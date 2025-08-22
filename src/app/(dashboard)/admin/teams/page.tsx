@@ -4,9 +4,9 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Loader2, Download, Save, Pencil, X, Trash2, MinusCircle } from "lucide-react";
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import { db } from "@/lib/firebase";
-import { collection, onSnapshot, doc, updateDoc } from "firebase/firestore";
+import { collection, onSnapshot, doc, updateDoc, query } from "firebase/firestore";
 import { Team, UserProfile, ProblemStatementCategory, TeamMember, ProblemStatement } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -30,8 +30,8 @@ import { manageTeamBySpoc } from "@/ai/flows/manage-team-by-spoc-flow";
 type CategoryFilter = ProblemStatementCategory | "All Categories";
 
 export default function AllTeamsPage() {
-  const [teams, setTeams] = useState<Team[]>([]);
-  const [users, setUsers] = useState<UserProfile[]>([]);
+  const [allTeams, setAllTeams] = useState<Team[]>([]);
+  const [allUsers, setAllUsers] = useState<Map<string, UserProfile>>(new Map());
   const [problemStatements, setProblemStatements] = useState<ProblemStatement[]>([]);
   const [loading, setLoading] = useState(true);
   const [isExporting, setIsExporting] = useState(false);
@@ -48,26 +48,43 @@ export default function AllTeamsPage() {
 
   useEffect(() => {
     setLoading(true);
-    const teamsCollection = collection(db, 'teams');
-    const usersCollection = collection(db, 'users');
+    // Listen to all teams
+    const teamsQuery = query(collection(db, 'teams'));
+    const unsubscribeTeams = onSnapshot(teamsQuery, (snapshot) => {
+        const teamsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Team));
+        setAllTeams(teamsData);
+
+        // From all teams, get all unique user UIDs
+        const allUserIds = new Set<string>();
+        teamsData.forEach(team => {
+            allUserIds.add(team.leader.uid);
+            team.members.forEach(member => {
+                if (member.uid) allUserIds.add(member.uid);
+            });
+        });
+        
+        // Listen to each user document for real-time profile updates
+        const userUnsubscribers = Array.from(allUserIds).map(uid => {
+            const userDocRef = doc(db, 'users', uid);
+            return onSnapshot(userDocRef, (userDoc) => {
+                if (userDoc.exists()) {
+                    const userData = { uid: userDoc.id, ...userDoc.data() } as UserProfile;
+                    setAllUsers(prevUsers => new Map(prevUsers).set(uid, userData));
+                }
+            });
+        });
+
+        if (loading) setLoading(false);
+
+        return () => userUnsubscribers.forEach(unsub => unsub());
+
+    }, (error) => {
+        console.error("Error fetching teams:", error);
+        toast({ title: "Error", description: "Failed to fetch teams.", variant: "destructive" });
+        setLoading(false);
+    });
+
     const problemStatementsCollection = collection(db, 'problemStatements');
-
-    const unsubscribeTeams = onSnapshot(teamsCollection, (snapshot) => {
-      const teamsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Team));
-      setTeams(teamsData);
-    }, (error) => {
-      console.error("Error fetching teams:", error);
-      toast({ title: "Error", description: "Failed to fetch teams.", variant: "destructive" });
-    });
-
-    const unsubscribeUsers = onSnapshot(usersCollection, (snapshot) => {
-      const usersData = snapshot.docs.map(doc => ({uid: doc.id, ...doc.data()} as UserProfile));
-      setUsers(usersData);
-    }, (error) => {
-      console.error("Error fetching users:", error);
-      toast({ title: "Error", description: "Failed to fetch user data.", variant: "destructive" });
-    });
-    
     const unsubscribeProblemStatements = onSnapshot(problemStatementsCollection, (snapshot) => {
       const psData = snapshot.docs.map(doc => ({id: doc.id, ...doc.data()} as ProblemStatement));
       setProblemStatements(psData);
@@ -76,27 +93,21 @@ export default function AllTeamsPage() {
       toast({ title: "Error", description: "Failed to fetch problem statements.", variant: "destructive" });
     });
 
-    // Wait for all snapshots to load initially
-    Promise.all([
-        new Promise(res => { const unsub = onSnapshot(teamsCollection, () => { res(true); unsub(); }); }),
-        new Promise(res => { const unsub = onSnapshot(usersCollection, () => { res(true); unsub(); }); }),
-        new Promise(res => { const unsub = onSnapshot(problemStatementsCollection, () => { res(true); unsub(); }); })
-    ]).then(() => setLoading(false));
-
     return () => {
       unsubscribeTeams();
-      unsubscribeUsers();
       unsubscribeProblemStatements();
     };
-  }, [toast]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
 
   const filteredTeams = useMemo(() => {
-    return teams.filter(team => {
+    return allTeams.filter(team => {
         const instituteMatch = instituteFilter === 'All Institutes' || team.institute === instituteFilter;
         const categoryMatch = categoryFilter === 'All Categories' || team.category === categoryFilter;
         return instituteMatch && categoryMatch;
     });
-  }, [teams, instituteFilter, categoryFilter]);
+  }, [allTeams, instituteFilter, categoryFilter]);
   
   const handleExport = async () => {
     setIsExporting(true);
@@ -128,7 +139,7 @@ export default function AllTeamsPage() {
   };
   
   const handleEditTeamName = (teamId: string) => {
-    const team = teams.find(t => t.id === teamId);
+    const team = allTeams.find(t => t.id === teamId);
     if (team) {
         setEditingTeam({ id: teamId, name: team.name });
     }
@@ -185,15 +196,29 @@ export default function AllTeamsPage() {
 
   const getTeamWithFullDetails = (teamsToProcess: Team[]) => {
     return teamsToProcess.map(team => {
-        const leaderProfile = users.find(u => u.uid === team.leader.uid);
+        const leaderProfile = allUsers.get(team.leader.uid);
         const membersWithDetails = team.members.map(member => {
-            const memberProfile = users.find(u => u.email === member.email);
+            // Find user profile by email if UID is not available in the team doc
+            let memberProfile: UserProfile | undefined;
+            if (member.uid) {
+                memberProfile = allUsers.get(member.uid);
+            } else {
+                // Fallback for older data structure
+                for (const user of allUsers.values()) {
+                    if (user.email === member.email) {
+                        memberProfile = user;
+                        break;
+                    }
+                }
+            }
+            
             return {
                 ...member,
-                uid: memberProfile?.uid,
+                uid: memberProfile?.uid || member.uid, // Prefer UID from profile
+                name: memberProfile?.name || member.name,
                 email: memberProfile?.email || member.email,
-                enrollmentNumber: memberProfile?.enrollmentNumber || member.enrollmentNumber || 'N/A',
-                contactNumber: memberProfile?.contactNumber || member.contactNumber || 'N/A',
+                enrollmentNumber: memberProfile?.enrollmentNumber || 'N/A',
+                contactNumber: memberProfile?.contactNumber || 'N/A',
                 yearOfStudy: memberProfile?.yearOfStudy || 'N/A',
                 semester: memberProfile?.semester,
             };
@@ -285,7 +310,7 @@ export default function AllTeamsPage() {
                 <TableBody>
                     {teamsWithDetails.map((team) => (
                        team.allMembers.map((member, memberIndex) => (
-                         <TableRow key={`${team.id}-${memberIndex}`}>
+                         <TableRow key={`${team.id}-${member.uid || memberIndex}`}>
                             {memberIndex === 0 && (
                                 <>
                                     <TableCell rowSpan={team.allMembers.length} className="font-medium align-top">
