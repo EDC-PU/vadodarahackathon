@@ -3,15 +3,27 @@
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { PlusCircle, Loader2, Users, Pencil } from "lucide-react";
+import { PlusCircle, Loader2, Users, Pencil, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { db } from "@/lib/firebase";
-import { collection, onSnapshot, query, orderBy } from "firebase/firestore";
+import { collection, onSnapshot, query, orderBy, deleteDoc, doc } from "firebase/firestore";
 import { ProblemStatement, Team } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 import { AddProblemStatementDialog } from "@/components/add-problem-statement-dialog";
 import { EditProblemStatementDialog } from "@/components/edit-problem-statement-dialog";
 import { Badge } from "@/components/ui/badge";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+
 
 export default function ProblemStatementsPage() {
   const [problemStatements, setProblemStatements] = useState<ProblemStatement[]>([]);
@@ -65,6 +77,16 @@ export default function ProblemStatementsPage() {
     setIsEditDialogOpen(true);
   }
 
+  const handleDeleteStatement = async (statementId: string) => {
+    try {
+      await deleteDoc(doc(db, "problemStatements", statementId));
+      toast({ title: "Success", description: "Problem statement has been deleted." });
+    } catch (error) {
+       console.error("Error deleting problem statement:", error);
+       toast({ title: "Error", description: "Could not delete problem statement.", variant: "destructive" });
+    }
+  };
+
   return (
     <>
       <AddProblemStatementDialog
@@ -107,11 +129,33 @@ export default function ProblemStatementsPage() {
                         <li key={ps.id} className="p-4 border rounded-md relative group">
                            <div className="flex justify-between items-start mb-2">
                              <h3 className="font-bold text-lg">{ps.title} <span className="text-sm font-normal text-muted-foreground">{ps.problemStatementId ? `(ID: ${ps.problemStatementId})` : ''}</span></h3>
-                             <Badge variant={ps.category === 'Software' ? 'default' : ps.category === 'Hardware' ? 'secondary' : 'outline'}>{ps.category}</Badge>
+                             <div className="flex items-center gap-2">
+                                <Badge variant={ps.category === 'Software' ? 'default' : ps.category === 'Hardware' ? 'secondary' : 'outline'}>{ps.category}</Badge>
+                                <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground" onClick={() => handleEditClick(ps)}>
+                                  <Pencil className="h-4 w-4"/>
+                                </Button>
+                                <AlertDialog>
+                                  <AlertDialogTrigger asChild>
+                                      <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive/70 hover:text-destructive">
+                                        <Trash2 className="h-4 w-4"/>
+                                      </Button>
+                                  </AlertDialogTrigger>
+                                  <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                      <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                      <AlertDialogDescription>
+                                        This action cannot be undone. This will permanently delete the problem statement "{ps.title}".
+                                      </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                      <AlertDialogAction onClick={() => handleDeleteStatement(ps.id)} className="bg-destructive hover:bg-destructive/90">Delete</AlertDialogAction>
+                                    </AlertDialogFooter>
+                                  </AlertDialogContent>
+                                </AlertDialog>
+                             </div>
                            </div>
-                           <Button variant="ghost" size="icon" className="absolute top-2 right-2 h-7 w-7 text-muted-foreground" onClick={() => handleEditClick(ps)}>
-                            <Pencil className="h-4 w-4"/>
-                           </Button>
+                           
                            {ps.description && <p className="text-sm text-muted-foreground mb-3">{ps.description}</p>}
                            <div className="grid grid-cols-2 md:grid-cols-3 gap-2 text-sm">
                               {ps.organization && <div><strong>Organization:</strong> {ps.organization}</div>}
