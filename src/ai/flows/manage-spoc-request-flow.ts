@@ -24,6 +24,13 @@ const manageSpocRequestFlow = ai.defineFlow(
     console.log(`manageSpocRequestFlow started. UID: ${uid}, Action: ${action}`);
     const adminAuth = getAdminAuth();
     const adminDb = getAdminDb();
+
+    if (!adminAuth || !adminDb) {
+      const errorMessage = "Firebase Admin SDK is not initialized. Please check server-side environment variables.";
+      console.error(errorMessage);
+      return { success: false, message: `Failed to ${action} SPOC: ${errorMessage}` };
+    }
+
     const userDocRef = adminDb.collection('users').doc(uid);
 
     try {
