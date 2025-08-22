@@ -3,7 +3,7 @@
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Team, TeamMember, UserProfile } from "@/lib/types";
+import { Team, UserProfile } from "@/lib/types";
 import { AlertCircle, CheckCircle, PlusCircle, Trash2, User, Loader2, FileText, Pencil, Users2 } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "./ui/alert";
 import { Input } from "./ui/input";
@@ -194,7 +194,7 @@ export default function LeaderDashboard() {
                         <Users2 />
                         Team Members ({teamMembers.length} / 6)
                     </CardTitle>
-                    <CardDescription>Your current team roster.</CardDescription>
+                    <CardDescription>Your current team roster. Invite members to have them appear here.</CardDescription>
                 </CardHeader>
                 <CardContent>
                     <Table>
@@ -210,43 +210,52 @@ export default function LeaderDashboard() {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {teamMembers.map((member) => (
-                                <TableRow key={member.uid}>
-                                    <TableCell className="font-medium">{member.name}</TableCell>
-                                    <TableCell>
-                                        <span className={`px-2 py-1 text-xs rounded-full ${member.role === 'leader' ? 'bg-primary/20 text-primary' : 'bg-secondary text-secondary-foreground'}`}>
-                                            {member.role}
-                                        </span>
-                                    </TableCell>
-                                    <TableCell>{member.email}</TableCell>
-                                    <TableCell>{member.enrollmentNumber || 'N/A'}</TableCell>
-                                    <TableCell>{member.yearOfStudy || 'N/A'}</TableCell>
-                                    <TableCell>{member.semester || 'N/A'}</TableCell>
-                                    <TableCell className="text-right">
-                                        {member.role !== 'leader' && (
-                                            <AlertDialog>
-                                                <AlertDialogTrigger asChild>
-                                                    <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-destructive" disabled={isRemoving === member.email}>
-                                                    {isRemoving === member.email ? <Loader2 className="h-4 w-4 animate-spin"/> : <Trash2 className="h-4 w-4"/>}
-                                                    </Button>
-                                                </AlertDialogTrigger>
-                                                <AlertDialogContent>
-                                                    <AlertDialogHeader>
-                                                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                                                    <AlertDialogDescription>
-                                                        This action will remove {member.name} from the team. They will need to be invited again to rejoin.
-                                                    </AlertDialogDescription>
-                                                    </AlertDialogHeader>
-                                                    <AlertDialogFooter>
-                                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                                    <AlertDialogAction onClick={() => handleRemoveMember(member)} className="bg-destructive hover:bg-destructive/90">Remove</AlertDialogAction>
-                                                    </AlertDialogFooter>
-                                                </AlertDialogContent>
-                                            </AlertDialog>
-                                        )}
+                            {teamMembers.length > 0 ? (
+                                teamMembers.map((member) => (
+                                    <TableRow key={member.uid}>
+                                        <TableCell className="font-medium">{member.name}</TableCell>
+                                        <TableCell>
+                                            <span className={`px-2 py-1 text-xs rounded-full ${member.role === 'leader' ? 'bg-primary/20 text-primary' : 'bg-secondary text-secondary-foreground'}`}>
+                                                {member.role}
+                                            </span>
+                                        </TableCell>
+                                        <TableCell>{member.email}</TableCell>
+                                        <TableCell>{member.enrollmentNumber || 'N/A'}</TableCell>
+                                        <TableCell>{member.yearOfStudy || 'N/A'}</TableCell>
+                                        <TableCell>{member.semester || 'N/A'}</TableCell>
+                                        <TableCell className="text-right">
+                                            {member.role !== 'leader' && (
+                                                <AlertDialog>
+                                                    <AlertDialogTrigger asChild>
+                                                        <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-destructive" disabled={isRemoving === member.email}>
+                                                        {isRemoving === member.email ? <Loader2 className="h-4 w-4 animate-spin"/> : <Trash2 className="h-4 w-4"/>}
+                                                        </Button>
+                                                    </AlertDialogTrigger>
+                                                    <AlertDialogContent>
+                                                        <AlertDialogHeader>
+                                                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                                        <AlertDialogDescription>
+                                                            This action will remove {member.name} from the team. They will need to be invited again to rejoin.
+                                                        </AlertDialogDescription>
+                                                        </AlertDialogHeader>
+                                                        <AlertDialogFooter>
+                                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                        <AlertDialogAction onClick={() => handleRemoveMember(member)} className="bg-destructive hover:bg-destructive/90">Remove</AlertDialogAction>
+                                                        </AlertDialogFooter>
+                                                    </AlertDialogContent>
+                                                </AlertDialog>
+                                            )}
+                                        </TableCell>
+                                    </TableRow>
+                                ))
+                             ) : (
+                                <TableRow>
+                                    <TableCell colSpan={7} className="text-center text-muted-foreground h-24">
+                                        No members have joined yet.
                                     </TableCell>
                                 </TableRow>
-                            ))}
+                             )
+                           }
                         </TableBody>
                     </Table>
                 </CardContent>
