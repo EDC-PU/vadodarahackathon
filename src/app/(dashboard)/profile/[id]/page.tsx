@@ -34,6 +34,8 @@ const formSchema = z.object({
   department: z.string().min(2, { message: "Department is required." }),
   enrollmentNumber: z.string().min(5, { message: "Enrollment number is required." }),
   contactNumber: z.string().regex(/^\d{10}$/, { message: "Please enter a valid 10-digit phone number." }),
+  semester: z.coerce.number({invalid_type_error: "Semester is required."}).min(1, { message: "Semester must be between 1 and 8." }).max(8, { message: "Semester must be between 1 and 8." }),
+  yearOfStudy: z.string().min(1, { message: "Year of study is required." }),
 });
 
 export default function ProfilePage() {
@@ -53,6 +55,8 @@ export default function ProfilePage() {
         department: "",
         enrollmentNumber: "",
         contactNumber: "",
+        semester: undefined,
+        yearOfStudy: "",
     },
   });
   
@@ -75,6 +79,8 @@ export default function ProfilePage() {
                     department: data.department || "",
                     enrollmentNumber: data.enrollmentNumber || "",
                     contactNumber: data.contactNumber || "",
+                    semester: data.semester,
+                    yearOfStudy: data.yearOfStudy,
                 });
             }
         } catch (err) {
@@ -105,6 +111,8 @@ export default function ProfilePage() {
             department: values.department,
             enrollmentNumber: values.enrollmentNumber,
             contactNumber: values.contactNumber,
+            semester: values.semester,
+            yearOfStudy: values.yearOfStudy,
         };
         batch.update(userDocRef, updatedProfileData);
 
@@ -126,6 +134,8 @@ export default function ProfilePage() {
                             gender: values.gender,
                             enrollmentNumber: values.enrollmentNumber,
                             contactNumber: values.contactNumber,
+                            semester: values.semester,
+                            yearOfStudy: values.yearOfStudy,
                         };
                         batch.update(teamDocRef, { members: updatedMembers });
                     }
@@ -260,7 +270,7 @@ export default function ProfilePage() {
                     )}
                     />
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <FormField
                             control={form.control}
                             name="enrollmentNumber"
@@ -274,6 +284,34 @@ export default function ProfilePage() {
                             </FormItem>
                             )}
                         />
+                         <FormField
+                            control={form.control}
+                            name="semester"
+                            render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Semester</FormLabel>
+                                <FormControl>
+                                <Input type="number" placeholder="e.g., 6" {...field} disabled={isLoading}/>
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                            )}
+                        />
+                         <FormField
+                            control={form.control}
+                            name="yearOfStudy"
+                            render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Year of Study</FormLabel>
+                                <FormControl>
+                                <Input type="number" placeholder="e.g., 3" {...field} disabled={isLoading}/>
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                            )}
+                        />
+                    </div>
+                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <FormField
                             control={form.control}
                             name="contactNumber"
