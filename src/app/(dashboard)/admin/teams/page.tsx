@@ -3,17 +3,20 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Loader2 } from "lucide-react";
+import { Loader2, Download } from "lucide-react";
 import { useEffect, useState } from "react";
 import { db } from "@/lib/firebase";
 import { collection, onSnapshot } from "firebase/firestore";
-import { Team, UserProfile, TeamMember } from "@/lib/types";
+import { Team, UserProfile } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
+import { Button } from "@/components/ui/button";
+import { exportTeams } from "@/ai/flows/export-teams-flow";
 
 export default function AllTeamsPage() {
   const [teams, setTeams] = useState<Team[]>([]);
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isExporting, setIsExporting] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -48,6 +51,33 @@ export default function AllTeamsPage() {
       unsubscribeUsers();
     };
   }, [toast]);
+  
+  const handleExport = async () => {
+    setIsExporting(true);
+    try {
+        const result = await exportTeams();
+        if (result.success && result.fileContent) {
+            const blob = new Blob([Buffer.from(result.fileContent, 'base64')], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = result.fileName || 'teams-export.xlsx';
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            a.remove();
+            toast({ title: "Success", description: "Team data has been exported." });
+        } else {
+            toast({ title: "Export Failed", description: result.message || "Could not generate the export file.", variant: "destructive" });
+        }
+    } catch (error) {
+        console.error("Error exporting data:", error);
+        toast({ title: "Error", description: "An unexpected error occurred during export.", variant: "destructive" });
+    } finally {
+        setIsExporting(false);
+    }
+  };
+
 
   const getTeamWithFullDetails = () => {
     return teams.map(team => {
@@ -80,9 +110,15 @@ export default function AllTeamsPage() {
 
   return (
     <div className="p-4 sm:p-6 lg:p-8">
-      <header className="mb-8">
-        <h1 className="text-3xl font-bold font-headline">All Teams</h1>
-        <p className="text-muted-foreground">View and manage all registered teams.</p>
+      <header className="mb-8 flex justify-between items-center">
+        <div>
+            <h1 className="text-3xl font-bold font-headline">All Teams</h1>
+            <p className="text-muted-foreground">View and manage all registered teams.</p>
+        </div>
+        <Button variant="outline" onClick={handleExport} disabled={isExporting}>
+            {isExporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
+            Export to Excel
+        </Button>
       </header>
 
       <Card>

@@ -15,7 +15,6 @@ import { exportTeams } from "@/ai/flows/export-teams-flow";
 export default function AdminDashboard() {
   const [stats, setStats] = useState({ teams: 0, participants: 0, spocs: 0, admins: 0 });
   const [loading, setLoading] = useState(true);
-  const [isExporting, setIsExporting] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -55,33 +54,6 @@ export default function AdminDashboard() {
     fetchData();
   }, [toast]);
   
-  const handleExport = async () => {
-    setIsExporting(true);
-    try {
-        const result = await exportTeams();
-        if (result.success && result.fileContent) {
-            const blob = new Blob([Buffer.from(result.fileContent, 'base64')], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = result.fileName || 'teams-export.xlsx';
-            document.body.appendChild(a);
-            a.click();
-            window.URL.revokeObjectURL(url);
-            a.remove();
-            toast({ title: "Success", description: "Team data has been exported." });
-        } else {
-            toast({ title: "Export Failed", description: result.message || "Could not generate the export file.", variant: "destructive" });
-        }
-    } catch (error) {
-        console.error("Error exporting data:", error);
-        toast({ title: "Error", description: "An unexpected error occurred during export.", variant: "destructive" });
-    } finally {
-        setIsExporting(false);
-    }
-  };
-
-
   if (loading) {
     return (
       <div className="flex justify-center items-center h-screen">
@@ -97,10 +69,6 @@ export default function AdminDashboard() {
             <h1 className="text-3xl font-bold font-headline">Admin Dashboard</h1>
             <p className="text-muted-foreground">An overview of the hackathon portal.</p>
         </div>
-        <Button variant="outline" onClick={handleExport} disabled={isExporting}>
-            {isExporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
-            Export All Data
-        </Button>
       </header>
       
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
