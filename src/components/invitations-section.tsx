@@ -83,6 +83,8 @@ export function InvitationsSection() {
                     enrollmentNumber: user.enrollmentNumber,
                     contactNumber: user.contactNumber,
                     gender: user.gender,
+                    semester: user.semester,
+                    yearOfStudy: user.yearOfStudy,
                 }]
             });
             

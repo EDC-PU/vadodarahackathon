@@ -60,6 +60,8 @@ export function CompleteProfileForm() {
             enrollmentNumber: user.enrollmentNumber || "",
             contactNumber: user.contactNumber || "",
             gender: user.gender || undefined,
+            semester: user.semester || undefined,
+            yearOfStudy: user.yearOfStudy || "",
         })
     }
   }, [user, form]);
@@ -85,6 +87,8 @@ export function CompleteProfileForm() {
             department: values.department,
             enrollmentNumber: values.enrollmentNumber,
             contactNumber: values.contactNumber,
+            semester: values.semester,
+            yearOfStudy: values.yearOfStudy,
         };
         batch.update(userDocRef, updatedProfileData);
         console.log(`Batch update queued for user document: ${user.uid}`);
@@ -107,6 +111,8 @@ export function CompleteProfileForm() {
                         gender: values.gender,
                         enrollmentNumber: values.enrollmentNumber,
                         contactNumber: values.contactNumber,
+                        semester: values.semester,
+                        yearOfStudy: values.yearOfStudy,
                     };
                     batch.update(teamDocRef, { members: updatedMembers });
                     console.log(`Batch update queued for team document ${user.teamId} at member index ${memberIndex}.`);

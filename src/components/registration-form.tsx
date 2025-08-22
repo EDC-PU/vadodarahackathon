@@ -77,7 +77,8 @@ export function RegistrationForm() {
             enrollmentNumber: user.enrollmentNumber || "",
             contactNumber: user.contactNumber || "",
             gender: user.gender || undefined,
-            yearOfStudy: "",
+            yearOfStudy: user.yearOfStudy || "",
+            semester: user.semester || undefined,
         });
     }
   }, [user, form]);
@@ -139,6 +140,8 @@ export function RegistrationForm() {
       department: values.department,
       enrollmentNumber: values.enrollmentNumber,
       contactNumber: values.contactNumber,
+      semester: values.semester,
+      yearOfStudy: values.yearOfStudy,
       passwordChanged: true, // They are creating their team, so they've passed the initial password change step
     };
     batch.update(userDocRef, userProfileUpdate);

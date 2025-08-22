@@ -19,6 +19,8 @@ export interface UserProfile {
   teamId?: string;
   passwordChanged?: boolean; // Flag to check if the user has changed the initial password
   spocStatus?: SpocStatus;
+  semester?: number;
+  yearOfStudy?: string;
 }
 
 export interface Invitation {
@@ -38,6 +40,8 @@ export interface TeamMember {
   enrollmentNumber: string;
   contactNumber: string;
   gender: "Male" | "Female" | "Other";
+  semester?: number;
+  yearOfStudy?: string;
 }
 
 export type ProblemStatementCategory = "Software" | "Hardware" | "Hardware & Software";

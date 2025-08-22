@@ -203,9 +203,9 @@ export default function LeaderDashboard() {
                                 <TableHead>Name</TableHead>
                                 <TableHead>Role</TableHead>
                                 <TableHead>Email</TableHead>
-                                <TableHead>Phone</TableHead>
-                                <TableHead>Department</TableHead>
                                 <TableHead>Enrollment No.</TableHead>
+                                <TableHead>Year</TableHead>
+                                <TableHead>Sem</TableHead>
                                 <TableHead className="text-right">Actions</TableHead>
                             </TableRow>
                         </TableHeader>
@@ -219,9 +219,9 @@ export default function LeaderDashboard() {
                                         </span>
                                     </TableCell>
                                     <TableCell>{member.email}</TableCell>
-                                    <TableCell>{member.contactNumber || 'N/A'}</TableCell>
-                                    <TableCell>{member.department || 'N/A'}</TableCell>
                                     <TableCell>{member.enrollmentNumber || 'N/A'}</TableCell>
+                                    <TableCell>{member.yearOfStudy || 'N/A'}</TableCell>
+                                    <TableCell>{member.semester || 'N/A'}</TableCell>
                                     <TableCell className="text-right">
                                         {member.role !== 'leader' && (
                                             <AlertDialog>
