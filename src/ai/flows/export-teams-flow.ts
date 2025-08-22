@@ -9,7 +9,7 @@ import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
 import { collection, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { Team } from '@/lib/types';
+import { Team, UserProfile, ProblemStatement } from '@/lib/types';
 import ExcelJS from 'exceljs';
 
 const ExportTeamsOutputSchema = z.object({
@@ -32,10 +32,15 @@ const exportTeamsFlow = ai.defineFlow(
   },
   async () => {
     try {
-        const teamsCollection = collection(db, 'teams');
-        const teamSnapshot = await getDocs(teamsCollection);
-        const teamsData = teamSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Team));
+        // 1. Fetch all necessary data
+        const teamsSnapshot = await getDocs(collection(db, 'teams'));
+        const usersSnapshot = await getDocs(collection(db, 'users'));
+        const problemStatementsSnapshot = await getDocs(collection(db, 'problemStatements'));
 
+        const teamsData = teamsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Team));
+        const usersData = usersSnapshot.docs.map(doc => ({ uid: doc.id, ...doc.data() } as UserProfile));
+        const problemStatementsData = problemStatementsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ProblemStatement));
+        
         if (teamsData.length === 0) {
             return { success: false, message: "No teams to export." };
         }
@@ -43,55 +48,66 @@ const exportTeamsFlow = ai.defineFlow(
         const workbook = new ExcelJS.Workbook();
         const worksheet = workbook.addWorksheet('Teams');
 
-        // Define columns
+        // 2. Define columns as requested
         worksheet.columns = [
-            { header: 'Team Name', key: 'name', width: 30 },
+            { header: 'TeamName', key: 'teamName', width: 30 },
+            { header: 'TeamLeaderName', key: 'teamLeaderName', width: 25 },
+            { header: 'Name', key: 'name', width: 25 },
+            { header: 'Email', key: 'email', width: 30 },
+            { header: 'Number', key: 'contactNumber', width: 20 },
             { header: 'Institute', key: 'institute', width: 40 },
-            { header: 'Category', key: 'category', width: 15 },
+            { header: 'EnrollmentNo', key: 'enrollmentNumber', width: 20 },
+            { header: 'Gender', key: 'gender', width: 15 },
+            { header: 'Problem Statement Number', key: 'problemStatementId', width: 25 },
+            { header: 'ProblemStatement Title', key: 'problemStatementTitle', width: 40 },
             { header: 'Department', key: 'department', width: 30 },
-            { header: 'Leader Name', key: 'leaderName', width: 25 },
-            { header: 'Leader Email', key: 'leaderEmail', width: 30 },
-            { header: 'Member Name', key: 'memberName', width: 25 },
-            { header: 'Member Email', key: 'memberEmail', width: 30 },
-            { header: 'Member Enrollment', key: 'memberEnrollment', width: 20 },
-            { header: 'Member Contact', key: 'memberContact', width: 20 },
-            { header: 'Member Gender', key: 'memberGender', width: 15 },
         ];
         
         // Style header
         worksheet.getRow(1).font = { bold: true };
-        worksheet.getRow(1).alignment = { vertical: 'middle', horizontal: 'center' };
 
-        // Add data
-        teamsData.forEach(team => {
-            // Add leader row
-            worksheet.addRow({
-                name: team.name,
-                institute: team.institute,
-                category: team.category,
-                department: team.department,
-                leaderName: `${team.leader.name} (Leader)`,
-                leaderEmail: team.leader.email,
-            });
+        // 3. Add data rows
+        for (const team of teamsData) {
+             const problemStatement = problemStatementsData.find(ps => ps.id === team.problemStatementId);
+             const leaderProfile = usersData.find(u => u.uid === team.leader.uid);
 
-            // Add member rows
-            team.members.forEach(member => {
+             // Add leader's row
+             if (leaderProfile) {
                 worksheet.addRow({
-                    name: team.name,
-                    institute: team.institute,
-                    category: team.category,
-                    department: team.department,
-                    memberName: member.name,
-                    memberEmail: member.email,
-                    memberEnrollment: member.enrollmentNumber,
-                    memberContact: member.contactNumber,
-                    memberGender: member.gender,
+                    teamName: team.name,
+                    teamLeaderName: leaderProfile.name,
+                    name: leaderProfile.name,
+                    email: leaderProfile.email,
+                    contactNumber: leaderProfile.contactNumber,
+                    institute: leaderProfile.institute,
+                    enrollmentNumber: leaderProfile.enrollmentNumber,
+                    gender: leaderProfile.gender,
+                    problemStatementId: problemStatement?.problemStatementId,
+                    problemStatementTitle: team.problemStatementTitle,
+                    department: leaderProfile.department,
                 });
-            });
-            
-             // Add a separator row for visual clarity
-            worksheet.addRow({});
-        });
+             }
+
+             // Add members' rows
+             for (const member of team.members) {
+                // The member object in the team collection might be more up-to-date for new members
+                // but the user profile will have gender, department etc. if they've completed it.
+                const memberProfile = usersData.find(u => u.uid === member.uid);
+                worksheet.addRow({
+                    teamName: team.name,
+                    teamLeaderName: leaderProfile?.name,
+                    name: memberProfile?.name || member.name,
+                    email: memberProfile?.email || member.email,
+                    contactNumber: memberProfile?.contactNumber || member.contactNumber,
+                    institute: team.institute,
+                    enrollmentNumber: memberProfile?.enrollmentNumber || member.enrollmentNumber,
+                    gender: memberProfile?.gender || member.gender,
+                    problemStatementId: problemStatement?.problemStatementId,
+                    problemStatementTitle: team.problemStatementTitle,
+                    department: team.department, // Members share team department
+                });
+             }
+        }
         
         const buffer = await workbook.xlsx.writeBuffer();
         const fileContent = Buffer.from(buffer).toString('base64');
