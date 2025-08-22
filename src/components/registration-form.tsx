@@ -73,10 +73,31 @@ export function RegistrationForm() {
   const createFirestoreData = async (user: User, values: z.infer<typeof formSchema>) => {
     const batch = writeBatch(db);
 
-    const isPanavAdmin = values.email.toLowerCase() === "panavrathi07@gmail.com";
+    const isPanavAdmin = values.email.toLowerCase() === "pranavrathi07@gmail.com";
     const role = isPanavAdmin ? "admin" : "leader";
 
-    // 1. Create Team
+    // For admins, we don't create a team, just a user profile.
+    if (role === 'admin') {
+        const userProfile: UserProfile = {
+            uid: user.uid,
+            name: values.name,
+            email: user.email!,
+            role: "admin",
+            photoURL: user.photoURL || '',
+            institute: values.institute,
+            department: values.department,
+            enrollmentNumber: values.enrollmentNumber,
+            contactNumber: values.contactNumber,
+            gender: values.gender as "Male" | "Female" | "Other",
+        };
+        const userDocRef = doc(db, "users", user.uid);
+        batch.set(userDocRef, userProfile);
+        await batch.commit();
+        return userProfile;
+    }
+
+
+    // 1. Create Team for leaders
     const teamDocRef = doc(collection(db, "teams"));
     const teamData = {
       id: teamDocRef.id,
@@ -93,12 +114,12 @@ export function RegistrationForm() {
     };
     batch.set(teamDocRef, teamData);
 
-    // 2. Create User Profile
+    // 2. Create User Profile for leaders
     const userProfile: UserProfile = {
       uid: user.uid,
       name: values.name,
       email: user.email!,
-      role: role,
+      role: "leader",
       photoURL: user.photoURL || '',
       institute: values.institute,
       department: values.department,
@@ -118,7 +139,7 @@ export function RegistrationForm() {
     setIsLoading(true);
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
-      const profile = await createFirestoreData(userCredential.user, values);
+      await createFirestoreData(userCredential.user, values);
       await handleLogin(userCredential.user);
     } catch (error: any) {
       console.error("Registration Error:", error);
@@ -463,3 +484,5 @@ export function RegistrationForm() {
     </Card>
   );
 }
+
+    
