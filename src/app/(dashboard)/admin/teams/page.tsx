@@ -3,20 +3,23 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Loader2, Download } from "lucide-react";
+import { Loader2, Download, Save } from "lucide-react";
 import { useEffect, useState } from "react";
 import { db } from "@/lib/firebase";
-import { collection, onSnapshot } from "firebase/firestore";
+import { collection, onSnapshot, doc, updateDoc } from "firebase/firestore";
 import { Team, UserProfile } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { exportTeams } from "@/ai/flows/export-teams-flow";
+import { Input } from "@/components/ui/input";
 
 export default function AllTeamsPage() {
   const [teams, setTeams] = useState<Team[]>([]);
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [isExporting, setIsExporting] = useState(false);
+  const [teamNumberInputs, setTeamNumberInputs] = useState<{ [key: string]: string }>({});
+  const [isSaving, setIsSaving] = useState<string | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -105,6 +108,29 @@ export default function AllTeamsPage() {
         };
     });
   };
+
+  const handleTeamNumberChange = (teamId: string, value: string) => {
+    setTeamNumberInputs(prev => ({...prev, [teamId]: value}));
+  };
+  
+  const handleSaveTeamNumber = async (teamId: string) => {
+    const teamNumber = teamNumberInputs[teamId];
+    if (!teamNumber) {
+        toast({ title: "Error", description: "Team number cannot be empty.", variant: "destructive" });
+        return;
+    }
+    setIsSaving(teamId);
+    try {
+        const teamDocRef = doc(db, 'teams', teamId);
+        await updateDoc(teamDocRef, { teamNumber: teamNumber });
+        toast({ title: "Success", description: "Team number has been allocated." });
+    } catch (error) {
+        console.error("Error allocating team number:", error);
+        toast({ title: "Error", description: "Could not allocate team number.", variant: "destructive" });
+    } finally {
+        setIsSaving(null);
+    }
+  };
   
   const teamsWithDetails = getTeamWithFullDetails();
 
@@ -137,7 +163,7 @@ export default function AllTeamsPage() {
             <Table>
                 <TableHeader>
                     <TableRow>
-                        <TableHead className="w-[100px]">Team No.</TableHead>
+                        <TableHead className="w-[200px]">Team No.</TableHead>
                         <TableHead>Team Name</TableHead>
                         <TableHead>Member Name</TableHead>
                         <TableHead>Enrollment No.</TableHead>
@@ -145,12 +171,33 @@ export default function AllTeamsPage() {
                     </TableRow>
                 </TableHeader>
                 <TableBody>
-                    {teamsWithDetails.map((team, index) => (
+                    {teamsWithDetails.map((team) => (
                        team.allMembers.map((member, memberIndex) => (
                          <TableRow key={`${team.id}-${memberIndex}`}>
                             {memberIndex === 0 && (
                                 <>
-                                    <TableCell rowSpan={team.allMembers.length} className="font-medium align-top">{index + 1}</TableCell>
+                                    <TableCell rowSpan={team.allMembers.length} className="font-medium align-top">
+                                        {team.teamNumber ? (
+                                            <span className="font-bold text-lg">{team.teamNumber}</span>
+                                        ) : (
+                                            <div className="flex items-center gap-2">
+                                                <Input 
+                                                    placeholder="e.g., T001" 
+                                                    value={teamNumberInputs[team.id] || ''}
+                                                    onChange={(e) => handleTeamNumberChange(team.id, e.target.value)}
+                                                    disabled={isSaving === team.id}
+                                                    className="w-24"
+                                                />
+                                                <Button 
+                                                    size="sm" 
+                                                    onClick={() => handleSaveTeamNumber(team.id)}
+                                                    disabled={isSaving === team.id}
+                                                >
+                                                    {isSaving === team.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4"/>}
+                                                </Button>
+                                            </div>
+                                        )}
+                                    </TableCell>
                                     <TableCell rowSpan={team.allMembers.length} className="font-medium align-top">{team.name}</TableCell>
                                 </>
                             )}

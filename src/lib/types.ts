@@ -1,5 +1,4 @@
 
-
 export type UserRole = "leader" | "member" | "spoc" | "admin";
 
 export interface UserProfile {
@@ -56,6 +55,7 @@ export interface Team {
   members: TeamMember[];
   problemStatementId?: string;
   problemStatementTitle?: string;
+  teamNumber?: string;
 }
 
 export interface Institute {
