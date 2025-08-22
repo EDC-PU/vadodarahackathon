@@ -1,0 +1,94 @@
+
+"use client";
+
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Loader2, PlusCircle } from "lucide-react";
+import { useEffect, useState } from "react";
+import { db } from "@/lib/firebase";
+import { collection, query, where, onSnapshot } from "firebase/firestore";
+import { UserProfile } from "@/lib/types";
+import { useToast } from "@/hooks/use-toast";
+import { AddSpocDialog } from "@/components/add-spoc-dialog";
+import { Badge } from "@/components/ui/badge";
+
+export default function ManageSpocsPage() {
+  const [spocs, setSpocs] = useState<UserProfile[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [isAddSpocOpen, setIsAddSpocOpen] = useState(false);
+  const { toast } = useToast();
+
+  const fetchSpocs = () => {
+    setLoading(true);
+    const usersCollection = collection(db, 'users');
+    const spocsQuery = query(usersCollection, where("role", "==", "spoc"));
+    
+    const unsubscribe = onSnapshot(spocsQuery, (snapshot) => {
+      const spocsData = snapshot.docs.map(doc => ({ uid: doc.id, ...doc.data() } as UserProfile));
+      setSpocs(spocsData);
+      setLoading(false);
+    }, (error) => {
+      console.error("Error fetching SPOCs:", error);
+      toast({ title: "Error", description: "Failed to fetch SPOC data.", variant: "destructive" });
+      setLoading(false);
+    });
+    
+    return unsubscribe;
+  };
+  
+  useEffect(() => {
+    const unsubscribe = fetchSpocs();
+    return () => unsubscribe();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  return (
+    <>
+      <AddSpocDialog
+        isOpen={isAddSpocOpen}
+        onOpenChange={setIsAddSpocOpen}
+        onSpocAdded={() => { /* onSnapshot handles updates */ }}
+      />
+      <div className="p-4 sm:p-6 lg:p-8">
+        <header className="mb-8 flex justify-between items-center">
+            <div>
+                <h1 className="text-3xl font-bold font-headline">Manage SPOCs</h1>
+                <p className="text-muted-foreground">Create and manage institute Single Points of Contact.</p>
+            </div>
+            <Button onClick={() => setIsAddSpocOpen(true)}>
+                <PlusCircle className="mr-2 h-4 w-4" /> Add SPOC
+            </Button>
+        </header>
+
+        <Card>
+            <CardHeader>
+              <CardTitle>SPOC List</CardTitle>
+              <CardDescription>
+                {spocs.length} SPOC(s) found. Login credentials are automatically emailed upon creation.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+                {loading ? (
+                    <div className="flex justify-center items-center h-48">
+                        <Loader2 className="h-8 w-8 animate-spin" />
+                    </div>
+                ) : spocs.length > 0 ? (
+                  <ul className="space-y-3">
+                    {spocs.map(spoc => (
+                        <li key={spoc.uid} className="p-4 border rounded-md flex justify-between items-center">
+                            <div>
+                                <p className="font-semibold text-lg">{spoc.name}</p>
+                                <p className="text-sm text-muted-foreground">{spoc.email}</p>
+                                <p className="text-sm text-muted-foreground">{spoc.department}</p>
+                            </div>
+                            <Badge variant="secondary">{spoc.institute}</Badge>
+                        </li>
+                    ))}
+                  </ul>
+                ) : <p className="text-center text-muted-foreground py-4">No SPOCs have been created yet.</p>}
+            </CardContent>
+          </Card>
+      </div>
+    </>
+  );
+}

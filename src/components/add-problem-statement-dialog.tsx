@@ -30,15 +30,15 @@ interface AddProblemStatementDialogProps {
 }
 
 const formSchema = z.object({
-  problemStatementId: z.string().min(1, "Problem Statement ID is required."),
-  title: z.string().min(10, "Title must be at least 10 characters long."),
-  description: z.string().min(50, "Description must be at least 50 characters long."),
-  organization: z.string().min(1, "Organization is required."),
-  department: z.string().min(1, "Department is required."),
+  title: z.string().min(1, "Title is required."),
   category: z.enum(["Software", "Hardware", "Hardware & Software"], {
     required_error: "You need to select a problem statement category.",
   }),
-  theme: z.string().min(1, "Theme is required."),
+  problemStatementId: z.string().optional(),
+  description: z.string().optional(),
+  organization: z.string().optional(),
+  department: z.string().optional(),
+  theme: z.string().optional(),
   youtubeLink: z.string().url().optional().or(z.literal('')),
   datasetLink: z.string().url().optional().or(z.literal('')),
   contactInfo: z.string().optional(),
@@ -51,8 +51,8 @@ export function AddProblemStatementDialog({ isOpen, onOpenChange }: AddProblemSt
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      problemStatementId: "",
       title: "",
+      problemStatementId: "",
       description: "",
       organization: "",
       department: "",
@@ -102,20 +102,7 @@ export function AddProblemStatementDialog({ isOpen, onOpenChange }: AddProblemSt
           <form onSubmit={form.handleSubmit(onSubmit)}>
           <ScrollArea className="h-[60vh] pr-4">
             <div className="space-y-4 py-4">
-              <FormField
-                control={form.control}
-                name="problemStatementId"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Problem Statement ID</FormLabel>
-                    <FormControl>
-                      <Input placeholder="e.g., 1525" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
+               <FormField
                 control={form.control}
                 name="title"
                 render={({ field }) => (
@@ -128,52 +115,7 @@ export function AddProblemStatementDialog({ isOpen, onOpenChange }: AddProblemSt
                   </FormItem>
                 )}
               />
-              <FormField
-                control={form.control}
-                name="description"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Description</FormLabel>
-                    <FormControl>
-                      <Textarea
-                        placeholder="Provide a detailed description of the problem, its context, and what a successful solution would look like."
-                        className="min-h-[100px]"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                 <FormField
-                  control={form.control}
-                  name="organization"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Organization</FormLabel>
-                      <FormControl>
-                        <Input placeholder="e.g., Godrej" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                 <FormField
-                  control={form.control}
-                  name="department"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Department</FormLabel>
-                      <FormControl>
-                        <Input placeholder="e.g., Godrej Appliances" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-              <FormField
+                <FormField
                 control={form.control}
                 name="category"
                 render={({ field }) => (
@@ -211,10 +153,68 @@ export function AddProblemStatementDialog({ isOpen, onOpenChange }: AddProblemSt
               />
               <FormField
                 control={form.control}
+                name="description"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Description (Optional)</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        placeholder="Provide a detailed description of the problem, its context, and what a successful solution would look like."
+                        className="min-h-[100px]"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="problemStatementId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Problem Statement ID (Optional)</FormLabel>
+                    <FormControl>
+                      <Input placeholder="e.g., 1525" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                 <FormField
+                  control={form.control}
+                  name="organization"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Organization (Optional)</FormLabel>
+                      <FormControl>
+                        <Input placeholder="e.g., Godrej" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                 <FormField
+                  control={form.control}
+                  name="department"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Department (Optional)</FormLabel>
+                      <FormControl>
+                        <Input placeholder="e.g., Godrej Appliances" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              <FormField
+                control={form.control}
                 name="theme"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Theme</FormLabel>
+                    <FormLabel>Theme (Optional)</FormLabel>
                     <FormControl>
                       <Input placeholder="e.g., Smart Automation" {...field} />
                     </FormControl>

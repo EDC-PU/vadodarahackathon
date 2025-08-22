@@ -20,6 +20,10 @@ import {
   Shield,
   LogOut,
   UserCheck,
+  FileQuestion,
+  Wrench,
+  BookUser,
+  Building2,
 } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { Button } from "./ui/button";
@@ -30,6 +34,11 @@ import { Skeleton } from "./ui/skeleton";
 const navItems = {
   admin: [
     { href: "/admin", icon: <LayoutDashboard />, label: "Dashboard" },
+    { href: "/admin/problem-statements", icon: <FileQuestion />, label: "Problem Statements" },
+    { href: "/admin/teams", icon: <Users />, label: "All Teams" },
+    { href: "/admin/spocs", icon: <Building2 />, label: "Manage SPOCs" },
+    { href: "/admin/admins", icon: <Shield />, label: "Manage Admins" },
+    { href: "/admin/settings", icon: <Wrench />, label: "Event Settings" },
   ],
   spoc: [
     { href: "/spoc", icon: <LayoutDashboard />, label: "Dashboard" },
