@@ -77,7 +77,7 @@ export default function LandingPage() {
             <div className="flex justify-center mb-6">
                 <Image src="https://www.pierc.org/vhlogo.png" alt="Vadodara Hackathon Logo" width={128} height={128} className="rounded-full" />
             </div>
-            <h1 className="text-4xl md:text-6xl font-bold tracking-tighter mb-4 font-headline bg-clip-text text-transparent bg-gradient-to-r from-primary to-blue-400">
+            <h1 className="text-5xl md:text-7xl font-bold tracking-tighter mb-4 font-headline bg-clip-text text-transparent bg-gradient-to-r from-primary to-red-500">
               Vadodara Hackathon 6.0
             </h1>
             <p className="max-w-3xl mx-auto text-lg md:text-xl text-foreground/80 mb-8">
