@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { db } from "@/lib/firebase";
@@ -46,11 +46,21 @@ export function CompleteSpocProfileForm() {
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      name: user?.name || "",
-      institute: user?.institute || "",
-      contactNumber: user?.contactNumber || "",
+      name: "",
+      institute: "",
+      contactNumber: "",
     },
   });
+
+  useEffect(() => {
+      if (user) {
+          form.reset({
+              name: user.name || "",
+              institute: user.institute || "",
+              contactNumber: user.contactNumber || "",
+          })
+      }
+  }, [user, form]);
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     if (!user) {
@@ -130,7 +140,7 @@ export function CompleteSpocProfileForm() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Institute</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isLoading}>
+                    <Select onValueChange={field.onChange} value={field.value} disabled={isLoading}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Select your institute" />

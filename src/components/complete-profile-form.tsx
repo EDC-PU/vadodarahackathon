@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { db } from "@/lib/firebase";
@@ -42,12 +42,27 @@ export function CompleteProfileForm() {
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      name: user?.name || "",
-      department: user?.department || "",
-      enrollmentNumber: user?.enrollmentNumber || "",
-      contactNumber: user?.contactNumber || "",
+      name: "",
+      department: "",
+      enrollmentNumber: "",
+      contactNumber: "",
+      gender: undefined,
+      semester: undefined,
+      yearOfStudy: "",
     },
   });
+
+  useEffect(() => {
+    if (user) {
+        form.reset({
+            name: user.name || "",
+            department: user.department || "",
+            enrollmentNumber: user.enrollmentNumber || "",
+            contactNumber: user.contactNumber || "",
+            gender: user.gender || undefined,
+        })
+    }
+  }, [user, form]);
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     console.log("CompleteProfileForm onSubmit triggered with values:", values);
@@ -178,7 +193,7 @@ export function CompleteProfileForm() {
                    <FormControl>
                       <RadioGroup
                         onValueChange={field.onChange}
-                        defaultValue={field.value}
+                        value={field.value}
                         className="flex items-center space-x-4 pt-2"
                          disabled={isLoading}
                       >
@@ -228,7 +243,7 @@ export function CompleteProfileForm() {
                   <FormItem>
                     <FormLabel>Semester</FormLabel>
                     <FormControl>
-                      <Input type="number" placeholder="e.g., 6" {...field} disabled={isLoading}/>
+                      <Input type="number" placeholder="e.g., 6" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

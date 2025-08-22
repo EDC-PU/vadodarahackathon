@@ -55,12 +55,12 @@ export function RegistrationForm() {
     resolver: zodResolver(formSchema),
     defaultValues: {
       teamName: "",
-      name: user?.name || "",
-      institute: user?.institute || "",
-      department: user?.department || "",
-      enrollmentNumber: user?.enrollmentNumber || "",
-      contactNumber: user?.contactNumber || "",
-      gender: user?.gender || undefined,
+      name: "",
+      institute: "",
+      department: "",
+      enrollmentNumber: "",
+      contactNumber: "",
+      gender: undefined,
       semester: undefined,
       yearOfStudy: "",
     },
@@ -242,7 +242,7 @@ export function RegistrationForm() {
                     <FormControl>
                         <RadioGroup
                           onValueChange={field.onChange}
-                          defaultValue={field.value}
+                          value={field.value}
                           className="flex items-center space-x-4 pt-2"
                           disabled={isLoading}
                         >
@@ -280,7 +280,7 @@ export function RegistrationForm() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Institute</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isLoading}>
+                    <Select onValueChange={field.onChange} value={field.value} disabled={isLoading}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Select your institute" />
