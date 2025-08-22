@@ -1,0 +1,45 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // Helper function to check if a user is authenticated
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // Helper function to get user's role from Firestore
+    function getUserRole(userId) {
+      return get(/databases/$(database)/documents/users/$(userId)).data.role;
+    }
+
+    // Helper function to check if the user is a member of a team
+    function isTeamMember(teamId) {
+        let team = get(/databases/$(database)/documents/teams/$(teamId)).data;
+        return request.auth.uid == team.leader.uid || request.auth.uid in team.members.map(m => m.uid);
+    }
+
+    // Public assets (e.g., event logos, brochures) can be read by anyone.
+    match /public/{allPaths=**} {
+      allow read: if true;
+      allow write: if false; // Only admins should upload public files via console/backend
+    }
+
+    // Users can manage their own files (e.g., profile pictures).
+    // Files are stored in a folder named after their user ID.
+    match /users/{userId}/{allPaths=**} {
+      allow read, write: if request.auth.uid == userId;
+    }
+    
+    // Team-specific files (e.g., project submissions).
+    // Only members of that team can read or write files.
+    match /teams/{teamId}/{allPaths=**} {
+        allow read, write: if isSignedIn() && isTeamMember(teamId);
+    }
+
+    // Default deny: No other paths are accessible.
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}
