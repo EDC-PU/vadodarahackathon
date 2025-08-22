@@ -2,104 +2,87 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-  
-    // Helper Functions
+
+    // Helper functions
     function isSignedIn() {
       return request.auth != null;
     }
 
-    function isUser(uid) {
-      return isSignedIn() && request.auth.uid == uid;
-    }
-    
-    function getUserData(uid) {
-      return get(/databases/$(database)/documents/users/$(uid)).data;
-    }
-    
-    function isRole(role) {
-      return isSignedIn() && getUserData(request.auth.uid).role == role;
+    function isUser(userId) {
+      return isSignedIn() && request.auth.uid == userId;
     }
 
-    function isAdmin() {
-      return isRole('admin');
+    function getUserData(userId) {
+      return get(/databases/$(database)/documents/users/$(userId)).data;
     }
     
+    function getTeamData(teamId) {
+        return get(/databases/$(database)/documents/teams/$(teamId)).data;
+    }
+
     function isTeamLeader(teamId) {
-       let team = get(/databases/$(database)/documents/teams/$(teamId)).data;
-       return isUser(team.leader.uid);
+      let user = getUserData(request.auth.uid);
+      return user.role == 'leader' && user.teamId == teamId;
     }
     
     function isTeamMember(teamId) {
-      let team = get(/databases/$(database)/documents/teams/$(teamId)).data;
-      let userInMembers = request.auth.uid in team.members.map(member => member.uid);
-      return isTeamLeader(teamId) || userInMembers;
+      let team = getTeamData(teamId);
+      // Check if user is the leader or in the members array
+      return request.auth.uid == team.leader.uid || request.auth.uid in team.members.map(member => member.uid);
     }
-
+    
     function isSpocForTeam(teamId) {
-        let team = get(/databases/$(database)/documents/teams/$(teamId)).data;
-        let spocData = getUserData(request.auth.uid);
-        return spocData.role == 'spoc' && spocData.institute == team.institute;
+        let user = getUserData(request.auth.uid);
+        let team = getTeamData(teamId);
+        return user.role == 'spoc' && user.institute == team.institute;
     }
 
-    // Collection Rules
+    function isAdmin() {
+      // Check for the existence of role and if it is 'admin'
+      return isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) && getUserData(request.auth.uid).role == 'admin';
+    }
 
+    // USERS collection
     match /users/{userId} {
-      // Any authenticated user can get another user's profile (for SPOC details, etc.)
+      // Any authenticated user can read any user's profile (for team/SPOC details)
       allow get: if isSignedIn();
       // A user can list their own profile, admins can list all
       allow list: if isUser(userId) || isAdmin();
-      // A user can only create their own profile document
-      allow create: if isUser(userId);
-      // A user can only update their own profile document
-      allow update: if isUser(userId);
-      // No one can delete user profiles through the client
-      allow delete: if false;
+      // A user can only write to their own profile, or an admin can.
+      allow write: if isUser(userId) || isAdmin();
     }
-    
+
+    // TEAMS collection
     match /teams/{teamId} {
-        // A user can read a team doc if they are a member, the institute's SPOC, or an admin
-        allow read: if isSignedIn() && (isTeamMember(teamId) || isSpocForTeam(teamId) || isAdmin());
-        // Only a team leader can create a team (handled by backend logic, client check is on user doc)
-        allow create: if isTeamLeader(teamId);
-        // Only the team leader, SPOC, or an admin can update a team
-        allow update: if isSignedIn() && (isTeamLeader(teamId) || isSpocForTeam(teamId) || isAdmin());
-        // Only a SPOC or admin can delete a team
-        allow delete: if isSignedIn() && (isSpocForTeam(teamId) || isAdmin());
+      // A user can read a team document if they are a member, a relevant SPOC, or an admin
+      allow get: if isTeamMember(teamId) || isSpocForTeam(teamId) || isAdmin();
+      // Users can query teams, permissions are checked at the read level.
+      allow list: if isSignedIn();
+      // Only the team leader can update their team details.
+      allow update: if isTeamLeader(teamId);
+       // Only an admin or a spoc can delete a team
+      allow delete: if isAdmin() || isSpocForTeam(teamId);
+      // Only an authenticated user can create a team (further logic in flows)
+      allow create: if isSignedIn();
     }
-    
+
+    // INVITATIONS collection
     match /invitations/{invitationId} {
-        // A user can read an invitation if it's for them, or if they are the leader of the team
-        allow read: if isSignedIn() && (
-                      resource.data.email == request.auth.token.email || 
-                      isTeamLeader(resource.data.teamId)
-                    );
-        // Any signed-in user can create an invitation (specifically, team leaders)
+        // An invitation can be read by the leader of the team that sent it,
+        // or by the user who it is addressed to.
+        allow read: if isTeamLeader(resource.data.teamId) || getUserData(request.auth.uid).email == resource.data.email || isAdmin();
+        // A user can update an invitation if they are the intended recipient (to accept/reject)
+        allow update: if getUserData(request.auth.uid).email == resource.data.email;
+        // Authenticated users can create invitations.
         allow create: if isSignedIn();
-        // A user can update an invitation if it's for them (to accept/reject)
-        allow update: if isSignedIn() && resource.data.email == request.auth.token.email;
-        // No one can delete invitations directly from the client
-        allow delete: if false;
+        // Only the team leader can delete an invitation they sent
+        allow delete: if isTeamLeader(resource.data.teamId);
     }
     
-    match /problemStatements/{statementId} {
-      // Anyone authenticated can read problem statements
-      allow read: if isSignedIn();
-      // Only admins can write problem statements
-      allow write: if isAdmin();
-    }
-    
-    match /config/{configId} {
-        // Anyone can read config (e.g., registration deadline)
-        allow read: if true;
-        // Only admins can write to config
-        allow write: if isAdmin();
-    }
-    
-    match /announcements/{announcementId} {
-        // Anyone authenticated can read announcements
-        allow read: if isSignedIn();
-        // Only admins can write announcements
-        allow write: if isAdmin();
+    // PROBLEM STATEMENTS, ANNOUNCEMENTS, CONFIG can be read by anyone, written by admins
+    match /{collection}/{docId} {
+       allow read: if isSignedIn();
+       allow write: if isAdmin();
     }
   }
 }
