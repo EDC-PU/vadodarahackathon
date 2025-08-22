@@ -187,9 +187,9 @@ export function useAuth() {
     } else {
         // User document doesn't exist. This is a brand new user signing up.
         const signUpForm = JSON.parse(sessionStorage.getItem('sign-up-form') || '{}');
-        const role = signUpForm?.role;
+        const { role, contactNumber } = signUpForm;
 
-        const newProfile: UserProfile = {
+        const newProfile: Partial<UserProfile> = {
             uid: loggedInUser.uid,
             name: loggedInUser.displayName || 'New User',
             email: loggedInUser.email!,
@@ -203,8 +203,7 @@ export function useAuth() {
 
         if (role === 'spoc') {
             newProfile.spocStatus = 'pending';
-            // We need a server-side flow to disable the user, as it's a privileged action.
-            // For now, the application logic will prevent login.
+            newProfile.contactNumber = contactNumber; // Save contact number for SPOC
             toastTitle = "Registration Submitted";
             toastDescription = "Your request has been sent for admin approval. You will be notified via email.";
         }

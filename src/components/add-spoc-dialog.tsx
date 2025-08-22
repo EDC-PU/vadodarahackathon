@@ -31,7 +31,10 @@ interface AddSpocDialogProps {
 
 const spocSchema = z.object({
   name: z.string().min(2, "Name is required."),
-  email: z.string().email("Invalid email address."),
+  email: z.string().email("Invalid email address.").refine(
+    (email) => email.endsWith('@paruluniversity.ac.in'),
+    { message: "Email must end with @paruluniversity.ac.in" }
+  ),
   institute: z.string().min(1, "Please select an institute."),
   contactNumber: z.string().regex(/^\d{10}$/, "Please enter a valid 10-digit phone number."),
 });
@@ -113,7 +116,7 @@ export function AddSpocDialog({ isOpen, onOpenChange, onSpocAdded }: AddSpocDial
                 <FormItem>
                   <FormLabel>Email</FormLabel>
                   <FormControl>
-                    <Input type="email" placeholder="spoc@example.com" {...field} />
+                    <Input type="email" placeholder="spoc@paruluniversity.ac.in" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

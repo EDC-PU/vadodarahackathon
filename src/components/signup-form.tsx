@@ -37,10 +37,28 @@ const formSchema = z.object({
   email: z.string().email({ message: "Invalid email address." }),
   password: z.string().min(6, { message: "Password must be at least 6 characters." }),
   confirmPassword: z.string().min(6, { message: "Password must be at least 6 characters." }),
-  role: z.string({ required_error: "Please select a role." }),
+  role: z.enum(["leader", "member", "spoc"], { required_error: "Please select a role." }),
+  contactNumber: z.string().optional(),
 }).refine((data) => data.password === data.confirmPassword, {
     message: "Passwords don't match",
     path: ["confirmPassword"],
+}).superRefine((data, ctx) => {
+    if (data.role === 'spoc') {
+        if (!data.email.endsWith('@paruluniversity.ac.in')) {
+            ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                message: "SPOC email must end with @paruluniversity.ac.in",
+                path: ["email"],
+            });
+        }
+        if (!data.contactNumber || !/^\d{10}$/.test(data.contactNumber)) {
+            ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                message: "Please enter a valid 10-digit phone number.",
+                path: ["contactNumber"],
+            });
+        }
+    }
 });
 
 export function SignupForm() {
@@ -76,8 +94,11 @@ export function SignupForm() {
       email: "",
       password: "",
       confirmPassword: "",
+      contactNumber: "",
     },
   });
+
+  const selectedRole = form.watch("role");
 
   const isRegistrationClosed = deadline ? new Date() > deadline : false;
 
@@ -151,6 +172,28 @@ export function SignupForm() {
       <CardContent className="p-6">
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+             <FormField
+              control={form.control}
+              name="role"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>I am registering as a...</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select your role" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="leader">Team Leader</SelectItem>
+                      <SelectItem value="member">Team Member (Invited)</SelectItem>
+                      <SelectItem value="spoc">Institute SPOC</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
             <FormField
               control={form.control}
               name="email"
@@ -164,6 +207,21 @@ export function SignupForm() {
                 </FormItem>
               )}
             />
+             {selectedRole === 'spoc' && (
+                <FormField
+                control={form.control}
+                name="contactNumber"
+                render={({ field }) => (
+                    <FormItem>
+                    <FormLabel>Contact Number</FormLabel>
+                    <FormControl>
+                        <Input placeholder="9876543210" {...field} disabled={isLoading || isGoogleLoading}/>
+                    </FormControl>
+                    <FormMessage />
+                    </FormItem>
+                )}
+                />
+            )}
             <FormField
               control={form.control}
               name="password"
@@ -213,28 +271,7 @@ export function SignupForm() {
                 </FormItem>
               )}
             />
-            <FormField
-              control={form.control}
-              name="role"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>I am registering as a...</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select your role" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="leader">Team Leader</SelectItem>
-                      <SelectItem value="member">Team Member</SelectItem>
-                      <SelectItem value="spoc">Institute SPOC</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+           
             <Button type="submit" className="w-full" disabled={isLoading || isGoogleLoading}>
               {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Sign Up with Email
