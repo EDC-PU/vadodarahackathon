@@ -87,6 +87,22 @@ const createSpocFlow = ai.defineFlow(
     }
 
     try {
+      // Check if a SPOC for this institute already exists
+      console.log(`Checking for existing SPOC for institute: ${input.institute}`);
+      const spocQuery = adminDb.collection('users')
+        .where('institute', '==', input.institute)
+        .where('role', '==', 'spoc')
+        .where('spocStatus', '==', 'approved');
+      
+      const existingSpocSnapshot = await spocQuery.get();
+      if (!existingSpocSnapshot.empty) {
+        const existingSpoc = existingSpocSnapshot.docs[0].data();
+        const errorMessage = `An approved SPOC (${existingSpoc.name}) already exists for ${input.institute}.`;
+        console.error(errorMessage);
+        return { success: false, message: errorMessage };
+      }
+      console.log(`No existing SPOC found for ${input.institute}. Proceeding...`);
+
       const tempPassword = generatePassword();
       
       console.log("Creating Firebase Auth user...");

@@ -19,7 +19,7 @@ import { useState, useEffect } from "react";
 import { Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { db } from "@/lib/firebase";
-import { doc, updateDoc } from "firebase/firestore";
+import { doc, updateDoc, collection, query, where, getDocs } from "firebase/firestore";
 import { useAuth } from "@/hooks/use-auth";
 import { UserProfile } from "@/lib/types";
 import {
@@ -34,7 +34,7 @@ import { notifyAdminsOfSpocRequest } from "@/ai/flows/notify-admins-flow";
 
 const formSchema = z.object({
   name: z.string().min(2, { message: "Name must be at least 2 characters." }),
-  institute: z.string({ required_error: "Please select an institute." }),
+  institute: z.string({ required_error: "Please select an institute." }).min(1, "Please select an institute."),
   contactNumber: z.string().regex(/^\d{10}$/, { message: "Please enter a valid 10-digit phone number." }),
 });
 
@@ -70,6 +70,28 @@ export function CompleteSpocProfileForm() {
     
     setIsLoading(true);
     try {
+        // Check if a SPOC for this institute already exists
+        console.log(`Checking for existing SPOC for institute: ${values.institute}`);
+        const spocQuery = query(
+            collection(db, 'users'),
+            where('institute', '==', values.institute),
+            where('role', '==', 'spoc')
+        );
+        
+        const existingSpocSnapshot = await getDocs(spocQuery);
+        if (!existingSpocSnapshot.empty) {
+            // Check if the existing SPOC is not the current user
+            const isDifferentUser = existingSpocSnapshot.docs.some(doc => doc.id !== user.uid);
+            if (isDifferentUser) {
+              const errorMessage = `A SPOC for ${values.institute} already exists or has a pending registration.`;
+              console.error(errorMessage);
+              toast({ title: "Registration Blocked", description: errorMessage, variant: "destructive" });
+              setIsLoading(false);
+              return;
+            }
+        }
+        console.log(`No existing SPOC found for ${values.institute}. Proceeding...`);
+
         const userDocRef = doc(db, "users", user.uid);
         const updatedProfileData: Partial<UserProfile> = {
             name: values.name,
