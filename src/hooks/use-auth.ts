@@ -16,7 +16,6 @@ export function useAuth() {
   const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [isNavigating, setIsNavigating] = useState(false);
-  const [teamMembers, setTeamMembers] = useState<UserProfile[]>([]);
   const router = useRouter();
   const pathname = usePathname();
   const { toast } = useToast();
@@ -91,46 +90,6 @@ export function useAuth() {
     }
   }, []);
 
-    useEffect(() => {
-        let unsubscribe: (() => void) | undefined;
-
-        if (user?.teamId) {
-            const teamDocRef = doc(db, 'teams', user.teamId);
-
-            unsubscribe = onSnapshot(teamDocRef, async (teamDoc) => {
-                if (teamDoc.exists() && user) {
-                    const teamData = teamDoc.data() as Team;
-                    
-                    const leaderProfile = teamData.leader.uid === user.uid ? user : (await getDoc(doc(db, 'users', teamData.leader.uid))).data() as UserProfile;
-
-                    const memberEmails = teamData.members.map(m => m.email).filter(email => email !== user.email);
-                    
-                    let membersData: UserProfile[] = [];
-
-                    if (memberEmails.length > 0) {
-                        const usersQuery = query(collection(db, 'users'), where('email', 'in', memberEmails));
-                        const usersSnapshot = await getDocs(usersQuery);
-                        membersData = usersSnapshot.docs.map(d => d.data() as UserProfile);
-                    }
-                    
-                    const allMembers = leaderProfile ? [leaderProfile, ...membersData] : membersData;
-                    setTeamMembers(allMembers);
-
-                } else {
-                    setTeamMembers(user && user.role === 'leader' ? [user] : []);
-                }
-            });
-        } else {
-            setTeamMembers(user && user.role === 'leader' ? [user] : []);
-        }
-
-        return () => {
-            if (unsubscribe) {
-                unsubscribe();
-            }
-        };
-    }, [user]);
-
 
   useEffect(() => {
     if (loading || isNavigating) {
@@ -150,7 +109,7 @@ export function useAuth() {
     if (!user) {
         // If there's no user and we're not on a public page, redirect to login
         const publicPaths = ['/login', '/register', '/forgot-password', '/'];
-        if (!publicPaths.includes(pathname)) {
+        if (!publicPaths.includes(pathname) && !pathname.startsWith('/_next/')) {
             console.log(`Redirect Check: No user found, redirecting from protected path ${pathname} to /login.`);
             performRedirect('/login');
         }
@@ -310,5 +269,7 @@ export function useAuth() {
   }, [toast]);
   
 
-  return { user, firebaseUser, loading, teamMembers, handleSignOut, handleLogin, reloadUser };
+  return { user, firebaseUser, loading, handleSignOut, handleLogin, reloadUser };
 }
+
+    

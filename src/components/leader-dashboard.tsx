@@ -8,7 +8,7 @@ import { AlertCircle, CheckCircle, PlusCircle, Trash2, User, Loader2, FileText, 
 import { Alert, AlertDescription, AlertTitle } from "./ui/alert";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { db } from "@/lib/firebase";
 import { doc, onSnapshot, updateDoc, arrayRemove, collection, query, where, getDocs, writeBatch } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
@@ -31,34 +31,68 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from ".
 
 
 export default function LeaderDashboard() {
-  const { user, loading: authLoading, teamMembers } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const [team, setTeam] = useState<Team | null>(null);
+  const [teamMembers, setTeamMembers] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [isInviting, setIsInviting] = useState(false);
   const [isRemoving, setIsRemoving] = useState<string | null>(null);
   const { toast } = useToast();
 
-  useEffect(() => {
-    if (authLoading) return;
-    if (user?.teamId) {
-        const teamDocRef = doc(db, "teams", user.teamId);
-        const unsubscribe = onSnapshot(teamDocRef, (doc) => {
-            if (doc.exists()) {
-                setTeam({ id: doc.id, ...doc.data() } as Team);
+  const fetchTeamMembers = useCallback((memberUIDs: string[]) => {
+    const unsubscribers = memberUIDs.map(uid => {
+      const userDocRef = doc(db, 'users', uid);
+      return onSnapshot(userDocRef, (doc) => {
+        if (doc.exists()) {
+          const updatedMember = { uid: doc.id, ...doc.data() } as UserProfile;
+          setTeamMembers(prevMembers => {
+            const existingMemberIndex = prevMembers.findIndex(m => m.uid === updatedMember.uid);
+            if (existingMemberIndex > -1) {
+              const newMembers = [...prevMembers];
+              newMembers[existingMemberIndex] = updatedMember;
+              return newMembers;
             } else {
-                setTeam(null);
+              return [...prevMembers, updatedMember];
             }
-            setLoading(false);
-        }, (error) => {
-            console.error("Error fetching team:", error);
-            toast({ title: "Error", description: "Could not fetch team data.", variant: "destructive" });
-            setLoading(false);
-        });
-        return () => unsubscribe();
-    } else {
+          });
+        }
+      });
+    });
+    return () => unsubscribers.forEach(unsub => unsub());
+  }, []);
+
+
+  useEffect(() => {
+    if (!user?.teamId) {
         setLoading(false);
+        return;
     }
-  }, [user, authLoading, toast]);
+    setLoading(true);
+
+    const teamDocRef = doc(db, 'teams', user.teamId);
+    const unsubscribeTeam = onSnapshot(teamDocRef, (doc) => {
+        if (doc.exists()) {
+            const teamData = { id: doc.id, ...doc.data() } as Team;
+            setTeam(teamData);
+
+            const allMemberUIDs = [teamData.leader.uid, ...teamData.members.map(m => m.uid)];
+            const uniqueUIDs = [...new Set(allMemberUIDs)];
+
+            // Reset members before fetching new ones to remove stale data
+            setTeamMembers([]);
+            fetchTeamMembers(uniqueUIDs);
+
+        } else {
+            setTeam(null);
+            setTeamMembers([]);
+        }
+        setLoading(false);
+    });
+
+    return () => unsubscribeTeam();
+
+}, [user, fetchTeamMembers]);
+
 
   const handleAddMember = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -161,6 +195,13 @@ export default function LeaderDashboard() {
       </div>
     );
   }
+  
+  const sortedTeamMembers = [...teamMembers].sort((a, b) => {
+      if (a.role === 'leader') return -1;
+      if (b.role === 'leader') return 1;
+      return a.name.localeCompare(b.name);
+  });
+
 
   const teamValidation = {
     memberCount: {
@@ -184,7 +225,7 @@ export default function LeaderDashboard() {
             <p className="text-muted-foreground">Manage your team and review your registration status.</p>
         </header>
 
-        <Card className="mb-8">
+        <Card className="mb-8 w-full">
             <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                     <Users2 />
@@ -206,8 +247,8 @@ export default function LeaderDashboard() {
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {teamMembers.length > 0 ? (
-                            teamMembers.map((member) => (
+                        {sortedTeamMembers.length > 0 ? (
+                            sortedTeamMembers.map((member) => (
                                 <TableRow key={member.uid}>
                                     <TableCell className="font-medium">{member.name}</TableCell>
                                     <TableCell>
@@ -247,7 +288,7 @@ export default function LeaderDashboard() {
                          ) : (
                             <TableRow>
                                 <TableCell colSpan={7} className="text-center text-muted-foreground h-24">
-                                    No members have joined yet.
+                                    {loading ? <Loader2 className="h-6 w-6 animate-spin mx-auto"/> : 'No members have joined yet.'}
                                 </TableCell>
                             </TableRow>
                          )
@@ -355,3 +396,5 @@ export default function LeaderDashboard() {
     </div>
   );
 }
+
+    
