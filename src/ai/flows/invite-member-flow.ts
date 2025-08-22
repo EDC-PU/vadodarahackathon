@@ -85,6 +85,11 @@ const inviteMemberFlow = ai.defineFlow(
                 console.error(errorMessage);
                 return { success: false, message: errorMessage };
             }
+            if (existingUser.role === 'spoc' || existingUser.role === 'admin') {
+                const errorMessage = "Users with an admin or SPOC role cannot be added to teams.";
+                console.error(errorMessage);
+                return { success: false, message: errorMessage };
+            }
         }
 
         // 2. Check if a pending invitation for this email already exists
