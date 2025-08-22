@@ -19,10 +19,10 @@ import { useState } from "react";
 import { Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { db } from "@/lib/firebase";
-import { doc, updateDoc } from "firebase/firestore";
+import { doc, updateDoc, getDoc, writeBatch } from "firebase/firestore";
 import { RadioGroup, RadioGroupItem } from "./ui/radio-group";
 import { useAuth } from "@/hooks/use-auth";
-import { UserProfile } from "@/lib/types";
+import { Team, UserProfile } from "@/lib/types";
 
 const formSchema = z.object({
   name: z.string().min(2, { message: "Name must be at least 2 characters." }),
@@ -57,18 +57,42 @@ export function CompleteProfileForm() {
     
     setIsLoading(true);
     try {
+        const batch = writeBatch(db);
+
+        // 1. Update the user's own profile document
         const userDocRef = doc(db, "users", user.uid);
-        
         const updatedProfileData: Partial<UserProfile> = {
             name: values.name,
             gender: values.gender,
             department: values.department,
             enrollmentNumber: values.enrollmentNumber,
             contactNumber: values.contactNumber,
-            // Assuming semester and year of study might be needed later
         };
+        batch.update(userDocRef, updatedProfileData);
+
+        // 2. If user is a member of a team, update their details in the team document
+        if (user.role === 'member' && user.teamId) {
+            const teamDocRef = doc(db, "teams", user.teamId);
+            const teamDoc = await getDoc(teamDocRef);
+            if (teamDoc.exists()) {
+                const teamData = teamDoc.data() as Team;
+                const memberIndex = teamData.members.findIndex(m => m.email === user.email);
+                
+                if (memberIndex !== -1) {
+                    const updatedMembers = [...teamData.members];
+                    updatedMembers[memberIndex] = {
+                        ...updatedMembers[memberIndex],
+                        name: values.name,
+                        gender: values.gender,
+                        enrollmentNumber: values.enrollmentNumber,
+                        contactNumber: values.contactNumber,
+                    };
+                    batch.update(teamDocRef, { members: updatedMembers });
+                }
+            }
+        }
         
-        await updateDoc(userDocRef, updatedProfileData);
+        await batch.commit();
 
         toast({
             title: "Profile Updated!",
