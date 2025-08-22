@@ -1,3 +1,4 @@
+
 'use server';
 
 /**
@@ -40,11 +41,17 @@ const prompt = ai.definePrompt({
   The current value they have entered is '{{value}}'.
   Here's some context about the form: {{formContext}}
 
+  {{#if (eq field "Team Name")}}
+  Your tip should be about creating a creative and unique team name that reflects the team's identity and the spirit of the Vadodara Hackathon 6.0.
+  Suggest a few creative names directly for a hackathon event.
+  The names should be short and catchy. For example: "Code Crusaders", "Byte Busters", or "Vadodara Voyagers".
+  {{else}}
   Provide a single, concise tip to help the user fill out this field correctly and completely.
   The tip should be no more than 2 sentences. Focus on accuracy and completeness of the field.
-  Do not provide any introductory or closing salutations.
-  Do not make up information that is not available in the context provided.
   If there is nothing helpful to say, say nothing.
+  {{/if}}
+  
+  Do not provide any introductory or closing salutations.
   `,
 });
 
