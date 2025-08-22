@@ -53,16 +53,16 @@ export default function LandingPage() {
         <section className="py-20 md:py-32">
           <div className="container max-w-7xl text-center">
             <div className="flex justify-center mb-6">
-                <Image src="https://placehold.co/150x150.png" alt="Vadodara Hackathon Logo" width={150} height={150} className="rounded-full" data-ai-hint="hackathon logo" />
+                <Image src="https://placehold.co/150x150.png" alt="Vadodara Hackathon Logo" width={150} height={150} className="rounded-full" data-ai-hint="futuristic logo" />
             </div>
-            <h1 className="text-4xl md:text-6xl font-bold tracking-tighter mb-4 font-headline bg-clip-text text-transparent bg-gradient-to-r from-primary to-accent">
+            <h1 className="text-4xl md:text-6xl font-bold tracking-tighter mb-4 font-headline bg-clip-text text-transparent bg-gradient-to-r from-primary to-blue-400">
               Vadodara Hackathon 6.0
             </h1>
             <p className="max-w-3xl mx-auto text-lg md:text-xl text-foreground/80 mb-8">
               Hosted by Parul University, PIERC. Join us for 24 hours of innovation, collaboration, and creation.
             </p>
             <div className="flex flex-col sm:flex-row justify-center gap-4">
-              <Button size="lg" asChild className="bg-gradient-to-r from-primary to-blue-400 hover:scale-105 transition-transform">
+              <Button size="lg" asChild className="hover:scale-105 transition-transform">
                 <Link href="/register?category=Software">
                   <Code className="mr-2 h-5 w-5" /> Register (Software)
                 </Link>
@@ -88,7 +88,7 @@ export default function LandingPage() {
               </p>
             </div>
             <div>
-              <Image src="https://placehold.co/600x400.png" alt="Hackathon event" width={600} height={400} className="rounded-lg shadow-xl" data-ai-hint="students coding" />
+              <Image src="https://placehold.co/600x400.png" alt="Hackathon event" width={600} height={400} className="rounded-lg shadow-xl" data-ai-hint="team brainstorming" />
             </div>
           </div>
         </section>

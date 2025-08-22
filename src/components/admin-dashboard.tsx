@@ -3,7 +3,9 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Download, PlusCircle, User, Users, Wrench } from "lucide-react";
+import { Download, PlusCircle, User, Users, Wrench, Shield } from "lucide-react";
+import { Input } from "./ui/input";
+import { Label } from "./ui/label";
 
 const spocs = [
   { name: "Dr. Smith", email: "smith@msu.ac.in", phone: "9876543210", institute: "Maharaja Sayajirao University" },
@@ -14,6 +16,10 @@ const teams = [
     { name: "Tech Titans", institute: "Parul University", members: 6, category: "Software" },
     { name: "Circuit Breakers", institute: "MSU", members: 5, category: "Hardware" },
 ];
+
+const admins = [
+    { email: "pranavrathi07@gmail.com" }
+]
 
 export default function AdminDashboard() {
   return (
@@ -28,6 +34,7 @@ export default function AdminDashboard() {
             <TabsList>
               <TabsTrigger value="overview">Overview</TabsTrigger>
               <TabsTrigger value="spocs">Manage SPOCs</TabsTrigger>
+              <TabsTrigger value="admins">Manage Admins</TabsTrigger>
               <TabsTrigger value="teams">All Teams</TabsTrigger>
               <TabsTrigger value="settings">Event Settings</TabsTrigger>
             </TabsList>
@@ -78,6 +85,40 @@ export default function AdminDashboard() {
                 <p>SPOC list will be displayed here.</p>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="admins">
+            <div className="grid gap-8 md:grid-cols-2">
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Create Admin</CardTitle>
+                        <CardDescription>Add a new administrator by email.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <form className="space-y-4">
+                            <div>
+                                <Label htmlFor="admin-email">Admin Email</Label>
+                                <Input id="admin-email" type="email" placeholder="admin@example.com" />
+                            </div>
+                            <Button type="submit"><PlusCircle className="mr-2 h-4 w-4" /> Create Admin</Button>
+                        </form>
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Current Admins</CardTitle>
+                        <CardDescription>The following users have admin privileges.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                        {admins.map(admin => (
+                            <div key={admin.email} className="flex items-center gap-3 p-3 bg-secondary rounded-md">
+                                <Shield className="h-5 w-5 text-primary"/>
+                                <span className="font-medium">{admin.email}</span>
+                            </div>
+                        ))}
+                    </CardContent>
+                </Card>
+            </div>
         </TabsContent>
 
         <TabsContent value="teams">

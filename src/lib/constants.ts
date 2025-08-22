@@ -1,9 +1,12 @@
 export const INSTITUTES = [
-  "Parul University",
-  "Maharaja Sayajirao University of Baroda",
-  "Navrachana University",
-  "ITM (SLS) Baroda University",
-  "Sigma Group of Institutes",
-  "Babaria Institute of Technology",
+  "Parul Institute of Paramedical & Health Sciences",
+  "Parul Institute of Ayurved & Research",
+  "Parul Institute of Ayurved",
+  "Parul Institute of Applied Sciences",
+  "Parul Institute of Computer Applications",
+  "Parul Institute of Engineering & Technology",
+  "Parul Institute of Technology",
+  "Parul Polytechnic Institute",
+  "Parul Institute of Engineering & Technology-Diploma Studies",
   "Other",
 ];
