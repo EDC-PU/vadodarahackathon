@@ -1,3 +1,4 @@
+
 'use client';
 
 import Link from 'next/link';
@@ -49,9 +50,8 @@ export default function LandingPage() {
     <div className="flex min-h-screen flex-col bg-background">
       <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="container flex h-16 max-w-7xl items-center justify-between">
-          <Link href="#" className="flex items-center gap-2 font-bold text-lg" prefetch={false}>
-            <Image src="https://www.pierc.org/vhlogo.png" alt="Vadodara Hackathon Logo" width={32} height={32} />
-            <span>Vadodara Hackathon 6.0</span>
+          <Link href="https://paruluniversity.ac.in/" target="_blank" rel="noopener noreferrer" className="flex items-center" prefetch={false}>
+             <Image src="https://www.paruluniversity.ac.in/pu-web/images/logo.png" alt="Parul University Logo" width={150} height={50} style={{height: 'auto'}}/>
           </Link>
           <nav className="hidden md:flex items-center gap-6 text-sm font-medium">
             {navLinks.map((link) => (
@@ -60,13 +60,18 @@ export default function LandingPage() {
               </Link>
             ))}
           </nav>
-          <div className="flex items-center gap-2">
-            <Button variant="ghost" asChild>
-              <Link href="/login">Login</Link>
-            </Button>
-            <Button asChild>
-              <Link href="/register">Register</Link>
-            </Button>
+          <div className="flex items-center gap-4">
+             <div className="flex items-center gap-2">
+                <Button variant="ghost" asChild>
+                  <Link href="/login">Login</Link>
+                </Button>
+                <Button asChild>
+                  <Link href="/register">Register</Link>
+                </Button>
+              </div>
+              <Link href="https://pierc.org/" target="_blank" rel="noopener noreferrer" className="items-center hidden sm:flex" prefetch={false}>
+                 <img src="https://www.pierc.org/assets/PIERC.svg" alt="PIERC Logo" className="h-8" />
+              </Link>
           </div>
         </div>
       </header>

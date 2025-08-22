@@ -94,10 +94,10 @@ export default function DashboardSidebar() {
   return (
     <>
       <SidebarHeader className="border-b">
-        <div className="flex items-center gap-2 w-full p-2">
-          <Image src="https://www.pierc.org/vhlogo.png" alt="Vadodara Hackathon Logo" width={32} height={32} />
+        <div className="flex items-center justify-center gap-2 w-full p-2">
+          <Image src="https://www.pierc.org/vhlogo.png" alt="Vadodara Hackathon Logo" width={40} height={40} />
           <span className="font-bold text-lg group-data-[collapsible=icon]:hidden">
-            VH 6.0 Portal
+            VH 6.0
           </span>
         </div>
       </SidebarHeader>
