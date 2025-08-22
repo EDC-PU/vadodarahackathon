@@ -5,9 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Loader2, AlertCircle, Save, Pencil, X, Trash2, Users, User, MinusCircle, Badge, ArrowUpDown } from "lucide-react";
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import { auth, db } from "@/lib/firebase";
-import { onAuthStateChanged } from "firebase/auth";
 import { doc, getDoc, collection, query, where, onSnapshot, updateDoc } from "firebase/firestore";
 import { Team, UserProfile, TeamMember } from "@/lib/types";
 import { Alert, AlertTitle, AlertDescription } from "./ui/alert";
@@ -26,12 +25,13 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { manageTeamBySpoc } from "@/ai/flows/manage-team-by-spoc-flow";
+import { useAuth } from "@/hooks/use-auth";
 
 type SortKey = 'teamName' | 'teamNumber' | 'name' | 'email' | 'enrollmentNumber' | 'contactNumber';
 type SortDirection = 'asc' | 'desc';
 
 export default function SpocDashboard() {
-  const [user, setUser] = useState<UserProfile | null>(null);
+  const { user, loading: authLoading } = useAuth();
   const [teams, setTeams] = useState<Team[]>([]);
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
@@ -42,46 +42,40 @@ export default function SpocDashboard() {
   const { toast } = useToast();
 
   useEffect(() => {
-    const unsubscribeAuth = onAuthStateChanged(auth, async (currentUser) => {
-      if (currentUser) {
-        const userDocRef = doc(db, "users", currentUser.uid);
-        const userDoc = await getDoc(userDocRef);
-        if (userDoc.exists()) {
-          const userData = userDoc.data() as UserProfile;
-          setUser(userData);
-
-          if (userData.role === 'spoc' && userData.institute) {
-            // Fetch teams for the SPOC's institute
-            const teamsQuery = query(collection(db, "teams"), where("institute", "==", userData.institute));
-            const unsubscribeTeams = onSnapshot(teamsQuery, (querySnapshot) => {
-              const teamsData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Team));
-              setTeams(teamsData);
-              if (loading) setLoading(false);
-            }, (error) => {
-              console.error("Error fetching teams:", error);
-              setLoading(false);
-            });
-
-            // Fetch all users to populate member details
-            const usersQuery = query(collection(db, "users"));
-            const unsubscribeUsers = onSnapshot(usersQuery, (snapshot) => {
-                const usersData = snapshot.docs.map(doc => doc.data() as UserProfile);
-                setUsers(usersData);
-            });
-
-            return () => {
-              unsubscribeTeams();
-              unsubscribeUsers();
-            };
-          }
+    if (!user || user.role !== 'spoc' || !user.institute) {
+        if (!authLoading) {
+            setLoading(false);
         }
-      }
-      setLoading(false);
+        return;
+    }
+
+    setLoading(true);
+
+    const teamsQuery = query(collection(db, "teams"), where("institute", "==", user.institute));
+    const unsubscribeTeams = onSnapshot(teamsQuery, (querySnapshot) => {
+        const teamsData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Team));
+        setTeams(teamsData);
+    }, (error) => {
+        console.error("Error fetching teams for SPOC:", error);
+        toast({ title: "Error", description: "Failed to fetch institute teams.", variant: "destructive" });
     });
 
-    return () => unsubscribeAuth();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    const usersQuery = query(collection(db, "users"));
+    const unsubscribeUsers = onSnapshot(usersQuery, (snapshot) => {
+        const usersData = snapshot.docs.map(doc => ({ uid: doc.id, ...doc.data() } as UserProfile));
+        setUsers(usersData);
+        setLoading(false);
+    }, (error) => {
+        console.error("Error fetching users for SPOC:", error);
+        toast({ title: "Error", description: "Failed to fetch user data.", variant: "destructive" });
+        setLoading(false);
+    });
+
+    return () => {
+        unsubscribeTeams();
+        unsubscribeUsers();
+    };
+  }, [user, authLoading, toast]);
   
   const getTeamWithFullDetails = (teamsToProcess: Team[]) => {
     return teamsToProcess.map(team => {
@@ -203,7 +197,7 @@ export default function SpocDashboard() {
     }
   }
 
-  if (loading) {
+  if (loading || authLoading) {
     return (
       <div className="flex justify-center items-center h-screen">
         <Loader2 className="h-8 w-8 animate-spin" />
@@ -324,7 +318,7 @@ export default function SpocDashboard() {
                                                 </AlertDialogHeader>
                                                 <AlertDialogFooter>
                                                 <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                                <AlertDialogAction onClick={() => handleDeleteTeam(team.id)}>Delete Team</AlertDialogAction>
+                                                <AlertDialogAction onClick={() => handleDeleteTeam(team.id)} className="bg-destructive hover:bg-destructive/90">Delete Team</AlertDialogAction>
                                                 </AlertDialogFooter>
                                             </AlertDialogContent>
                                         </AlertDialog>
@@ -357,7 +351,7 @@ export default function SpocDashboard() {
                                             </AlertDialogHeader>
                                             <AlertDialogFooter>
                                             <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                            <AlertDialogAction onClick={() => handleRemoveMember(team.id, member)}>Remove Member</AlertDialogAction>
+                                            <AlertDialogAction onClick={() => handleRemoveMember(team.id, member)} className="bg-destructive hover:bg-destructive/90">Remove Member</AlertDialogAction>
                                             </AlertDialogFooter>
                                         </AlertDialogContent>
                                     </AlertDialog>
