@@ -36,7 +36,7 @@ import { Alert, AlertTitle, AlertDescription } from "./ui/alert";
 const formSchema = z.object({
   email: z.string().email({ message: "Invalid email address." }),
   password: z.string().min(6, { message: "Password must be at least 6 characters." }),
-  role: z.string().optional(),
+  role: z.string({ required_error: "Please select a role." }),
 });
 
 export function SignupForm() {
@@ -78,6 +78,7 @@ export function SignupForm() {
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
+    // Store the selected role in session storage to be retrieved in useAuth hook after redirect
     sessionStorage.setItem('sign-up-form', JSON.stringify(values));
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
@@ -107,6 +108,10 @@ export function SignupForm() {
     const provider = new GoogleAuthProvider();
     try {
       const result = await signInWithPopup(auth, provider);
+      // For google sign-in, we can't select a role beforehand. 
+      // We will need a different logic path in useAuth or a subsequent page.
+      // For now, let's assume they become a leader by default if signing up this way.
+      sessionStorage.setItem('sign-up-form', JSON.stringify({ role: 'leader' }));
       await handleLogin(result.user);
     } catch (error: any) {
       console.error("Google Sign-In Error:", error);
@@ -190,17 +195,17 @@ export function SignupForm() {
               name="role"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Role</FormLabel>
+                  <FormLabel>I am registering as a...</FormLabel>
                   <Select onValueChange={field.onChange} defaultValue={field.value}>
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Select a role" />
+                        <SelectValue placeholder="Select your role" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="member">Member</SelectItem>
-                      <SelectItem value="leader">Leader</SelectItem>
-                      <SelectItem value="spoc">SPOC</SelectItem>
+                      <SelectItem value="leader">Team Leader</SelectItem>
+                      <SelectItem value="member">Team Member</SelectItem>
+                      <SelectItem value="spoc">Institute SPOC</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />

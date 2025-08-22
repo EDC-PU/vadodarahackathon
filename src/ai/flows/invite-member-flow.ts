@@ -5,10 +5,10 @@
  */
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
-import { db } from '@/lib/firebase';
 import { doc, updateDoc, arrayUnion } from 'firebase/firestore';
 import nodemailer from 'nodemailer';
-import admin from '@/lib/firebase-admin';
+import { getAdminAuth, getAdminDb } from '@/lib/firebase-admin';
+import { db } from '@/lib/firebase';
 
 
 // Helper to generate a random password
@@ -89,9 +89,10 @@ const inviteMemberFlow = ai.defineFlow(
   async (input) => {
     try {
         const tempPassword = generatePassword();
+        const adminAuth = getAdminAuth();
         
         // 1. Create Firebase Auth user
-        const userRecord = await admin.auth().createUser({
+        const userRecord = await adminAuth.createUser({
             email: input.memberEmail,
             emailVerified: true,
             password: tempPassword,

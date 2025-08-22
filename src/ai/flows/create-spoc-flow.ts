@@ -9,7 +9,7 @@ import { z } from 'genkit';
 import { db } from '@/lib/firebase';
 import { doc, setDoc } from 'firebase/firestore';
 import nodemailer from 'nodemailer';
-import admin from '@/lib/firebase-admin';
+import { getAdminAuth, getAdminDb } from '@/lib/firebase-admin';
 
 // Helper to generate a random password
 const generatePassword = (length = 10) => {
@@ -86,9 +86,11 @@ const createSpocFlow = ai.defineFlow(
   async (input) => {
     try {
       const tempPassword = generatePassword();
+      const adminAuth = getAdminAuth();
+      const adminDb = getAdminDb();
       
       // 1. Create Firebase Auth user
-      const userRecord = await admin.auth().createUser({
+      const userRecord = await adminAuth.createUser({
           email: input.email,
           emailVerified: true,
           password: tempPassword,
@@ -99,8 +101,8 @@ const createSpocFlow = ai.defineFlow(
       const uid = userRecord.uid;
        
       // 2. Create user profile in Firestore
-      const userDocRef = doc(db, 'users', uid);
-      await setDoc(userDocRef, {
+      const userDocRef = adminDb.collection('users').doc(uid);
+      await userDocRef.set({
         uid: uid,
         name: input.name,
         email: input.email,
