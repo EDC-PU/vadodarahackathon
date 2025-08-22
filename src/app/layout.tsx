@@ -21,10 +21,13 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={cn(
+      <body
+        className={cn(
           "min-h-screen bg-background font-body antialiased",
           fontInter.variable
-        )}>
+        )}
+        suppressHydrationWarning
+      >
         {children}
         <Toaster />
       </body>
