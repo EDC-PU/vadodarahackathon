@@ -271,50 +271,29 @@ export default function AllTeamsPage() {
                          <TableRow key={`${team.id}-${memberIndex}`}>
                             {memberIndex === 0 && (
                                 <TableCell rowSpan={team.allMembers.length} className="font-medium align-top">
-                                    <div className="flex flex-col gap-2">
-                                        {editingTeam?.id === team.id ? (
-                                            <div className="flex items-center gap-2">
-                                                <Input 
-                                                    value={editingTeam.name}
-                                                    onChange={(e) => setEditingTeam({ ...editingTeam, name: e.target.value })}
-                                                    className="w-40 h-8"
-                                                    disabled={isSaving === team.id}
-                                                />
-                                                <Button size="icon" className="h-8 w-8" onClick={() => handleSaveTeamName(team.id)} disabled={isSaving === team.id}>
-                                                    {isSaving === team.id ? <Loader2 className="h-4 w-4 animate-spin"/> : <Save className="h-4 w-4"/>}
-                                                </Button>
-                                                <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setEditingTeam(null)} disabled={isSaving === team.id}>
-                                                    <X className="h-4 w-4"/>
-                                                </Button>
-                                            </div>
-                                        ) : (
-                                            <div className="flex items-center gap-2 group">
-                                                <span>{team.name}</span>
-                                                <Button size="icon" variant="ghost" className="h-7 w-7 opacity-0 group-hover:opacity-100" onClick={() => handleEditTeamName(team.id)}>
-                                                    <Pencil className="h-4 w-4 text-muted-foreground"/>
-                                                </Button>
-                                            </div>
-                                        )}
-                                        <AlertDialog>
-                                            <AlertDialogTrigger asChild>
-                                                <Button variant="destructive" size="sm" className="w-fit" disabled={isProcessing === team.id}>
-                                                    <Trash2 className="mr-2 h-4 w-4"/> Delete Team
-                                                </Button>
-                                            </AlertDialogTrigger>
-                                            <AlertDialogContent>
-                                                <AlertDialogHeader>
-                                                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                                                <AlertDialogDescription>
-                                                    This will permanently delete the team "{team.name}" and remove all its members. This action cannot be undone.
-                                                </AlertDialogDescription>
-                                                </AlertDialogHeader>
-                                                <AlertDialogFooter>
-                                                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                                <AlertDialogAction onClick={() => handleDeleteTeam(team.id)} className="bg-destructive hover:bg-destructive/90">Delete</AlertDialogAction>
-                                                </AlertDialogFooter>
-                                            </AlertDialogContent>
-                                        </AlertDialog>
-                                    </div>
+                                    {editingTeam?.id === team.id ? (
+                                        <div className="flex items-center gap-2">
+                                            <Input 
+                                                value={editingTeam.name}
+                                                onChange={(e) => setEditingTeam({ ...editingTeam, name: e.target.value })}
+                                                className="w-40 h-8"
+                                                disabled={isSaving === team.id}
+                                            />
+                                            <Button size="icon" className="h-8 w-8" onClick={() => handleSaveTeamName(team.id)} disabled={isSaving === team.id}>
+                                                {isSaving === team.id ? <Loader2 className="h-4 w-4 animate-spin"/> : <Save className="h-4 w-4"/>}
+                                            </Button>
+                                            <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setEditingTeam(null)} disabled={isSaving === team.id}>
+                                                <X className="h-4 w-4"/>
+                                            </Button>
+                                        </div>
+                                    ) : (
+                                        <div className="flex items-center gap-2 group">
+                                            <span>{team.name}</span>
+                                            <Button size="icon" variant="ghost" className="h-7 w-7 opacity-0 group-hover:opacity-100" onClick={() => handleEditTeamName(team.id)}>
+                                                <Pencil className="h-4 w-4 text-muted-foreground"/>
+                                            </Button>
+                                        </div>
+                                    )}
                                 </TableCell>
                             )}
                             <TableCell>{member.name} {member.isLeader && '(Leader)'}</TableCell>
@@ -323,7 +302,27 @@ export default function AllTeamsPage() {
                             <TableCell>{member.yearOfStudy}</TableCell>
                             <TableCell>{member.semester}</TableCell>
                             <TableCell className="text-right">
-                                {!member.isLeader && (
+                                {member.isLeader ? (
+                                     <AlertDialog>
+                                        <AlertDialogTrigger asChild>
+                                            <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" disabled={isProcessing === team.id}>
+                                                {isProcessing === team.id ? <Loader2 className="h-4 w-4 animate-spin"/> : <Trash2 className="h-4 w-4"/>}
+                                            </Button>
+                                        </AlertDialogTrigger>
+                                        <AlertDialogContent>
+                                            <AlertDialogHeader>
+                                            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                            <AlertDialogDescription>
+                                                This will permanently delete the team "{team.name}" and remove all its members. This action cannot be undone.
+                                            </AlertDialogDescription>
+                                            </AlertDialogHeader>
+                                            <AlertDialogFooter>
+                                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                            <AlertDialogAction onClick={() => handleDeleteTeam(team.id)} className="bg-destructive hover:bg-destructive/90">Delete</AlertDialogAction>
+                                            </AlertDialogFooter>
+                                        </AlertDialogContent>
+                                    </AlertDialog>
+                                ) : (
                                      <AlertDialog>
                                         <AlertDialogTrigger asChild>
                                             <Button variant="ghost" size="icon" className="h-8 w-8" disabled={isProcessing === `${team.id}-${member.uid}`}>
@@ -358,5 +357,3 @@ export default function AllTeamsPage() {
     </div>
   );
 }
-
-    
