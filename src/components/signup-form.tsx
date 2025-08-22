@@ -35,6 +35,7 @@ import { Alert, AlertTitle, AlertDescription } from "./ui/alert";
 import { INSTITUTES } from "@/lib/constants";
 
 const formSchema = z.object({
+  name: z.string().optional(),
   email: z.string().email({ message: "Invalid email address." }),
   password: z.string().min(6, { message: "Password must be at least 6 characters." }),
   confirmPassword: z.string().min(6, { message: "Password must be at least 6 characters." }),
@@ -46,6 +47,13 @@ const formSchema = z.object({
     path: ["confirmPassword"],
 }).superRefine((data, ctx) => {
     if (data.role === 'spoc') {
+        if (!data.name || data.name.length < 2) {
+            ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                message: "Name must be at least 2 characters.",
+                path: ["name"],
+            });
+        }
         if (!data.email.endsWith('@paruluniversity.ac.in')) {
             ctx.addIssue({
                 code: z.ZodIssueCode.custom,
@@ -103,6 +111,7 @@ export function SignupForm() {
       email: "",
       password: "",
       confirmPassword: "",
+      name: "",
       contactNumber: "",
       institute: "",
     },
@@ -206,6 +215,19 @@ export function SignupForm() {
             />
             {selectedRole === 'spoc' && (
                <>
+                <FormField
+                  control={form.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Full Name</FormLabel>
+                      <FormControl>
+                        <Input placeholder="John Doe" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
                 <FormField
                 control={form.control}
                 name="institute"
@@ -329,5 +351,3 @@ export function SignupForm() {
     </Card>
   );
 }
-
-    

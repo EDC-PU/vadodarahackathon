@@ -188,8 +188,8 @@ export function useAuth() {
     } else {
         // User document doesn't exist. This is a brand new user signing up.
         const signUpForm = JSON.parse(sessionStorage.getItem('sign-up-form') || '{}');
-        const { role, contactNumber, institute } = signUpForm;
-        const newUserName = loggedInUser.displayName || 'New User';
+        const { role, name, contactNumber, institute } = signUpForm;
+        const newUserName = name || loggedInUser.displayName || 'New User';
 
         const newProfile: Partial<UserProfile> = {
             uid: loggedInUser.uid,
