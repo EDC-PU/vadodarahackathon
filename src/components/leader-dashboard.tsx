@@ -3,7 +3,7 @@
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Team, UserProfile } from "@/lib/types";
+import { Team, UserProfile, TeamMember } from "@/lib/types";
 import { AlertCircle, CheckCircle, PlusCircle, Trash2, User, Loader2, FileText, Pencil, Users2 } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "./ui/alert";
 import { Input } from "./ui/input";
@@ -39,59 +39,67 @@ export default function LeaderDashboard() {
   const [isRemoving, setIsRemoving] = useState<string | null>(null);
   const { toast } = useToast();
 
-  const fetchTeamMembers = useCallback((memberUIDs: string[]) => {
-    const unsubscribers = memberUIDs.map(uid => {
-      const userDocRef = doc(db, 'users', uid);
-      return onSnapshot(userDocRef, (doc) => {
-        if (doc.exists()) {
-          const updatedMember = { uid: doc.id, ...doc.data() } as UserProfile;
-          setTeamMembers(prevMembers => {
-            const existingMemberIndex = prevMembers.findIndex(m => m.uid === updatedMember.uid);
-            if (existingMemberIndex > -1) {
-              const newMembers = [...prevMembers];
-              newMembers[existingMemberIndex] = updatedMember;
-              return newMembers;
-            } else {
-              return [...prevMembers, updatedMember];
-            }
-          });
-        }
-      });
-    });
-    return () => unsubscribers.forEach(unsub => unsub());
-  }, []);
-
-
-  useEffect(() => {
+  const fetchTeamAndMembers = useCallback(() => {
     if (!user?.teamId) {
-        setLoading(false);
-        return;
+      setLoading(false);
+      return () => {};
     }
     setLoading(true);
 
     const teamDocRef = doc(db, 'teams', user.teamId);
-    const unsubscribeTeam = onSnapshot(teamDocRef, (doc) => {
-        if (doc.exists()) {
-            const teamData = { id: doc.id, ...doc.data() } as Team;
-            setTeam(teamData);
 
-            const allMemberUIDs = [teamData.leader.uid, ...teamData.members.map(m => m.uid)];
-            const uniqueUIDs = [...new Set(allMemberUIDs)];
-
-            // Reset members before fetching new ones to remove stale data
-            setTeamMembers([]);
-            fetchTeamMembers(uniqueUIDs);
-
-        } else {
-            setTeam(null);
-            setTeamMembers([]);
-        }
+    const unsubscribeTeam = onSnapshot(teamDocRef, (teamDoc) => {
+      if (!teamDoc.exists()) {
+        setTeam(null);
+        setTeamMembers([]);
         setLoading(false);
+        return;
+      }
+
+      const teamData = { id: teamDoc.id, ...teamDoc.data() } as Team;
+      setTeam(teamData);
+
+      const memberUIDs = teamData.members.map(m => m.uid).filter(Boolean);
+      const allUIDs = [...new Set([teamData.leader.uid, ...memberUIDs])];
+      
+      const memberUnsubscribers: (() => void)[] = [];
+
+      allUIDs.forEach(uid => {
+        const userDocRef = doc(db, 'users', uid);
+        const unsubscribeUser = onSnapshot(userDocRef, (userDoc) => {
+          if (userDoc.exists()) {
+            const memberData = { uid: userDoc.id, ...userDoc.data() } as UserProfile;
+            setTeamMembers(prevMembers => {
+              const memberExists = prevMembers.some(m => m.uid === memberData.uid);
+              if (memberExists) {
+                return prevMembers.map(m => m.uid === memberData.uid ? memberData : m);
+              }
+              return [...prevMembers, memberData];
+            });
+          }
+        });
+        memberUnsubscribers.push(unsubscribeUser);
+      });
+      
+      setLoading(false);
+
+      return () => {
+        memberUnsubscribers.forEach(unsub => unsub());
+      };
+    }, (error) => {
+      console.error("Error fetching team data:", error);
+      toast({ title: "Error", description: "Failed to fetch team data.", variant: "destructive" });
+      setLoading(false);
     });
 
-    return () => unsubscribeTeam();
+    return unsubscribeTeam;
 
-}, [user, fetchTeamMembers]);
+  }, [user?.teamId, toast]);
+
+  useEffect(() => {
+    const unsubscribe = fetchTeamAndMembers();
+    return () => unsubscribe();
+  }, [fetchTeamAndMembers]);
 
 
   const handleAddMember = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -240,6 +248,7 @@ export default function LeaderDashboard() {
                             <TableHead>Name</TableHead>
                             <TableHead>Role</TableHead>
                             <TableHead>Email</TableHead>
+                            <TableHead>Contact No.</TableHead>
                             <TableHead>Enrollment No.</TableHead>
                             <TableHead>Year</TableHead>
                             <TableHead>Sem</TableHead>
@@ -257,6 +266,7 @@ export default function LeaderDashboard() {
                                         </span>
                                     </TableCell>
                                     <TableCell>{member.email}</TableCell>
+                                    <TableCell>{member.contactNumber || 'N/A'}</TableCell>
                                     <TableCell>{member.enrollmentNumber || 'N/A'}</TableCell>
                                     <TableCell>{member.yearOfStudy || 'N/A'}</TableCell>
                                     <TableCell>{member.semester || 'N/A'}</TableCell>
@@ -287,8 +297,8 @@ export default function LeaderDashboard() {
                             ))
                          ) : (
                             <TableRow>
-                                <TableCell colSpan={7} className="text-center text-muted-foreground h-24">
-                                    {loading ? <Loader2 className="h-6 w-6 animate-spin mx-auto"/> : 'No members have joined yet.'}
+                                <TableCell colSpan={8} className="text-center text-muted-foreground h-24">
+                                    {loading ? <Loader2 className="h-6 w-6 animate-spin mx-auto"/> : 'Your details are shown. Invite members to add them to the team.'}
                                 </TableCell>
                             </TableRow>
                          )
@@ -396,5 +406,3 @@ export default function LeaderDashboard() {
     </div>
   );
 }
-
-    

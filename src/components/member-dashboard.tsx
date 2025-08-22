@@ -20,77 +20,76 @@ export default function MemberDashboard() {
   const [spoc, setSpoc] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const fetchTeamMembers = useCallback((memberUIDs: string[]) => {
-    const unsubscribers = memberUIDs.map(uid => {
-      if (!uid) return () => {};
-      const userDocRef = doc(db, 'users', uid);
-      return onSnapshot(userDocRef, (doc) => {
-        if (doc.exists()) {
-          const updatedMember = { uid: doc.id, ...doc.data() } as UserProfile;
-          setTeamMembers(prevMembers => {
-            const existingMemberIndex = prevMembers.findIndex(m => m.uid === updatedMember.uid);
-            if (existingMemberIndex > -1) {
-              const newMembers = [...prevMembers];
-              newMembers[existingMemberIndex] = updatedMember;
-              return newMembers;
-            } else {
-              return [...prevMembers, updatedMember];
-            }
-          });
-        }
+  const fetchTeamAndMembers = useCallback(() => {
+    if (!user?.teamId) {
+      setLoading(false);
+      return () => {};
+    }
+    setLoading(true);
+
+    const teamDocRef = doc(db, 'teams', user.teamId);
+
+    const unsubscribeTeam = onSnapshot(teamDocRef, (teamDoc) => {
+      if (!teamDoc.exists()) {
+        setTeam(null);
+        setTeamMembers([]);
+        setLoading(false);
+        return;
+      }
+
+      const teamData = { id: teamDoc.id, ...teamDoc.data() } as Team;
+      setTeam(teamData);
+      
+      const spocsQuery = query(collection(db, "users"), where("institute", "==", teamData.institute), where("role", "==", "spoc"), where("spocStatus", "==", "approved"));
+      const unsubscribeSpoc = onSnapshot(spocsQuery, (snapshot) => {
+          if (!snapshot.empty) {
+              setSpoc(snapshot.docs[0].data() as UserProfile);
+          } else {
+              setSpoc(null);
+          }
       });
+
+      const memberUIDs = teamData.members.map(m => m.uid).filter(Boolean);
+      const allUIDs = [...new Set([teamData.leader.uid, ...memberUIDs])];
+      
+      const memberUnsubscribers: (() => void)[] = [];
+
+      allUIDs.forEach(uid => {
+        const userDocRef = doc(db, 'users', uid);
+        const unsubscribeUser = onSnapshot(userDocRef, (userDoc) => {
+          if (userDoc.exists()) {
+            const memberData = { uid: userDoc.id, ...userDoc.data() } as UserProfile;
+            setTeamMembers(prevMembers => {
+              const memberExists = prevMembers.some(m => m.uid === memberData.uid);
+              if (memberExists) {
+                return prevMembers.map(m => m.uid === memberData.uid ? memberData : m);
+              }
+              return [...prevMembers, memberData];
+            });
+          }
+        });
+        memberUnsubscribers.push(unsubscribeUser);
+      });
+      
+      setLoading(false);
+
+      return () => {
+        memberUnsubscribers.forEach(unsub => unsub());
+        unsubscribeSpoc();
+      };
+    }, (error) => {
+      console.error("Error fetching team data:", error);
+      setLoading(false);
     });
-    return () => unsubscribers.forEach(unsub => unsub());
-  }, []);
+
+    return unsubscribeTeam;
+
+  }, [user?.teamId]);
 
   useEffect(() => {
-    let unsubscribeTeam: () => void = () => {};
-    let unsubscribeSpoc: () => void = () => {};
-
-    const fetchSpoc = (institute: string) => {
-        const spocsQuery = query(collection(db, "users"), where("institute", "==", institute), where("role", "==", "spoc"), where("spocStatus", "==", "approved"));
-        return onSnapshot(spocsQuery, (snapshot) => {
-            if (!snapshot.empty) {
-                setSpoc(snapshot.docs[0].data() as UserProfile);
-            } else {
-                setSpoc(null);
-            }
-        });
-    };
-
-    if (user && user.teamId) {
-        const teamDocRef = doc(db, "teams", user.teamId);
-        unsubscribeTeam = onSnapshot(teamDocRef, (teamDoc) => {
-            if (teamDoc.exists()) {
-                const teamData = { id: teamDoc.id, ...teamDoc.data() } as Team;
-                setTeam(teamData);
-
-                const allMemberUIDs = [teamData.leader.uid, ...teamData.members.map(m => m.uid)];
-                const uniqueUIDs = [...new Set(allMemberUIDs)];
-                setTeamMembers([]);
-                fetchTeamMembers(uniqueUIDs);
-                
-                if (teamData.institute) {
-                    unsubscribeSpoc = fetchSpoc(teamData.institute);
-                }
-            } else {
-                setTeam(null);
-                setTeamMembers([]);
-            }
-             setLoading(false);
-        }, (error) => {
-            console.error("Error fetching team data:", error);
-            setLoading(false);
-        });
-    } else {
-        setLoading(false);
-    }
-
-    return () => {
-        unsubscribeTeam();
-        unsubscribeSpoc();
-    };
-  }, [user, fetchTeamMembers]);
+    const unsubscribe = fetchTeamAndMembers();
+    return () => unsubscribe();
+  }, [fetchTeamAndMembers]);
 
   if (authLoading || loading) {
     return (
@@ -147,6 +146,7 @@ export default function MemberDashboard() {
                             <TableHead>Name</TableHead>
                             <TableHead>Role</TableHead>
                             <TableHead>Email</TableHead>
+                            <TableHead>Contact No.</TableHead>
                             <TableHead>Enrollment No.</TableHead>
                             <TableHead>Year</TableHead>
                             <TableHead>Sem</TableHead>
@@ -163,6 +163,7 @@ export default function MemberDashboard() {
                                         </span>
                                     </TableCell>
                                     <TableCell>{member.email}</TableCell>
+                                    <TableCell>{member.contactNumber || 'N/A'}</TableCell>
                                     <TableCell>{member.enrollmentNumber || 'N/A'}</TableCell>
                                     <TableCell>{member.yearOfStudy || 'N/A'}</TableCell>
                                     <TableCell>{member.semester || 'N/A'}</TableCell>
@@ -170,7 +171,7 @@ export default function MemberDashboard() {
                             ))
                          ) : (
                             <TableRow>
-                                <TableCell colSpan={6} className="text-center text-muted-foreground h-24">
+                                <TableCell colSpan={7} className="text-center text-muted-foreground h-24">
                                     {loading ? <Loader2 className="h-6 w-6 animate-spin mx-auto"/> : 'No members found.'}
                                 </TableCell>
                             </TableRow>
