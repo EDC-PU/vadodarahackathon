@@ -4,11 +4,11 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Team, UserProfile, TeamMember } from "@/lib/types";
-import { AlertCircle, CheckCircle, PlusCircle, Trash2, User, Loader2, FileText, Pencil, Users2, Badge } from "lucide-react";
+import { AlertCircle, CheckCircle, PlusCircle, Trash2, User, Loader2, FileText, Pencil, Users2, Badge, ArrowUpDown } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "./ui/alert";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { db } from "@/lib/firebase";
 import { doc, onSnapshot, updateDoc, arrayRemove, collection, query, where, getDocs, writeBatch } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
@@ -29,6 +29,8 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";
 
+type SortKey = 'name' | 'role' | 'email' | 'contactNumber' | 'enrollmentNumber' | 'yearOfStudy' | 'semester';
+type SortDirection = 'asc' | 'desc';
 
 export default function LeaderDashboard() {
   const { user, loading: authLoading } = useAuth();
@@ -37,6 +39,7 @@ export default function LeaderDashboard() {
   const [loading, setLoading] = useState(true);
   const [isInviting, setIsInviting] = useState(false);
   const [isRemoving, setIsRemoving] = useState<string | null>(null);
+  const [sortConfig, setSortConfig] = useState<{ key: SortKey, direction: SortDirection } | null>(null);
   const { toast } = useToast();
 
   const fetchTeamAndMembers = useCallback(() => {
@@ -183,6 +186,40 @@ export default function LeaderDashboard() {
         setIsRemoving(null);
     }
   };
+  
+  const sortedTeamMembers = useMemo(() => {
+    let sortableItems = [...teamMembers];
+    if (sortConfig !== null) {
+      sortableItems.sort((a, b) => {
+        const aValue = a[sortConfig.key] ?? '';
+        const bValue = b[sortConfig.key] ?? '';
+        if (aValue < bValue) {
+          return sortConfig.direction === 'asc' ? -1 : 1;
+        }
+        if (aValue > bValue) {
+          return sortConfig.direction === 'asc' ? 1 : -1;
+        }
+        return 0;
+      });
+    }
+    return sortableItems;
+  }, [teamMembers, sortConfig]);
+
+  const requestSort = (key: SortKey) => {
+    let direction: SortDirection = 'asc';
+    if (sortConfig && sortConfig.key === key && sortConfig.direction === 'asc') {
+      direction = 'desc';
+    }
+    setSortConfig({ key, direction });
+  };
+  
+  const getSortIndicator = (key: SortKey) => {
+    if (!sortConfig || sortConfig.key !== key) {
+      return <ArrowUpDown className="h-4 w-4" />;
+    }
+    return sortConfig.direction === 'asc' ? '▲' : '▼';
+  };
+
 
   if (authLoading || loading) {
     return (
@@ -203,13 +240,6 @@ export default function LeaderDashboard() {
       </div>
     );
   }
-  
-  const sortedTeamMembers = [...teamMembers].sort((a, b) => {
-      if (a.role === 'leader') return -1;
-      if (b.role === 'leader') return 1;
-      return a.name.localeCompare(b.name);
-  });
-
 
   const teamValidation = {
     memberCount: {
@@ -246,13 +276,27 @@ export default function LeaderDashboard() {
                 <Table>
                     <TableHeader>
                         <TableRow>
-                            <TableHead>Name</TableHead>
-                            <TableHead>Role</TableHead>
-                            <TableHead>Email</TableHead>
-                            <TableHead>Contact No.</TableHead>
-                            <TableHead>Enrollment No.</TableHead>
-                            <TableHead>Year</TableHead>
-                            <TableHead>Sem</TableHead>
+                            <TableHead>
+                                <Button variant="ghost" onClick={() => requestSort('name')}>Name {getSortIndicator('name')}</Button>
+                            </TableHead>
+                            <TableHead>
+                                <Button variant="ghost" onClick={() => requestSort('role')}>Role {getSortIndicator('role')}</Button>
+                            </TableHead>
+                            <TableHead>
+                                <Button variant="ghost" onClick={() => requestSort('email')}>Email {getSortIndicator('email')}</Button>
+                            </TableHead>
+                            <TableHead>
+                                <Button variant="ghost" onClick={() => requestSort('contactNumber')}>Contact No. {getSortIndicator('contactNumber')}</Button>
+                            </TableHead>
+                            <TableHead>
+                                <Button variant="ghost" onClick={() => requestSort('enrollmentNumber')}>Enrollment No. {getSortIndicator('enrollmentNumber')}</Button>
+                            </TableHead>
+                            <TableHead>
+                                <Button variant="ghost" onClick={() => requestSort('yearOfStudy')}>Year {getSortIndicator('yearOfStudy')}</Button>
+                            </TableHead>
+                            <TableHead>
+                                <Button variant="ghost" onClick={() => requestSort('semester')}>Sem {getSortIndicator('semester')}</Button>
+                            </TableHead>
                             <TableHead className="text-right">Actions</TableHead>
                         </TableRow>
                     </TableHeader>
@@ -407,5 +451,3 @@ export default function LeaderDashboard() {
     </div>
   );
 }
-
-    

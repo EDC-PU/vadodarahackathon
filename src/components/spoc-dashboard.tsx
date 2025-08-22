@@ -4,8 +4,8 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Loader2, AlertCircle, Save, Pencil, X, Trash2, Users, User, MinusCircle, Badge } from "lucide-react";
-import { useEffect, useState } from "react";
+import { Loader2, AlertCircle, Save, Pencil, X, Trash2, Users, User, MinusCircle, Badge, ArrowUpDown } from "lucide-react";
+import { useEffect, useState, useMemo } from "react";
 import { auth, db } from "@/lib/firebase";
 import { onAuthStateChanged } from "firebase/auth";
 import { doc, getDoc, collection, query, where, onSnapshot, updateDoc } from "firebase/firestore";
@@ -27,6 +27,8 @@ import {
 } from "@/components/ui/alert-dialog";
 import { manageTeamBySpoc } from "@/ai/flows/manage-team-by-spoc-flow";
 
+type SortKey = 'teamName' | 'teamNumber' | 'name' | 'email' | 'enrollmentNumber' | 'contactNumber';
+type SortDirection = 'asc' | 'desc';
 
 export default function SpocDashboard() {
   const [user, setUser] = useState<UserProfile | null>(null);
@@ -36,6 +38,7 @@ export default function SpocDashboard() {
   const [editingTeam, setEditingTeam] = useState<{ id: string, name: string } | null>(null);
   const [isSaving, setIsSaving] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState<string | null>(null);
+  const [sortConfig, setSortConfig] = useState<{ key: SortKey, direction: SortDirection } | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -79,9 +82,9 @@ export default function SpocDashboard() {
     return () => unsubscribeAuth();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  const getTeamWithFullDetails = () => {
-    return teams.map(team => {
+  
+  const getTeamWithFullDetails = (teamsToProcess: Team[]) => {
+    return teamsToProcess.map(team => {
         const leaderProfile = users.find(u => u.uid === team.leader.uid);
         const membersWithDetails = team.members.map(member => {
             const memberProfile = users.find(u => u.email === member.email);
@@ -108,6 +111,40 @@ export default function SpocDashboard() {
             allMembers,
         };
     });
+  };
+
+  const teamsWithDetails = useMemo(() => {
+    const detailedTeams = getTeamWithFullDetails(teams);
+    if (sortConfig !== null) {
+      return [...detailedTeams].sort((a, b) => {
+        const aVal = a[sortConfig.key] || '';
+        const bVal = b[sortConfig.key] || '';
+        if (aVal < bVal) {
+          return sortConfig.direction === 'asc' ? -1 : 1;
+        }
+        if (aVal > bVal) {
+          return sortConfig.direction === 'asc' ? 1 : -1;
+        }
+        return 0;
+      });
+    }
+    return detailedTeams;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [teams, users, sortConfig]);
+
+  const requestSort = (key: SortKey) => {
+    let direction: SortDirection = 'asc';
+    if (sortConfig && sortConfig.key === key && sortConfig.direction === 'asc') {
+        direction = 'desc';
+    }
+    setSortConfig({ key, direction });
+  };
+  
+  const getSortIndicator = (key: SortKey) => {
+    if (!sortConfig || sortConfig.key !== key) {
+      return <ArrowUpDown className="h-4 w-4" />;
+    }
+    return sortConfig.direction === 'asc' ? '▲' : '▼';
   };
 
   const handleEditTeamName = (teamId: string) => {
@@ -186,7 +223,6 @@ export default function SpocDashboard() {
     )
   }
 
-  const teamsWithDetails = getTeamWithFullDetails();
   const totalParticipants = teams.reduce((acc, team) => acc + 1 + team.members.length, 0);
 
   return (
@@ -234,12 +270,12 @@ export default function SpocDashboard() {
                 <Table>
                     <TableHeader>
                     <TableRow>
-                        <TableHead>Team Name</TableHead>
-                        <TableHead>Team No.</TableHead>
-                        <TableHead>Member Name</TableHead>
-                        <TableHead>Email</TableHead>
-                        <TableHead>Enrollment No.</TableHead>
-                        <TableHead>Contact No.</TableHead>
+                        <TableHead><Button variant="ghost" onClick={() => requestSort('teamName')}>Team Name {getSortIndicator('teamName')}</Button></TableHead>
+                        <TableHead><Button variant="ghost" onClick={() => requestSort('teamNumber')}>Team No. {getSortIndicator('teamNumber')}</Button></TableHead>
+                        <TableHead><Button variant="ghost" onClick={() => requestSort('name')}>Member Name {getSortIndicator('name')}</Button></TableHead>
+                        <TableHead><Button variant="ghost" onClick={() => requestSort('email')}>Email {getSortIndicator('email')}</Button></TableHead>
+                        <TableHead><Button variant="ghost" onClick={() => requestSort('enrollmentNumber')}>Enrollment No. {getSortIndicator('enrollmentNumber')}</Button></TableHead>
+                        <TableHead><Button variant="ghost" onClick={() => requestSort('contactNumber')}>Contact No. {getSortIndicator('contactNumber')}</Button></TableHead>
                         <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                     </TableHeader>
@@ -338,5 +374,3 @@ export default function SpocDashboard() {
     </div>
   );
 }
-
-    

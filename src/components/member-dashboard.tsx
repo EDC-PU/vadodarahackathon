@@ -2,8 +2,8 @@
 "use client";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { User, Users, Phone, Mail, FileText, Trophy, Calendar, Loader2, AlertCircle, Badge } from "lucide-react";
-import { useEffect, useState, useCallback } from "react";
+import { User, Users, Phone, Mail, FileText, Trophy, Calendar, Loader2, AlertCircle, Badge, ArrowUpDown } from "lucide-react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { db } from "@/lib/firebase";
 import { doc, getDoc, onSnapshot, collection, query, where } from "firebase/firestore";
 import { Team, UserProfile } from "@/lib/types";
@@ -12,6 +12,10 @@ import { useAuth } from "@/hooks/use-auth";
 import { AnnouncementsSection } from "./announcements-section";
 import { InvitationsSection } from "./invitations-section";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";
+import { Button } from "./ui/button";
+
+type SortKey = 'name' | 'role' | 'email' | 'contactNumber' | 'enrollmentNumber' | 'yearOfStudy' | 'semester';
+type SortDirection = 'asc' | 'desc';
 
 export default function MemberDashboard() {
   const { user, loading: authLoading } = useAuth();
@@ -19,6 +23,7 @@ export default function MemberDashboard() {
   const [teamMembers, setTeamMembers] = useState<UserProfile[]>([]);
   const [spoc, setSpoc] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [sortConfig, setSortConfig] = useState<{ key: SortKey, direction: SortDirection } | null>(null);
 
   const fetchTeamAndMembers = useCallback(() => {
     if (!user?.teamId) {
@@ -90,6 +95,39 @@ export default function MemberDashboard() {
     const unsubscribe = fetchTeamAndMembers();
     return () => unsubscribe();
   }, [fetchTeamAndMembers]);
+  
+  const sortedTeamMembers = useMemo(() => {
+    let sortableItems = [...teamMembers];
+    if (sortConfig !== null) {
+      sortableItems.sort((a, b) => {
+        const aValue = a[sortConfig.key] ?? '';
+        const bValue = b[sortConfig.key] ?? '';
+        if (aValue < bValue) {
+          return sortConfig.direction === 'asc' ? -1 : 1;
+        }
+        if (aValue > bValue) {
+          return sortConfig.direction === 'asc' ? 1 : -1;
+        }
+        return 0;
+      });
+    }
+    return sortableItems;
+  }, [teamMembers, sortConfig]);
+
+  const requestSort = (key: SortKey) => {
+    let direction: SortDirection = 'asc';
+    if (sortConfig && sortConfig.key === key && sortConfig.direction === 'asc') {
+      direction = 'desc';
+    }
+    setSortConfig({ key, direction });
+  };
+
+  const getSortIndicator = (key: SortKey) => {
+    if (!sortConfig || sortConfig.key !== key) {
+      return <ArrowUpDown className="h-4 w-4" />;
+    }
+    return sortConfig.direction === 'asc' ? '▲' : '▼';
+  };
 
   if (authLoading || loading) {
     return (
@@ -110,12 +148,6 @@ export default function MemberDashboard() {
         </div>
     );
   }
-  
-  const sortedTeamMembers = [...teamMembers].sort((a, b) => {
-      if (a.role === 'leader') return -1;
-      if (b.role === 'leader') return 1;
-      return a.name.localeCompare(b.name);
-  });
 
   return (
     <div className="p-4 sm:p-6 lg:p-8">
@@ -144,13 +176,27 @@ export default function MemberDashboard() {
                 <Table>
                     <TableHeader>
                         <TableRow>
-                            <TableHead>Name</TableHead>
-                            <TableHead>Role</TableHead>
-                            <TableHead>Email</TableHead>
-                            <TableHead>Contact No.</TableHead>
-                            <TableHead>Enrollment No.</TableHead>
-                            <TableHead>Year</TableHead>
-                            <TableHead>Sem</TableHead>
+                           <TableHead>
+                                <Button variant="ghost" onClick={() => requestSort('name')}>Name {getSortIndicator('name')}</Button>
+                            </TableHead>
+                            <TableHead>
+                                <Button variant="ghost" onClick={() => requestSort('role')}>Role {getSortIndicator('role')}</Button>
+                            </TableHead>
+                            <TableHead>
+                                <Button variant="ghost" onClick={() => requestSort('email')}>Email {getSortIndicator('email')}</Button>
+                            </TableHead>
+                            <TableHead>
+                                <Button variant="ghost" onClick={() => requestSort('contactNumber')}>Contact No. {getSortIndicator('contactNumber')}</Button>
+                            </TableHead>
+                            <TableHead>
+                                <Button variant="ghost" onClick={() => requestSort('enrollmentNumber')}>Enrollment No. {getSortIndicator('enrollmentNumber')}</Button>
+                            </TableHead>
+                            <TableHead>
+                                <Button variant="ghost" onClick={() => requestSort('yearOfStudy')}>Year {getSortIndicator('yearOfStudy')}</Button>
+                            </TableHead>
+                            <TableHead>
+                                <Button variant="ghost" onClick={() => requestSort('semester')}>Sem {getSortIndicator('semester')}</Button>
+                            </TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -243,5 +289,3 @@ export default function MemberDashboard() {
     </div>
   );
 }
-
-    
