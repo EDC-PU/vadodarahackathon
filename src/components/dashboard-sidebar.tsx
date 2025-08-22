@@ -29,6 +29,7 @@ import {
   BarChart2,
   HeartPulse,
   UserRoundCheck,
+  Users2,
 } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { Button } from "./ui/button";
@@ -43,6 +44,7 @@ const navItems = {
     { href: "/admin/announcements", icon: <Megaphone />, label: "Announcements" },
     { href: "/admin/problem-statements", icon: <FileQuestion />, label: "Problem Statements" },
     { href: "/admin/teams", icon: <Users />, label: "All Teams" },
+    { href: "/admin/users", icon: <Users2 />, label: "Manage Users" },
     { href: "/admin/spocs", icon: <Building2 />, label: "Manage SPOCs" },
     { href: "/admin/spoc-requests", icon: <UserRoundCheck />, label: "SPOC Requests" },
     { href: "/admin/admins", icon: <Shield />, label: "Manage Admins" },

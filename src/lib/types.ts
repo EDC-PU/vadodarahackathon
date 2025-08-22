@@ -22,6 +22,10 @@ export interface UserProfile {
   spocStatus?: SpocStatus;
   semester?: number;
   yearOfStudy?: string;
+  createdAt?: {
+      seconds: number,
+      nanoseconds: number,
+  }
 }
 
 export interface Invitation {
@@ -114,6 +118,19 @@ export interface Announcement {
 
 
 // Schemas for Genkit Flows
+
+// delete-user-flow
+export const DeleteUserInputSchema = z.object({
+  uid: z.string().describe("The UID of the user to delete."),
+});
+export type DeleteUserInput = z.infer<typeof DeleteUserInputSchema>;
+
+export const DeleteUserOutputSchema = z.object({
+  success: z.boolean(),
+  message: z.string(),
+});
+export type DeleteUserOutput = z.infer<typeof DeleteUserOutputSchema>;
+
 
 // create-spoc-flow
 export const CreateSpocInputSchema = z.object({

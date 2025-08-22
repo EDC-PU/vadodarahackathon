@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { onAuthStateChanged, signOut, User as FirebaseUser } from 'firebase/auth';
-import { doc, getDoc, onSnapshot, collection, query, where, getDocs, writeBatch, updateDoc, setDoc, arrayUnion, deleteDoc } from 'firebase/firestore';
+import { doc, getDoc, onSnapshot, collection, query, where, getDocs, writeBatch, updateDoc, setDoc, arrayUnion, deleteDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import { UserProfile, Team } from '@/lib/types';
 import { useRouter, usePathname } from 'next/navigation';
@@ -205,6 +205,7 @@ export function useAuth() {
                 contactNumber: 'N/A',
                 gender: 'Other',
                 passwordChanged: true,
+                createdAt: serverTimestamp() as any,
             };
             await setDoc(userDocRef, adminProfile);
             userDoc = await getDoc(userDocRef);
@@ -258,6 +259,7 @@ export function useAuth() {
             role: role as UserProfile['role'],
             photoURL: loggedInUser.photoURL || '',
             passwordChanged: loggedInUser.providerData.some(p => p.providerId === 'google.com'), // True for Google, false for email
+            createdAt: serverTimestamp() as any,
         };
         
         console.log("handleLogin: Creating new user document with profile:", newProfile);
@@ -271,5 +273,3 @@ export function useAuth() {
 
   return { user, firebaseUser, loading, handleSignOut, handleLogin, reloadUser };
 }
-
-    
