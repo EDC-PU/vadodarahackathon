@@ -119,7 +119,10 @@ export default function DashboardSidebar() {
 
   const profileLink = getProfileLink(user);
   if ((activeRole === 'leader' || activeRole === 'member') && profileLink) {
-    items.push(profileLink);
+    // Ensure the profile link is not already in the list
+    if (!items.some(item => item.href === profileLink.href)) {
+        items.push(profileLink);
+    }
   }
 
 
