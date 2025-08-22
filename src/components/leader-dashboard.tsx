@@ -179,91 +179,86 @@ export default function LeaderDashboard() {
 
   return (
     <div className="p-4 sm:p-6 lg:p-8">
-      <header className="mb-8">
-        <h1 className="text-3xl font-bold font-headline">Team Dashboard: {team.name}</h1>
-        <p className="text-muted-foreground">Manage your team and review your registration status.</p>
-      </header>
+        <header className="mb-8">
+            <h1 className="text-3xl font-bold font-headline">Team Dashboard: {team.name}</h1>
+            <p className="text-muted-foreground">Manage your team and review your registration status.</p>
+        </header>
 
-      <div className="grid gap-8 lg:grid-cols-3">
-        {/* Left Column */}
-        <div className="lg:col-span-2 space-y-8">
-            <AnnouncementsSection audience="teams_and_all" />
-             <Card>
-                <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                        <Users2 />
-                        Team Members ({teamMembers.length} / 6)
-                    </CardTitle>
-                    <CardDescription>Your current team roster. Invite members to have them appear here.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>Name</TableHead>
-                                <TableHead>Role</TableHead>
-                                <TableHead>Email</TableHead>
-                                <TableHead>Enrollment No.</TableHead>
-                                <TableHead>Year</TableHead>
-                                <TableHead>Sem</TableHead>
-                                <TableHead className="text-right">Actions</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {teamMembers.length > 0 ? (
-                                teamMembers.map((member) => (
-                                    <TableRow key={member.uid}>
-                                        <TableCell className="font-medium">{member.name}</TableCell>
-                                        <TableCell>
-                                            <span className={`px-2 py-1 text-xs rounded-full ${member.role === 'leader' ? 'bg-primary/20 text-primary' : 'bg-secondary text-secondary-foreground'}`}>
-                                                {member.role}
-                                            </span>
-                                        </TableCell>
-                                        <TableCell>{member.email}</TableCell>
-                                        <TableCell>{member.enrollmentNumber || 'N/A'}</TableCell>
-                                        <TableCell>{member.yearOfStudy || 'N/A'}</TableCell>
-                                        <TableCell>{member.semester || 'N/A'}</TableCell>
-                                        <TableCell className="text-right">
-                                            {member.role !== 'leader' && (
-                                                <AlertDialog>
-                                                    <AlertDialogTrigger asChild>
-                                                        <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-destructive" disabled={isRemoving === member.email}>
-                                                        {isRemoving === member.email ? <Loader2 className="h-4 w-4 animate-spin"/> : <Trash2 className="h-4 w-4"/>}
-                                                        </Button>
-                                                    </AlertDialogTrigger>
-                                                    <AlertDialogContent>
-                                                        <AlertDialogHeader>
-                                                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                                                        <AlertDialogDescription>
-                                                            This action will remove {member.name} from the team. They will need to be invited again to rejoin.
-                                                        </AlertDialogDescription>
-                                                        </AlertDialogHeader>
-                                                        <AlertDialogFooter>
-                                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                                        <AlertDialogAction onClick={() => handleRemoveMember(member)} className="bg-destructive hover:bg-destructive/90">Remove</AlertDialogAction>
-                                                        </AlertDialogFooter>
-                                                    </AlertDialogContent>
-                                                </AlertDialog>
-                                            )}
-                                        </TableCell>
-                                    </TableRow>
-                                ))
-                             ) : (
-                                <TableRow>
-                                    <TableCell colSpan={7} className="text-center text-muted-foreground h-24">
-                                        No members have joined yet.
+        <Card className="mb-8">
+            <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                    <Users2 />
+                    Team Members ({teamMembers.length} / 6)
+                </CardTitle>
+                <CardDescription>Your current team roster. Invite members to have them appear here.</CardDescription>
+            </CardHeader>
+            <CardContent>
+                <Table>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead>Name</TableHead>
+                            <TableHead>Role</TableHead>
+                            <TableHead>Email</TableHead>
+                            <TableHead>Enrollment No.</TableHead>
+                            <TableHead>Year</TableHead>
+                            <TableHead>Sem</TableHead>
+                            <TableHead className="text-right">Actions</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {teamMembers.length > 0 ? (
+                            teamMembers.map((member) => (
+                                <TableRow key={member.uid}>
+                                    <TableCell className="font-medium">{member.name}</TableCell>
+                                    <TableCell>
+                                        <span className={`px-2 py-1 text-xs rounded-full ${member.role === 'leader' ? 'bg-primary/20 text-primary' : 'bg-secondary text-secondary-foreground'}`}>
+                                            {member.role}
+                                        </span>
+                                    </TableCell>
+                                    <TableCell>{member.email}</TableCell>
+                                    <TableCell>{member.enrollmentNumber || 'N/A'}</TableCell>
+                                    <TableCell>{member.yearOfStudy || 'N/A'}</TableCell>
+                                    <TableCell>{member.semester || 'N/A'}</TableCell>
+                                    <TableCell className="text-right">
+                                        {member.role !== 'leader' && (
+                                            <AlertDialog>
+                                                <AlertDialogTrigger asChild>
+                                                    <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-destructive" disabled={isRemoving === member.email}>
+                                                    {isRemoving === member.email ? <Loader2 className="h-4 w-4 animate-spin"/> : <Trash2 className="h-4 w-4"/>}
+                                                    </Button>
+                                                </AlertDialogTrigger>
+                                                <AlertDialogContent>
+                                                    <AlertDialogHeader>
+                                                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                                    <AlertDialogDescription>
+                                                        This action will remove {member.name} from the team. They will need to be invited again to rejoin.
+                                                    </AlertDialogDescription>
+                                                    </AlertDialogHeader>
+                                                    <AlertDialogFooter>
+                                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                    <AlertDialogAction onClick={() => handleRemoveMember(member)} className="bg-destructive hover:bg-destructive/90">Remove</AlertDialogAction>
+                                                    </AlertDialogFooter>
+                                                </AlertDialogContent>
+                                            </AlertDialog>
+                                        )}
                                     </TableCell>
                                 </TableRow>
-                             )
-                           }
-                        </TableBody>
-                    </Table>
-                </CardContent>
-             </Card>
-        </div>
-        
-        {/* Right Column */}
-        <div className="lg:col-span-1 space-y-8">
+                            ))
+                         ) : (
+                            <TableRow>
+                                <TableCell colSpan={7} className="text-center text-muted-foreground h-24">
+                                    No members have joined yet.
+                                </TableCell>
+                            </TableRow>
+                         )
+                       }
+                    </TableBody>
+                </Table>
+            </CardContent>
+         </Card>
+
+        <div className="grid gap-8 lg:grid-cols-3">
+             <AnnouncementsSection audience="teams_and_all" />
             <Card>
                 <CardHeader>
                     <CardTitle>Team Status</CardTitle>
@@ -300,62 +295,63 @@ export default function LeaderDashboard() {
                 </CardContent>
             </Card>
             
-            <Card>
-                <CardHeader>
-                    <CardTitle>Problem Statement & Category</CardTitle>
-                    <CardDescription>Select a problem statement. Your team's category will be set automatically.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    {team.problemStatementId ? (
-                        <div className="space-y-3">
-                            <p className="text-muted-foreground">Your team has selected:</p>
-                            <h3 className="text-lg font-semibold">{team.problemStatementTitle}</h3>
-                            <p className="text-sm">Team Category: <span className="font-semibold">{team.category}</span></p>
-                             <Button variant="outline" asChild>
-                                <Link href="/leader/select-problem-statement">
-                                    <Pencil className="mr-2 h-4 w-4" /> Change Problem Statement
-                                </Link>
-                            </Button>
-                        </div>
-                    ) : (
-                        <div className="flex flex-col items-start gap-4">
-                            <p>Your team has not selected a problem statement yet.</p>
-                            <Button asChild>
-                               <Link href="/leader/select-problem-statement">
-                                    <FileText className="mr-2 h-4 w-4" /> Select Problem Statement
-                               </Link>
-                            </Button>
-                        </div>
-                    )}
-                </CardContent>
-            </Card>
+            <div className="space-y-8">
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Problem Statement & Category</CardTitle>
+                        <CardDescription>Select a problem statement. Your team's category will be set automatically.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        {team.problemStatementId ? (
+                            <div className="space-y-3">
+                                <p className="text-muted-foreground">Your team has selected:</p>
+                                <h3 className="text-lg font-semibold">{team.problemStatementTitle}</h3>
+                                <p className="text-sm">Team Category: <span className="font-semibold">{team.category}</span></p>
+                                 <Button variant="outline" asChild>
+                                    <Link href="/leader/select-problem-statement">
+                                        <Pencil className="mr-2 h-4 w-4" /> Change Problem Statement
+                                    </Link>
+                                </Button>
+                            </div>
+                        ) : (
+                            <div className="flex flex-col items-start gap-4">
+                                <p>Your team has not selected a problem statement yet.</p>
+                                <Button asChild>
+                                   <Link href="/leader/select-problem-statement">
+                                        <FileText className="mr-2 h-4 w-4" /> Select Problem Statement
+                                   </Link>
+                                </Button>
+                            </div>
+                        )}
+                    </CardContent>
+                </Card>
 
-            <Card>
-                <CardHeader>
-                    <CardTitle>Add New Member</CardTitle>
-                    <CardDescription>
-                        {canAddMoreMembers ? `You can invite ${6 - teamMembers.length} more members.` : "Your team is full."}
-                    </CardDescription>
-                </CardHeader>
-                <CardContent>
-                   {canAddMoreMembers ? (
-                    <form onSubmit={handleAddMember} className="space-y-4">
-                         <div>
-                            <Label htmlFor="new-member-email">Member's Email</Label>
-                            <Input id="new-member-email" name="new-member-email" type="email" placeholder="member@example.com" required disabled={isInviting}/>
-                        </div>
-                        <Button type="submit" disabled={isInviting}>
-                            {isInviting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <PlusCircle className="mr-2 h-4 w-4" />}
-                             Send Invitation
-                        </Button>
-                    </form>
-                   ): (
-                    <p className="text-sm text-muted-foreground">You have reached the maximum number of team members.</p>
-                   )}
-                </CardContent>
-            </Card>
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Add New Member</CardTitle>
+                        <CardDescription>
+                            {canAddMoreMembers ? `You can invite ${6 - teamMembers.length} more members.` : "Your team is full."}
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                       {canAddMoreMembers ? (
+                        <form onSubmit={handleAddMember} className="space-y-4">
+                             <div>
+                                <Label htmlFor="new-member-email">Member's Email</Label>
+                                <Input id="new-member-email" name="new-member-email" type="email" placeholder="member@example.com" required disabled={isInviting}/>
+                            </div>
+                            <Button type="submit" disabled={isInviting}>
+                                {isInviting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <PlusCircle className="mr-2 h-4 w-4" />}
+                                 Send Invitation
+                            </Button>
+                        </form>
+                       ): (
+                        <p className="text-sm text-muted-foreground">You have reached the maximum number of team members.</p>
+                       )}
+                    </CardContent>
+                </Card>
+            </div>
         </div>
-      </div>
     </div>
   );
 }
