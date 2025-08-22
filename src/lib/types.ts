@@ -164,6 +164,21 @@ export const ExportTeamsOutputSchema = z.object({
 });
 export type ExportTeamsOutput = z.infer<typeof ExportTeamsOutputSchema>;
 
+// get-institute-teams-flow
+export const GetInstituteTeamsInputSchema = z.object({
+  institute: z.string().describe("The name of the institute to fetch teams for."),
+});
+export type GetInstituteTeamsInput = z.infer<typeof GetInstituteTeamsInputSchema>;
+
+export const GetInstituteTeamsOutputSchema = z.object({
+  success: z.boolean(),
+  message: z.string().optional(),
+  teams: z.array(z.any()).optional().describe("An array of team objects."),
+  users: z.record(z.any()).optional().describe("A map of user profiles, with UID as the key."),
+});
+export type GetInstituteTeamsOutput = z.infer<typeof GetInstituteTeamsOutputSchema>;
+
+
 // invite-member-flow
 export const InviteMemberInputSchema = z.object({
   teamId: z.string().describe("The ID of the team to add the member to."),
