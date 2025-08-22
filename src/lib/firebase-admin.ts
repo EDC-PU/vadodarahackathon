@@ -13,6 +13,8 @@ function initializeAdminApp(): admin.app.App | null {
     }
 
     console.log("Firebase Admin SDK: Initializing new app...");
+    // The private key is often stored with literal "\\n" for newlines.
+    // We need to replace these with actual newline characters.
     const privateKey = (process.env.FIREBASE_PRIVATE_KEY || '').replace(/\\n/g, '\n');
 
     if (!process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || !process.env.FIREBASE_CLIENT_EMAIL || !privateKey) {
@@ -34,6 +36,10 @@ function initializeAdminApp(): admin.app.App | null {
         return app;
     } catch (error) {
         console.error("Firebase Admin SDK: Initialization failed with error:", error);
+        // Log the specific error to help with debugging.
+        if (error instanceof Error) {
+            console.error("Error Message:", error.message);
+        }
         return null;
     }
 }
