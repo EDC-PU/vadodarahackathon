@@ -16,7 +16,6 @@ import {
   CarouselNext,
   CarouselPrevious,
 } from "@/components/ui/carousel";
-import Autoplay from "embla-carousel-autoplay";
 import { db } from '@/lib/firebase';
 import { collection, getDocs, query, where } from 'firebase/firestore';
 import { UserProfile } from '@/lib/types';
@@ -25,6 +24,8 @@ import { Skeleton } from './ui/skeleton';
 import { AnnouncementsSection } from './announcements-section';
 import { cn } from '@/lib/utils';
 import { useScrollAnimation } from '@/hooks/use-scroll-animation';
+import Autoplay from "embla-carousel-autoplay"
+
 
 interface SpocDetails {
   [key: string]: { name: string; email: string; contact: string }
@@ -54,10 +55,7 @@ export default function LandingPage() {
   const [spocDetails, setSpocDetails] = useState<SpocDetails>({});
   const [loadingSpocs, setLoadingSpocs] = useState(true);
   const { user, loading: authLoading, redirectToDashboard: goToDashboard } = useAuth();
-  
-  const autoplay = useRef(
-    Autoplay({ delay: 2000, stopOnInteraction: true })
-  );
+  const autoplayPlugin = useRef(Autoplay({ delay: 2000, stopOnInteraction: true }));
 
 
   useEffect(() => {
@@ -104,7 +102,7 @@ export default function LandingPage() {
   const galleryImages = [
     '/VadodaraHackathon/1.jpg',
     '/VadodaraHackathon/2.jpg',
-    '/vadodarahackathon/3.jpg',
+    '/VadodaraHackathon/3.jpg',
     '/VadodaraHackathon/4.jpg',
     '/VadodaraHackathon/5.jpg',
     '/VadodaraHackathon/6.jpg',
@@ -131,7 +129,7 @@ export default function LandingPage() {
     <div className="flex min-h-screen flex-col bg-background text-foreground selection:bg-primary/40">
       <div className="fixed top-0 left-0 w-full h-full bg-grid-slate-900/10 [mask-image:radial-gradient(ellipse_at_center,transparent_20%,black)] -z-10"></div>
       <header className="sticky top-0 z-50 w-full border-b border-border/20 bg-background/50 backdrop-blur-lg">
-        <div className="container flex h-24 max-w-7xl items-center justify-between">
+        <div className="container flex h-28 max-w-7xl items-center justify-between">
           <Link href="/" className="flex items-center gap-2 font-bold text-xl" prefetch={false}>
              <Image src="https://www.pierc.org/_next/static/media/PIERC%20WHITE.a9ef7cc8.svg" alt="Vadodara Hackathon Logo" width={150} height={150}/>
           </Link>
@@ -258,11 +256,7 @@ export default function LandingPage() {
               </div>
             </div>
             <div>
-              <Carousel className="w-full max-w-xl mx-auto"
-                plugins={[autoplay.current]}
-                onMouseEnter={() => autoplay.current.stop()}
-                onMouseLeave={() => autoplay.current.play()}
-              >
+              <Carousel className="w-full max-w-xl mx-auto" plugins={[autoplayPlugin.current]}>
                 <CarouselContent>
                   {aboutImages.map((src, index) => (
                     <CarouselItem key={index}>
@@ -286,7 +280,7 @@ export default function LandingPage() {
         <AnimatedSection id="gallery">
             <div className="container max-w-7xl">
                 <h2 className="text-3xl font-bold text-center mb-12 font-headline">Gallery</h2>
-                 <Carousel className="w-full" opts={{ loop: true }} plugins={[autoplay.current]}>
+                 <Carousel className="w-full" opts={{ loop: true }} plugins={[autoplayPlugin.current]}>
                     <CarouselContent>
                     {galleryImages.map((src, index) => (
                         <CarouselItem key={index} className="md:basis-1/2 lg:basis-1/3">
