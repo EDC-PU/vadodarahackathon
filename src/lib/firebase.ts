@@ -1,3 +1,4 @@
+
 // Import the functions you need from the SDKs you need
 import { initializeApp, getApps, getApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
@@ -7,7 +8,7 @@ import { getFirestore } from "firebase/firestore";
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
-  apiKey: "AIzaSyDlIhhiTEWmX4sl0N4pqJi8NbdwCvnbltA",
+  apiKey: "AIzaSyDLIhhiTEWmX4sl0N4pqJi8NbdwCvnbltA",
   authDomain: "vadodara-hackathon-60-portal.firebaseapp.com",
   projectId: "vadodara-hackathon-60-portal",
   storageBucket: "vadodara-hackathon-60-portal.appspot.com",
@@ -21,3 +22,4 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 
 export { app, auth, db };
+

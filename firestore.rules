@@ -1,44 +1,41 @@
+
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Helper functions to check user roles
-    function isSignedIn() {
-      return request.auth != null;
+    function isAppAdmin() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
 
-    function isRole(role) {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == role;
-    }
-
-    function isOwner(userId) {
-      return request.auth.uid == userId;
-    }
-
-    // Users can read their own profile, admins can read any.
-    match /users/{userId} {
-      allow read: if isSignedIn();
-      allow create: if isSignedIn();
-      allow update: if isSignedIn() && isOwner(userId);
-      allow delete: if isRole('admin');
-    }
-
-    // Authenticated users can read problem statements, only admins can write.
+    // Problem statements can be read by any authenticated user.
+    // Only admins can create, update, or delete them.
     match /problemStatements/{statementId} {
-      allow read: if isSignedIn();
-      allow write: if isSignedIn() && isRole('admin');
+      allow read: if request.auth != null;
+      allow write: if isAppAdmin();
     }
 
-    // Rules for teams collection
+    // Teams can be read by authenticated users.
+    // Only team leaders or admins can update team details.
     match /teams/{teamId} {
-      allow read: if isSignedIn();
-      // Only the team leader can update the team.
-      allow update: if isSignedIn() && get(/databases/$(database)/documents/teams/$(teamId)).data.leader.uid == request.auth.uid;
-      // Team leader can create a team
-      allow create: if isSignedIn();
-      // Only admin can delete a team
-      allow delete: if isRole('admin');
+      allow read: if request.auth != null;
+      allow create: if request.auth != null;
+      allow update: if request.auth.uid == resource.data.leader.uid || isAppAdmin();
+      allow delete: if isAppAdmin();
+    }
+
+    // Users can read and update their own profile.
+    // Admins can read and update ANY user's profile.
+    match /users/{userId} {
+      allow read: if request.auth.uid == userId || isAppAdmin();
+      allow create: if request.auth != null;
+      allow update: if request.auth.uid == userId || isAppAdmin();
+    }
+
+    // SPOCs can be created by admins.
+    match /spocs/{spocId} {
+        allow read: if isAppAdmin() || request.auth.uid == spocId;
+        allow write: if isAppAdmin();
     }
   }
 }
