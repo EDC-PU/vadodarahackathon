@@ -3,51 +3,65 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Helper Functions
-    function isSignedIn() {
+    // Helper functions
+    function isAuth() {
       return request.auth != null;
     }
 
-    function isUser(userId) {
-      return isSignedIn() && request.auth.uid == userId;
+    function isOwner(userId) {
+      return isAuth() && request.auth.uid == userId;
     }
-    
-    function getUserData(userId) {
-      return get(/databases/$(database)/documents/users/$(userId)).data;
+
+    function getRole(uid) {
+      return get(/databases/$(database)/documents/users/$(uid)).data.role;
     }
-    
+
     function isAdmin() {
-      return isSignedIn() && getUserData(request.auth.uid).role == 'admin';
+      return isAuth() && getRole(request.auth.uid) == 'admin';
     }
-    
+
     function isSpoc() {
-       return isSignedIn() && getUserData(request.auth.uid).role == 'spoc';
-    }
-
-    // Collection Rules
-    match /users/{userId} {
-      allow read: if isUser(userId) || isAdmin();
-      allow write: if isUser(userId) || isAdmin();
-      allow create: if isSignedIn();
+      return isAuth() && getRole(request.auth.uid) == 'spoc';
     }
     
-    match /teams/{teamId} {
-        allow read: if isSignedIn();
-        allow create: if isSignedIn();
-        
-        // Only the team leader or an admin can update/delete the team
-        allow update, delete: if isSignedIn() && 
-                                  (request.auth.uid == resource.data.leader.uid || isAdmin());
+    function isLeader(teamId) {
+      return isAuth() && request.auth.uid == get(/databases/$(database)/documents/teams/$(teamId)).data.leader.uid;
     }
 
-    match /problemStatements/{statementId} {
-        allow read: if isSignedIn();
-        allow create, update, delete: if isAdmin();
+    // Collection rules
+    match /users/{userId} {
+      // Anyone can create their own user document upon signing up.
+      // Admins and SPOCs can also create users.
+      allow create: if isAuth() && (isOwner(userId) || isAdmin() || isSpoc());
+      
+      // Users can read their own data. Admins can read anyone's data.
+      allow read: if isOwner(userId) || isAdmin();
+      
+      // Users can update their own data. Admins can update anyone's data.
+      allow update: if isOwner(userId) || isAdmin();
+      
+      // Only admins can delete users.
+      allow delete: if isAdmin();
+    }
+
+    match /teams/{teamId} {
+      allow read: if isAuth();
+      // Only authenticated users can create a team (as a leader).
+      allow create: if isAuth(); 
+      // Only the team leader or an admin can update or delete a team.
+      allow update, delete: if isLeader(teamId) || isAdmin();
+    }
+
+    match /problemStatements/{psId} {
+      allow read: if isAuth();
+      allow create, update, delete: if isAdmin();
     }
     
     match /announcements/{announcementId} {
-        allow read: if true; // Everyone can read announcements
-        allow create, update, delete: if isAdmin();
+      // Anyone, including unauthenticated users (for the landing page), can read announcements.
+      allow read: if true;
+      // Only admins can manage announcements.
+      allow create, update, delete: if isAdmin();
     }
   }
 }
