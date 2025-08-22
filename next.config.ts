@@ -27,6 +27,12 @@ const nextConfig: NextConfig = {
         hostname: 'www.pierc.org',
         port: '',
         pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'www.paruluniversity.ac.in',
+        port: '',
+        pathname: '/**',
       }
     ],
   },

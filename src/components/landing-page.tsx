@@ -276,9 +276,18 @@ export default function LandingPage() {
       </main>
 
       <footer className="bg-muted border-t">
-        <div className="container max-w-7xl py-6 text-center text-sm text-foreground/60">
-          <p>&copy; {new Date().getFullYear()} Vadodara Hackathon. All rights reserved.</p>
-          <p>An initiative by Parul University, PIERC.</p>
+        <div className="container max-w-7xl py-8">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+              <div className="flex items-center gap-4">
+                  <Image src="https://www.paruluniversity.ac.in/pu-web/images/logo.png" alt="Parul University Logo" width={150} height={50} />
+                  <div className="w-px h-10 bg-border"></div>
+                  <img src="https://www.pierc.org/assets/PIERC.svg" alt="PIERC Logo" className="h-10" />
+              </div>
+              <div className="text-center md:text-right text-sm text-foreground/60">
+                <p>&copy; {new Date().getFullYear()} Vadodara Hackathon. All rights reserved.</p>
+                <p>An initiative by Parul University, PIERC.</p>
+            </div>
+          </div>
         </div>
       </footer>
     </div>
