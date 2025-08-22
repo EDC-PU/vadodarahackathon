@@ -49,9 +49,9 @@ export default function LandingPage() {
   return (
     <div className="flex min-h-screen flex-col bg-background">
       <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="container flex h-20 max-w-7xl items-center justify-between">
+        <div className="container flex h-24 max-w-7xl items-center justify-between">
           <Link href="https://paruluniversity.ac.in/" target="_blank" rel="noopener noreferrer" className="flex items-center" prefetch={false}>
-             <Image src="https://www.paruluniversity.ac.in/pu-web/images/logo.png" alt="Parul University Logo" width={180} height={60} style={{height: 'auto'}}/>
+             <Image src="https://www.paruluniversity.ac.in/pu-web/images/logo.png" alt="Parul University Logo" width={220} height={70} style={{height: 'auto'}}/>
           </Link>
           <nav className="hidden md:flex items-center gap-6 text-sm font-medium">
             {navLinks.map((link) => (
@@ -70,7 +70,7 @@ export default function LandingPage() {
                 </Button>
               </div>
               <Link href="https://pierc.org/" target="_blank" rel="noopener noreferrer" className="items-center hidden sm:flex" prefetch={false}>
-                 <img src="https://www.pierc.org/assets/PIERC.svg" alt="PIERC Logo" className="h-10" />
+                 <img src="https://www.pierc.org/assets/PIERC.svg" alt="PIERC Logo" className="h-14" />
               </Link>
           </div>
         </div>
@@ -80,7 +80,7 @@ export default function LandingPage() {
         <section className="py-20 md:py-32">
           <div className="container max-w-7xl text-center">
             <div className="flex justify-center mb-8">
-                <Image src="https://www.pierc.org/vhlogo.png" alt="Vadodara Hackathon Logo" width={256} height={256} className="rounded-full" />
+                <Image src="https://www.pierc.org/vhlogo.png" alt="Vadodara Hackathon Logo" width={500} height={500} className="h-auto" style={{maxWidth: '60vh'}} />
             </div>
             <p className="max-w-3xl mx-auto text-lg md:text-xl text-foreground/80 mb-8">
              Your Gateway to Smart India Hackathon 2025!
