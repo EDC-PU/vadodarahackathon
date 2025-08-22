@@ -60,7 +60,7 @@ export function AddSpocDialog({ isOpen, onOpenChange, onSpocAdded }: AddSpocDial
         toast({
           title: "SPOC Action Required",
           description: result.message,
-          duration: 10000, // Make toast stay longer
+          duration: 15000, // Make toast stay longer
         });
         onSpocAdded(); // Callback to refresh the list
         onOpenChange(false); // Close the dialog
@@ -90,7 +90,7 @@ export function AddSpocDialog({ isOpen, onOpenChange, onSpocAdded }: AddSpocDial
         <DialogHeader>
           <DialogTitle>Add New SPOC</DialogTitle>
           <DialogDescription>
-            Create a new Single Point of Contact (SPOC) for an institute. A temporary password will be generated and must be communicated to them.
+            Create a new Single Point of Contact (SPOC). Their login credentials will be emailed to them automatically.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
