@@ -11,7 +11,6 @@ import { useToast } from './use-toast';
 
 async function findTeamByMemberEmail(email: string): Promise<Team | null> {
     const teamsRef = collection(db, "teams");
-    const q = query(teamsRef, where("members", "array-contains", { email })); // This is a limitation, exact match needed.
     const querySnapshot = await getDocs(teamsRef);
 
     for (const doc of querySnapshot.docs) {
@@ -78,6 +77,25 @@ export function useAuth() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const redirectToDashboard = useCallback((userProfile: UserProfile) => {
+     switch (userProfile.role) {
+        case "admin":
+          router.push("/admin");
+          break;
+        case "leader":
+          router.push("/leader");
+          break;
+        case "spoc":
+          router.push("/spoc");
+          break;
+        case "member":
+          router.push("/member");
+          break;
+        default:
+          router.push("/login");
+      }
+  }, [router]);
+
   const handleLogin = useCallback(async (loggedInUser: FirebaseUser) => {
     const userDocRef = doc(db, "users", loggedInUser.uid);
     const userDoc = await getDoc(userDocRef);
@@ -125,12 +143,37 @@ export function useAuth() {
             toast({ title: "Welcome!", description: "Your account is set up. Redirecting..." });
             redirectToDashboard(newProfile);
         } else {
-            toast({
-                title: "Registration Incomplete",
-                description: "Your account is not associated with a team. Please register first.",
-                variant: "destructive",
-            });
-            await signOut(auth);
+            // This is a user (likely an admin) created in the console who is logging in for the first time.
+            // Or someone who is not on a team trying to log in.
+            // Let's check if an admin document exists for this email.
+            const usersRef = collection(db, "users");
+            const q = query(usersRef, where("email", "==", loggedInUser.email!), where("role", "==", "admin"));
+            const adminSnapshot = await getDocs(q);
+
+            if (!adminSnapshot.empty) {
+                const adminDoc = adminSnapshot.docs[0];
+                const adminProfile = adminDoc.data() as UserProfile;
+                 // It's possible the UID is different if created manually vs. Google Sign-In
+                // We should update the UID in firestore to match the authenticated user
+                if (adminDoc.id !== loggedInUser.uid) {
+                    const oldDocRef = doc(db, 'users', adminDoc.id);
+                    const newDocRef = doc(db, 'users', loggedInUser.uid);
+                    const batch = writeBatch(db);
+                    batch.set(newDocRef, {...adminProfile, uid: loggedInUser.uid });
+                    batch.delete(oldDocRef);
+                    await batch.commit();
+                }
+
+                toast({ title: "Admin Login Successful", description: "Redirecting to your dashboard..." });
+                redirectToDashboard(adminProfile);
+            } else {
+                 toast({
+                    title: "Registration Incomplete",
+                    description: "Your account is not associated with a team. Please register first.",
+                    variant: "destructive",
+                });
+                await signOut(auth);
+            }
         }
     }
   }, [redirectToDashboard, toast]);
@@ -146,26 +189,6 @@ export function useAuth() {
     }
   }, [router, toast]);
   
-  const redirectToDashboard = useCallback((userProfile: UserProfile) => {
-     switch (userProfile.role) {
-        case "admin":
-          router.push("/admin");
-          break;
-        case "leader":
-          router.push("/leader");
-          break;
-        case "spoc":
-          router.push("/spoc");
-          break;
-        case "member":
-          router.push("/member");
-          break;
-        default:
-          router.push("/login");
-      }
-  }, [router]);
 
   return { user, firebaseUser, loading, handleSignOut, redirectToDashboard, handleLogin };
 }
-
-    
