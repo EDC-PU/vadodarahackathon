@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { onAuthStateChanged, signOut, User as FirebaseUser } from 'firebase/auth';
-import { doc, getDoc, onSnapshot, collection, query, where, getDocs, writeBatch, updateDoc, setDoc } from 'firebase/firestore';
+import { doc, getDoc, onSnapshot, collection, query, where, getDocs, writeBatch, updateDoc, setDoc, arrayUnion, deleteDoc } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import { UserProfile, Team } from '@/lib/types';
 import { useRouter, usePathname } from 'next/navigation';
@@ -11,27 +11,53 @@ import { useToast } from './use-toast';
 import { getAdminAuth } from '@/lib/firebase-admin';
 import { notifyAdminsOfSpocRequest } from '@/ai/flows/notify-admins-flow';
 
-async function findTeamByMemberEmail(email: string): Promise<Team | null> {
-    console.log(`findTeamByMemberEmail: Searching for team with member email: ${email}`);
-    if (!email) return null;
-    const teamsRef = collection(db, "teams");
-    const querySnapshot = await getDocs(teamsRef);
+async function checkAndAcceptInvitation(loggedInUser: FirebaseUser, userProfile: UserProfile) {
+    console.log(`Checking for invitations for email: ${loggedInUser.email}`);
+    if (!loggedInUser.email) return userProfile;
 
-    for (const doc of querySnapshot.docs) {
-        const team = { id: doc.id, ...doc.data() } as Team;
-        // Check both leader and members
-        if (team.leader.email.toLowerCase() === email.toLowerCase()) {
-            console.log(`findTeamByMemberEmail: Found user as leader of team ${team.id}`);
-            return team;
-        }
-        const member = team.members.find(m => m.email.toLowerCase() === email.toLowerCase());
-        if (member) {
-            console.log(`findTeamByMemberEmail: Found user as member of team ${team.id}`);
-            return team;
-        }
+    const invitationsRef = collection(db, "invitations");
+    const q = query(invitationsRef, where("email", "==", loggedInUser.email));
+    const invitationSnapshot = await getDocs(q);
+
+    if (invitationSnapshot.empty) {
+        console.log("No pending invitations found.");
+        return userProfile;
     }
-    console.log(`findTeamByMemberEmail: No team found for email ${email}`);
-    return null;
+
+    const invitationDoc = invitationSnapshot.docs[0];
+    const { teamId } = invitationDoc.data();
+    console.log(`Invitation found for team ID: ${teamId}`);
+
+    const batch = writeBatch(db);
+
+    // 1. Add member to the team
+    const teamDocRef = doc(db, "teams", teamId);
+    batch.update(teamDocRef, {
+        members: arrayUnion({
+            uid: loggedInUser.uid,
+            name: userProfile.name,
+            email: userProfile.email,
+            enrollmentNumber: userProfile.enrollmentNumber || '',
+            contactNumber: userProfile.contactNumber || '',
+            gender: userProfile.gender || 'Other',
+        })
+    });
+    console.log(`Batch update: Added user ${loggedInUser.uid} to team ${teamId}`);
+
+    // 2. Update the user's profile with teamId and role
+    const userDocRef = doc(db, "users", loggedInUser.uid);
+    const updatedProfileData = { teamId, role: 'member' };
+    batch.update(userDocRef, updatedProfileData);
+    console.log(`Batch update: Updated user ${loggedInUser.uid} profile with teamId and role.`);
+
+    // 3. Delete the invitation
+    batch.delete(invitationDoc.ref);
+    console.log(`Batch delete: Removed invitation document for ${loggedInUser.email}`);
+
+    await batch.commit();
+    console.log("Invitation batch commit successful.");
+
+    return { ...userProfile, ...updatedProfileData };
 }
 
 export function useAuth() {
@@ -73,11 +99,18 @@ export function useAuth() {
         return;
      }
 
-     // If the user is a new signup with no role, they need to create a team
-     if (!userProfile.role) {
-         console.log("redirectToDashboard: User has no role. Redirecting to /create-team.");
+     // If the user is a new signup with role 'leader', they need to create a team
+     if (userProfile.role === 'leader' && !userProfile.teamId) {
+         console.log("redirectToDashboard: User is a leader but has no team. Redirecting to /create-team.");
          router.push('/create-team');
          return;
+     }
+
+     // If the user is a new signup with role 'member', but has no teamId yet (hasn't been added)
+     if (userProfile.role === 'member' && !userProfile.teamId) {
+        console.log("redirectToDashboard: User is a member but has no team. Redirecting to /complete-profile to wait.");
+        router.push('/complete-profile');
+        return;
      }
 
      // Then, check if the user has completed their profile
@@ -102,8 +135,8 @@ export function useAuth() {
           router.push("/member");
           break;
         default:
-          console.log("redirectToDashboard: User has unknown role or default case. Redirecting to /create-team.");
-          router.push("/create-team");
+          console.log("redirectToDashboard: User has unknown role or default case. Redirecting to /register.");
+          router.push("/register");
       }
   }, [router, toast]);
 
@@ -148,10 +181,10 @@ export function useAuth() {
                 console.warn(`useAuth onSnapshot: User was part of team ${user.teamId} but is no longer. Resetting role.`);
                 toast({
                     title: "Removed from Team",
-                    description: "The team leader has removed you from the team. You can now register as a new leader.",
+                    description: "The team leader or a SPOC has removed you from the team. You can now register as a new leader.",
                     variant: "destructive"
                 });
-                setUser({ ...userProfile, teamId: undefined, role: undefined });
+                setUser({ ...userProfile, teamId: undefined, role: 'leader' }); // Default to leader so they can create a new team
                 router.push('/create-team');
                 return;
             }
@@ -223,10 +256,14 @@ export function useAuth() {
         }
     }
 
+    let finalUserProfile;
     if (userDoc.exists()) {
-      const userProfile = userDoc.data() as UserProfile;
+      let userProfile = userDoc.data() as UserProfile;
       console.log("handleLogin: User document exists.", userProfile);
-
+      
+      // Check for and accept invitations for existing users
+      finalUserProfile = await checkAndAcceptInvitation(loggedInUser, userProfile);
+      
       if (loggedInUser.disabled) {
         console.warn(`handleLogin: Login attempt by disabled user: ${loggedInUser.email}`);
         toast({
@@ -243,7 +280,7 @@ export function useAuth() {
         title: "Login Successful",
         description: "Redirecting to your dashboard...",
       });
-      redirectToDashboard(userProfile);
+      
     } else {
         console.log("handleLogin: New user detected. Creating profile from sessionStorage role.");
         const role = sessionStorage.getItem('sign-up-role');
@@ -256,22 +293,26 @@ export function useAuth() {
             return;
         }
 
-        const newProfile: Partial<UserProfile> = {
+        const newProfile: UserProfile = {
             uid: loggedInUser.uid,
             name: loggedInUser.displayName || 'New User',
             email: loggedInUser.email!,
             role: role as UserProfile['role'],
             photoURL: loggedInUser.photoURL || '',
-            passwordChanged: true, // Assumed true for Google Sign-In or initial signup
+            passwordChanged: loggedInUser.providerData.some(p => p.providerId === 'google.com'), // True for Google, false for email
         };
         
         console.log("handleLogin: Creating new user document with profile:", newProfile);
         await setDoc(doc(db, "users", loggedInUser.uid), newProfile);
         
-        toast({ title: "Account Created!", description: "Let's complete your profile." });
+        // Check for and accept invitations for new users
+        finalUserProfile = await checkAndAcceptInvitation(loggedInUser, newProfile);
         
-        redirectToDashboard(newProfile as UserProfile);
+        toast({ title: "Account Created!", description: "Let's complete your profile." });
     }
+
+    redirectToDashboard(finalUserProfile);
+
   }, [redirectToDashboard, toast]);
 
   const handleSignOut = useCallback(async () => {
@@ -290,3 +331,5 @@ export function useAuth() {
 
   return { user, firebaseUser, loading, handleSignOut, redirectToDashboard, handleLogin };
 }
+
+    

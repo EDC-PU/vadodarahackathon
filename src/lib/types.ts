@@ -1,3 +1,4 @@
+
 import {z} from 'genkit';
 
 export type UserRole = "leader" | "member" | "spoc" | "admin";
@@ -20,7 +21,7 @@ export interface UserProfile {
 }
 
 export interface TeamMember {
-  uid?: string; // UID is optional until member logs in
+  uid: string; 
   name: string;
   email: string;
   enrollmentNumber: string;
@@ -128,8 +129,7 @@ export type ExportTeamsOutput = z.infer<typeof ExportTeamsOutputSchema>;
 export const InviteMemberInputSchema = z.object({
   teamId: z.string().describe("The ID of the team to add the member to."),
   teamName: z.string().describe("The name of the team."),
-  memberName: z.string().describe("The full name of the new member."),
-  memberEmail: z.string().email().describe("The email address of the new member."),
+  memberEmail: z.string().email().describe("The email address of the new member to invite."),
 });
 export type InviteMemberInput = z.infer<typeof InviteMemberInputSchema>;
 
@@ -250,3 +250,5 @@ export const SystemHealthStateSchema = z.object({
   timestamp: z.string(),
 });
 export type SystemHealthState = z.infer<typeof SystemHealthStateSchema>;
+
+    

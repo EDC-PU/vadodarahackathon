@@ -54,7 +54,6 @@ export default function LeaderDashboard() {
     const form = event.currentTarget;
     const formData = new FormData(form);
     const memberEmail = formData.get("new-member-email") as string;
-    const memberName = formData.get("new-member-name") as string;
     
     // Check if member already exists by email
     const isAlreadyInTeam = team.members.some(m => m.email.toLowerCase() === memberEmail.toLowerCase()) || team.leader.email.toLowerCase() === memberEmail.toLowerCase();
@@ -68,7 +67,6 @@ export default function LeaderDashboard() {
         const result = await inviteMember({
             teamId: team.id,
             teamName: team.name,
-            memberName,
             memberEmail,
         });
 
@@ -108,7 +106,7 @@ export default function LeaderDashboard() {
             members: arrayRemove(memberDataForRemoval)
         });
 
-        // 2. Find the user by email and clear their teamId
+        // 2. Find the user by email and clear their teamId and role
         const usersRef = collection(db, "users");
         const q = query(usersRef, where("email", "==", memberToRemove.email));
         const querySnapshot = await getDocs(q);
@@ -116,7 +114,7 @@ export default function LeaderDashboard() {
         if (!querySnapshot.empty) {
             const userDoc = querySnapshot.docs[0];
             const userDocRef = doc(db, "users", userDoc.id);
-            batch.update(userDocRef, { teamId: "" });
+            batch.update(userDocRef, { teamId: "", role: "member" }); // Reset role, keep as member
         }
 
         await batch.commit();
@@ -245,25 +243,19 @@ export default function LeaderDashboard() {
                 <CardHeader>
                     <CardTitle>Add New Member</CardTitle>
                     <CardDescription>
-                        {canAddMoreMembers ? `You can add ${5 - team.members.length} more members.` : "Your team is full."}
+                        {canAddMoreMembers ? `You can invite ${5 - team.members.length} more members.` : "Your team is full."}
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
                    {canAddMoreMembers ? (
                     <form onSubmit={handleAddMember} className="space-y-4">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                             <div>
-                                <Label htmlFor="new-member-name">Full Name</Label>
-                                <Input id="new-member-name" name="new-member-name" placeholder="Member's Name" required disabled={isInviting}/>
-                            </div>
-                            <div>
-                                <Label htmlFor="new-member-email">Email</Label>
-                                <Input id="new-member-email" name="new-member-email" type="email" placeholder="member@example.com" required disabled={isInviting}/>
-                            </div>
+                         <div>
+                            <Label htmlFor="new-member-email">Member's Email</Label>
+                            <Input id="new-member-email" name="new-member-email" type="email" placeholder="member@example.com" required disabled={isInviting}/>
                         </div>
                         <Button type="submit" disabled={isInviting}>
                             {isInviting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <PlusCircle className="mr-2 h-4 w-4" />}
-                             Invite Member
+                             Send Invitation
                         </Button>
                     </form>
                    ): (
@@ -306,3 +298,5 @@ export default function LeaderDashboard() {
     </div>
   );
 }
+
+    

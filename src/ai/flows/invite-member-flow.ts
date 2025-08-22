@@ -1,30 +1,17 @@
 
 'use server';
 /**
- * @fileOverview Flow to invite a new member to a team, create their auth account, and email them their credentials.
+ * @fileOverview Flow to invite a new member to a team by sending them an invitation email.
  */
 import { ai } from '@/ai/genkit';
 import { InviteMemberInput, InviteMemberInputSchema, InviteMemberOutput, InviteMemberOutputSchema } from '@/lib/types';
-import { doc, updateDoc, arrayUnion } from 'firebase/firestore';
+import { getAdminDb } from '@/lib/firebase-admin';
 import nodemailer from 'nodemailer';
-import { getAdminAuth, getAdminDb } from '@/lib/firebase-admin';
+import { collection, query, where, getDocs, addDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
-
-// Helper to generate a random password
-const generatePassword = (length = 10) => {
-  const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()";
-  let retVal = "";
-  for (let i = 0, n = charset.length; i < length; ++i) {
-    retVal += charset.charAt(Math.floor(Math.random() * n));
-  }
-  console.log("Generated temporary password for new member.");
-  return retVal;
-};
-
-
-async function sendCredentialsEmail(name: string, email: string, password: string, teamName: string) {
-    console.log(`Attempting to send new member credentials email to ${email}...`);
+async function sendInvitationEmail(email: string, teamName: string) {
+    console.log(`Attempting to send team invitation email to ${email}...`);
     if (!process.env.GMAIL_EMAIL || !process.env.GMAIL_PASSWORD) {
         console.error("GMAIL_EMAIL or GMAIL_PASSWORD environment variables not set.");
         throw new Error("Missing GMAIL_EMAIL or GMAIL_PASSWORD environment variables. Please set them in your .env file. Note: You must use a Google App Password for GMAIL_PASSWORD.");
@@ -44,16 +31,11 @@ async function sendCredentialsEmail(name: string, email: string, password: strin
         to: email,
         subject: `You're Invited to Join Team ${teamName} on the Vadodara Hackathon Portal!`,
         html: `
-            <h1>Welcome to the Team!</h1>
-            <p>Hi ${name},</p>
+            <h1>You're Invited!</h1>
             <p>You have been invited to join <strong>${teamName}</strong> for the Vadodara Hackathon 6.0.</p>
-            <p>Please use the following credentials to log in to the portal and complete your profile:</p>
-            <ul>
-                <li><strong>Email:</strong> ${email}</li>
-                <li><strong>Password:</strong> ${password}</li>
-            </ul>
-            <p><a href="http://localhost:9002/login">Click here to log in</a></p>
-            <p><strong>Important:</strong> You will be required to change this temporary password upon your first login.</p>
+            <p>To accept the invitation, please register or log in to the portal using this email address.</p>
+            <p><a href="http://localhost:9002/register">Click here to register or log in</a></p>
+            <p>If you already have an account, simply log in to be added to the team. If not, please sign up as a "Team Member (Invited)".</p>
             <p>We're excited to have you on board!</p>
             <br/>
             <p>Best Regards,</p>
@@ -81,47 +63,57 @@ const inviteMemberFlow = ai.defineFlow(
   },
   async (input) => {
     console.log("inviteMemberFlow started with input:", input);
+    const adminDb = getAdminDb();
+     if (!adminDb) {
+      const errorMessage = "Firebase Admin SDK is not initialized. Please check server-side environment variables.";
+      console.error(errorMessage);
+      return { success: false, message: `Failed to invite member: ${errorMessage}` };
+    }
+
     try {
-        const tempPassword = generatePassword();
-        const adminAuth = getAdminAuth();
+        const usersRef = collection(db, "users");
         
-        console.log(`Creating Firebase Auth user for ${input.memberEmail}...`);
-        // 1. Create Firebase Auth user
-        const userRecord = await adminAuth.createUser({
+        // 1. Check if user already exists and is on a team
+        console.log(`Checking existing user with email: ${input.memberEmail}`);
+        const userQuery = query(usersRef, where("email", "==", input.memberEmail));
+        const userSnapshot = await getDocs(userQuery);
+        
+        if (!userSnapshot.empty) {
+            const existingUser = userSnapshot.docs[0].data();
+            if (existingUser.teamId) {
+                const errorMessage = "This user is already part of another team.";
+                console.error(errorMessage);
+                return { success: false, message: errorMessage };
+            }
+        }
+
+        // 2. Check if an invitation for this email already exists
+        console.log(`Checking existing invitation for email: ${input.memberEmail}`);
+        const invitationsRef = collection(db, "invitations");
+        const invitationQuery = query(invitationsRef, where("email", "==", input.memberEmail));
+        const invitationSnapshot = await getDocs(invitationQuery);
+        if (!invitationSnapshot.empty) {
+            const errorMessage = "An invitation has already been sent to this email address.";
+            console.error(errorMessage);
+            return { success: false, message: errorMessage };
+        }
+        
+        console.log("No existing user or invitation conflicts. Creating invitation.");
+        // 3. Create an invitation document
+        await addDoc(invitationsRef, {
+            teamId: input.teamId,
+            teamName: input.teamName,
             email: input.memberEmail,
-            emailVerified: true,
-            password: tempPassword,
-            displayName: input.memberName,
-            disabled: false,
+            createdAt: new Date(),
         });
+        console.log(`Invitation document created for ${input.memberEmail} to join ${input.teamName}`);
 
-        const uid = userRecord.uid;
-        console.log(`Successfully created Firebase Auth user with UID: ${uid}`);
-       
-        console.log(`Adding member to team document ${input.teamId}...`);
-        // 2. Add member to the team's array in Firestore
-        const teamDocRef = doc(db, "teams", input.teamId);
-        await updateDoc(teamDocRef, {
-            members: arrayUnion({
-                uid: uid,
-                name: input.memberName,
-                email: input.memberEmail,
-                // These are placeholders until the user logs in and completes their profile
-                enrollmentNumber: '',
-                contactNumber: '',
-                gender: 'Other',
-            })
-        });
-        console.log("Successfully updated team document.");
-
-        console.log("Sending credentials email...");
-        // 3. Send email with credentials
-        await sendCredentialsEmail(input.memberName, input.memberEmail, tempPassword, input.teamName);
+        // 4. Send email notification
+        await sendInvitationEmail(input.memberEmail, input.teamName);
 
         const result: InviteMemberOutput = {
             success: true,
-            message: `Invitation sent to ${input.memberName}. Their account has been created.`,
-            uid: uid,
+            message: `Invitation sent to ${input.memberEmail}. They need to log in or register to accept.`,
         };
         console.log("inviteMemberFlow finished successfully.", result);
         return result;
@@ -130,9 +122,7 @@ const inviteMemberFlow = ai.defineFlow(
         console.error("Error inviting member:", error);
         let errorMessage = error.message || "An unknown error occurred.";
         
-        if (error.code === 'auth/email-already-exists') {
-            errorMessage = 'This email is already registered. Please check if they are already part of another team.';
-        } else if (errorMessage.toLowerCase().includes('invalid login') || (error as any).code === 'EAUTH') {
+        if (errorMessage.toLowerCase().includes('invalid login') || (error as any).code === 'EAUTH') {
              errorMessage = 'Could not send email. Please check your GMAIL_EMAIL and GMAIL_PASSWORD in the .env file. You may need to use a Google App Password.';
         }
         
@@ -142,3 +132,5 @@ const inviteMemberFlow = ai.defineFlow(
     }
   }
 );
+
+    
