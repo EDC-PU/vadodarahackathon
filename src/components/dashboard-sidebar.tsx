@@ -54,11 +54,14 @@ const navItems = {
   ],
 };
 
-const getProfileLink = (user: any) => ({
-    href: `/profile/${user.uid}`,
-    icon: <UserIcon />,
-    label: "My Profile"
-});
+const getProfileLink = (user: any) => {
+    if (!user || !user.enrollmentNumber) return null;
+    return {
+        href: `/profile/${user.enrollmentNumber}`,
+        icon: <UserIcon />,
+        label: "My Profile"
+    }
+};
 
 
 const RoleIcon = ({ role }: { role: string }) => {
@@ -108,8 +111,9 @@ export default function DashboardSidebar() {
   const activeRole = user.role as keyof typeof navItems;
   let items = navItems[activeRole] || [];
 
-  if ((activeRole === 'leader' || activeRole === 'member') && user.uid) {
-    items.push(getProfileLink(user));
+  const profileLink = getProfileLink(user);
+  if ((activeRole === 'leader' || activeRole === 'member') && profileLink) {
+    items.push(profileLink);
   }
 
 
@@ -161,3 +165,5 @@ export default function DashboardSidebar() {
     </>
   );
 }
+
+    

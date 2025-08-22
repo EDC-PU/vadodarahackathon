@@ -19,7 +19,7 @@ import { useState, useEffect } from "react";
 import { Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { db } from "@/lib/firebase";
-import { doc, updateDoc, getDoc, writeBatch } from "firebase/firestore";
+import { doc, updateDoc, getDoc, writeBatch, collection, query, where, getDocs } from "firebase/firestore";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useAuth } from "@/hooks/use-auth";
 import { Team, UserProfile } from "@/lib/types";
@@ -38,38 +38,58 @@ const formSchema = z.object({
 
 export default function ProfilePage() {
   const { user, loading: authLoading } = useAuth();
+  const [profileData, setProfileData] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isFetching, setIsFetching] = useState(true);
   const { toast } = useToast();
   const params = useParams();
-  const profileUserId = params.id as string;
+  const profileEnrollmentNumber = params.id as string;
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-        name: user?.name || "",
-        gender: user?.gender || undefined,
-        department: user?.department || "",
-        enrollmentNumber: user?.enrollmentNumber || "",
-        contactNumber: user?.contactNumber || "",
+        name: "",
+        gender: undefined,
+        department: "",
+        enrollmentNumber: "",
+        contactNumber: "",
     },
   });
   
   useEffect(() => {
-    if (user) {
-        form.reset({
-            name: user.name || "",
-            gender: user.gender || undefined,
-            department: user.department || "",
-            enrollmentNumber: user.enrollmentNumber || "",
-            contactNumber: user.contactNumber || "",
-        });
-    }
-  }, [user, form]);
+    const fetchProfileData = async () => {
+        if (!profileEnrollmentNumber) return;
+        setIsFetching(true);
+        try {
+            const usersRef = collection(db, "users");
+            const q = query(usersRef, where("enrollmentNumber", "==", profileEnrollmentNumber));
+            const querySnapshot = await getDocs(q);
+
+            if (!querySnapshot.empty) {
+                const userDoc = querySnapshot.docs[0];
+                const data = { uid: userDoc.id, ...userDoc.data() } as UserProfile;
+                setProfileData(data);
+                form.reset({
+                    name: data.name || "",
+                    gender: data.gender || undefined,
+                    department: data.department || "",
+                    enrollmentNumber: data.enrollmentNumber || "",
+                    contactNumber: data.contactNumber || "",
+                });
+            }
+        } catch (err) {
+             toast({ title: "Error", description: "Failed to fetch profile data.", variant: "destructive" });
+        } finally {
+            setIsFetching(false);
+        }
+    };
+    fetchProfileData();
+  }, [profileEnrollmentNumber, form, toast]);
 
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    if (!user) {
-        toast({ title: "Error", description: "You are not logged in.", variant: "destructive" });
+    if (!user || !profileData || user.uid !== profileData.uid) {
+        toast({ title: "Error", description: "You can only edit your own profile.", variant: "destructive" });
         return;
     }
     
@@ -119,6 +139,11 @@ export default function ProfilePage() {
             title: "Profile Updated!",
             description: "Your details have been successfully saved.",
         });
+        
+        // If enrollment number was changed, we might need to redirect
+        if (profileEnrollmentNumber !== values.enrollmentNumber) {
+            window.location.href = `/profile/${values.enrollmentNumber}`;
+        }
 
     } catch (error: any) {
       console.error("Profile Update Error:", error);
@@ -132,7 +157,7 @@ export default function ProfilePage() {
     }
   }
 
-  if (authLoading) {
+  if (authLoading || isFetching) {
       return (
           <div className="flex justify-center items-center h-screen">
               <Loader2 className="h-8 w-8 animate-spin" />
@@ -140,7 +165,7 @@ export default function ProfilePage() {
       )
   }
   
-  if (!user || user.uid !== profileUserId) {
+  if (!user || user.enrollmentNumber !== profileEnrollmentNumber) {
     return (
         <div className="p-4 sm:p-6 lg:p-8">
             <Alert variant="destructive">
@@ -206,7 +231,7 @@ export default function ProfilePage() {
                         <FormControl>
                             <RadioGroup
                                 onValueChange={field.onChange}
-                                defaultValue={field.value}
+                                value={field.value}
                                 className="flex items-center space-x-4 pt-2"
                                 disabled={isLoading}
                             >
@@ -275,3 +300,5 @@ export default function ProfilePage() {
     </div>
   );
 }
+
+    
