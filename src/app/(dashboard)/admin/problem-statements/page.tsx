@@ -23,6 +23,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import Link from "next/link";
 
 
 export default function ProblemStatementsPage() {
@@ -170,7 +171,9 @@ export default function ProblemStatementsPage() {
                                     <Users className="h-4 w-4 text-primary" />
                                     <span>{teamCount} {teamCount === 1 ? 'team' : 'teams'} registered</span>
                                 </div>
-                                <Button variant="outline" size="sm">View Teams</Button>
+                                <Button variant="outline" size="sm" asChild>
+                                    <Link href={`/admin/teams?problemStatementId=${ps.id}`}>View Teams</Link>
+                                </Button>
                            </div>
                         </li>
                       )

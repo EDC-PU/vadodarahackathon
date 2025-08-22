@@ -4,7 +4,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Loader2, Download, Save, Pencil, X, Trash2, MinusCircle } from "lucide-react";
-import { useEffect, useState, useMemo, useCallback } from "react";
+import { useEffect, useState, useMemo, useCallback, Suspense } from "react";
 import { db } from "@/lib/firebase";
 import { collection, onSnapshot, doc, updateDoc, query } from "firebase/firestore";
 import { Team, UserProfile, ProblemStatementCategory, TeamMember, ProblemStatement } from "@/lib/types";
@@ -26,10 +26,11 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { manageTeamBySpoc } from "@/ai/flows/manage-team-by-spoc-flow";
+import { useSearchParams } from "next/navigation";
 
 type CategoryFilter = ProblemStatementCategory | "All Categories";
 
-export default function AllTeamsPage() {
+function AllTeamsContent() {
   const [allTeams, setAllTeams] = useState<Team[]>([]);
   const [allUsers, setAllUsers] = useState<Map<string, UserProfile>>(new Map());
   const [problemStatements, setProblemStatements] = useState<ProblemStatement[]>([]);
@@ -42,9 +43,19 @@ export default function AllTeamsPage() {
 
   const [instituteFilter, setInstituteFilter] = useState<string>("All Institutes");
   const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>("All Categories");
+  const [problemStatementFilter, setProblemStatementFilter] = useState<string>("All Problem Statements");
+
   const { toast } = useToast();
+  const searchParams = useSearchParams();
   
   const categories: CategoryFilter[] = ["All Categories", "Software", "Hardware", "Hardware & Software"];
+
+  useEffect(() => {
+    const psIdFromQuery = searchParams.get('problemStatementId');
+    if (psIdFromQuery) {
+        setProblemStatementFilter(psIdFromQuery);
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     setLoading(true);
@@ -63,16 +74,20 @@ export default function AllTeamsPage() {
             });
         });
         
-        // Listen to each user document for real-time profile updates
-        const userUnsubscribers = Array.from(allUserIds).map(uid => {
-            const userDocRef = doc(db, 'users', uid);
-            return onSnapshot(userDocRef, (userDoc) => {
-                if (userDoc.exists()) {
-                    const userData = { uid: userDoc.id, ...userDoc.data() } as UserProfile;
-                    setAllUsers(prevUsers => new Map(prevUsers).set(uid, userData));
-                }
+        const userUnsubscribers: (()=>void)[] = [];
+        if (allUserIds.size > 0) {
+            // Listen to each user document for real-time profile updates
+             Array.from(allUserIds).forEach(uid => {
+                const userDocRef = doc(db, 'users', uid);
+                const unsub = onSnapshot(userDocRef, (userDoc) => {
+                    if (userDoc.exists()) {
+                        const userData = { uid: userDoc.id, ...userDoc.data() } as UserProfile;
+                        setAllUsers(prevUsers => new Map(prevUsers).set(uid, userData));
+                    }
+                });
+                userUnsubscribers.push(unsub);
             });
-        });
+        }
 
         if (loading) setLoading(false);
 
@@ -105,9 +120,10 @@ export default function AllTeamsPage() {
     return allTeams.filter(team => {
         const instituteMatch = instituteFilter === 'All Institutes' || team.institute === instituteFilter;
         const categoryMatch = categoryFilter === 'All Categories' || team.category === categoryFilter;
-        return instituteMatch && categoryMatch;
+        const psMatch = problemStatementFilter === 'All Problem Statements' || team.problemStatementId === problemStatementFilter;
+        return instituteMatch && categoryMatch && psMatch;
     });
-  }, [allTeams, instituteFilter, categoryFilter]);
+  }, [allTeams, instituteFilter, categoryFilter, problemStatementFilter]);
   
   const handleExport = async () => {
     setIsExporting(true);
@@ -198,12 +214,10 @@ export default function AllTeamsPage() {
     return teamsToProcess.map(team => {
         const leaderProfile = allUsers.get(team.leader.uid);
         const membersWithDetails = team.members.map(member => {
-            // Find user profile by email if UID is not available in the team doc
             let memberProfile: UserProfile | undefined;
             if (member.uid) {
                 memberProfile = allUsers.get(member.uid);
             } else {
-                // Fallback for older data structure
                 for (const user of allUsers.values()) {
                     if (user.email === member.email) {
                         memberProfile = user;
@@ -214,7 +228,7 @@ export default function AllTeamsPage() {
             
             return {
                 ...member,
-                uid: memberProfile?.uid || member.uid, // Prefer UID from profile
+                uid: memberProfile?.uid || member.uid,
                 name: memberProfile?.name || member.name,
                 email: memberProfile?.email || member.email,
                 enrollmentNumber: memberProfile?.enrollmentNumber || 'N/A',
@@ -255,7 +269,7 @@ export default function AllTeamsPage() {
             <h1 className="text-3xl font-bold font-headline">All Teams</h1>
             <p className="text-muted-foreground">View and manage all registered teams.</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
             <Select value={instituteFilter} onValueChange={setInstituteFilter}>
                 <SelectTrigger className="w-48">
                     <SelectValue placeholder="Filter by Institute" />
@@ -271,6 +285,15 @@ export default function AllTeamsPage() {
                 </SelectTrigger>
                 <SelectContent>
                     {categories.map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}
+                </SelectContent>
+            </Select>
+            <Select value={problemStatementFilter} onValueChange={setProblemStatementFilter}>
+                <SelectTrigger className="w-48">
+                    <SelectValue placeholder="Filter by Problem Statement" />
+                </SelectTrigger>
+                <SelectContent>
+                    <SelectItem value="All Problem Statements">All Problem Statements</SelectItem>
+                    {problemStatements.map(ps => <SelectItem key={ps.id} value={ps.id}>{ps.problemStatementId} - {ps.title}</SelectItem>)}
                 </SelectContent>
             </Select>
             <Button variant="outline" onClick={handleExport} disabled={isExporting}>
@@ -402,4 +425,12 @@ export default function AllTeamsPage() {
       </Card>
     </div>
   );
+}
+
+export default function AllTeamsPage() {
+    return (
+        <Suspense fallback={<div className="flex justify-center items-center h-screen"><Loader2 className="h-8 w-8 animate-spin" /></div>}>
+            <AllTeamsContent />
+        </Suspense>
+    )
 }
