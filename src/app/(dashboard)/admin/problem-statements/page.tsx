@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { PlusCircle, Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { db } from "@/lib/firebase";
-import { collection, onSnapshot } from "firebase/firestore";
+import { collection, onSnapshot, query, orderBy } from "firebase/firestore";
 import { ProblemStatement } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 import { AddProblemStatementDialog } from "@/components/add-problem-statement-dialog";
@@ -21,9 +21,12 @@ export default function ProblemStatementsPage() {
   useEffect(() => {
     setLoading(true);
     const problemStatementsCollection = collection(db, 'problemStatements');
-    const unsubscribe = onSnapshot(problemStatementsCollection, (snapshot) => {
+    // Order by the auto-generated ID to keep them in sequence
+    const q = query(problemStatementsCollection, orderBy("problemStatementId"));
+    
+    const unsubscribe = onSnapshot(q, (snapshot) => {
         const statementsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ProblemStatement));
-        setProblemStatements(statementsData.sort((a, b) => (a.problemStatementId || "").localeCompare(b.problemStatementId || "")));
+        setProblemStatements(statementsData);
         setLoading(false);
     }, (error) => {
         console.error("Error fetching problem statements:", error);

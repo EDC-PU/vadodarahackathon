@@ -20,7 +20,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
 import { RadioGroup, RadioGroupItem } from "./ui/radio-group";
 import { Textarea } from "./ui/textarea";
-import { addDoc, collection } from "firebase/firestore";
+import { addDoc, collection, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { ScrollArea } from "./ui/scroll-area";
 
@@ -34,7 +34,6 @@ const formSchema = z.object({
   category: z.enum(["Software", "Hardware", "Hardware & Software"], {
     required_error: "You need to select a problem statement category.",
   }),
-  problemStatementId: z.string().optional(),
   description: z.string().optional(),
   organization: z.string().optional(),
   department: z.string().optional(),
@@ -52,7 +51,6 @@ export function AddProblemStatementDialog({ isOpen, onOpenChange }: AddProblemSt
     resolver: zodResolver(formSchema),
     defaultValues: {
       title: "",
-      problemStatementId: "",
       description: "",
       organization: "",
       department: "",
@@ -66,14 +64,22 @@ export function AddProblemStatementDialog({ isOpen, onOpenChange }: AddProblemSt
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     setIsLoading(true);
     try {
+      // Get the number of existing problem statements to generate the new ID
+      const problemStatementsRef = collection(db, "problemStatements");
+      const snapshot = await getDocs(problemStatementsRef);
+      const count = snapshot.size;
+      const newIdNumber = count + 1;
+      const formattedId = `VH_PS_${String(newIdNumber).padStart(2, '0')}`;
+
       await addDoc(collection(db, "problemStatements"), {
         ...values,
+        problemStatementId: formattedId,
         createdAt: new Date(),
       });
 
       toast({
         title: "Success",
-        description: "The new problem statement has been added.",
+        description: `The new problem statement has been added with ID: ${formattedId}`,
       });
       form.reset();
       onOpenChange(false);
@@ -95,7 +101,7 @@ export function AddProblemStatementDialog({ isOpen, onOpenChange }: AddProblemSt
         <DialogHeader>
           <DialogTitle>Add New Problem Statement</DialogTitle>
           <DialogDescription>
-            Fill in the details for the new problem statement. It will be available for teams to select.
+            Fill in the details for the new problem statement. It will be available for teams to select. The ID will be auto-generated.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -163,19 +169,6 @@ export function AddProblemStatementDialog({ isOpen, onOpenChange }: AddProblemSt
                         className="min-h-[100px]"
                         {...field}
                       />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="problemStatementId"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Problem Statement ID (Optional)</FormLabel>
-                    <FormControl>
-                      <Input placeholder="e.g., 1525" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

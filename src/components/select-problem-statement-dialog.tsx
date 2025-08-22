@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Loader2, Search } from "lucide-react";
 import { ProblemStatement } from "@/lib/types";
 import { db } from "@/lib/firebase";
-import { collection, getDocs, query, where } from "firebase/firestore";
+import { collection, getDocs, query, where, orderBy } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import { Input } from "./ui/input";
 import { ScrollArea } from "./ui/scroll-area";
@@ -41,7 +41,11 @@ export function SelectProblemStatementDialog({ isOpen, onOpenChange, teamCategor
         try {
           // Fetch statements that match the team's category OR are "Hardware & Software"
           const applicableCategories = [teamCategory, "Hardware & Software"];
-          const q = query(collection(db, "problemStatements"), where("category", "in", applicableCategories));
+          const q = query(
+            collection(db, "problemStatements"), 
+            where("category", "in", applicableCategories),
+            orderBy("problemStatementId")
+          );
           
           const querySnapshot = await getDocs(q);
           const statements = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ProblemStatement));
@@ -67,7 +71,8 @@ export function SelectProblemStatementDialog({ isOpen, onOpenChange, teamCategor
     const filteredData = problemStatements.filter(item => {
       return (
         item.title.toLowerCase().includes(lowercasedFilter) ||
-        item.description.toLowerCase().includes(lowercasedFilter)
+        (item.description && item.description.toLowerCase().includes(lowercasedFilter)) ||
+        (item.problemStatementId && item.problemStatementId.toLowerCase().includes(lowercasedFilter))
       );
     });
     setFilteredStatements(filteredData);
@@ -85,7 +90,7 @@ export function SelectProblemStatementDialog({ isOpen, onOpenChange, teamCategor
         <div className="relative">
              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
              <Input 
-                placeholder="Search by title or keyword..."
+                placeholder="Search by ID, title or keyword..."
                 className="pl-9"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
@@ -105,7 +110,7 @@ export function SelectProblemStatementDialog({ isOpen, onOpenChange, teamCategor
                 onClick={() => onProblemStatementSelect(ps)}
                 >
                     <div className="flex justify-between items-start mb-2">
-                        <h3 className="font-semibold">{ps.title}</h3>
+                        <h3 className="font-semibold">{ps.title} ({ps.problemStatementId})</h3>
                         <Badge variant={ps.category === teamCategory ? 'default' : 'secondary'}>{ps.category}</Badge>
                     </div>
                   <p className="text-sm text-muted-foreground line-clamp-2">{ps.description}</p>
