@@ -189,10 +189,7 @@ export function RegistrationForm() {
                   <FormItem>
                     <FormLabel>Full Name</FormLabel>
                     <FormControl>
-                      <div className="flex items-center gap-2">
-                        <Input placeholder="John Doe" {...field} disabled={isLoading}/>
-                        <SmartFieldTip fieldName="Team Leader Name" formContext={formDescription} />
-                      </div>
+                      <Input placeholder="John Doe" {...field} disabled={isLoading}/>
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -247,12 +244,9 @@ export function RegistrationForm() {
                     <FormLabel>Institute</FormLabel>
                     <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isLoading}>
                       <FormControl>
-                        <div className="flex items-center gap-2">
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select your institute" />
-                          </SelectTrigger>
-                          <SmartFieldTip fieldName="Institute" formContext={formDescription} />
-                        </div>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select your institute" />
+                        </SelectTrigger>
                       </FormControl>
                       <SelectContent>
                         {INSTITUTES.map((inst) => (
@@ -271,10 +265,7 @@ export function RegistrationForm() {
                   <FormItem>
                     <FormLabel>Department</FormLabel>
                     <FormControl>
-                      <div className="flex items-center gap-2">
-                        <Input placeholder="e.g., Computer Engineering" {...field} disabled={isLoading}/>
-                        <SmartFieldTip fieldName="Department" formContext={formDescription} />
-                      </div>
+                      <Input placeholder="e.g., Computer Engineering" {...field} disabled={isLoading}/>
                     </FormControl>
                     <FormMessage />
                   </FormItem>
