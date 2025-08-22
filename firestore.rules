@@ -1,78 +1,90 @@
+
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-  
-    // Helper function to get a user's role from their profile document
-    function getUserRole(userId) {
-      return get(/databases/$(database)/documents/users/$(userId)).data.role;
-    }
-    
-    // Helper function to check if a user is an admin
-    function isAdmin(userId) {
-      return getUserRole(userId) == 'admin';
+
+    // Helper function to check if a user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
     }
 
-    // `users` collection rules
+    // Helper function to check if a user has a specific role
+    function hasRole(role) {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == role;
+    }
+    
+    // Helper function to check if a user is the owner of a document
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+
+    // --- Default Deny ---
+    match /{document=**} {
+      allow read, write: if false;
+    }
+    
+    // --- Collection Rules ---
+
+    // Users Collection
     match /users/{userId} {
-      // Allow users to read and update their OWN profile
-      allow read, update: if request.auth.uid == userId;
-      // Admins can read any user profile
-      allow get: if isAdmin(request.auth.uid);
-      // Admins can create or delete user docs (used by server-side flows)
-      allow create, delete: if isAdmin(request.auth.uid);
-      // Public read access for some pages like SPOC list.
-      // More specific queries should be used to protect data.
-      allow list: if request.auth != null;
+      // Users can create their own profile
+      allow create: if isAuthenticated();
+      // Users can read their own profile, Admins can read any profile, SPOCs can read profiles from their institute
+      allow read: if isOwner(userId) || hasRole('admin') || 
+                  (hasRole('spoc') && get(/databases/$(database)/documents/users/$(userId)).data.institute == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.institute);
+      // Users can update their own profile
+      allow update: if isOwner(userId);
+      // Only admins can delete user profiles
+      allow delete: if hasRole('admin');
     }
 
-    // `teams` collection rules
+    // Teams Collection
     match /teams/{teamId} {
-      // Only authenticated users can create teams
-      allow create: if request.auth != null;
-      
-      // Team leaders and admins can update team details
-      allow update: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'leader' && get(/databases/$(database)/documents/teams/$(teamId)).data.leader.uid == request.auth.uid
-                      || isAdmin(request.auth.uid);
+        // Team leaders can create teams
+        allow create: if hasRole('leader');
+        // Team members, SPOCs from the same institute, and Admins can read team data
+        allow read: if hasRole('admin') || 
+                    (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.teamId == teamId) ||
+                    (hasRole('spoc') && resource.data.institute == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.institute);
+        // Only the team leader can update team details
+        allow update: if hasRole('admin') || resource.data.leader.uid == request.auth.uid;
+        // Only the team leader or an admin can delete a team
+        allow delete: if hasRole('admin') || resource.data.leader.uid == request.auth.uid;
+    }
 
-      // Team members, leaders, SPOCs, and admins can read team data
-      allow read: if request.auth.uid in resource.data.members..uid 
-                   || request.auth.uid == resource.data.leader.uid
-                   || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.institute == resource.data.institute
-                   || isAdmin(request.auth.uid);
-                   
-      // Admins and SPOCs (of the same institute) can delete teams
-      allow delete: if isAdmin(request.auth.uid)
-                     || (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'spoc' && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.institute == resource.data.institute);
+    // Invitations Collection
+    match /invitations/{invitationId} {
+      // Team leaders can create invitations
+      allow create: if hasRole('leader');
+      // The invited user can read and update (accept/reject) their own invitation.
+      allow read, update: if resource.data.email == request.auth.token.email;
+      // No one can delete invitations directly; they are updated to a terminal status.
+      allow delete: if false;
     }
-    
-    // `problemStatements` collection rules
-    match /problemStatements/{statementId} {
-      // Any authenticated user can read problem statements
-      allow read: if request.auth != null;
-      // Only admins can create, update, or delete them
-      allow write: if isAdmin(request.auth.uid);
-    }
-    
-    // `announcements` collection rules
-    match /announcements/{announcementId} {
-        // Any authenticated user can read announcements
-        allow read: if request.auth != null;
-        // Only admins can create or delete them
-        allow create, delete: if isAdmin(request.auth.uid);
-    }
-    
-    // `config` collection rules (for event settings like deadlines)
-    match /config/{configId} {
-      // Anyone can read config settings
+
+    // Problem Statements Collection
+    match /problemStatements/{psId} {
+      // Anyone can read problem statements
       allow read: if true;
-      // Only admins can change them
-      allow write: if isAdmin(request.auth.uid);
+      // Only admins can create, update, or delete them
+      allow write: if hasRole('admin');
     }
     
-     // Health check collection (server-side only)
-    match /__healthchecks__/{docId} {
-      allow read, write: if false; // No client access
+    // Announcements Collection
+    match /announcements/{announcementId} {
+      // Anyone can read announcements
+      allow read: if true;
+      // Only admins can create, update, or delete them
+      allow write: if hasRole('admin');
+    }
+    
+    // Configuration Collection
+    match /config/{configId} {
+      // Anyone can read configuration
+      allow read: if true;
+      // Only admins can write configuration
+      allow write: if hasRole('admin');
     }
   }
 }
