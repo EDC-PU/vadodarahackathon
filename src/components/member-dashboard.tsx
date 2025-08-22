@@ -2,7 +2,7 @@
 "use client";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { User, Users, Phone, Mail, FileText, Trophy, Calendar, Loader2, AlertCircle } from "lucide-react";
+import { User, Users, Phone, Mail, FileText, Trophy, Calendar, Loader2, AlertCircle, Badge } from "lucide-react";
 import { useEffect, useState, useCallback } from "react";
 import { db } from "@/lib/firebase";
 import { doc, getDoc, onSnapshot, collection, query, where } from "firebase/firestore";
@@ -136,6 +136,7 @@ export default function MemberDashboard() {
             <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                     <Users/> Team Details: {team.name}
+                    {team.teamNumber && <Badge variant="secondary">Team No: {team.teamNumber}</Badge>}
                 </CardTitle>
                 <CardDescription>Your current team roster from {team.institute}.</CardDescription>
             </CardHeader>
@@ -242,3 +243,5 @@ export default function MemberDashboard() {
     </div>
   );
 }
+
+    

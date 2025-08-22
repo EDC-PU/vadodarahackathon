@@ -4,7 +4,7 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Team, UserProfile, TeamMember } from "@/lib/types";
-import { AlertCircle, CheckCircle, PlusCircle, Trash2, User, Loader2, FileText, Pencil, Users2 } from "lucide-react";
+import { AlertCircle, CheckCircle, PlusCircle, Trash2, User, Loader2, FileText, Pencil, Users2, Badge } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "./ui/alert";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
@@ -238,6 +238,7 @@ export default function LeaderDashboard() {
                 <CardTitle className="flex items-center gap-2">
                     <Users2 />
                     Team Members ({teamMembers.length} / 6)
+                    {team.teamNumber && <Badge variant="secondary">Team No: {team.teamNumber}</Badge>}
                 </CardTitle>
                 <CardDescription>Your current team roster. Invite members to have them appear here.</CardDescription>
             </CardHeader>
@@ -406,3 +407,5 @@ export default function LeaderDashboard() {
     </div>
   );
 }
+
+    

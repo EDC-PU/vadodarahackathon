@@ -4,7 +4,7 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Loader2, AlertCircle, Save, Pencil, X, Trash2, Users, User, MinusCircle } from "lucide-react";
+import { Loader2, AlertCircle, Save, Pencil, X, Trash2, Users, User, MinusCircle, Badge } from "lucide-react";
 import { useEffect, useState } from "react";
 import { auth, db } from "@/lib/firebase";
 import { onAuthStateChanged } from "firebase/auth";
@@ -235,6 +235,7 @@ export default function SpocDashboard() {
                     <TableHeader>
                     <TableRow>
                         <TableHead>Team Name</TableHead>
+                        <TableHead>Team No.</TableHead>
                         <TableHead>Member Name</TableHead>
                         <TableHead>Email</TableHead>
                         <TableHead>Enrollment No.</TableHead>
@@ -294,6 +295,11 @@ export default function SpocDashboard() {
                                     </div>
                                 </TableCell>
                             )}
+                             {memberIndex === 0 && (
+                                <TableCell rowSpan={team.allMembers.length} className="align-top">
+                                    {team.teamNumber ? <Badge variant="outline">{team.teamNumber}</Badge> : <span className="text-muted-foreground text-xs">Not Assigned</span>}
+                                </TableCell>
+                            )}
                             <TableCell>{member.name} {member.isLeader && '(Leader)'}</TableCell>
                             <TableCell>{member.email}</TableCell>
                             <TableCell>{member.enrollmentNumber}</TableCell>
@@ -332,3 +338,5 @@ export default function SpocDashboard() {
     </div>
   );
 }
+
+    
