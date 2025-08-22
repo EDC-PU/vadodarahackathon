@@ -44,6 +44,7 @@ async function sendSpocCredentialsEmail(name: string, email: string, password: s
             </ul>
             <p><a href="http://localhost:9002/login">Click here to log in</a></p>
             <p>As a SPOC, you can view and manage the teams registered from your institute.</p>
+            <p><strong>Important:</strong> You will be required to change this temporary password upon your first login.</p>
             <br/>
             <p>Best Regards,</p>
             <p>The Vadodara Hackathon Team</p>
@@ -54,6 +55,7 @@ async function sendSpocCredentialsEmail(name: string, email: string, password: s
 }
 
 
+export type CreateSpocInput = z.infer<typeof CreateSpocInputSchema>;
 const CreateSpocInputSchema = z.object({
   name: z.string().describe('Full name of the SPOC.'),
   email: z.string().email().describe('Email address for the SPOC account.'),
@@ -61,14 +63,14 @@ const CreateSpocInputSchema = z.object({
   contactNumber: z.string().describe('The contact number of the SPOC.'),
   department: z.string().describe('The department of the SPOC.'),
 });
-export type CreateSpocInput = z.infer<typeof CreateSpocInputSchema>;
 
+export type CreateSpocOutput = z.infer<typeof CreateSpocOutputSchema>;
 const CreateSpocOutputSchema = z.object({
   success: z.boolean(),
   message: z.string(),
   uid: z.string().optional(),
 });
-export type CreateSpocOutput = z.infer<typeof CreateSpocOutputSchema>;
+
 
 export async function createSpoc(input: CreateSpocInput): Promise<CreateSpocOutput> {
   return createSpocFlow(input);
@@ -95,6 +97,7 @@ const createSpocFlow = ai.defineFlow(
         contactNumber: input.contactNumber,
         department: input.department,
         role: 'spoc',
+        passwordChanged: false, // User must change this password
       });
 
       // Send email with credentials

@@ -14,6 +14,7 @@ export interface UserProfile {
   contactNumber: string;
   gender: "Male" | "Female" | "Other";
   teamId?: string;
+  passwordChanged?: boolean; // Flag to check if the user has changed the initial password
 }
 
 export interface TeamMember {
@@ -73,5 +74,3 @@ export interface EventInfo {
   brochureUrl: string;
   problemStatementsUrl: string;
 }
-
-    

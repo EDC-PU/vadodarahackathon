@@ -62,6 +62,7 @@ async function sendCredentialsEmail(name: string, email: string, password: strin
                 <li><strong>Password:</strong> ${password}</li>
             </ul>
             <p><a href="http://localhost:9002/login">Click here to log in</a></p>
+            <p><strong>Important:</strong> You will be required to change this temporary password upon your first login.</p>
             <p>We're excited to have you on board!</p>
             <br/>
             <p>Best Regards,</p>

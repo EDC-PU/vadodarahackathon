@@ -34,7 +34,13 @@ export function useAuth() {
   const { toast } = useToast();
 
   const redirectToDashboard = useCallback((userProfile: UserProfile) => {
-     // Check if the user has completed their profile
+     // First, check if the user needs to change their password
+     if (userProfile.passwordChanged === false) {
+        router.push('/change-password');
+        return;
+     }
+
+     // Then, check if the user has completed their profile
      if ((userProfile.role === 'member' || userProfile.role === 'leader') && !userProfile.enrollmentNumber) {
         router.push('/complete-profile');
         return;
@@ -126,6 +132,7 @@ export function useAuth() {
                 enrollmentNumber: 'N/A',
                 contactNumber: 'N/A',
                 gender: 'Other',
+                passwordChanged: true,
             };
             await setDoc(userDocRef, adminProfile);
             userDoc = await getDoc(userDocRef); // Re-fetch the document
@@ -188,7 +195,8 @@ export function useAuth() {
                     contactNumber: '', // To be filled out
                     gender: "Other", 
                     teamId: team.id,
-                    photoURL: loggedInUser.photoURL || ''
+                    photoURL: loggedInUser.photoURL || '',
+                    passwordChanged: false, // Force password change
                 };
                 
                 await setDoc(userDocRef, newProfile);

@@ -89,6 +89,7 @@ export function RegistrationForm() {
             enrollmentNumber: values.enrollmentNumber,
             contactNumber: values.contactNumber,
             gender: values.gender as "Male" | "Female" | "Other",
+            passwordChanged: true,
         };
         const userDocRef = doc(db, "users", user.uid);
         batch.set(userDocRef, userProfile);
@@ -127,6 +128,7 @@ export function RegistrationForm() {
       contactNumber: values.contactNumber,
       gender: values.gender as "Male" | "Female" | "Other",
       teamId: teamDocRef.id, // Link user to team
+      passwordChanged: true, // User created their own password
     };
     const userDocRef = doc(db, "users", user.uid);
     batch.set(userDocRef, userProfile);
