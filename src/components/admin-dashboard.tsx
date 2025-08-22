@@ -11,6 +11,7 @@ import { db } from "@/lib/firebase";
 import { collection, getDocs, doc, setDoc, query, where } from "firebase/firestore";
 import { Team, UserProfile } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
+import { makeAdmin } from "@/ai/flows/make-admin-flow";
 
 export default function AdminDashboard() {
   const [teams, setTeams] = useState<Team[]>([]);
@@ -18,6 +19,7 @@ export default function AdminDashboard() {
   const [admins, setAdmins] = useState<UserProfile[]>([]);
   const [stats, setStats] = useState({ teams: 0, participants: 0 });
   const [loading, setLoading] = useState(true);
+  const [isCreatingAdmin, setIsCreatingAdmin] = useState(false);
   const { toast } = useToast();
 
   const fetchData = async () => {
@@ -60,12 +62,25 @@ export default function AdminDashboard() {
 
   const handleCreateAdmin = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    setIsCreatingAdmin(true);
     const formData = new FormData(event.currentTarget);
     const email = formData.get('admin-email') as string;
 
-    // This is a simplified version. In a real app, you'd use a Cloud Function
-    // to look up the user by email, get their UID, and set a custom claim or Firestore doc.
-    toast({ title: "Info", description: "In a real app, a Cloud Function would handle admin creation securely." });
+    try {
+      const result = await makeAdmin({ email });
+      if (result.success) {
+        toast({ title: "Success", description: result.message });
+        await fetchData(); // Refresh data to show new admin
+        (event.target as HTMLFormElement).reset();
+      } else {
+        toast({ title: "Error", description: result.message, variant: "destructive" });
+      }
+    } catch (error) {
+       console.error("Error creating admin:", error);
+       toast({ title: "Error", description: "An unexpected error occurred.", variant: "destructive" });
+    } finally {
+      setIsCreatingAdmin(false);
+    }
   };
 
   if (loading) {
@@ -154,9 +169,12 @@ export default function AdminDashboard() {
                         <form onSubmit={handleCreateAdmin} className="space-y-4">
                             <div>
                                 <Label htmlFor="admin-email">Admin Email</Label>
-                                <Input id="admin-email" name="admin-email" type="email" placeholder="admin@example.com" />
+                                <Input id="admin-email" name="admin-email" type="email" placeholder="admin@example.com" required disabled={isCreatingAdmin} />
                             </div>
-                            <Button type="submit"><PlusCircle className="mr-2 h-4 w-4" /> Create Admin</Button>
+                            <Button type="submit" disabled={isCreatingAdmin}>
+                                {isCreatingAdmin ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <PlusCircle className="mr-2 h-4 w-4" />}
+                                Create Admin
+                            </Button>
                         </form>
                     </CardContent>
                 </Card>
