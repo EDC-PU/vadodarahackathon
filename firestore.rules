@@ -1,3 +1,4 @@
+
 rules_version = '2';
 
 service cloud.firestore {
@@ -8,81 +9,82 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    function isUser(userId) {
-      return isSignedIn() && request.auth.uid == userId;
+    function isOwner(userId) {
+      return request.auth.uid == userId;
     }
 
-    function getUserData(userId) {
-      return get(/databases/$(database)/documents/users/$(userId)).data;
+    function getUserData() {
+        return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
     }
     
-    function getTeamData(teamId) {
-        return get(/databases/$(database)/documents/teams/$(teamId)).data;
-    }
-
-    function isTeamLeader(teamId) {
-      let user = getUserData(request.auth.uid);
-      return user.role == 'leader' && user.teamId == teamId;
-    }
-    
-    function isTeamMember(teamId) {
-      let team = getTeamData(teamId);
-      // Check if user is the leader or in the members array
-      return request.auth.uid == team.leader.uid || request.auth.uid in team.members.map(member => member.uid);
-    }
-    
-    function isSpocForTeam(teamId) {
-        let user = getUserData(request.auth.uid);
-        let team = getTeamData(teamId);
-        return user.role == 'spoc' && user.institute == team.institute;
-    }
-
     function isAdmin() {
-      // Check for the existence of role and if it is 'admin'
-      return isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) && getUserData(request.auth.uid).role == 'admin';
+      return isSignedIn() && getUserData().role == 'admin';
     }
 
-    // USERS collection
-    match /users/{userId} {
-      // Any authenticated user can read any user's profile (for team/SPOC details)
-      allow get: if isSignedIn();
-      // A user can list their own profile, admins can list all
-      allow list: if isUser(userId) || isAdmin();
-      // A user can only write to their own profile, or an admin can.
-      allow write: if isUser(userId) || isAdmin();
-    }
-
-    // TEAMS collection
-    match /teams/{teamId} {
-      // A user can read a team document if they are a member, a relevant SPOC, or an admin
-      allow get: if isTeamMember(teamId) || isSpocForTeam(teamId) || isAdmin();
-      // Users can query teams, permissions are checked at the read level.
-      allow list: if isSignedIn();
-      // Only the team leader can update their team details.
-      allow update: if isTeamLeader(teamId);
-       // Only an admin or a spoc can delete a team
-      allow delete: if isAdmin() || isSpocForTeam(teamId);
-      // Only an authenticated user can create a team (further logic in flows)
-      allow create: if isSignedIn();
-    }
-
-    // INVITATIONS collection
-    match /invitations/{invitationId} {
-        // An invitation can be read by the leader of the team that sent it,
-        // or by the user who it is addressed to.
-        allow read: if isTeamLeader(resource.data.teamId) || getUserData(request.auth.uid).email == resource.data.email || isAdmin();
-        // A user can update an invitation if they are the intended recipient (to accept/reject)
-        allow update: if getUserData(request.auth.uid).email == resource.data.email;
-        // Authenticated users can create invitations.
-        allow create: if isSignedIn();
-        // Only the team leader can delete an invitation they sent
-        allow delete: if isTeamLeader(resource.data.teamId);
+    function isSpoc() {
+        return isSignedIn() && getUserData().role == 'spoc';
     }
     
-    // PROBLEM STATEMENTS, ANNOUNCEMENTS, CONFIG can be read by anyone, written by admins
-    match /{collection}/{docId} {
-       allow read: if isSignedIn();
-       allow write: if isAdmin();
+    function isTeamLeader(teamId) {
+      return isSignedIn() && get(/databases/$(database)/documents/teams/$(teamId)).data.leader.uid == request.auth.uid;
+    }
+
+    function isTeamMember(teamId) {
+        let team = get(/databases/$(database)/documents/teams/$(teamId)).data;
+        return isSignedIn() && (request.auth.uid == team.leader.uid || request.auth.uid in team.members.map(member => member.uid));
+    }
+    
+    function isSpocForInstitute(institute) {
+        return isSpoc() && getUserData().institute == institute;
+    }
+
+    // USERS
+    match /users/{userId} {
+      // Allow reads (get) for any authenticated user.
+      allow get: if isSignedIn();
+      // Allow queries (list) for any authenticated user.
+      allow list: if isSignedIn();
+      // A user can only update their own profile.
+      allow update: if isOwner(userId);
+      // Allow creation for new users signing up.
+      allow create: if isOwner(userId);
+    }
+
+    // TEAMS
+    match /teams/{teamId} {
+        function isSpocForThisTeam() {
+          return isSpocForInstitute(get(/databases/$(database)/documents/teams/$(teamId)).data.institute);
+        }
+        
+        allow read: if isTeamMember(teamId) || isAdmin() || isSpocForThisTeam();
+        allow create: if isSignedIn();
+        allow update: if isTeamLeader(teamId) || isAdmin() || isSpocForThisTeam();
+        allow delete: if isAdmin() || isSpocForThisTeam();
+    }
+
+    // INVITATIONS
+    match /invitations/{invitationId} {
+        allow create: if isSignedIn();
+        allow read, update: if isSignedIn() && (
+            resource.data.email == request.auth.email || // User who received the invitation
+            isTeamLeader(resource.data.teamId) // Leader of the team who sent it
+        );
+    }
+    
+    // PUBLIC & ADMIN-WRITABLE COLLECTIONS
+    match /problemStatements/{docId} {
+        allow read: if isSignedIn();
+        allow write: if isAdmin();
+    }
+    
+    match /config/{docId} {
+        allow read: if isSignedIn();
+        allow write: if isAdmin();
+    }
+    
+    match /announcements/{docId} {
+        allow read: if isSignedIn();
+        allow write: if isAdmin();
     }
   }
 }
