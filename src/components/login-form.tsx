@@ -41,14 +41,21 @@ export function LoginForm() {
     // Mock Firebase login
     setTimeout(() => {
       setIsLoading(false);
-      // In a real app, you'd handle success/error from Firebase
-      // and redirect based on user role.
-      toast({
-        title: "Login Successful",
-        description: "Redirecting to your dashboard...",
-      });
-      // Mock redirect
-      window.location.href = '/dashboard/leader';
+
+      if (values.email === "pranavrathi07@gmail.com" && values.password === "Admin@123") {
+         toast({
+          title: "Admin Login Successful",
+          description: "Redirecting to your dashboard...",
+        });
+        window.location.href = '/admin';
+      } else {
+         toast({
+          title: "Login Successful",
+          description: "Redirecting to your dashboard...",
+        });
+        window.location.href = '/leader';
+      }
+
     }, 1500);
   }
 
