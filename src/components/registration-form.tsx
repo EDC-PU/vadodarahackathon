@@ -1,3 +1,4 @@
+
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -72,14 +73,8 @@ export function RegistrationForm() {
         description: "Your account has been created. Redirecting to your dashboard.",
       });
 
-      if (values.email === "pranavrathi07@gmail.com") {
-        // In a real app, you'd set a custom claim for the admin role here.
-        // For this demo, we'll just redirect.
-        window.location.href = "/admin";
-      } else {
-        // Redirect to leader dashboard
-        window.location.href = "/leader";
-      }
+      // Redirect to leader dashboard
+      window.location.href = "/leader";
     } catch (error: any) {
       console.error("Registration Error:", error);
        toast({
@@ -96,16 +91,12 @@ export function RegistrationForm() {
     setIsGoogleLoading(true);
     const provider = new GoogleAuthProvider();
     try {
-      const result = await signInWithPopup(auth, provider);
+      await signInWithPopup(auth, provider);
       toast({
         title: "Sign Up Successful",
         description: "Redirecting to your dashboard...",
       });
-      if (result.user.email === "pranavrathi07@gmail.com") {
-        window.location.href = "/admin";
-      } else {
-        window.location.href = '/leader';
-      }
+      window.location.href = '/leader';
     } catch (error: any) {
       console.error("Google Sign-In Error:", error);
       toast({

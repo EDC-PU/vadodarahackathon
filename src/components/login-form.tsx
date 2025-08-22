@@ -1,3 +1,4 @@
+
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -44,21 +45,18 @@ export function LoginForm() {
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
     try {
-      // This is a special admin account for demo purposes.
-      if (values.email === "pranavrathi07@gmail.com" && values.password === "Admin@123") {
-        await signInWithEmailAndPassword(auth, values.email, values.password);
-        toast({
-          title: "Admin Login Successful",
-          description: "Redirecting to your dashboard...",
-        });
+      // In a real app, you would check the user's role from a database/custom claims
+      // after login and redirect accordingly.
+      const userCredential = await signInWithEmailAndPassword(auth, values.email, values.password);
+
+      toast({
+        title: "Login Successful",
+        description: "Redirecting to your dashboard...",
+      });
+
+      if (userCredential.user.email === "pranavrathi07@gmail.com") {
         window.location.href = '/admin';
       } else {
-        await signInWithEmailAndPassword(auth, values.email, values.password);
-        toast({
-          title: "Login Successful",
-          description: "Redirecting to your dashboard...",
-        });
-        // This is a simplification. In a real app, you'd check the user's role.
         window.location.href = '/leader';
       }
     } catch (error: any) {
@@ -77,12 +75,16 @@ export function LoginForm() {
     setIsGoogleLoading(true);
     const provider = new GoogleAuthProvider();
     try {
-      await signInWithPopup(auth, provider);
+      const result = await signInWithPopup(auth, provider);
       toast({
         title: "Login Successful",
         description: "Redirecting to your dashboard...",
       });
-      window.location.href = '/leader';
+      if (result.user.email === "pranavrathi07@gmail.com") {
+        window.location.href = '/admin';
+      } else {
+        window.location.href = '/leader';
+      }
     } catch (error: any) {
       console.error("Google Sign-In Error:", error);
       toast({
