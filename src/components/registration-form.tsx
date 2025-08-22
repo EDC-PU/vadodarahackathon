@@ -29,10 +29,11 @@ import { useToast } from "@/hooks/use-toast";
 import { SmartFieldTip } from "./smart-field-tip";
 import { auth, db } from "@/lib/firebase";
 import { createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, User } from "firebase/auth";
-import { doc, setDoc, writeBatch } from "firebase/firestore";
+import { doc, setDoc, writeBatch, getDoc, collection } from "firebase/firestore";
 import { Separator } from "./ui/separator";
 import { UserProfile } from "@/lib/types";
 import { RadioGroup, RadioGroupItem } from "./ui/radio-group";
+import { useAuth } from "@/hooks/use-auth";
 
 const formSchema = z.object({
   teamName: z.string().min(3, { message: "Team name must be at least 3 characters." }),
@@ -53,6 +54,7 @@ export function RegistrationForm() {
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const { toast } = useToast();
+  const { redirectToDashboard } = useAuth();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -67,64 +69,79 @@ export function RegistrationForm() {
       password: "",
     },
   });
-
-  const createFirestoreData = async (user: User, values: z.infer<typeof formSchema>) => {
+  
+  const createFirestoreData = async (user: User, values: z.infer<typeof formSchema>, existingProfile?: UserProfile) => {
     const batch = writeBatch(db);
 
-    // 1. Create User Profile
+    const isPanavAdmin = values.email.toLowerCase() === "panavrathi07@gmail.com";
+    const role = isPanavAdmin ? "admin" : "leader";
+
+    // 1. Create or Update User Profile
     const userProfile: UserProfile = {
+      ...(existingProfile || {}),
       uid: user.uid,
       name: values.name,
       email: values.email,
-      role: "leader",
+      role: role,
       institute: values.institute,
       department: values.department,
       enrollmentNumber: values.enrollmentNumber,
       contactNumber: values.contactNumber,
-      gender: values.gender,
-      teamId: "", // Will be set next
+      gender: values.gender as "Male" | "Female" | "Other",
+      teamId: existingProfile?.teamId || "", // Preserve teamId if it exists
     };
     const userDocRef = doc(db, "users", user.uid);
     
-    // 2. Create Team
-    const teamDocRef = doc(collection(db, "teams"));
-    userProfile.teamId = teamDocRef.id; // Link user to team
-    batch.set(userDocRef, userProfile);
+    // 2. Create Team if the user is a leader and doesn't have a team yet
+    if (role === 'leader' && !userProfile.teamId) {
+      const teamDocRef = doc(collection(db, "teams"));
+      userProfile.teamId = teamDocRef.id; // Link user to team
 
-    const teamData = {
-      name: values.teamName,
-      leader: {
-          uid: user.uid,
-          name: values.name,
-          email: values.email,
-      },
-      institute: values.institute,
-      department: values.department,
-      category: values.category,
-      members: [], // Start with empty members array
-    };
-    batch.set(teamDocRef, teamData);
+      const teamData = {
+        id: teamDocRef.id,
+        name: values.teamName,
+        leader: {
+            uid: user.uid,
+            name: values.name,
+            email: values.email,
+        },
+        institute: values.institute,
+        department: values.department,
+        category: values.category as "Software" | "Hardware",
+        members: [], // Start with empty members array
+      };
+      batch.set(teamDocRef, teamData);
+    }
+    
+    batch.set(userDocRef, userProfile, { merge: true });
     
     await batch.commit();
+    return userProfile;
   }
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
-      await createFirestoreData(userCredential.user, values);
+      const profile = await createFirestoreData(userCredential.user, values);
 
       toast({
         title: "Registration Successful!",
         description: "Your account has been created. Redirecting to your dashboard.",
       });
 
-      window.location.href = "/leader";
+      redirectToDashboard(profile);
     } catch (error: any) {
       console.error("Registration Error:", error);
+      let errorMessage = "An unexpected error occurred.";
+       if (error.code === 'auth/email-already-in-use') {
+          errorMessage = "This email is already registered. Please login instead.";
+       } else {
+          errorMessage = error.message;
+       }
        toast({
         title: "Registration Failed",
-        description: error.message || "An unexpected error occurred.",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
@@ -133,13 +150,54 @@ export function RegistrationForm() {
   }
 
   async function handleGoogleSignIn() {
+    // 1. Validate form first
+    const isValid = await form.trigger();
+    if (!isValid) {
+      toast({
+        title: "Incomplete Form",
+        description: "Please fill out all the details before signing up with Google.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     setIsGoogleLoading(true);
-    toast({ title: "Info", description: "Please fill the form to complete Google Sign-Up.", variant: "default"});
-    // Just a placeholder, Google Sign-in for registration would need a multi-step form
-    // where user signs in first, then fills details.
-    // For now, we'll just log it.
-    console.log("Google Sign-In for registration would require a multi-step process.");
-    setIsGoogleLoading(false);
+    const provider = new GoogleAuthProvider();
+    try {
+      const result = await signInWithPopup(auth, provider);
+      const user = result.user;
+
+      // Check if user already exists in Firestore
+      const userDocRef = doc(db, "users", user.uid);
+      const userDoc = await getDoc(userDocRef);
+      if (userDoc.exists()) {
+        toast({
+          title: "Account Exists",
+          description: "You're already registered. Redirecting to login...",
+        });
+        redirectToDashboard(userDoc.data() as UserProfile);
+        return;
+      }
+      
+      const formValues = form.getValues();
+      const profile = await createFirestoreData(user, formValues);
+      
+      toast({
+        title: "Registration Successful!",
+        description: "Your account has been created. Redirecting...",
+      });
+      redirectToDashboard(profile);
+
+    } catch (error: any) {
+      console.error("Google Sign-In Error:", error);
+      toast({
+        title: "Google Sign-In Failed",
+        description: error.message || "An unexpected error occurred.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsGoogleLoading(false);
+    }
   }
   
   const formDescription = "This is a registration form for the Vadodara Hackathon 6.0. Team leaders should fill out their personal and academic details to create their account and team.";
@@ -409,7 +467,7 @@ export function RegistrationForm() {
           <Separator />
           <span className="absolute left-1/2 -translate-x-1/2 top-1/2 -translate-y-1/2 bg-card px-2 text-xs text-muted-foreground">OR</span>
         </div>
-        <Button variant="outline" className="w-full" onClick={handleGoogleSignIn} disabled={true || isGoogleLoading}>
+        <Button variant="outline" className="w-full" onClick={handleGoogleSignIn} disabled={isLoading || isGoogleLoading}>
             {isGoogleLoading ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
             ) : (

@@ -1,3 +1,4 @@
+
 export type UserRole = "leader" | "member" | "spoc" | "admin";
 
 export interface UserProfile {
@@ -5,12 +6,13 @@ export interface UserProfile {
   role: UserRole;
   name: string;
   email: string;
-  phone?: string;
-  institute?: string;
+  photoURL?: string;
+  institute: string;
+  department: string;
+  enrollmentNumber: string;
+  contactNumber: string;
+  gender: "Male" | "Female" | "Other";
   teamId?: string;
-  enrollmentNumber?: string;
-  department?: string;
-  gender?: "Male" | "Female" | "Other";
 }
 
 export interface TeamMember {

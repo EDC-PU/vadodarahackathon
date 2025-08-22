@@ -1,3 +1,4 @@
+
 "use client";
 
 import {
@@ -24,21 +25,17 @@ import { usePathname } from "next/navigation";
 import { Button } from "./ui/button";
 import Image from "next/image";
 import { useAuth } from "@/hooks/use-auth";
+import { Skeleton } from "./ui/skeleton";
 
 const navItems = {
   admin: [
     { href: "/admin", icon: <LayoutDashboard />, label: "Dashboard" },
-    { href: "/admin/spocs", icon: <UserCheck />, label: "Manage SPOCs" },
-    { href: "/admin/teams", icon: <Users />, label: "All Teams" },
-    { href: "/admin/settings", icon: <Settings />, label: "Event Settings" },
   ],
   spoc: [
     { href: "/spoc", icon: <LayoutDashboard />, label: "Dashboard" },
-    { href: "/spoc/teams", icon: <Users />, label: "Institute Teams" },
   ],
   leader: [
     { href: "/leader", icon: <LayoutDashboard />, label: "Team Dashboard" },
-    { href: "/leader/members", icon: <UserPlus />, label: "Manage Members" },
   ],
   member: [
     { href: "/member", icon: <LayoutDashboard />, label: "Dashboard" },
@@ -60,10 +57,36 @@ export default function DashboardSidebar() {
   const pathname = usePathname();
   const { user, loading, handleSignOut } = useAuth();
   
-  if (loading || !user) {
-    // You can return a loading spinner or a placeholder here
-    return null; 
+  if (loading) {
+    return (
+      <>
+        <SidebarHeader className="border-b p-2">
+           <div className="flex items-center gap-2 w-full p-2">
+              <Skeleton className="w-8 h-8 rounded-full" />
+              <Skeleton className="h-6 w-32" />
+           </div>
+        </SidebarHeader>
+        <SidebarContent className="p-2">
+          <div className="flex flex-col gap-2">
+            <Skeleton className="h-8 w-full" />
+            <Skeleton className="h-8 w-full" />
+            <Skeleton className="h-8 w-full" />
+          </div>
+        </SidebarContent>
+        <SidebarFooter className="border-t p-2">
+          <div className="flex items-center gap-3 w-full p-2">
+            <Skeleton className="w-10 h-10 rounded-full" />
+            <div className="flex flex-col gap-1.5">
+              <Skeleton className="h-4 w-24" />
+              <Skeleton className="h-3 w-16" />
+            </div>
+          </div>
+        </SidebarFooter>
+      </>
+    )
   }
+
+  if (!user) return null;
   
   const activeRole = user.role as keyof typeof navItems;
   const items = navItems[activeRole] || [];

@@ -1,9 +1,10 @@
+
 "use client";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Download, PlusCircle, User, Users, Shield, Loader2 } from "lucide-react";
+import { Download, PlusCircle, User, Users, Shield, Loader2, UserPlus } from "lucide-react";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { useEffect, useState } from "react";
@@ -12,6 +13,9 @@ import { collection, getDocs, doc, setDoc, query, where } from "firebase/firesto
 import { Team, UserProfile } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 import { makeAdmin } from "@/ai/flows/make-admin-flow";
+import { exportTeams } from "@/ai/flows/export-teams-flow";
+import { AddSpocDialog } from "./add-spoc-dialog";
+
 
 export default function AdminDashboard() {
   const [teams, setTeams] = useState<Team[]>([]);
@@ -20,6 +24,8 @@ export default function AdminDashboard() {
   const [stats, setStats] = useState({ teams: 0, participants: 0 });
   const [loading, setLoading] = useState(true);
   const [isCreatingAdmin, setIsCreatingAdmin] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
+  const [isAddSpocOpen, setIsAddSpocOpen] = useState(false);
   const { toast } = useToast();
 
   const fetchData = async () => {
@@ -83,6 +89,32 @@ export default function AdminDashboard() {
     }
   };
 
+  const handleExport = async () => {
+    setIsExporting(true);
+    try {
+        const result = await exportTeams();
+        if (result.success && result.fileContent) {
+            const blob = new Blob([Buffer.from(result.fileContent, 'base64')], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = result.fileName || 'teams-export.xlsx';
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            a.remove();
+            toast({ title: "Success", description: "Team data has been exported." });
+        } else {
+            toast({ title: "Export Failed", description: result.message || "Could not generate the export file.", variant: "destructive" });
+        }
+    } catch (error) {
+        console.error("Error exporting data:", error);
+        toast({ title: "Error", description: "An unexpected error occurred during export.", variant: "destructive" });
+    } finally {
+        setIsExporting(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center items-center h-screen">
@@ -92,6 +124,12 @@ export default function AdminDashboard() {
   }
 
   return (
+    <>
+    <AddSpocDialog
+      isOpen={isAddSpocOpen}
+      onOpenChange={setIsAddSpocOpen}
+      onSpocAdded={fetchData} // Refresh data after adding a SPOC
+    />
     <div className="p-4 sm:p-6 lg:p-8">
       <header className="mb-8">
         <h1 className="text-3xl font-bold font-headline">Admin Dashboard</h1>
@@ -107,8 +145,8 @@ export default function AdminDashboard() {
               <TabsTrigger value="teams">All Teams</TabsTrigger>
               <TabsTrigger value="settings">Event Settings</TabsTrigger>
             </TabsList>
-            <Button variant="outline">
-                <Download className="mr-2 h-4 w-4" />
+            <Button variant="outline" onClick={handleExport} disabled={isExporting}>
+                {isExporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
                 Export All Data
             </Button>
         </div>
@@ -134,6 +172,24 @@ export default function AdminDashboard() {
                          <p className="text-xs text-muted-foreground">Across all teams</p>
                     </CardContent>
                 </Card>
+                 <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">SPOCs</CardTitle>
+                        <UserPlus className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold">{spocs.length}</div>
+                    </CardContent>
+                </Card>
+                 <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Admins</CardTitle>
+                        <Shield className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold">{admins.length}</div>
+                    </CardContent>
+                </Card>
             </div>
         </TabsContent>
 
@@ -144,16 +200,20 @@ export default function AdminDashboard() {
                 <CardTitle>SPOC Management</CardTitle>
                 <CardDescription>Create and manage institute SPOCs. ({spocs.length} SPOCs)</CardDescription>
               </div>
-              <Button>
+              <Button onClick={() => setIsAddSpocOpen(true)}>
                 <PlusCircle className="mr-2 h-4 w-4" /> Add SPOC
               </Button>
             </CardHeader>
             <CardContent>
                 {spocs.length > 0 ? (
                   <ul className="space-y-2">
-                    {spocs.map(spoc => <li key={spoc.uid}>{spoc.name} - {spoc.email} ({spoc.institute})</li>)}
+                    {spocs.map(spoc => (
+                        <li key={spoc.uid} className="p-2 border rounded-md flex justify-between items-center">
+                            <span>{spoc.name} - {spoc.email} ({spoc.institute})</span>
+                        </li>
+                    ))}
                   </ul>
-                ) : <p>No SPOCs found.</p>}
+                ) : <p className="text-center text-muted-foreground py-4">No SPOCs found.</p>}
             </CardContent>
           </Card>
         </TabsContent>
@@ -173,7 +233,7 @@ export default function AdminDashboard() {
                             </div>
                             <Button type="submit" disabled={isCreatingAdmin}>
                                 {isCreatingAdmin ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <PlusCircle className="mr-2 h-4 w-4" />}
-                                Create Admin
+                                Make Admin
                             </Button>
                         </form>
                     </CardContent>
@@ -205,12 +265,12 @@ export default function AdminDashboard() {
                 {teams.length > 0 ? (
                   <ul className="space-y-2">
                       {teams.map(team => (
-                          <li key={team.id}>
+                          <li key={team.id} className="p-2 border rounded-md">
                               <strong>{team.name}</strong> ({team.institute}) - {team.members.length + 1} members
                           </li>
                       ))}
                   </ul>
-                ): <p>No teams have registered yet.</p>}
+                ): <p className="text-center text-muted-foreground py-4">No teams have registered yet.</p>}
             </CardContent>
           </Card>
         </TabsContent>
@@ -229,5 +289,6 @@ export default function AdminDashboard() {
         </TabsContent>
       </Tabs>
     </div>
+    </>
   );
 }

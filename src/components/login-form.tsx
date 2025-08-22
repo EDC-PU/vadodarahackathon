@@ -20,10 +20,11 @@ import { Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { auth, db } from "@/lib/firebase";
 import { signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, User } from "firebase/auth";
-import { doc, getDoc } from "firebase/firestore";
+import { doc, getDoc, setDoc } from "firebase/firestore";
 import { Separator } from "./ui/separator";
 import { Chrome } from "lucide-react";
 import { UserProfile } from "@/lib/types";
+import { useAuth } from "@/hooks/use-auth";
 
 
 const formSchema = z.object({
@@ -35,6 +36,7 @@ export function LoginForm() {
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const { toast } = useToast();
+  const { redirectToDashboard } = useAuth();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -54,32 +56,16 @@ export function LoginForm() {
         title: "Login Successful",
         description: "Redirecting to your dashboard...",
       });
-      switch (userProfile.role) {
-        case "admin":
-          window.location.href = "/admin";
-          break;
-        case "leader":
-          window.location.href = "/leader";
-          break;
-        case "spoc":
-            window.location.href = "/spoc";
-            break;
-        case "member":
-            window.location.href = "/member";
-            break;
-        default:
-          window.location.href = "/login";
-      }
+      redirectToDashboard(userProfile);
     } else {
-        // This case might happen if user registered but profile creation failed.
-        // Or if it's a new sign-in via Google that needs a profile.
-        toast({
-            title: "Profile Incomplete",
-            description: "Please complete your registration.",
-            variant: "destructive",
-        });
-        // Potentially redirect to a profile completion page
-        window.location.href = "/register";
+      // This is a new sign in via Google that doesn't have a profile yet.
+      // Admins are created in the console, so they should always have a profile.
+      toast({
+        title: "Registration Incomplete",
+        description: "This Google account is not registered. Please sign up first.",
+        variant: "destructive",
+      });
+      // We don't create a user profile here because we need more details from the registration form.
     }
   }
 
@@ -90,9 +76,16 @@ export function LoginForm() {
       await handleLogin(userCredential.user);
     } catch (error: any) {
       console.error("Login Error:", error);
+      const errorCode = error.code;
+      let errorMessage = "An unexpected error occurred.";
+      if (errorCode === 'auth/user-not-found' || errorCode === 'auth/wrong-password' || errorCode === 'auth/invalid-credential') {
+        errorMessage = "Invalid email or password. Please try again."
+      } else {
+        errorMessage = error.message;
+      }
       toast({
         title: "Login Failed",
-        description: error.message || "An unexpected error occurred.",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
