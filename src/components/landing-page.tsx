@@ -79,12 +79,9 @@ export default function LandingPage() {
       <main className="flex-1">
         <section className="py-20 md:py-32">
           <div className="container max-w-7xl text-center">
-            <div className="flex justify-center mb-6">
-                <Image src="https://www.pierc.org/vhlogo.png" alt="Vadodara Hackathon Logo" width={128} height={128} className="rounded-full" />
+            <div className="flex justify-center mb-8">
+                <Image src="https://www.pierc.org/vhlogo.png" alt="Vadodara Hackathon Logo" width={256} height={256} className="rounded-full" />
             </div>
-            <h1 className="text-5xl md:text-7xl font-bold tracking-tighter mb-4 font-headline bg-clip-text text-transparent bg-gradient-to-r from-primary to-red-500">
-              Vadodara Hackathon 6.0
-            </h1>
             <p className="max-w-3xl mx-auto text-lg md:text-xl text-foreground/80 mb-8">
              Your Gateway to Smart India Hackathon 2025!
             </p>
