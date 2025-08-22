@@ -54,6 +54,10 @@ export default function LandingPage() {
   const [spocDetails, setSpocDetails] = useState<SpocDetails>({});
   const [loadingSpocs, setLoadingSpocs] = useState(true);
   const { user, loading: authLoading, redirectToDashboard: goToDashboard } = useAuth();
+  
+  const autoplay = useRef(
+    Autoplay({ delay: 2000, stopOnInteraction: true })
+  );
 
 
   useEffect(() => {
@@ -254,7 +258,11 @@ export default function LandingPage() {
               </div>
             </div>
             <div>
-              <Carousel className="w-full max-w-xl mx-auto">
+              <Carousel className="w-full max-w-xl mx-auto"
+                plugins={[autoplay.current]}
+                onMouseEnter={() => autoplay.current.stop()}
+                onMouseLeave={() => autoplay.current.play()}
+              >
                 <CarouselContent>
                   {aboutImages.map((src, index) => (
                     <CarouselItem key={index}>
@@ -278,15 +286,7 @@ export default function LandingPage() {
         <AnimatedSection id="gallery">
             <div className="container max-w-7xl">
                 <h2 className="text-3xl font-bold text-center mb-12 font-headline">Gallery</h2>
-                 <Carousel 
-                    className="w-full" 
-                    opts={{ loop: true }}
-                    plugins={[
-                        Autoplay({
-                          delay: 2000,
-                        }),
-                    ]}
-                 >
+                 <Carousel className="w-full" opts={{ loop: true }} plugins={[autoplay.current]}>
                     <CarouselContent>
                     {galleryImages.map((src, index) => (
                         <CarouselItem key={index} className="md:basis-1/2 lg:basis-1/3">
@@ -411,5 +411,3 @@ export default function LandingPage() {
     </div>
   );
 }
-
-    
