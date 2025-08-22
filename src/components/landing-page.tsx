@@ -49,9 +49,9 @@ export default function LandingPage() {
   return (
     <div className="flex min-h-screen flex-col bg-background">
       <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="container flex h-16 max-w-7xl items-center justify-between">
+        <div className="container flex h-20 max-w-7xl items-center justify-between">
           <Link href="https://paruluniversity.ac.in/" target="_blank" rel="noopener noreferrer" className="flex items-center" prefetch={false}>
-             <Image src="https://www.paruluniversity.ac.in/pu-web/images/logo.png" alt="Parul University Logo" width={150} height={50} style={{height: 'auto'}}/>
+             <Image src="https://www.paruluniversity.ac.in/pu-web/images/logo.png" alt="Parul University Logo" width={180} height={60} style={{height: 'auto'}}/>
           </Link>
           <nav className="hidden md:flex items-center gap-6 text-sm font-medium">
             {navLinks.map((link) => (
@@ -70,7 +70,7 @@ export default function LandingPage() {
                 </Button>
               </div>
               <Link href="https://pierc.org/" target="_blank" rel="noopener noreferrer" className="items-center hidden sm:flex" prefetch={false}>
-                 <img src="https://www.pierc.org/assets/PIERC.svg" alt="PIERC Logo" className="h-8" />
+                 <img src="https://www.pierc.org/assets/PIERC.svg" alt="PIERC Logo" className="h-10" />
               </Link>
           </div>
         </div>
