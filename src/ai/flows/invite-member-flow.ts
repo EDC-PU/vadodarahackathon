@@ -4,7 +4,7 @@
  * @fileOverview Flow to invite a new member to a team, create their auth account, and email them their credentials.
  */
 import { ai } from '@/ai/genkit';
-import { z } from 'genkit';
+import { InviteMemberInput, InviteMemberInputSchema, InviteMemberOutput, InviteMemberOutputSchema } from '@/lib/types';
 import { doc, updateDoc, arrayUnion } from 'firebase/firestore';
 import nodemailer from 'nodemailer';
 import { getAdminAuth, getAdminDb } from '@/lib/firebase-admin';
@@ -20,22 +20,6 @@ const generatePassword = (length = 10) => {
   }
   return retVal;
 };
-
-
-export type InviteMemberInput = z.infer<typeof InviteMemberInputSchema>;
-const InviteMemberInputSchema = z.object({
-  teamId: z.string().describe("The ID of the team to add the member to."),
-  teamName: z.string().describe("The name of the team."),
-  memberName: z.string().describe("The full name of the new member."),
-  memberEmail: z.string().email().describe("The email address of the new member."),
-});
-
-export type InviteMemberOutput = z.infer<typeof InviteMemberOutputSchema>;
-const InviteMemberOutputSchema = z.object({
-  success: z.boolean(),
-  message: z.string(),
-  uid: z.string().optional(),
-});
 
 
 async function sendCredentialsEmail(name: string, email: string, password: string, teamName: string) {

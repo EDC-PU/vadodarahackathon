@@ -5,25 +5,9 @@
  */
 
 import { ai } from '@/ai/genkit';
-import { z } from 'genkit';
 import { getAdminDb, getAdminAuth } from '@/lib/firebase-admin';
-import { Team, UserProfile } from '@/lib/types';
+import { Team, ManageTeamBySpocInput, ManageTeamBySpocInputSchema, ManageTeamBySpocOutput, ManageTeamBySpocOutputSchema } from '@/lib/types';
 import { arrayRemove } from 'firebase/firestore';
-
-
-export type ManageTeamBySpocInput = z.infer<typeof ManageTeamBySpocInputSchema>;
-const ManageTeamBySpocInputSchema = z.object({
-  teamId: z.string().describe("The ID of the team to manage."),
-  action: z.enum(['remove-member', 'delete-team']).describe("The action to perform."),
-  memberEmail: z.string().email().optional().describe("The email of the member to remove (required for 'remove-member' action)."),
-});
-
-
-export type ManageTeamBySpocOutput = z.infer<typeof ManageTeamBySpocOutputSchema>;
-const ManageTeamBySpocOutputSchema = z.object({
-  success: z.boolean(),
-  message: z.string(),
-});
 
 
 export async function manageTeamBySpoc(input: ManageTeamBySpocInput): Promise<ManageTeamBySpocOutput> {

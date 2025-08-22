@@ -39,7 +39,7 @@ export default function SystemHealthDashboard() {
     }
   };
 
-  const allServicesSuccess = healthState ? Object.values(healthState).every(service => service.success) : false;
+  const allServicesSuccess = healthState ? Object.values(healthState).every(service => typeof service === 'object' && service !== null && 'success' in service ? service.success : true) : false;
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 bg-gray-900 text-white min-h-screen">

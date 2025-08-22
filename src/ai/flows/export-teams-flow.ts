@@ -1,3 +1,4 @@
+
 'use server';
 
 /**
@@ -5,19 +6,10 @@
  */
 
 import { ai } from '@/ai/genkit';
-import { z } from 'genkit';
 import { getAdminDb } from '@/lib/firebase-admin'; // Use admin DB for full access
-import { Team, UserProfile, ProblemStatement } from '@/lib/types';
+import { Team, UserProfile, ProblemStatement, ExportTeamsOutput, ExportTeamsOutputSchema } from '@/lib/types';
 import ExcelJS from 'exceljs';
 
-const ExportTeamsOutputSchema = z.object({
-    success: z.boolean(),
-    message: z.string().optional(),
-    fileContent: z.string().optional().describe("Base64 encoded content of the Excel file."),
-    fileName: z.string().optional(),
-});
-
-export type ExportTeamsOutput = z.infer<typeof ExportTeamsOutputSchema>;
 
 export async function exportTeams(): Promise<ExportTeamsOutput> {
     return exportTeamsFlow();

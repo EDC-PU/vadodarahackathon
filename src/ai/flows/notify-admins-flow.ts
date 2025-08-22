@@ -5,23 +5,9 @@
  */
 
 import { ai } from '@/ai/genkit';
-import { z } from 'genkit';
 import { getAdminDb } from '@/lib/firebase-admin';
 import nodemailer from 'nodemailer';
-import { UserProfile } from '@/lib/types';
-
-export const NotifyAdminsInputSchema = z.object({
-  spocName: z.string().describe("The name of the SPOC who registered."),
-  spocEmail: z.string().email().describe("The email of the SPOC."),
-  spocInstitute: z.string().describe("The institute of the SPOC."),
-});
-export type NotifyAdminsInput = z.infer<typeof NotifyAdminsInputSchema>;
-
-const NotifyAdminsOutputSchema = z.object({
-    success: z.boolean(),
-    message: z.string(),
-});
-export type NotifyAdminsOutput = z.infer<typeof NotifyAdminsOutputSchema>;
+import { UserProfile, NotifyAdminsInput, NotifyAdminsInputSchema, NotifyAdminsOutput, NotifyAdminsOutputSchema } from '@/lib/types';
 
 
 async function sendSpocRequestEmail(adminEmails: string[], spocName: string, spocInstitute: string) {

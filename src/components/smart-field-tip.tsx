@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from "react";
@@ -9,6 +10,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { getRegistrationTips } from "@/ai/flows/registration-tips";
+import { RegistrationTipsInput } from "@/lib/types";
 
 interface SmartFieldTipProps {
   fieldName: string;
@@ -31,7 +33,7 @@ export function SmartFieldTip({ fieldName, fieldValue, formContext }: SmartField
         field: fieldName,
         value: fieldValue,
         formContext: formContext,
-      });
+      } as RegistrationTipsInput);
       setTip(result.tip);
     } catch (err) {
       console.error("Error fetching AI tip:", err);

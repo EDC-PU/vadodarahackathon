@@ -5,20 +5,9 @@
  */
 
 import { ai } from '@/ai/genkit';
-import { z } from 'genkit';
+import { ManageSpocRequestInput, ManageSpocRequestInputSchema, ManageSpocRequestOutput, ManageSpocRequestOutputSchema } from '@/lib/types';
 import { getAdminAuth, getAdminDb } from '@/lib/firebase-admin';
 
-export type ManageSpocRequestInput = z.infer<typeof ManageSpocRequestInputSchema>;
-const ManageSpocRequestInputSchema = z.object({
-  uid: z.string().describe("The UID of the SPOC user to manage."),
-  action: z.enum(['approve', 'reject']).describe("The action to perform."),
-});
-
-export type ManageSpocRequestOutput = z.infer<typeof ManageSpocRequestOutputSchema>;
-const ManageSpocRequestOutputSchema = z.object({
-  success: z.boolean(),
-  message: z.string(),
-});
 
 export async function manageSpocRequest(input: ManageSpocRequestInput): Promise<ManageSpocRequestOutput> {
   return manageSpocRequestFlow(input);

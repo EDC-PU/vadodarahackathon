@@ -4,49 +4,10 @@
  * @fileOverview A flow to check the health and connectivity of Firebase services.
  */
 import { ai } from '@/ai/genkit';
-import { z } from 'genkit';
 import admin from 'firebase-admin';
 import { getAdminApp, getAdminDb, getAdminAuth, getAdminStorage } from '@/lib/firebase-admin';
-
-// Define schemas for the output
-const ServiceStatusSchema = z.object({
-  success: z.boolean(),
-  message: z.string(),
-});
-
-const EnvVarDetailsSchema = z.object({
-    key: z.string(),
-    set: z.boolean(),
-});
-
-const EnvVarsStatusSchema = ServiceStatusSchema.extend({
-  details: z.array(EnvVarDetailsSchema),
-});
-
-const FirestoreStatusSchema = ServiceStatusSchema.extend({
-  canRead: z.boolean(),
-  canWrite: z.boolean(),
-});
-
-const AuthStatusSchema = ServiceStatusSchema.extend({
-  canListUsers: z.boolean(),
-});
-
-const StorageStatusSchema = ServiceStatusSchema.extend({
-  bucketExists: z.boolean(),
-  bucket: z.string().optional(),
-});
-
-const SystemHealthStateSchema = z.object({
-  envVars: EnvVarsStatusSchema,
-  serviceAccount: ServiceStatusSchema,
-  firestore: FirestoreStatusSchema,
-  auth: AuthStatusSchema,
-  storage: StorageStatusSchema,
-  timestamp: z.string(),
-});
-
-export type SystemHealthState = z.infer<typeof SystemHealthStateSchema>;
+import { SystemHealthState, SystemHealthStateSchema } from '@/lib/types';
+import {z} from 'genkit';
 
 // Define the main function and flow
 export async function runHealthCheck(): Promise<SystemHealthState> {
@@ -70,14 +31,14 @@ const systemHealthCheckFlow = ai.defineFlow(
     ];
     const envVarDetails = envKeys.map(key => ({ key, set: !!process.env[key] }));
     const allEnvVarsSet = envVarDetails.every(v => v.set);
-    const envVars = {
+    const envVars: z.infer<typeof SystemHealthStateSchema.shape.envVars> = {
         success: allEnvVarsSet,
         message: allEnvVarsSet ? "All required Firebase environment variables are set." : "One or more required Firebase environment variables are missing.",
         details: envVarDetails
     };
 
     // 2. Check Service Account
-    let serviceAccount: z.infer<typeof ServiceStatusSchema> = { success: false, message: "" };
+    let serviceAccount: z.infer<typeof SystemHealthStateSchema.shape.serviceAccount> = { success: false, message: "" };
     try {
         getAdminApp(); // This will throw if initialization fails
         serviceAccount = { success: true, message: "Firebase Admin SDK initialized successfully." };
@@ -86,7 +47,7 @@ const systemHealthCheckFlow = ai.defineFlow(
     }
     
     // 3. Check Firestore
-    let firestore: z.infer<typeof FirestoreStatusSchema> = { success: false, message: "Firestore check not performed.", canRead: false, canWrite: false };
+    let firestore: z.infer<typeof SystemHealthStateSchema.shape.firestore> = { success: false, message: "Firestore check not performed.", canRead: false, canWrite: false };
     if (serviceAccount.success) {
         try {
             const db = getAdminDb();
@@ -108,7 +69,7 @@ const systemHealthCheckFlow = ai.defineFlow(
     }
 
     // 4. Check Firebase Auth
-    let auth: z.infer<typeof AuthStatusSchema> = { success: false, message: "Auth check not performed.", canListUsers: false };
+    let auth: z.infer<typeof SystemHealthStateSchema.shape.auth> = { success: false, message: "Auth check not performed.", canListUsers: false };
      if (serviceAccount.success) {
         try {
             const authAdmin = getAdminAuth();
@@ -122,7 +83,7 @@ const systemHealthCheckFlow = ai.defineFlow(
     }
 
     // 5. Check Firebase Storage
-    let storage: z.infer<typeof StorageStatusSchema> = { success: false, message: "Storage check not performed.", bucketExists: false };
+    let storage: z.infer<typeof SystemHealthStateSchema.shape.storage> = { success: false, message: "Storage check not performed.", bucketExists: false };
      if (serviceAccount.success) {
         try {
             const storageAdmin = getAdminStorage();
@@ -147,13 +108,3 @@ const systemHealthCheckFlow = ai.defineFlow(
     };
   }
 );
-
-// This is needed for the dev menu
-import { genkit } from 'genkit';
-import { googleAI } from '@genkit-ai/googleai';
-if (process.env.GENKIT_ENV === 'dev') {
-  genkit({
-    plugins: [googleAI()],
-    flows: [systemHealthCheckFlow],
-  });
-}

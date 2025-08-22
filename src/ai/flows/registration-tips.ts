@@ -10,22 +10,8 @@
  */
 
 import {ai} from '@/ai/genkit';
-import {z} from 'genkit';
+import { RegistrationTipsInput, RegistrationTipsInputSchema, RegistrationTipsOutput, RegistrationTipsOutputSchema } from '@/lib/types';
 
-const RegistrationTipsInputSchema = z.object({
-  field: z.string().describe('The form field the user is currently filling out.'),
-  value: z.string().optional().describe('The current value entered by the user in the field.'),
-  formContext: z
-    .string()
-    .optional()
-    .describe('Context about the form the user is filling out.'),
-});
-export type RegistrationTipsInput = z.infer<typeof RegistrationTipsInputSchema>;
-
-const RegistrationTipsOutputSchema = z.object({
-  tip: z.string().describe('A helpful tip for the user to consider.'),
-});
-export type RegistrationTipsOutput = z.infer<typeof RegistrationTipsOutputSchema>;
 
 export async function getRegistrationTips(input: RegistrationTipsInput): Promise<RegistrationTipsOutput> {
   return registrationTipsFlow(input);

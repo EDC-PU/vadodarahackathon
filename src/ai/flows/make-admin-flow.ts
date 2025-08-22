@@ -1,3 +1,4 @@
+
 'use server';
 
 /**
@@ -9,21 +10,9 @@
  */
 
 import {ai} from '@/ai/genkit';
-import {z} from 'genkit';
+import { MakeAdminInput, MakeAdminInputSchema, MakeAdminOutput, MakeAdminOutputSchema } from '@/lib/types';
 import { collection, query, where, getDocs, updateDoc, doc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-
-const MakeAdminInputSchema = z.object({
-  email: z.string().email().describe('The email of the user to make an admin.'),
-});
-export type MakeAdminInput = z.infer<typeof MakeAdminInputSchema>;
-
-const MakeAdminOutputSchema = z.object({
-  success: z.boolean(),
-  message: z.string(),
-  uid: z.string().optional(),
-});
-export type MakeAdminOutput = z.infer<typeof MakeAdminOutputSchema>;
 
 
 export async function makeAdmin(input: MakeAdminInput): Promise<MakeAdminOutput> {

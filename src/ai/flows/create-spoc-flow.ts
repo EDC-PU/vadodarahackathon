@@ -5,9 +5,7 @@
  */
 
 import { ai } from '@/ai/genkit';
-import { z } from 'genkit';
-import { db } from '@/lib/firebase';
-import { doc, setDoc } from 'firebase/firestore';
+import { CreateSpocInput, CreateSpocInputSchema, CreateSpocOutput, CreateSpocOutputSchema } from '@/lib/types';
 import nodemailer from 'nodemailer';
 import { getAdminAuth, getAdminDb } from '@/lib/firebase-admin';
 
@@ -57,23 +55,6 @@ async function sendSpocCredentialsEmail(name: string, email: string, password: s
 
     await transporter.sendMail(mailOptions);
 }
-
-
-export type CreateSpocInput = z.infer<typeof CreateSpocInputSchema>;
-const CreateSpocInputSchema = z.object({
-  name: z.string().describe('Full name of the SPOC.'),
-  email: z.string().email().describe('Email address for the SPOC account.'),
-  institute: z.string().describe('The institute the SPOC belongs to.'),
-  contactNumber: z.string().describe('The contact number of the SPOC.'),
-});
-
-export type CreateSpocOutput = z.infer<typeof CreateSpocOutputSchema>;
-const CreateSpocOutputSchema = z.object({
-  success: z.boolean(),
-  message: z.string(),
-  uid: z.string().optional(),
-});
-
 
 export async function createSpoc(input: CreateSpocInput): Promise<CreateSpocOutput> {
   return createSpocFlow(input);
