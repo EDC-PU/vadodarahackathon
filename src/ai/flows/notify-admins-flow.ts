@@ -41,6 +41,7 @@ async function sendSpocRequestEmail(adminEmails: string[], spocName: string, spo
         `,
     };
 
+    console.log(`Sending SPOC request notification email to admins: ${adminEmails.join(', ')}`);
     await transporter.sendMail(mailOptions);
 }
 

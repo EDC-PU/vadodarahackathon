@@ -53,6 +53,7 @@ async function sendSpocCredentialsEmail(name: string, email: string, password: s
         `,
     };
 
+    console.log(`Sending SPOC creation email to: ${email}`);
     await transporter.sendMail(mailOptions);
 }
 

@@ -57,6 +57,7 @@ async function sendCredentialsEmail(name: string, email: string, password: strin
         `,
     };
 
+    console.log(`Sending member invitation email to: ${email}`);
     await transporter.sendMail(mailOptions);
 }
 
