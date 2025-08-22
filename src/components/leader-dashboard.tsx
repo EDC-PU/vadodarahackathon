@@ -3,19 +3,19 @@
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Team, TeamMember, UserProfile, ProblemStatement } from "@/lib/types";
+import { Team, TeamMember, UserProfile } from "@/lib/types";
 import { AlertCircle, CheckCircle, PlusCircle, Trash2, User, Loader2, FileText, Pencil } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "./ui/alert";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { useEffect, useState } from "react";
 import { db } from "@/lib/firebase";
-import { doc, onSnapshot, updateDoc, arrayUnion, arrayRemove, collection, query, where, getDocs, writeBatch } from "firebase/firestore";
+import { doc, onSnapshot, updateDoc, arrayRemove, collection, query, where, getDocs, writeBatch } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { inviteMember } from "@/ai/flows/invite-member-flow";
-import { SelectProblemStatementDialog } from "./select-problem-statement-dialog";
 import { AnnouncementsSection } from "./announcements-section";
+import Link from "next/link";
 
 
 export default function LeaderDashboard() {
@@ -23,7 +23,6 @@ export default function LeaderDashboard() {
   const [team, setTeam] = useState<Team | null>(null);
   const [loading, setLoading] = useState(true);
   const [isInviting, setIsInviting] = useState(false);
-  const [isSelectProblemStatementOpen, setIsSelectProblemStatementOpen] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -127,23 +126,6 @@ export default function LeaderDashboard() {
         toast({ title: "Error", description: "Failed to remove member.", variant: "destructive" });
     }
   };
-  
-  const handleProblemStatementSelect = async (ps: ProblemStatement) => {
-    if (!team) return;
-    try {
-        const teamDocRef = doc(db, 'teams', team.id);
-        await updateDoc(teamDocRef, {
-            problemStatementId: ps.id,
-            problemStatementTitle: ps.title,
-            category: ps.category, // Automatically set team category based on PS
-        });
-        toast({ title: "Success", description: "Problem statement selected and team category updated." });
-        setIsSelectProblemStatementOpen(false);
-    } catch (error) {
-        console.error("Error selecting problem statement:", error);
-        toast({ title: "Error", description: "Could not select problem statement.", variant: "destructive" });
-    }
-  };
 
   if (authLoading || loading) {
     return (
@@ -181,12 +163,6 @@ export default function LeaderDashboard() {
   const canAddMoreMembers = team.members.length < 5;
 
   return (
-    <>
-    <SelectProblemStatementDialog 
-        isOpen={isSelectProblemStatementOpen}
-        onOpenChange={setIsSelectProblemStatementOpen}
-        onProblemStatementSelect={handleProblemStatementSelect}
-    />
     <div className="p-4 sm:p-6 lg:p-8">
       <header className="mb-8">
         <h1 className="text-3xl font-bold font-headline">Team Dashboard: {team.name}</h1>
@@ -246,15 +222,19 @@ export default function LeaderDashboard() {
                             <p className="text-muted-foreground">Your team has selected:</p>
                             <h3 className="text-lg font-semibold">{team.problemStatementTitle}</h3>
                             <p className="text-sm">Team Category: <span className="font-semibold">{team.category}</span></p>
-                             <Button variant="outline" onClick={() => setIsSelectProblemStatementOpen(true)}>
-                                <Pencil className="mr-2 h-4 w-4" /> Change Problem Statement
+                             <Button variant="outline" asChild>
+                                <Link href="/leader/select-problem-statement">
+                                    <Pencil className="mr-2 h-4 w-4" /> Change Problem Statement
+                                </Link>
                             </Button>
                         </div>
                     ) : (
                         <div className="flex flex-col items-start gap-4">
                             <p>Your team has not selected a problem statement yet.</p>
-                            <Button onClick={() => setIsSelectProblemStatementOpen(true)}>
-                                <FileText className="mr-2 h-4 w-4" /> Select Problem Statement
+                            <Button asChild>
+                               <Link href="/leader/select-problem-statement">
+                                    <FileText className="mr-2 h-4 w-4" /> Select Problem Statement
+                               </Link>
                             </Button>
                         </div>
                     )}
@@ -324,6 +304,5 @@ export default function LeaderDashboard() {
         </div>
       </div>
     </div>
-    </>
   );
 }

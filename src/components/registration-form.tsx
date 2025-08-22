@@ -28,7 +28,7 @@ import { INSTITUTES } from "@/lib/constants";
 import { useToast } from "@/hooks/use-toast";
 import { SmartFieldTip } from "./smart-field-tip";
 import { db } from "@/lib/firebase";
-import { doc, setDoc, writeBatch, getDoc, collection, updateDoc } from "firebase/firestore";
+import { doc, setDoc, writeBatch, getDoc, collection, updateDoc, query, where, getDocs } from "firebase/firestore";
 import { Separator } from "./ui/separator";
 import { UserProfile } from "@/lib/types";
 import { RadioGroup, RadioGroupItem } from "./ui/radio-group";
@@ -87,6 +87,20 @@ export function RegistrationForm() {
       return;
     }
 
+    // Check for team name uniqueness
+    const teamsRef = collection(db, "teams");
+    const q = query(teamsRef, where("name", "==", values.teamName));
+    const querySnapshot = await getDocs(q);
+
+    if (!querySnapshot.empty) {
+      toast({
+        title: "Team Name Taken",
+        description: "A team with this name already exists. Please choose another name.",
+        variant: "destructive",
+      });
+      return null;
+    }
+
     const batch = writeBatch(db);
 
     // 1. Create Team
@@ -130,11 +144,11 @@ export function RegistrationForm() {
     setIsLoading(true);
     try {
       const updatedUser = await createTeamAndAssignLeader(values);
-      toast({
-        title: "Team Registered!",
-        description: `Your team "${values.teamName}" has been successfully created.`,
-      });
       if (updatedUser) {
+        toast({
+          title: "Team Registered!",
+          description: `Your team "${values.teamName}" has been successfully created.`,
+        });
         redirectToDashboard(updatedUser);
       }
     } catch (error: any) {
