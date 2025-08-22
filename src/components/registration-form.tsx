@@ -56,21 +56,27 @@ export function RegistrationForm() {
     defaultValues: {
       teamName: "",
       name: user?.name || "",
-      department: "",
-      enrollmentNumber: "",
+      institute: user?.institute || "",
+      department: user?.department || "",
+      enrollmentNumber: user?.enrollmentNumber || "",
+      contactNumber: user?.contactNumber || "",
+      gender: user?.gender || undefined,
+      semester: undefined,
       yearOfStudy: "",
-      contactNumber: "",
     },
   });
 
   useEffect(() => {
     if (user) {
         form.reset({
-            name: user.name,
             teamName: "",
+            name: user.name || "",
+            institute: user.institute || "",
             department: user.department || "",
             enrollmentNumber: user.enrollmentNumber || "",
             contactNumber: user.contactNumber || "",
+            gender: user.gender || undefined,
+            yearOfStudy: "",
         });
     }
   }, [user, form]);
@@ -96,6 +102,7 @@ export function RegistrationForm() {
       institute: values.institute,
       department: values.department,
       members: [], // Start with empty members array
+      category: undefined,
     };
     batch.set(teamDocRef, teamData);
 
@@ -294,7 +301,7 @@ export function RegistrationForm() {
                   <FormItem>
                     <FormLabel>Semester</FormLabel>
                     <FormControl>
-                      <Input type="number" placeholder="e.g., 6" {...field} disabled={isLoading}/>
+                      <Input type="number" placeholder="e.g., 6" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
