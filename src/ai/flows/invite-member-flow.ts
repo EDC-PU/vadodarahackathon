@@ -24,7 +24,7 @@ const generatePassword = (length = 10) => {
 
 
 async function sendCredentialsEmail(name: string, email: string, password: string, teamName: string) {
-    console.log("Attempting to send new member credentials email...");
+    console.log(`Attempting to send new member credentials email to ${email}...`);
     if (!process.env.GMAIL_EMAIL || !process.env.GMAIL_PASSWORD) {
         console.error("GMAIL_EMAIL or GMAIL_PASSWORD environment variables not set.");
         throw new Error("Missing GMAIL_EMAIL or GMAIL_PASSWORD environment variables. Please set them in your .env file. Note: You must use a Google App Password for GMAIL_PASSWORD.");
