@@ -121,7 +121,7 @@ export interface Announcement {
 
 // delete-user-flow
 export const DeleteUserInputSchema = z.object({
-  uid: z.string().describe("The UID of the user to delete."),
+  uid: z.string().describe('The UID of the user to be deleted.'),
 });
 export type DeleteUserInput = z.infer<typeof DeleteUserInputSchema>;
 

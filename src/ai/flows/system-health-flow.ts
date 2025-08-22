@@ -7,7 +7,7 @@ import { ai } from '@/ai/genkit';
 import admin from 'firebase-admin';
 import { getAdminApp, getAdminDb, getAdminAuth, getAdminStorage } from '@/lib/firebase-admin';
 import { SystemHealthState, SystemHealthStateSchema } from '@/lib/types';
-import {z} from 'genkit';
+import type { z } from 'genkit';
 
 // Define the main function and flow
 export async function runHealthCheck(): Promise<SystemHealthState> {

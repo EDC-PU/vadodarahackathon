@@ -5,19 +5,8 @@
  */
 
 import { ai } from '@/ai/genkit';
-import { z } from 'genkit';
 import { getAdminAuth, getAdminDb } from '@/lib/firebase-admin';
-
-export const DeleteUserInputSchema = z.object({
-  uid: z.string().describe('The UID of the user to be deleted.'),
-});
-export type DeleteUserInput = z.infer<typeof DeleteUserInputSchema>;
-
-export const DeleteUserOutputSchema = z.object({
-  success: z.boolean(),
-  message: z.string(),
-});
-export type DeleteUserOutput = z.infer<typeof DeleteUserOutputSchema>;
+import { DeleteUserInput, DeleteUserInputSchema, DeleteUserOutput, DeleteUserOutputSchema } from '@/lib/types';
 
 
 export async function deleteUser(input: DeleteUserInput): Promise<DeleteUserOutput> {
