@@ -14,11 +14,14 @@ import { auth, db } from "@/lib/firebase";
 import { doc, onSnapshot, updateDoc, arrayUnion, arrayRemove, collection, query, where, getDocs, writeBatch } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
+import { inviteMember } from "@/ai/flows/invite-member-flow";
+
 
 export default function LeaderDashboard() {
   const { user, loading: authLoading } = useAuth();
   const [team, setTeam] = useState<Team | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isInviting, setIsInviting] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -45,40 +48,40 @@ export default function LeaderDashboard() {
   const handleAddMember = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!team) return;
+    setIsInviting(true);
 
     const form = event.currentTarget;
     const formData = new FormData(form);
     const memberEmail = formData.get("new-member-email") as string;
+    const memberName = formData.get("new-member-name") as string;
     
     // Check if member already exists by email
     const isAlreadyInTeam = team.members.some(m => m.email.toLowerCase() === memberEmail.toLowerCase()) || team.leader.email.toLowerCase() === memberEmail.toLowerCase();
     if (isAlreadyInTeam) {
         toast({ title: "Error", description: "This user is already in the team.", variant: "destructive" });
+        setIsInviting(false);
         return;
     }
 
-    const newMember: Omit<TeamMember, 'uid' | 'enrollmentNumber' | 'contactNumber' | 'gender'> = {
-      name: formData.get("new-member-name") as string,
-      email: memberEmail,
-    };
-
     try {
-      const teamDocRef = doc(db, "teams", team.id);
-      await updateDoc(teamDocRef, {
-        members: arrayUnion({
-            ...newMember,
-            // These are placeholders until the user logs in and completes their profile
-            uid: `pending-${newMember.email}`, 
-            enrollmentNumber: '',
-            contactNumber: '',
-            gender: 'Other',
-        })
-      });
-      toast({ title: "Success", description: "Team member invited. They can now log in to complete their registration." });
-      form.reset();
+        const result = await inviteMember({
+            teamId: team.id,
+            teamName: team.name,
+            memberName,
+            memberEmail,
+        });
+
+        if (result.success) {
+            toast({ title: "Invitation Sent", description: result.message });
+            form.reset();
+        } else {
+             toast({ title: "Error", description: result.message, variant: "destructive" });
+        }
     } catch (error) {
       console.error("Error adding member:", error);
       toast({ title: "Error", description: "Failed to add member.", variant: "destructive" });
+    } finally {
+      setIsInviting(false);
     }
   };
 
@@ -212,14 +215,17 @@ export default function LeaderDashboard() {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                              <div>
                                 <Label htmlFor="new-member-name">Full Name</Label>
-                                <Input id="new-member-name" name="new-member-name" placeholder="Member's Name" required/>
+                                <Input id="new-member-name" name="new-member-name" placeholder="Member's Name" required disabled={isInviting}/>
                             </div>
                             <div>
                                 <Label htmlFor="new-member-email">Email</Label>
-                                <Input id="new-member-email" name="new-member-email" type="email" placeholder="member@example.com" required/>
+                                <Input id="new-member-email" name="new-member-email" type="email" placeholder="member@example.com" required disabled={isInviting}/>
                             </div>
                         </div>
-                        <Button type="submit"><PlusCircle className="mr-2 h-4 w-4" /> Invite Member</Button>
+                        <Button type="submit" disabled={isInviting}>
+                            {isInviting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <PlusCircle className="mr-2 h-4 w-4" />}
+                             Invite Member
+                        </Button>
                     </form>
                    ): (
                     <p className="text-sm text-muted-foreground">You have reached the maximum number of team members.</p>
