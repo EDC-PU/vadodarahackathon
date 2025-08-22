@@ -1,3 +1,4 @@
+
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -14,13 +15,15 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
-import { useState } from "react";
-import { Chrome, Eye, EyeOff, Loader2 } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Chrome, Eye, EyeOff, Loader2, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { auth } from "@/lib/firebase";
+import { auth, db } from "@/lib/firebase";
 import { createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from "firebase/auth";
 import { Separator } from "./ui/separator";
 import { useAuth } from "@/hooks/use-auth";
+import { doc, getDoc } from "firebase/firestore";
+import { Alert, AlertTitle, AlertDescription } from "./ui/alert";
 
 const formSchema = z.object({
   email: z.string().email({ message: "Invalid email address." }),
@@ -31,8 +34,27 @@ export function SignupForm() {
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [deadline, setDeadline] = useState<Date | null>(null);
+  const [isDeadlineLoading, setIsDeadlineLoading] = useState(true);
   const { toast } = useToast();
   const { handleLogin } = useAuth();
+  
+  useEffect(() => {
+    const fetchDeadline = async () => {
+        try {
+            const configDocRef = doc(db, "config", "event");
+            const configDoc = await getDoc(configDocRef);
+            if (configDoc.exists() && configDoc.data().registrationDeadline) {
+                setDeadline(configDoc.data().registrationDeadline.toDate());
+            }
+        } catch (error) {
+            console.error("Error fetching registration deadline:", error);
+        } finally {
+            setIsDeadlineLoading(false);
+        }
+    };
+    fetchDeadline();
+  }, []);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -41,6 +63,8 @@ export function SignupForm() {
       password: "",
     },
   });
+
+  const isRegistrationClosed = deadline ? new Date() > deadline : false;
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
@@ -81,6 +105,22 @@ export function SignupForm() {
     } finally {
       setIsGoogleLoading(false);
     }
+  }
+  
+  if (isDeadlineLoading) {
+    return <div className="flex items-center justify-center p-8"><Loader2 className="h-8 w-8 animate-spin" /></div>
+  }
+
+  if (isRegistrationClosed) {
+      return (
+        <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Registration Closed</AlertTitle>
+            <AlertDescription>
+                The registration deadline has passed. New sign-ups are no longer being accepted.
+            </AlertDescription>
+        </Alert>
+      )
   }
 
   return (

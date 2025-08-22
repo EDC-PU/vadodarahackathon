@@ -25,6 +25,7 @@ import {
   BookUser,
   Building2,
   Megaphone,
+  User as UserIcon,
 } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { Button } from "./ui/button";
@@ -54,6 +55,13 @@ const navItems = {
     { href: "/member/spoc", icon: <FileText />, label: "SPOC Details" },
   ],
 };
+
+const getProfileLink = (user: any) => ({
+    href: `/profile/${user.uid}`,
+    icon: <UserIcon />,
+    label: "My Profile"
+});
+
 
 const RoleIcon = ({ role }: { role: string }) => {
   switch (role) {
@@ -100,7 +108,12 @@ export default function DashboardSidebar() {
   if (!user) return null;
   
   const activeRole = user.role as keyof typeof navItems;
-  const items = navItems[activeRole] || [];
+  let items = navItems[activeRole] || [];
+
+  if ((activeRole === 'leader' || activeRole === 'member') && user.uid) {
+    items.push(getProfileLink(user));
+  }
+
 
   return (
     <>
@@ -118,7 +131,7 @@ export default function DashboardSidebar() {
             <SidebarMenuItem key={item.href}>
               <Link href={item.href}>
                 <SidebarMenuButton
-                  isActive={pathname === item.href}
+                  isActive={pathname.startsWith(item.href) && (item.href !== '/leader' || pathname === '/leader')}
                   tooltip={{ children: item.label }}
                 >
                   {item.icon}
