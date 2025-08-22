@@ -3,31 +3,59 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { User, Users, Phone, Mail, FileText, Trophy, Calendar, Loader2, AlertCircle } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { db } from "@/lib/firebase";
 import { doc, getDoc, onSnapshot, collection, query, where } from "firebase/firestore";
-import { Team, UserProfile, Spoc } from "@/lib/types";
+import { Team, UserProfile } from "@/lib/types";
 import { Alert, AlertDescription, AlertTitle } from "./ui/alert";
 import { useAuth } from "@/hooks/use-auth";
 import { AnnouncementsSection } from "./announcements-section";
 import { InvitationsSection } from "./invitations-section";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";
 
 export default function MemberDashboard() {
   const { user, loading: authLoading } = useAuth();
   const [team, setTeam] = useState<Team | null>(null);
-  const [spoc, setSpoc] = useState<Spoc | null>(null);
+  const [teamMembers, setTeamMembers] = useState<UserProfile[]>([]);
+  const [spoc, setSpoc] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
+
+  const fetchTeamMembers = useCallback((memberUIDs: string[]) => {
+    const unsubscribers = memberUIDs.map(uid => {
+      if (!uid) return () => {};
+      const userDocRef = doc(db, 'users', uid);
+      return onSnapshot(userDocRef, (doc) => {
+        if (doc.exists()) {
+          const updatedMember = { uid: doc.id, ...doc.data() } as UserProfile;
+          setTeamMembers(prevMembers => {
+            const existingMemberIndex = prevMembers.findIndex(m => m.uid === updatedMember.uid);
+            if (existingMemberIndex > -1) {
+              const newMembers = [...prevMembers];
+              newMembers[existingMemberIndex] = updatedMember;
+              return newMembers;
+            } else {
+              return [...prevMembers, updatedMember];
+            }
+          });
+        }
+      });
+    });
+    return () => unsubscribers.forEach(unsub => unsub());
+  }, []);
 
   useEffect(() => {
     let unsubscribeTeam: () => void = () => {};
-    
-    const fetchSpoc = async (institute: string) => {
-        // Simplified: Assuming one SPOC per institute, stored in 'users' with role 'spoc'
-        const spocsQuery = query(collection(db, "users"), where("institute", "==", institute), where("role", "==", "spoc"));
-        const spocSnapshot = await getDoc(spocsQuery.docs[0].ref); // Get first one
-        if (spocSnapshot.exists()) {
-             setSpoc(spocSnapshot.data() as Spoc);
-        }
+    let unsubscribeSpoc: () => void = () => {};
+
+    const fetchSpoc = (institute: string) => {
+        const spocsQuery = query(collection(db, "users"), where("institute", "==", institute), where("role", "==", "spoc"), where("spocStatus", "==", "approved"));
+        return onSnapshot(spocsQuery, (snapshot) => {
+            if (!snapshot.empty) {
+                setSpoc(snapshot.docs[0].data() as UserProfile);
+            } else {
+                setSpoc(null);
+            }
+        });
     };
 
     if (user && user.teamId) {
@@ -36,12 +64,18 @@ export default function MemberDashboard() {
             if (teamDoc.exists()) {
                 const teamData = { id: teamDoc.id, ...teamDoc.data() } as Team;
                 setTeam(teamData);
+
+                const allMemberUIDs = [teamData.leader.uid, ...teamData.members.map(m => m.uid)];
+                const uniqueUIDs = [...new Set(allMemberUIDs)];
+                setTeamMembers([]);
+                fetchTeamMembers(uniqueUIDs);
+                
                 if (teamData.institute) {
-                    fetchSpoc(teamData.institute);
+                    unsubscribeSpoc = fetchSpoc(teamData.institute);
                 }
             } else {
-                // Team document was deleted
                 setTeam(null);
+                setTeamMembers([]);
             }
              setLoading(false);
         }, (error) => {
@@ -54,9 +88,10 @@ export default function MemberDashboard() {
 
     return () => {
         unsubscribeTeam();
+        unsubscribeSpoc();
     };
-  }, [user]);
-  
+  }, [user, fetchTeamMembers]);
+
   if (authLoading || loading) {
     return (
       <div className="flex justify-center items-center h-screen">
@@ -76,6 +111,12 @@ export default function MemberDashboard() {
         </div>
     );
   }
+  
+  const sortedTeamMembers = [...teamMembers].sort((a, b) => {
+      if (a.role === 'leader') return -1;
+      if (b.role === 'leader') return 1;
+      return a.name.localeCompare(b.name);
+  });
 
   return (
     <div className="p-4 sm:p-6 lg:p-8">
@@ -84,36 +125,64 @@ export default function MemberDashboard() {
         <p className="text-muted-foreground">Here is your team and hackathon information.</p>
       </header>
       
-      {/* Show invitations only if user is not on a team */}
       {!user.teamId && (
         <div className="mb-8">
             <InvitationsSection />
         </div>
       )}
       
-      <div className="mb-8">
-        <AnnouncementsSection audience="teams_and_all" />
-      </div>
-      
       {team ? (
-        <div className="grid gap-8 lg:grid-cols-2">
-            <Card>
-                <CardHeader>
-                    <CardTitle className="flex items-center gap-2"><Users/> Team Details</CardTitle>
-                    <CardDescription>Your team, "{team.name}", from {team.institute}.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <p className="font-semibold mb-2">Team Leader: {team.leader.name} ({team.leader.email})</p>
-                    <div className="space-y-2">
-                        <p className="font-semibold">Members:</p>
-                        <ul className="list-disc list-inside pl-2 text-muted-foreground space-y-1">
-                            <li>{team.leader.name} (Leader)</li>
-                            {team.members.map(m => <li key={m.uid}>{m.name}</li>)}
-                        </ul>
-                    </div>
-                </CardContent>
-            </Card>
+        <>
+        <Card className="mb-8 w-full">
+            <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                    <Users/> Team Details: {team.name}
+                </CardTitle>
+                <CardDescription>Your current team roster from {team.institute}.</CardDescription>
+            </CardHeader>
+            <CardContent>
+                <Table>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead>Name</TableHead>
+                            <TableHead>Role</TableHead>
+                            <TableHead>Email</TableHead>
+                            <TableHead>Enrollment No.</TableHead>
+                            <TableHead>Year</TableHead>
+                            <TableHead>Sem</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {sortedTeamMembers.length > 0 ? (
+                            sortedTeamMembers.map((member) => (
+                                <TableRow key={member.uid}>
+                                    <TableCell className="font-medium">{member.name}</TableCell>
+                                    <TableCell>
+                                        <span className={`px-2 py-1 text-xs rounded-full ${member.role === 'leader' ? 'bg-primary/20 text-primary' : 'bg-secondary text-secondary-foreground'}`}>
+                                            {member.role}
+                                        </span>
+                                    </TableCell>
+                                    <TableCell>{member.email}</TableCell>
+                                    <TableCell>{member.enrollmentNumber || 'N/A'}</TableCell>
+                                    <TableCell>{member.yearOfStudy || 'N/A'}</TableCell>
+                                    <TableCell>{member.semester || 'N/A'}</TableCell>
+                                </TableRow>
+                            ))
+                         ) : (
+                            <TableRow>
+                                <TableCell colSpan={6} className="text-center text-muted-foreground h-24">
+                                    {loading ? <Loader2 className="h-6 w-6 animate-spin mx-auto"/> : 'No members found.'}
+                                </TableCell>
+                            </TableRow>
+                         )
+                       }
+                    </TableBody>
+                </Table>
+            </CardContent>
+         </Card>
 
+        <div className="grid gap-8 lg:grid-cols-2">
+            <AnnouncementsSection audience="teams_and_all" />
             <div className="space-y-8">
                 <Card>
                     <CardHeader>
@@ -147,7 +216,6 @@ export default function MemberDashboard() {
                         <CardTitle>Hackathon Information</CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-3">
-                        {/* This can be fetched from a 'config' document in Firestore */}
                         <div className="flex items-center gap-3">
                             <Calendar className="h-5 w-5 text-primary"/>
                             <p><strong>Dates:</strong> To be Announced</p>
@@ -160,6 +228,7 @@ export default function MemberDashboard() {
                 </Card>
             </div>
         </div>
+        </>
       ) : !user.teamId ? (
          <Alert>
             <AlertCircle className="h-4 w-4" />
