@@ -26,7 +26,6 @@ export default function RootLayout({
           "min-h-screen bg-background font-body antialiased",
           fontInter.variable
         )}
-        suppressHydrationWarning
       >
         {children}
         <Toaster />
