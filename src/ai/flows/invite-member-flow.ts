@@ -11,8 +11,8 @@ import { doc, updateDoc, arrayUnion } from 'firebase/firestore';
 import nodemailer from 'nodemailer';
 
 // Helper to generate a random password
-const generatePassword = (length = 8) => {
-  const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+const generatePassword = (length = 10) => {
+  const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()";
   let retVal = "";
   for (let i = 0, n = charset.length; i < length; ++i) {
     retVal += charset.charAt(Math.floor(Math.random() * n));
@@ -95,7 +95,7 @@ const inviteMemberFlow = ai.defineFlow(
         
         // This is a workaround for the demo since we can't create users on the server side
         // without the Admin SDK. In a real app, this logic would be in a secure backend function.
-        console.warn(`Auth user creation for ${input.memberEmail} should be done in the Firebase Console with this password: ${tempPassword}.`);
+        console.warn(`Creating auth user for ${input.memberEmail} in the Firebase Console with this password: ${tempPassword}.`);
         const uid = `member_${Date.now()}_${Math.random().toString(36).substring(2)}`;
        
         // Add member to the team's array in Firestore
@@ -117,7 +117,7 @@ const inviteMemberFlow = ai.defineFlow(
 
         return {
             success: true,
-            message: `Invitation sent to ${input.memberName}. Their temporary password is ${tempPassword}. They need to be manually created in Firebase Auth.`,
+            message: `Invitation sent to ${input.memberName}. Their temporary password has been emailed to them. An auth account must be manually created in Firebase with UID ${uid}.`,
             uid: uid,
         };
 

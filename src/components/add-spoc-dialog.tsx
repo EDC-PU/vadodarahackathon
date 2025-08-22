@@ -35,7 +35,6 @@ const spocSchema = z.object({
   institute: z.string().min(1, "Please select an institute."),
   contactNumber: z.string().regex(/^\d{10}$/, "Please enter a valid 10-digit phone number."),
   department: z.string().min(2, "Department is required."),
-  password: z.string().min(6, "Password must be at least 6 characters."),
 });
 
 export function AddSpocDialog({ isOpen, onOpenChange, onSpocAdded }: AddSpocDialogProps) {
@@ -50,7 +49,6 @@ export function AddSpocDialog({ isOpen, onOpenChange, onSpocAdded }: AddSpocDial
       institute: "",
       contactNumber: "",
       department: "",
-      password: "",
     },
   });
 
@@ -60,8 +58,9 @@ export function AddSpocDialog({ isOpen, onOpenChange, onSpocAdded }: AddSpocDial
       const result = await createSpoc(values as CreateSpocInput);
       if (result.success) {
         toast({
-          title: "SPOC Created",
+          title: "SPOC Action Required",
           description: result.message,
+          duration: 10000, // Make toast stay longer
         });
         onSpocAdded(); // Callback to refresh the list
         onOpenChange(false); // Close the dialog
@@ -91,7 +90,7 @@ export function AddSpocDialog({ isOpen, onOpenChange, onSpocAdded }: AddSpocDial
         <DialogHeader>
           <DialogTitle>Add New SPOC</DialogTitle>
           <DialogDescription>
-            Create a new Single Point of Contact (SPOC) for an institute. The SPOC will be able to manage teams from their institute.
+            Create a new Single Point of Contact (SPOC) for an institute. A temporary password will be generated and must be communicated to them.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -167,19 +166,6 @@ export function AddSpocDialog({ isOpen, onOpenChange, onSpocAdded }: AddSpocDial
                     <Input placeholder="9876543210" {...field} />
                   </FormControl>
                   <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="password"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Temporary Password</FormLabel>
-                  <FormControl>
-                    <Input type="password" {...field} />
-                  </FormControl>
-                   <FormMessage />
                 </FormItem>
               )}
             />

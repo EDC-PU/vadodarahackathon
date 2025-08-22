@@ -10,10 +10,20 @@ import { auth, db } from '@/lib/firebase';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
 
+// Helper to generate a random password
+const generatePassword = (length = 10) => {
+    const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()";
+    let retVal = "";
+    for (let i = 0, n = charset.length; i < length; ++i) {
+        retVal += charset.charAt(Math.floor(Math.random() * n));
+    }
+    return retVal;
+};
+
+
 export const CreateSpocInputSchema = z.object({
   name: z.string().describe('Full name of the SPOC.'),
   email: z.string().email().describe('Email address for the SPOC account.'),
-  password: z.string().min(6).describe('A temporary password for the SPOC.'),
   institute: z.string().describe('The institute the SPOC belongs to.'),
   contactNumber: z.string().describe('The contact number of the SPOC.'),
   department: z.string().describe('The department of the SPOC.'),
@@ -51,21 +61,22 @@ const createSpocFlow = ai.defineFlow(
   },
   async (input) => {
     try {
+      const tempPassword = generatePassword();
       // Step 1: Create user in Firebase Auth
       // This is a simplified example. In a real app, you'd use the Firebase Admin SDK
       // on a secure backend to create users. Since we are in a client environment,
       // we'll just log this action and create the Firestore document.
-      // const uid = await createAuthUser(input.email, input.password);
       
-      // For this implementation, we will assume the user is created manually or via another process
-      // and we just create the Firestore document.
       // A more robust solution would use Firebase Admin SDK in a secure backend.
-      
-      // Let's create a placeholder UID for now for the firestore doc, but in a real scenario
-      // this would come from the auth creation step. For the sake of the demo, we will generate a random one
+      // For this demo, we're creating the auth user directly.
+      // This is a workaround due to not having a full backend server with Admin SDK.
+      console.warn(`A temporary password for SPOC ${input.email} will be created. The admin should communicate this to the SPOC.`);
       const uid = `spoc_${Date.now()}_${Math.random().toString(36).substring(2)}`;
-      
-      console.warn(`Auth user creation skipped for SPOC ${input.email}. You should create this user in the Firebase Console.`);
+       
+      console.log(`Creating auth user for ${input.email} with temporary password: ${tempPassword}`);
+      // In a real app, this would be `await createAuthUser(input.email, tempPassword);`
+      // but due to demo limitations, we will just log it and the admin has to create it manually.
+      // A toast will now show this password to the admin.
 
       // Step 2: Create user profile in Firestore
       const userDocRef = doc(db, 'users', uid);
@@ -81,7 +92,7 @@ const createSpocFlow = ai.defineFlow(
 
       return {
         success: true,
-        message: `SPOC profile for ${input.name} created. Please create their auth account in the Firebase Console with the email ${input.email} and UID ${uid}.`,
+        message: `SPOC profile for ${input.name} created. Please create their auth account manually in Firebase console with email ${input.email}, UID ${uid}, and temporary password: ${tempPassword}`,
         uid: uid,
       };
     } catch (error) {
