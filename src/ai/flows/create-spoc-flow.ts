@@ -54,7 +54,7 @@ async function sendSpocCredentialsEmail(name: string, email: string, password: s
 }
 
 
-export const CreateSpocInputSchema = z.object({
+const CreateSpocInputSchema = z.object({
   name: z.string().describe('Full name of the SPOC.'),
   email: z.string().email().describe('Email address for the SPOC account.'),
   institute: z.string().describe('The institute the SPOC belongs to.'),
@@ -63,7 +63,7 @@ export const CreateSpocInputSchema = z.object({
 });
 export type CreateSpocInput = z.infer<typeof CreateSpocInputSchema>;
 
-export const CreateSpocOutputSchema = z.object({
+const CreateSpocOutputSchema = z.object({
   success: z.boolean(),
   message: z.string(),
   uid: z.string().optional(),
