@@ -5,11 +5,11 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Logo } from '@/components/logo';
-import { Award, Code, Cpu, Mail, MapPin, Phone, Users, Calendar, Trophy, FileText, BarChart, FileQuestion } from 'lucide-react';
+import { Award, Code, Cpu, Mail, MapPin, Phone, Users, Calendar, Trophy, FileText, BarChart, FileQuestion, Loader2 } from 'lucide-react';
 import Image from 'next/image';
 import { INSTITUTES } from '@/lib/constants';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Carousel,
   CarouselContent,
@@ -17,14 +17,46 @@ import {
   CarouselNext,
   CarouselPrevious,
 } from "@/components/ui/carousel";
+import { db } from '@/lib/firebase';
+import { collection, getDocs, query, where } from 'firebase/firestore';
+import { UserProfile } from '@/lib/types';
 
-const spocDetails: { [key: string]: { name: string; email: string; contact: string } } = {
-  "Parul Institute of Applied Sciences": { name: "Chintan Somaiyya", email: "chintan.somaiya23775@paruluniversity.ac.in", contact: "74054 05402" },
-};
 
+interface SpocDetails {
+  [key: string]: { name: string; email: string; contact: string }
+}
 
 export default function LandingPage() {
   const [selectedInstitute, setSelectedInstitute] = useState<string | null>(null);
+  const [spocDetails, setSpocDetails] = useState<SpocDetails>({});
+  const [loadingSpocs, setLoadingSpocs] = useState(true);
+
+  useEffect(() => {
+    const fetchSpocs = async () => {
+      try {
+        const spocQuery = query(collection(db, "users"), where("role", "==", "spoc"));
+        const querySnapshot = await getDocs(spocQuery);
+        const spocs: SpocDetails = {};
+        querySnapshot.forEach(doc => {
+          const spocData = doc.data() as UserProfile;
+          if (spocData.institute) {
+            spocs[spocData.institute] = {
+              name: spocData.name,
+              email: spocData.email,
+              contact: spocData.contactNumber,
+            };
+          }
+        });
+        setSpocDetails(spocs);
+      } catch (error) {
+        console.error("Error fetching SPOCs: ", error);
+      } finally {
+        setLoadingSpocs(false);
+      }
+    };
+    fetchSpocs();
+  }, []);
+
 
   const navLinks = [
     { name: 'Home', href: '#' },
@@ -80,7 +112,7 @@ export default function LandingPage() {
         <section className="py-20 md:py-32">
           <div className="container max-w-7xl text-center">
             <div className="flex justify-center mb-8">
-                <Image src="https://www.pierc.org/vhlogo.png" alt="Vadodara Hackathon Logo" width={500} height={500} className="h-auto" style={{maxWidth: '60vh'}} />
+                <Image src="https://www.pierc.org/vhlogo.png" alt="Vadodara Hackathon Logo" width={500} height={500} className="h-auto" style={{maxWidth: '50vh'}} />
             </div>
             <p className="max-w-3xl mx-auto text-lg md:text-xl text-foreground/80 mb-8">
              Your Gateway to Smart India Hackathon 2025!
@@ -107,14 +139,22 @@ export default function LandingPage() {
             <p className="text-muted-foreground mb-4">Have any doubts or queries?</p>
             <h3 className="text-2xl font-semibold mb-4 font-headline">Get Contact details of your Institute SPOC</h3>
              <div className="max-w-md mx-auto mb-4">
-                <Select onValueChange={setSelectedInstitute}>
+                <Select onValueChange={setSelectedInstitute} disabled={loadingSpocs}>
                   <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select Your Institute" />
+                    <SelectValue placeholder={loadingSpocs ? "Loading institutes..." : "Select Your Institute"} />
                   </SelectTrigger>
                   <SelectContent>
-                    {INSTITUTES.map((inst) => (
-                      <SelectItem key={inst} value={inst}>{inst}</SelectItem>
-                    ))}
+                    {loadingSpocs ? (
+                       <div className="flex items-center justify-center p-4">
+                          <Loader2 className="h-5 w-5 animate-spin" />
+                       </div>
+                    ) : Object.keys(spocDetails).length > 0 ? (
+                      Object.keys(spocDetails).map((inst) => (
+                        <SelectItem key={inst} value={inst}>{inst}</SelectItem>
+                      ))
+                    ) : (
+                      <div className="p-4 text-center text-sm text-muted-foreground">No SPOCs found.</div>
+                    )}
                   </SelectContent>
                 </Select>
             </div>
