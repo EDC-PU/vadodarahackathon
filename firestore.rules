@@ -2,56 +2,55 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-  
-    // Helper function to check if a user has a specific role
-    function isRole(role) {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == role;
-    }
-    
+
     // Helper function to check if a user is an admin
     function isAdmin() {
-      return isRole('admin');
-    }
-    
-    // Helper function to check if a user is a leader
-    function isLeader() {
-      return isRole('leader');
+      return exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
 
+    // Helper function to check if a user is the leader of a specific team
+    function isTeamLeader(teamId) {
+      return exists(/databases/$(database)/documents/teams/$(teamId)) &&
+             get(/databases/$(database)/documents/teams/$(teamId)).data.leader.uid == request.auth.uid;
+    }
+
+    // Rules for the 'users' collection
     match /users/{userId} {
-      // READ: Users can read their own profile. Admins can read any profile.
-      allow read: if request.auth.uid == userId || isAdmin();
-      
-      // CREATE: Any user can create their own profile during registration.
-      // Admins can create new user profiles (for SPOCs).
-      allow create: if request.auth.uid == userId || isAdmin();
-      
-      // UPDATE: Users can update their own profile. Admins can update any profile (to make another user an admin).
-      allow update: if request.auth.uid == userId || isAdmin();
-      
-      // DELETE: Only admins can delete users (for cleanup).
+      // Any authenticated user can create their own user document.
+      allow create: if request.auth != null && request.auth.uid == userId;
+
+      // Users can read their own document. Admins can read any user document.
+      allow read: if request.auth != null && (request.auth.uid == userId || isAdmin());
+
+      // Users can update their own document. Admins can update any user document.
+      allow update: if request.auth != null && (request.auth.uid == userId || isAdmin());
+
+      // Only admins can delete users.
       allow delete: if isAdmin();
     }
 
+    // Rules for the 'teams' collection
     match /teams/{teamId} {
-      // READ: Any authenticated user can read team details.
+       // Any authenticated user can read team data.
       allow read: if request.auth != null;
-      
-      // CREATE: Only a team leader can create a team document.
-      allow create: if isLeader();
-      
-      // UPDATE: Only the team leader or an admin can update team details.
-      allow update: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.teamId == teamId || isAdmin();
-      
-      // DELETE: Only admins can delete teams.
-      allow delete: if isAdmin();
+
+      // Any authenticated user can create a team (register).
+      allow create: if request.auth != null;
+
+      // Only the team leader or an admin can update a team.
+      allow update: if request.auth != null && (isTeamLeader(teamId) || isAdmin());
+
+      // Only the team leader or an admin can delete a team.
+      allow delete: if request.auth != null && (isTeamLeader(teamId) || isAdmin());
     }
-    
+
+    // Rules for the 'problemStatements' collection
     match /problemStatements/{statementId} {
-      // READ: Any authenticated user can view problem statements.
+      // Any authenticated user can read problem statements.
       allow read: if request.auth != null;
-      
-      // WRITE (Create, Update, Delete): Only admins can manage problem statements.
+
+      // Only admins can create, update, or delete problem statements.
       allow write: if isAdmin();
     }
   }
