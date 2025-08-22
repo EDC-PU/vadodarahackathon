@@ -54,7 +54,7 @@ export function RegistrationForm() {
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const { toast } = useToast();
-  const { redirectToDashboard } = useAuth();
+  const { handleLogin } = useAuth();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -70,50 +70,45 @@ export function RegistrationForm() {
     },
   });
   
-  const createFirestoreData = async (user: User, values: z.infer<typeof formSchema>, existingProfile?: UserProfile) => {
+  const createFirestoreData = async (user: User, values: z.infer<typeof formSchema>) => {
     const batch = writeBatch(db);
 
     const isPanavAdmin = values.email.toLowerCase() === "panavrathi07@gmail.com";
     const role = isPanavAdmin ? "admin" : "leader";
 
-    // 1. Create or Update User Profile
+    // 1. Create Team
+    const teamDocRef = doc(collection(db, "teams"));
+    const teamData = {
+      id: teamDocRef.id,
+      name: values.teamName,
+      leader: {
+          uid: user.uid,
+          name: values.name,
+          email: values.email,
+      },
+      institute: values.institute,
+      department: values.department,
+      category: values.category as "Software" | "Hardware",
+      members: [], // Start with empty members array
+    };
+    batch.set(teamDocRef, teamData);
+
+    // 2. Create User Profile
     const userProfile: UserProfile = {
-      ...(existingProfile || {}),
       uid: user.uid,
       name: values.name,
-      email: values.email,
+      email: user.email!,
       role: role,
+      photoURL: user.photoURL || '',
       institute: values.institute,
       department: values.department,
       enrollmentNumber: values.enrollmentNumber,
       contactNumber: values.contactNumber,
       gender: values.gender as "Male" | "Female" | "Other",
-      teamId: existingProfile?.teamId || "", // Preserve teamId if it exists
+      teamId: teamDocRef.id, // Link user to team
     };
     const userDocRef = doc(db, "users", user.uid);
-    
-    // 2. Create Team if the user is a leader and doesn't have a team yet
-    if (role === 'leader' && !userProfile.teamId) {
-      const teamDocRef = doc(collection(db, "teams"));
-      userProfile.teamId = teamDocRef.id; // Link user to team
-
-      const teamData = {
-        id: teamDocRef.id,
-        name: values.teamName,
-        leader: {
-            uid: user.uid,
-            name: values.name,
-            email: values.email,
-        },
-        institute: values.institute,
-        department: values.department,
-        category: values.category as "Software" | "Hardware",
-        members: [], // Start with empty members array
-      };
-      batch.set(teamDocRef, teamData);
-    }
-    
-    batch.set(userDocRef, userProfile, { merge: true });
+    batch.set(userDocRef, userProfile);
     
     await batch.commit();
     return userProfile;
@@ -124,13 +119,7 @@ export function RegistrationForm() {
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
       const profile = await createFirestoreData(userCredential.user, values);
-
-      toast({
-        title: "Registration Successful!",
-        description: "Your account has been created. Redirecting to your dashboard.",
-      });
-
-      redirectToDashboard(profile);
+      await handleLogin(userCredential.user);
     } catch (error: any) {
       console.error("Registration Error:", error);
       let errorMessage = "An unexpected error occurred.";
@@ -151,11 +140,11 @@ export function RegistrationForm() {
 
   async function handleGoogleSignIn() {
     // 1. Validate form first
-    const isValid = await form.trigger();
+    const isValid = await form.trigger(["teamName", "category", "name", "gender", "institute", "department", "enrollmentNumber", "semester", "yearOfStudy", "contactNumber"]);
     if (!isValid) {
       toast({
         title: "Incomplete Form",
-        description: "Please fill out all the details before signing up with Google.",
+        description: "Please fill out all your team and personal details before signing up with Google.",
         variant: "destructive",
       });
       return;
@@ -171,22 +160,17 @@ export function RegistrationForm() {
       const userDocRef = doc(db, "users", user.uid);
       const userDoc = await getDoc(userDocRef);
       if (userDoc.exists()) {
-        toast({
-          title: "Account Exists",
-          description: "You're already registered. Redirecting to login...",
-        });
-        redirectToDashboard(userDoc.data() as UserProfile);
-        return;
+         toast({ title: "Account Exists", description: "You're already registered. Redirecting..." });
+         await handleLogin(user);
+         return;
       }
       
       const formValues = form.getValues();
-      const profile = await createFirestoreData(user, formValues);
+      // Use the email from Google, but the rest from the form
+      const valuesWithGoogleEmail = { ...formValues, email: user.email! };
+      await createFirestoreData(user, valuesWithGoogleEmail);
       
-      toast({
-        title: "Registration Successful!",
-        description: "Your account has been created. Redirecting...",
-      });
-      redirectToDashboard(profile);
+      await handleLogin(user);
 
     } catch (error: any) {
       console.error("Google Sign-In Error:", error);
@@ -288,7 +272,7 @@ export function RegistrationForm() {
                 name="email"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Email</FormLabel>
+                    <FormLabel>Email (for manual login)</FormLabel>
                     <FormControl>
                       <div className="flex items-center gap-2">
                         <Input placeholder="leader@example.com" {...field} disabled={isLoading || isGoogleLoading}/>
@@ -444,7 +428,7 @@ export function RegistrationForm() {
                 name="password"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Password</FormLabel>
+                    <FormLabel>Password (for manual login)</FormLabel>
                     <FormControl>
                       <div className="flex items-center gap-2">
                         <Input type="password" placeholder="••••••••" {...field} disabled={isLoading || isGoogleLoading}/>
@@ -459,7 +443,7 @@ export function RegistrationForm() {
 
             <Button type="submit" className="w-full" disabled={isLoading || isGoogleLoading}>
               {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Create Account
+              Create Account with Email
             </Button>
           </form>
         </Form>

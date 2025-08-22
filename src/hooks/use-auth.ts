@@ -17,8 +17,8 @@ async function findTeamByMemberEmail(email: string): Promise<Team | null> {
     for (const doc of querySnapshot.docs) {
         const team = { id: doc.id, ...doc.data() } as Team;
         // Check both leader and members
-        if (team.leader.email === email) return team;
-        const member = team.members.find(m => m.email === email);
+        if (team.leader.email.toLowerCase() === email.toLowerCase()) return team;
+        const member = team.members.find(m => m.email.toLowerCase() === email.toLowerCase());
         if (member) {
             return team;
         }
@@ -35,7 +35,7 @@ export function useAuth() {
 
   const redirectToDashboard = useCallback((userProfile: UserProfile) => {
      // Check if the user has completed their profile
-     if (userProfile.role === 'member' && !userProfile.enrollmentNumber) {
+     if ((userProfile.role === 'member' || userProfile.role === 'leader') && !userProfile.enrollmentNumber) {
         router.push('/complete-profile');
         return;
      }
@@ -59,26 +59,23 @@ export function useAuth() {
   }, [router]);
 
   useEffect(() => {
-    const unsubscribeAuth = onAuthStateChanged(auth, async (currentUser) => {
+    const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
       setFirebaseUser(currentUser);
       if (currentUser) {
         const userDocRef = doc(db, 'users', currentUser.uid);
         
-        const unsubscribeProfile = onSnapshot(userDocRef, async (userDoc) => {
+        const unsubscribeProfile = onSnapshot(userDocRef, (userDoc) => {
           if (userDoc.exists()) {
             const userProfile = { uid: userDoc.id, ...userDoc.data() } as UserProfile;
             
-            // If the user was a member and their teamId was just removed
             if (user?.teamId && !userProfile.teamId) {
                 toast({
                     title: "Removed from Team",
                     description: "The team leader has removed you from the team. You can now register as a new leader.",
                     variant: "destructive"
                 });
-                // No need to sign out, just update state and let them decide what to do next
-                // They can now go to /register
                 setUser({ ...userProfile, teamId: undefined });
-                router.push('/register'); // Redirect them to registration
+                router.push('/register');
                 return;
             }
 
@@ -119,7 +116,7 @@ export function useAuth() {
       redirectToDashboard(userProfile);
     } else {
         // User document doesn't exist for the current UID.
-        // Let's check if a user profile exists with this email (e.g., created by an admin).
+        // Check if a user profile exists with this email (e.g., created by an admin or leader).
         const usersRef = collection(db, "users");
         const q = query(usersRef, where("email", "==", loggedInUser.email!));
         const userSnapshot = await getDocs(q);
@@ -129,38 +126,38 @@ export function useAuth() {
             const existingUserDoc = userSnapshot.docs[0];
             const userProfile = existingUserDoc.data() as UserProfile;
 
-            // This handles cases where the doc ID is not the same as the auth UID (e.g. SPOC creation)
             const oldDocRef = doc(db, 'users', existingUserDoc.id);
             const newDocRef = doc(db, 'users', loggedInUser.uid);
             const batch = writeBatch(db);
             
-            batch.set(newDocRef, { ...userProfile, uid: loggedInUser.uid, photoURL: loggedInUser.photoURL || userProfile.photoURL || '' });
-            // Only delete the old doc if the ID is different.
+            const finalProfile = { ...userProfile, uid: loggedInUser.uid, photoURL: loggedInUser.photoURL || userProfile.photoURL || '' };
+            batch.set(newDocRef, finalProfile);
+
             if (existingUserDoc.id !== loggedInUser.uid) {
                batch.delete(oldDocRef);
             }
             await batch.commit();
 
             toast({ title: "Login Successful", description: "Redirecting to your dashboard..." });
-            redirectToDashboard({ ...userProfile, uid: loggedInUser.uid });
+            redirectToDashboard(finalProfile);
 
         } else {
             // No profile exists. Maybe they are a newly added team member?
             const team = await findTeamByMemberEmail(loggedInUser.email!);
             if (team) {
-                const memberDetails = team.members.find(m => m.email === loggedInUser.email)!;
+                const memberDetails = team.members.find(m => m.email.toLowerCase() === loggedInUser.email!.toLowerCase())!;
                 const newProfile: UserProfile = {
                     uid: loggedInUser.uid,
                     name: loggedInUser.displayName || memberDetails.name,
                     email: loggedInUser.email!,
                     role: 'member',
                     institute: team.institute,
-                    // These will be filled out on the complete-profile page
-                    department: '',
-                    enrollmentNumber: '',
-                    contactNumber: '',
+                    department: '', // To be filled out
+                    enrollmentNumber: '', // To be filled out
+                    contactNumber: '', // To be filled out
                     gender: "Other", 
                     teamId: team.id,
+                    photoURL: loggedInUser.photoURL || ''
                 };
                 
                 await setDoc(userDocRef, newProfile);
@@ -168,17 +165,17 @@ export function useAuth() {
                 toast({ title: "Welcome!", description: "Please complete your profile information." });
                 redirectToDashboard(newProfile);
             } else {
-                 // No profile and not a team member. They must register.
                  toast({
-                    title: "Registration Incomplete",
-                    description: "Your account is not associated with a team or role. Please register first.",
+                    title: "Registration Required",
+                    description: "Your account was not found. Please complete the registration form.",
                     variant: "destructive",
                 });
-                await signOut(auth);
+                await signOut(auth); // Sign out to prevent being stuck in a logged-in but no-profile state
+                router.push('/register'); // Redirect to registration page
             }
         }
     }
-  }, [redirectToDashboard, toast]);
+  }, [redirectToDashboard, toast, router]);
 
   const handleSignOut = useCallback(async () => {
     try {
