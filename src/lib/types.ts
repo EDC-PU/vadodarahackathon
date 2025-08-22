@@ -1,5 +1,6 @@
 
 export type UserRole = "leader" | "member" | "spoc" | "admin";
+export type SpocStatus = "pending" | "approved" | "rejected";
 
 export interface UserProfile {
   uid: string;
@@ -14,6 +15,7 @@ export interface UserProfile {
   gender?: "Male" | "Female" | "Other";
   teamId?: string;
   passwordChanged?: boolean; // Flag to check if the user has changed the initial password
+  spocStatus?: SpocStatus;
 }
 
 export interface TeamMember {

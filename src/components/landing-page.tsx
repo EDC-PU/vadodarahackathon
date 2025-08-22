@@ -39,7 +39,7 @@ export default function LandingPage() {
   useEffect(() => {
     const fetchSpocs = async () => {
       try {
-        const spocQuery = query(collection(db, "users"), where("role", "==", "spoc"));
+        const spocQuery = query(collection(db, "users"), where("role", "==", "spoc"), where("spocStatus", "==", "approved"));
         const querySnapshot = await getDocs(spocQuery);
         const spocs: SpocDetails = {};
         querySnapshot.forEach(doc => {

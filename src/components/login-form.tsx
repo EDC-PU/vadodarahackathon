@@ -57,7 +57,10 @@ export function LoginForm() {
       let errorMessage = "An unexpected error occurred.";
       if (errorCode === 'auth/user-not-found' || errorCode === 'auth/wrong-password' || errorCode === 'auth/invalid-credential') {
         errorMessage = "Invalid email or password. Please check your credentials and try again."
-      } else {
+      } else if (errorCode === 'auth/user-disabled') {
+        errorMessage = "Your account is pending approval or has been disabled. Please contact an administrator."
+      }
+      else {
         errorMessage = error.message;
       }
       toast({
@@ -76,11 +79,18 @@ export function LoginForm() {
     try {
       const result = await signInWithPopup(auth, provider);
       await handleLogin(result.user);
-    } catch (error: any) {
+    } catch (error: any)
+       {
       console.error("Google Sign-In Error:", error);
+      let errorMessage = "An unexpected error occurred.";
+      if (error.code === 'auth/user-disabled') {
+        errorMessage = "Your account is pending approval or has been disabled. Please contact an administrator."
+      } else {
+        errorMessage = error.message;
+      }
       toast({
         title: "Google Sign-In Failed",
-        description: error.message || "An unexpected error occurred.",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {

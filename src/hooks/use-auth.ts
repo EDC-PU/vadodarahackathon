@@ -8,6 +8,7 @@ import { auth, db } from '@/lib/firebase';
 import { UserProfile, Team } from '@/lib/types';
 import { useRouter } from 'next/navigation';
 import { useToast } from './use-toast';
+import { getAdminAuth } from '@/lib/firebase-admin';
 
 async function findTeamByMemberEmail(email: string): Promise<Team | null> {
     if (!email) return null;
@@ -37,6 +38,22 @@ export function useAuth() {
      // First, check if the user needs to change their password
      if (userProfile.passwordChanged === false) {
         router.push('/change-password');
+        return;
+     }
+     
+     // Handle pending SPOCs
+     if (userProfile.role === 'spoc' && userProfile.spocStatus === 'pending') {
+        // SPOC is pending approval, don't redirect to dashboard.
+        // The login form will handle showing the message.
+        // We can sign them out and show a toast.
+        signOut(auth);
+        toast({
+            title: "Pending Approval",
+            description: "Your SPOC account is awaiting admin approval. You will be notified via email once it's approved.",
+            variant: "default",
+            duration: 10000,
+        });
+        router.push('/login');
         return;
      }
 
@@ -69,7 +86,7 @@ export function useAuth() {
            // If role is somehow null or undefined, send to create a team
           router.push("/create-team");
       }
-  }, [router]);
+  }, [router, toast]);
 
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
@@ -149,55 +166,58 @@ export function useAuth() {
 
     if (userDoc.exists()) {
       const userProfile = userDoc.data() as UserProfile;
+
+      // Handle disabled users (pending SPOCs)
+      if (loggedInUser.disabled) {
+        toast({
+            title: "Account Pending Approval",
+            description: "Your SPOC account is awaiting admin approval. Please check back later.",
+            variant: "destructive",
+            duration: 8000,
+        });
+        signOut(auth);
+        return;
+      }
+      
       toast({
         title: "Login Successful",
         description: "Redirecting to your dashboard...",
       });
       redirectToDashboard(userProfile);
     } else {
-        // User document doesn't exist. Check for profiles created by others.
-        const usersRef = collection(db, "users");
-        const q = query(usersRef, where("email", "==", loggedInUser.email!));
-        const userSnapshot = await getDocs(q);
+        // User document doesn't exist. This is a brand new user signing up.
+        const signUpForm = JSON.parse(sessionStorage.getItem('sign-up-form') || '{}');
+        const role = signUpForm?.role;
 
-        if (!userSnapshot.empty) {
-            // A profile with this email exists. Link it to the new auth UID.
-            const existingUserDoc = userSnapshot.docs[0];
-            const userProfile = existingUserDoc.data() as UserProfile;
+        const newProfile: UserProfile = {
+            uid: loggedInUser.uid,
+            name: loggedInUser.displayName || 'New User',
+            email: loggedInUser.email!,
+            role: role,
+            photoURL: loggedInUser.photoURL || '',
+            passwordChanged: true, // For self-registration, we skip forced password change
+        };
+        
+        let toastTitle = "Account Created!";
+        let toastDescription = "Let's get you set up.";
 
-            const oldDocRef = doc(db, 'users', existingUserDoc.id);
-            const newDocRef = doc(db, 'users', loggedInUser.uid);
-            const batch = writeBatch(db);
-            
-            const finalProfile = { ...userProfile, uid: loggedInUser.uid, photoURL: loggedInUser.photoURL || userProfile.photoURL || '' };
-            batch.set(newDocRef, finalProfile);
+        if (role === 'spoc') {
+            newProfile.spocStatus = 'pending';
+            // We need a server-side flow to disable the user, as it's a privileged action.
+            // For now, the application logic will prevent login.
+            toastTitle = "Registration Submitted";
+            toastDescription = "Your request has been sent for admin approval. You will be notified via email.";
+        }
 
-            if (existingUserDoc.id !== loggedInUser.uid) {
-               batch.delete(oldDocRef);
-            }
-            await batch.commit();
-
-            toast({ title: "Login Successful", description: "Redirecting..." });
-            redirectToDashboard(finalProfile);
-
+        await setDoc(doc(db, "users", loggedInUser.uid), newProfile);
+        sessionStorage.removeItem('sign-up-form');
+        
+        toast({ title: toastTitle, description: toastDescription });
+        
+        if (role === 'spoc') {
+            signOut(auth);
+            router.push('/login');
         } else {
-            // No profile exists at all. This is a brand new user.
-            // Create a placeholder user profile.
-            const signUpForm = JSON.parse(sessionStorage.getItem('sign-up-form') || '{}');
-            const newProfile: Partial<UserProfile> = {
-                uid: loggedInUser.uid,
-                name: loggedInUser.displayName || 'New User',
-                email: loggedInUser.email!,
-                role: signUpForm?.role,
-                photoURL: loggedInUser.photoURL || '',
-                // No role assigned yet. This is the key for the new flow.
-            };
-            await setDoc(doc(db, "users", loggedInUser.uid), newProfile);
-            sessionStorage.removeItem('sign-up-form');
-            toast({
-                title: "Account Created!",
-                description: "Let's get your team setup.",
-            });
             redirectToDashboard(newProfile as UserProfile);
         }
     }
