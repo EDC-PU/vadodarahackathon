@@ -44,9 +44,6 @@ export function useAuth() {
      
      // Handle pending SPOCs
      if (userProfile.role === 'spoc' && userProfile.spocStatus === 'pending') {
-        // SPOC is pending approval, don't redirect to dashboard.
-        // The login form will handle showing the message.
-        // We can sign them out and show a toast.
         signOut(auth);
         toast({
             title: "Pending Approval",
@@ -55,6 +52,12 @@ export function useAuth() {
             duration: 10000,
         });
         router.push('/login');
+        return;
+     }
+     
+      // If SPOC hasn't completed their profile
+     if (userProfile.role === 'spoc' && (!userProfile.institute || !userProfile.contactNumber)) {
+        router.push('/complete-spoc-profile');
         return;
      }
 
@@ -84,7 +87,6 @@ export function useAuth() {
           router.push("/member");
           break;
         default:
-           // If role is somehow null or undefined, send to create a team
           router.push("/create-team");
       }
   }, [router, toast]);
@@ -111,8 +113,6 @@ export function useAuth() {
             }
 
             setUser(userProfile);
-          } else {
-             // If user doc doesn't exist, handleLogin will be responsible for creating it
           }
            setLoading(false);
         }, (error) => {
@@ -138,7 +138,6 @@ export function useAuth() {
     const userDocRef = doc(db, "users", loggedInUser.uid);
     let userDoc = await getDoc(userDocRef);
 
-    // Super Admin Check
     const adminEmail = process.env.NEXT_PUBLIC_ADMIN_EMAIL;
     if (adminEmail && loggedInUser.email === adminEmail) {
         if (!userDoc.exists()) {
@@ -168,7 +167,6 @@ export function useAuth() {
     if (userDoc.exists()) {
       const userProfile = userDoc.data() as UserProfile;
 
-      // Handle disabled users (pending SPOCs)
       if (loggedInUser.disabled) {
         toast({
             title: "Account Pending Approval",
@@ -186,55 +184,29 @@ export function useAuth() {
       });
       redirectToDashboard(userProfile);
     } else {
-        // User document doesn't exist. This is a brand new user signing up.
-        const signUpForm = JSON.parse(sessionStorage.getItem('sign-up-form') || '{}');
-        const { role, name, contactNumber, institute } = signUpForm;
-        const newUserName = name || loggedInUser.displayName || 'New User';
+        const role = sessionStorage.getItem('sign-up-role');
+        sessionStorage.removeItem('sign-up-role');
+
+        if (!role) {
+            toast({ title: "Error", description: "Role selection was not found. Please try signing up again.", variant: "destructive" });
+            signOut(auth);
+            return;
+        }
 
         const newProfile: Partial<UserProfile> = {
             uid: loggedInUser.uid,
-            name: newUserName,
+            name: loggedInUser.displayName || 'New User',
             email: loggedInUser.email!,
-            role: role,
+            role: role as UserProfile['role'],
             photoURL: loggedInUser.photoURL || '',
-            passwordChanged: true, // For self-registration, we skip forced password change
+            passwordChanged: true, 
         };
         
-        let toastTitle = "Account Created!";
-        let toastDescription = "Let's get you set up.";
-
-        if (role === 'spoc') {
-            newProfile.spocStatus = 'pending';
-            newProfile.contactNumber = contactNumber;
-            newProfile.institute = institute;
-            toastTitle = "Registration Submitted";
-            toastDescription = "Your request has been sent for admin approval. You will be notified via email.";
-
-            // Notify admins
-            notifyAdminsOfSpocRequest({
-                spocName: newUserName,
-                spocEmail: loggedInUser.email!,
-                spocInstitute: institute,
-            }).then(result => {
-                if (!result.success) {
-                    console.error("Failed to send admin notification:", result.message);
-                    // Non-critical error, so we don't need to block the user.
-                    // We can log this for monitoring.
-                }
-            });
-        }
-
         await setDoc(doc(db, "users", loggedInUser.uid), newProfile);
-        sessionStorage.removeItem('sign-up-form');
         
-        toast({ title: toastTitle, description: toastDescription });
+        toast({ title: "Account Created!", description: "Let's complete your profile." });
         
-        if (role === 'spoc') {
-            signOut(auth);
-            router.push('/login');
-        } else {
-            redirectToDashboard(newProfile as UserProfile);
-        }
+        redirectToDashboard(newProfile as UserProfile);
     }
   }, [redirectToDashboard, toast, router]);
 

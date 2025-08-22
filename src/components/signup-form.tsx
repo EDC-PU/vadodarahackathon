@@ -35,47 +35,13 @@ import { Alert, AlertTitle, AlertDescription } from "./ui/alert";
 import { INSTITUTES } from "@/lib/constants";
 
 const formSchema = z.object({
-  name: z.string().optional(),
   email: z.string().email({ message: "Invalid email address." }),
   password: z.string().min(6, { message: "Password must be at least 6 characters." }),
   confirmPassword: z.string().min(6, { message: "Password must be at least 6 characters." }),
   role: z.enum(["leader", "member", "spoc"], { required_error: "Please select a role." }),
-  contactNumber: z.string().optional(),
-  institute: z.string().optional(),
 }).refine((data) => data.password === data.confirmPassword, {
     message: "Passwords don't match",
     path: ["confirmPassword"],
-}).superRefine((data, ctx) => {
-    if (data.role === 'spoc') {
-        if (!data.name || data.name.length < 2) {
-            ctx.addIssue({
-                code: z.ZodIssueCode.custom,
-                message: "Name must be at least 2 characters.",
-                path: ["name"],
-            });
-        }
-        if (!data.email.endsWith('@paruluniversity.ac.in')) {
-            ctx.addIssue({
-                code: z.ZodIssueCode.custom,
-                message: "SPOC email must end with @paruluniversity.ac.in",
-                path: ["email"],
-            });
-        }
-        if (!data.contactNumber || !/^\d{10}$/.test(data.contactNumber)) {
-            ctx.addIssue({
-                code: z.ZodIssueCode.custom,
-                message: "Please enter a valid 10-digit phone number.",
-                path: ["contactNumber"],
-            });
-        }
-        if (!data.institute) {
-             ctx.addIssue({
-                code: z.ZodIssueCode.custom,
-                message: "Please select an institute.",
-                path: ["institute"],
-            });
-        }
-    }
 });
 
 export function SignupForm() {
@@ -111,26 +77,18 @@ export function SignupForm() {
       email: "",
       password: "",
       confirmPassword: "",
-      name: "",
-      contactNumber: "",
-      institute: "",
     },
   });
-
-  const selectedRole = form.watch("role");
 
   const isRegistrationClosed = deadline ? new Date() > deadline : false;
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
-    // Store the selected role in session storage to be retrieved in useAuth hook after redirect
-    sessionStorage.setItem('sign-up-form', JSON.stringify(values));
+    sessionStorage.setItem('sign-up-role', values.role);
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
       await handleLogin(userCredential.user);
     } catch (error: any) {
-
-
       console.error("Sign-up Error:", error);
       let errorMessage = "An unexpected error occurred.";
        if (error.code === 'auth/email-already-in-use') {
@@ -150,13 +108,17 @@ export function SignupForm() {
 
   async function handleGoogleSignIn() {
     setIsGoogleLoading(true);
+    const selectedRole = form.getValues("role");
+    if (!selectedRole) {
+        toast({ title: "Role Required", description: "Please select your role before signing in with Google.", variant: "destructive" });
+        setIsGoogleLoading(false);
+        return;
+    }
+    
+    sessionStorage.setItem('sign-up-role', selectedRole);
     const provider = new GoogleAuthProvider();
     try {
       const result = await signInWithPopup(auth, provider);
-      // For google sign-in, we can't select a role beforehand. 
-      // We will need a different logic path in useAuth or a subsequent page.
-      // For now, let's assume they become a leader by default if signing up this way.
-      sessionStorage.setItem('sign-up-form', JSON.stringify({ role: 'leader' }));
       await handleLogin(result.user);
     } catch (error: any) {
       console.error("Google Sign-In Error:", error);
@@ -213,58 +175,7 @@ export function SignupForm() {
                 </FormItem>
               )}
             />
-            {selectedRole === 'spoc' && (
-               <>
-                <FormField
-                  control={form.control}
-                  name="name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Full Name</FormLabel>
-                      <FormControl>
-                        <Input placeholder="John Doe" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                control={form.control}
-                name="institute"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Institute</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select your institute" />
-                          </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {INSTITUTES.map((inst) => (
-                          <SelectItem key={inst} value={inst}>{inst}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-                <FormField
-                control={form.control}
-                name="contactNumber"
-                render={({ field }) => (
-                    <FormItem>
-                    <FormLabel>Contact Number</FormLabel>
-                    <FormControl>
-                        <Input placeholder="9876543210" {...field} disabled={isLoading || isGoogleLoading}/>
-                    </FormControl>
-                    <FormMessage />
-                    </FormItem>
-                )}
-                />
-               </>
-            )}
+            
             <FormField
               control={form.control}
               name="email"
