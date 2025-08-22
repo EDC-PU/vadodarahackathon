@@ -81,7 +81,9 @@ export function useAuth() {
 
             setUser(userProfile);
           } else {
-             setUser(null);
+             // If user doc doesn't exist, handleLogin will be responsible for creating it
+             // This can happen if a user authenticates but their Firestore doc creation fails
+             // We don't set user to null here to allow handleLogin to do its job.
           }
            setLoading(false);
         }, (error) => {
@@ -105,7 +107,36 @@ export function useAuth() {
 
   const handleLogin = useCallback(async (loggedInUser: FirebaseUser) => {
     const userDocRef = doc(db, "users", loggedInUser.uid);
-    const userDoc = await getDoc(userDocRef);
+    let userDoc = await getDoc(userDocRef);
+
+    // Super Admin Check
+    // Note: This requires ADMIN_EMAIL to be set in environment variables.
+    const adminEmail = process.env.NEXT_PUBLIC_ADMIN_EMAIL;
+    if (adminEmail && loggedInUser.email === adminEmail) {
+        if (!userDoc.exists()) {
+            console.log("Admin user does not exist in Firestore. Creating...");
+            const adminProfile: UserProfile = {
+                uid: loggedInUser.uid,
+                name: "Super Admin",
+                email: loggedInUser.email!,
+                role: 'admin',
+                photoURL: loggedInUser.photoURL || '',
+                institute: 'Parul University',
+                department: 'Administration',
+                enrollmentNumber: 'N/A',
+                contactNumber: 'N/A',
+                gender: 'Other',
+            };
+            await setDoc(userDocRef, adminProfile);
+            userDoc = await getDoc(userDocRef); // Re-fetch the document
+        } else {
+            // Ensure the role is admin if the doc already exists
+            const userProfile = userDoc.data() as UserProfile;
+            if (userProfile.role !== 'admin') {
+                await updateDoc(userDocRef, { role: 'admin' });
+            }
+        }
+    }
 
     if (userDoc.exists()) {
       const userProfile = userDoc.data() as UserProfile;
