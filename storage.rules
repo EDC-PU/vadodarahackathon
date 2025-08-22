@@ -2,44 +2,27 @@ rules_version = '2';
 
 service firebase.storage {
   match /b/{bucket}/o {
-
-    // Helper function to check if a user is authenticated
-    function isSignedIn() {
-      return request.auth != null;
-    }
-
-    // Helper function to get user's role from Firestore
-    function getUserRole(userId) {
-      return get(/databases/$(database)/documents/users/$(userId)).data.role;
-    }
-
-    // Helper function to check if the user is a member of a team
-    function isTeamMember(teamId) {
-        let team = get(/databases/$(database)/documents/teams/$(teamId)).data;
-        return request.auth.uid == team.leader.uid || request.auth.uid in team.members.map(m => m.uid);
-    }
-
-    // Public assets (e.g., event logos, brochures) can be read by anyone.
-    match /public/{allPaths=**} {
-      allow read: if true;
-      allow write: if false; // Only admins should upload public files via console/backend
-    }
-
-    // Users can manage their own files (e.g., profile pictures).
-    // Files are stored in a folder named after their user ID.
-    match /users/{userId}/{allPaths=**} {
-      allow read, write: if request.auth.uid == userId;
-    }
-    
-    // Team-specific files (e.g., project submissions).
-    // Only members of that team can read or write files.
-    match /teams/{teamId}/{allPaths=**} {
-        allow read, write: if isSignedIn() && isTeamMember(teamId);
-    }
-
-    // Default deny: No other paths are accessible.
+    // Default deny all
     match /{allPaths=**} {
       allow read, write: if false;
+    }
+
+    // Allow public read for hackathon documents like brochures or problem statements
+    match /public/{document=**} {
+      allow read: if true;
+      allow write: if get(/databases/(default)/documents/users/$(request.auth.uid)).data.role == 'admin'; // Only admins can upload public files
+    }
+
+    // Allow authenticated users to upload their profile pictures
+    match /user-profiles/{userId}/{fileName} {
+      allow read: if request.auth != null; // Allow any logged-in user to see profile pics
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Allow team leaders to upload team-specific files (e.g., project submissions)
+    match /team-submissions/{teamId}/{fileName} {
+       allow read: if request.auth != null && (get(/databases/(default)/documents/teams/$(teamId)).data.leader.uid == request.auth.uid || get(/databases/(default)/documents/users/$(request.auth.uid)).data.role == 'admin');
+       allow write: if request.auth != null && get(/databases/(default)/documents/teams/$(teamId)).data.leader.uid == request.auth.uid;
     }
   }
 }
