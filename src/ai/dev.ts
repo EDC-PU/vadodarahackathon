@@ -9,3 +9,4 @@ import '@/ai/flows/export-teams-flow.ts';
 import '@/ai/flows/invite-member-flow.ts';
 import '@/ai/flows/system-health-flow.ts';
 import '@/ai/flows/manage-spoc-request-flow.ts';
+import '@/ai/flows/manage-team-by-spoc-flow.ts';
