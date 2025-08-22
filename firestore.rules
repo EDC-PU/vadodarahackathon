@@ -1,12 +1,68 @@
-
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Allow read and write access for any authenticated user.
-    // This is a lenient ruleset to prevent permission errors during development.
-    match /{document=**} {
-      allow read, write: if request.auth != null;
+  
+    // Helper function to get user's role from their profile
+    function getUserRole(userId) {
+      return get(/databases/$(database)/documents/users/$(userId)).data.role;
+    }
+    
+    // Helper function to check if the user is an Admin
+    function isAdmin() {
+      return request.auth != null && getUserRole(request.auth.uid) == 'admin';
+    }
+    
+    // Helper function to check if the user is a SPOC
+    function isSpoc() {
+      return request.auth != null && getUserRole(request.auth.uid) == 'spoc';
+    }
+    
+    // Helper function to get user's data
+    function getUser(userId) {
+      return get(/databases/$(database)/documents/users/$(userId)).data;
+    }
+
+    // Users can only read/update their own profile. Admins/SPOCs can read any profile.
+    match /users/{userId} {
+      allow read: if isAdmin() || isSpoc() || request.auth.uid == userId;
+      allow create: if request.auth.uid == userId;
+      allow update: if isAdmin() || request.auth.uid == userId;
+    }
+    
+    // Team data rules
+    match /teams/{teamId} {
+      // Allow read access if user is an Admin, a SPOC from the same institute, or a member of the team.
+      allow read: if isAdmin() || 
+                   (isSpoc() && getUser(request.auth.uid).institute == resource.data.institute) ||
+                   (request.auth != null && request.auth.uid == resource.data.leader.uid) ||
+                   (request.auth != null && resource.data.members.exists(member, member.uid == request.auth.uid));
+                   
+      // Allow team creation for any authenticated user.
+      allow create: if request.auth != null;
+      
+      // Allow updates only by Admins or the team leader.
+      allow update: if isAdmin() || (request.auth != null && request.auth.uid == resource.data.leader.uid);
+      
+      // Only admins can delete a team.
+      allow delete: if isAdmin();
+    }
+    
+    // Problem Statements can be read by anyone authenticated, but only written by admins.
+    match /problemStatements/{statementId} {
+      allow read: if request.auth != null;
+      allow write: if isAdmin();
+    }
+
+    // Announcements can be read by anyone authenticated, but only written by admins.
+     match /announcements/{announcementId} {
+      allow read: if request.auth != null;
+      allow write: if isAdmin();
+    }
+    
+    // Configuration can only be read/written by admins.
+    match /config/{configId} {
+        allow read, write: if isAdmin();
     }
   }
 }
