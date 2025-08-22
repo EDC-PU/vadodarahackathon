@@ -26,6 +26,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { manageTeamBySpoc } from "@/ai/flows/manage-team-by-spoc-flow";
 import { useAuth } from "@/hooks/use-auth";
+import { getInstituteTeams } from "@/ai/flows/get-institute-teams-flow";
 
 type SortKey = 'teamName' | 'teamNumber' | 'name' | 'email' | 'enrollmentNumber' | 'contactNumber';
 type SortDirection = 'asc' | 'desc';
@@ -40,54 +41,44 @@ export default function SpocDashboard() {
   const [isProcessing, setIsProcessing] = useState<string | null>(null);
   const [sortConfig, setSortConfig] = useState<{ key: SortKey, direction: SortDirection } | null>(null);
   const { toast } = useToast();
+  
+  const fetchInstituteData = useCallback(async (institute: string) => {
+    setLoading(true);
+    try {
+      const result = await getInstituteTeams({ institute });
+      if (result.success && result.teams && result.users) {
+        setTeams(result.teams as Team[]);
+        setUsers(new Map(Object.entries(result.users)));
+      } else {
+        throw new Error(result.message || "Failed to fetch institute data.");
+      }
+    } catch (error) {
+      console.error("Error in fetchInstituteData:", error);
+      toast({ title: "Error", description: error instanceof Error ? error.message : "An unexpected error occurred.", variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
+  }, [toast]);
 
   useEffect(() => {
-    if (!user || user.role !== 'spoc' || !user.institute) {
-        if (!authLoading) setLoading(false);
-        return;
-    }
+    if (user && user.institute) {
+        // Initial fetch
+        fetchInstituteData(user.institute);
 
-    setLoading(true);
-
-    const teamsQuery = query(collection(db, "teams"), where("institute", "==", user.institute));
-    
-    const unsubscribeTeams = onSnapshot(teamsQuery, (querySnapshot) => {
-        const teamsData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Team));
-        setTeams(teamsData);
-
-        const allUserIds = new Set<string>();
-        teamsData.forEach(team => {
-            allUserIds.add(team.leader.uid);
-            team.members.forEach(member => {
-                if (member.uid) allUserIds.add(member.uid);
-            });
+        // Real-time listener for just the teams to get updates on teamNumber etc.
+        const teamsQuery = query(collection(db, "teams"), where("institute", "==", user.institute));
+        const unsubscribe = onSnapshot(teamsQuery, (snapshot) => {
+             const teamsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Team));
+             setTeams(teamsData);
+        }, (error) => {
+            console.error("Error listening to team updates:", error);
         });
-        
-        const userUnsubscribers: (()=>void)[] = [];
-        if (allUserIds.size > 0) {
-             Array.from(allUserIds).forEach(uid => {
-                const userDocRef = doc(db, 'users', uid);
-                const unsub = onSnapshot(userDocRef, (userDoc) => {
-                    if (userDoc.exists()) {
-                        const userData = { uid: userDoc.id, ...userDoc.data() } as UserProfile;
-                        setUsers(prevUsers => new Map(prevUsers).set(uid, userData));
-                    }
-                });
-                userUnsubscribers.push(unsub);
-            });
-        }
-        
-        setLoading(false);
-        return () => userUnsubscribers.forEach(unsub => unsub());
 
-    }, (error) => {
-        console.error("Error fetching teams for SPOC:", error);
-        toast({ title: "Error", description: "Failed to fetch institute teams.", variant: "destructive" });
+        return () => unsubscribe();
+    } else if (!authLoading) {
         setLoading(false);
-    });
-
-    return () => unsubscribeTeams();
-  }, [user, authLoading, toast]);
+    }
+  }, [user, authLoading, fetchInstituteData]);
   
   const getTeamWithFullDetails = (teamsToProcess: Team[]) => {
     return teamsToProcess.map(team => {
@@ -184,6 +175,7 @@ export default function SpocDashboard() {
         const result = await manageTeamBySpoc({ teamId, action: 'remove-member', memberEmail: memberToRemove.email });
         if (result.success) {
             toast({ title: "Success", description: result.message });
+             if(user?.institute) fetchInstituteData(user.institute); // Refresh data
         } else {
             toast({ title: "Error", description: result.message, variant: "destructive" });
         }
@@ -200,6 +192,7 @@ export default function SpocDashboard() {
         const result = await manageTeamBySpoc({ teamId, action: 'delete-team' });
         if (result.success) {
             toast({ title: "Success", description: result.message });
+            if(user?.institute) fetchInstituteData(user.institute); // Refresh data
         } else {
             toast({ title: "Error", description: result.message, variant: "destructive" });
         }
