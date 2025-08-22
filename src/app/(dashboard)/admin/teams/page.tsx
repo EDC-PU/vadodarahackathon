@@ -3,7 +3,7 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Loader2, Download, Save, Pencil, X, Trash2, MinusCircle } from "lucide-react";
+import { Loader2, Download, Save, Pencil, X, Trash2, MinusCircle, ChevronDown } from "lucide-react";
 import { useEffect, useState, useMemo, useCallback, Suspense } from "react";
 import { db } from "@/lib/firebase";
 import { collection, onSnapshot, doc, updateDoc, query } from "firebase/firestore";
@@ -25,6 +25,14 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { manageTeamBySpoc } from "@/ai/flows/manage-team-by-spoc-flow";
 import { useSearchParams } from "next/navigation";
 
@@ -43,7 +51,9 @@ function AllTeamsContent() {
 
   const [instituteFilter, setInstituteFilter] = useState<string>("All Institutes");
   const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>("All Categories");
-  const [problemStatementFilter, setProblemStatementFilter] = useState<string>("All Problem Statements");
+  const [selectedProblemStatements, setSelectedProblemStatements] = useState<string[]>([]);
+  const [filteredProblemStatements, setFilteredProblemStatements] = useState<ProblemStatement[]>([]);
+
 
   const { toast } = useToast();
   const searchParams = useSearchParams();
@@ -53,7 +63,7 @@ function AllTeamsContent() {
   useEffect(() => {
     const psIdFromQuery = searchParams.get('problemStatementId');
     if (psIdFromQuery) {
-        setProblemStatementFilter(psIdFromQuery);
+        setSelectedProblemStatements([psIdFromQuery]);
     }
   }, [searchParams]);
 
@@ -103,6 +113,7 @@ function AllTeamsContent() {
     const unsubscribeProblemStatements = onSnapshot(problemStatementsCollection, (snapshot) => {
       const psData = snapshot.docs.map(doc => ({id: doc.id, ...doc.data()} as ProblemStatement));
       setProblemStatements(psData);
+      setFilteredProblemStatements(psData); // Initially show all
     }, (error) => {
       console.error("Error fetching problem statements:", error);
       toast({ title: "Error", description: "Failed to fetch problem statements.", variant: "destructive" });
@@ -115,15 +126,26 @@ function AllTeamsContent() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  useEffect(() => {
+    if (categoryFilter === "All Categories") {
+        setFilteredProblemStatements(problemStatements);
+    } else {
+        const filtered = problemStatements.filter(ps => ps.category === categoryFilter);
+        setFilteredProblemStatements(filtered);
+    }
+    // Reset selected problem statements when category changes
+    setSelectedProblemStatements([]);
+  }, [categoryFilter, problemStatements]);
+
 
   const filteredTeams = useMemo(() => {
     return allTeams.filter(team => {
         const instituteMatch = instituteFilter === 'All Institutes' || team.institute === instituteFilter;
         const categoryMatch = categoryFilter === 'All Categories' || team.category === categoryFilter;
-        const psMatch = problemStatementFilter === 'All Problem Statements' || team.problemStatementId === problemStatementFilter;
+        const psMatch = selectedProblemStatements.length === 0 || (team.problemStatementId && selectedProblemStatements.includes(team.problemStatementId));
         return instituteMatch && categoryMatch && psMatch;
     });
-  }, [allTeams, instituteFilter, categoryFilter, problemStatementFilter]);
+  }, [allTeams, instituteFilter, categoryFilter, selectedProblemStatements]);
   
   const handleExport = async () => {
     setIsExporting(true);
@@ -262,6 +284,18 @@ function AllTeamsContent() {
   
   const teamsWithDetails = getTeamWithFullDetails(filteredTeams);
 
+  const handleProblemStatementFilterChange = (psId: string) => {
+    setSelectedProblemStatements(prev => {
+        const newSelection = new Set(prev);
+        if (newSelection.has(psId)) {
+            newSelection.delete(psId);
+        } else {
+            newSelection.add(psId);
+        }
+        return Array.from(newSelection);
+    });
+  };
+
   return (
     <div className="p-4 sm:p-6 lg:p-8">
       <header className="mb-8 flex flex-col sm:flex-row justify-between sm:items-center gap-4">
@@ -287,15 +321,27 @@ function AllTeamsContent() {
                     {categories.map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}
                 </SelectContent>
             </Select>
-            <Select value={problemStatementFilter} onValueChange={setProblemStatementFilter}>
-                <SelectTrigger className="w-48">
-                    <SelectValue placeholder="Filter by Problem Statement" />
-                </SelectTrigger>
-                <SelectContent>
-                    <SelectItem value="All Problem Statements">All Problem Statements</SelectItem>
-                    {problemStatements.map(ps => <SelectItem key={ps.id} value={ps.id}>{ps.problemStatementId}</SelectItem>)}
-                </SelectContent>
-            </Select>
+             <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                    <Button variant="outline" className="w-48 justify-between">
+                         {selectedProblemStatements.length > 0 ? `${selectedProblemStatements.length} selected` : 'Filter by PS'}
+                         <ChevronDown className="h-4 w-4 ml-2"/>
+                    </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-56">
+                    <DropdownMenuLabel>Problem Statements</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    {filteredProblemStatements.length > 0 ? filteredProblemStatements.map((ps) => (
+                        <DropdownMenuCheckboxItem
+                            key={ps.id}
+                            checked={selectedProblemStatements.includes(ps.id)}
+                            onCheckedChange={() => handleProblemStatementFilterChange(ps.id)}
+                        >
+                            {ps.problemStatementId}
+                        </DropdownMenuCheckboxItem>
+                    )) : <DropdownMenuLabel className="text-xs text-muted-foreground font-normal">No statements for this category</DropdownMenuLabel>}
+                </DropdownMenuContent>
+            </DropdownMenu>
             <Button variant="outline" onClick={handleExport} disabled={isExporting}>
                 {isExporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
                 Export
@@ -434,3 +480,4 @@ export default function AllTeamsPage() {
         </Suspense>
     )
 }
+
