@@ -60,7 +60,7 @@ export function RegistrationForm() {
       department: "",
       enrollmentNumber: "",
       contactNumber: "",
-      gender: "Male",
+      gender: undefined,
       semester: undefined,
       yearOfStudy: "",
     },
@@ -76,7 +76,7 @@ export function RegistrationForm() {
             department: user.department || "",
             enrollmentNumber: user.enrollmentNumber || "",
             contactNumber: user.contactNumber || "",
-            gender: user.gender || "Male",
+            gender: user.gender || undefined,
             yearOfStudy: "",
         });
     }
@@ -124,7 +124,6 @@ export function RegistrationForm() {
       institute: values.institute,
       department: values.department,
       members: [], // Start with empty members array
-      category: undefined,
     };
     batch.set(teamDocRef, teamData);
     console.log("Batch operation: Set new team data.", teamData);
