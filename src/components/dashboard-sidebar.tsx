@@ -51,8 +51,6 @@ const navItems = {
   ],
   member: [
     { href: "/member", icon: <LayoutDashboard />, label: "Dashboard" },
-    { href: "/member/team", icon: <Users />, label: "My Team" },
-    { href: "/member/spoc", icon: <FileText />, label: "SPOC Details" },
   ],
 };
 
@@ -68,7 +66,7 @@ const RoleIcon = ({ role }: { role: string }) => {
     case "admin": return <Shield className="w-4 h-4" />;
     case "spoc": return <UserCheck className="w-4 h-4" />;
     case "leader": return <Users className="w-4 h-4" />;
-    default: return null;
+    default: return <UserIcon className="w-4 h-4" />;
   }
 };
 
@@ -131,7 +129,7 @@ export default function DashboardSidebar() {
             <SidebarMenuItem key={item.href}>
               <Link href={item.href}>
                 <SidebarMenuButton
-                  isActive={pathname.startsWith(item.href) && (item.href !== '/leader' || pathname === '/leader')}
+                  isActive={pathname === item.href}
                   tooltip={{ children: item.label }}
                 >
                   {item.icon}
