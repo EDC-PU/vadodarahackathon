@@ -22,12 +22,13 @@ import {
 } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
 import { useState } from "react";
-import { Loader2 } from "lucide-react";
+import { Chrome, Loader2 } from "lucide-react";
 import { INSTITUTES } from "@/lib/constants";
 import { useToast } from "@/hooks/use-toast";
 import { SmartFieldTip } from "./smart-field-tip";
 import { auth } from "@/lib/firebase";
-import { createUserWithEmailAndPassword } from "firebase/auth";
+import { createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from "firebase/auth";
+import { Separator } from "./ui/separator";
 
 const formSchema = z.object({
   name: z.string().min(2, { message: "Name must be at least 2 characters." }),
@@ -43,6 +44,7 @@ const formSchema = z.object({
 
 export function RegistrationForm() {
   const [isLoading, setIsLoading] = useState(false);
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const { toast } = useToast();
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -82,6 +84,28 @@ export function RegistrationForm() {
       setIsLoading(false);
     }
   }
+
+  async function handleGoogleSignIn() {
+    setIsGoogleLoading(true);
+    const provider = new GoogleAuthProvider();
+    try {
+      await signInWithPopup(auth, provider);
+      toast({
+        title: "Sign Up Successful",
+        description: "Redirecting to your dashboard...",
+      });
+      window.location.href = '/leader';
+    } catch (error: any) {
+      console.error("Google Sign-In Error:", error);
+      toast({
+        title: "Google Sign-In Failed",
+        description: error.message || "An unexpected error occurred.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsGoogleLoading(false);
+    }
+  }
   
   const formDescription = "This is a registration form for the Vadodara Hackathon 6.0. Team leaders should fill out their personal and academic details to create their account and team.";
 
@@ -99,7 +123,7 @@ export function RegistrationForm() {
                     <FormLabel>Full Name</FormLabel>
                     <FormControl>
                       <div className="flex items-center gap-2">
-                        <Input placeholder="John Doe" {...field} />
+                        <Input placeholder="John Doe" {...field} disabled={isLoading || isGoogleLoading}/>
                         <SmartFieldTip fieldName="Team Leader Name" formContext={formDescription} />
                       </div>
                     </FormControl>
@@ -115,7 +139,7 @@ export function RegistrationForm() {
                     <FormLabel>Email</FormLabel>
                     <FormControl>
                       <div className="flex items-center gap-2">
-                        <Input placeholder="leader@example.com" {...field} />
+                        <Input placeholder="leader@example.com" {...field} disabled={isLoading || isGoogleLoading}/>
                         <SmartFieldTip fieldName="Email" formContext={formDescription} />
                       </div>
                     </FormControl>
@@ -132,7 +156,7 @@ export function RegistrationForm() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Institute</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isLoading || isGoogleLoading}>
                       <FormControl>
                         <div className="flex items-center gap-2">
                           <SelectTrigger>
@@ -159,7 +183,7 @@ export function RegistrationForm() {
                     <FormLabel>Department</FormLabel>
                     <FormControl>
                       <div className="flex items-center gap-2">
-                        <Input placeholder="e.g., Computer Engineering" {...field} />
+                        <Input placeholder="e.g., Computer Engineering" {...field} disabled={isLoading || isGoogleLoading}/>
                         <SmartFieldTip fieldName="Department" formContext={formDescription} />
                       </div>
                     </FormControl>
@@ -177,7 +201,7 @@ export function RegistrationForm() {
                   <FormItem>
                     <FormLabel>Enrollment No.</FormLabel>
                     <FormControl>
-                      <Input placeholder="20030310XXXX" {...field} />
+                      <Input placeholder="20030310XXXX" {...field} disabled={isLoading || isGoogleLoading}/>
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -190,7 +214,7 @@ export function RegistrationForm() {
                   <FormItem>
                     <FormLabel>Semester</FormLabel>
                     <FormControl>
-                      <Input type="number" placeholder="e.g., 6" {...field} />
+                      <Input type="number" placeholder="e.g., 6" {...field} disabled={isLoading || isGoogleLoading}/>
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -203,7 +227,7 @@ export function RegistrationForm() {
                   <FormItem>
                     <FormLabel>Year of Study</FormLabel>
                     <FormControl>
-                      <Input type="number" placeholder="e.g., 3" {...field} />
+                      <Input type="number" placeholder="e.g., 3" {...field} disabled={isLoading || isGoogleLoading}/>
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -219,7 +243,7 @@ export function RegistrationForm() {
                   <FormItem>
                     <FormLabel>Contact Number</FormLabel>
                     <FormControl>
-                      <Input placeholder="9876543210" {...field} />
+                      <Input placeholder="9876543210" {...field} disabled={isLoading || isGoogleLoading}/>
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -233,7 +257,7 @@ export function RegistrationForm() {
                     <FormLabel>Password</FormLabel>
                     <FormControl>
                       <div className="flex items-center gap-2">
-                        <Input type="password" placeholder="••••••••" {...field} />
+                        <Input type="password" placeholder="••••••••" {...field} disabled={isLoading || isGoogleLoading}/>
                         <SmartFieldTip fieldName="Password" formContext={formDescription} />
                       </div>
                     </FormControl>
@@ -243,12 +267,24 @@ export function RegistrationForm() {
               />
             </div>
 
-            <Button type="submit" className="w-full" disabled={isLoading}>
+            <Button type="submit" className="w-full" disabled={isLoading || isGoogleLoading}>
               {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Create Account
             </Button>
           </form>
         </Form>
+        <div className="relative my-4">
+          <Separator />
+          <span className="absolute left-1/2 -translate-x-1/2 top-1/2 -translate-y-1/2 bg-card px-2 text-xs text-muted-foreground">OR</span>
+        </div>
+        <Button variant="outline" className="w-full" onClick={handleGoogleSignIn} disabled={isLoading || isGoogleLoading}>
+            {isGoogleLoading ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+                <Chrome className="mr-2 h-4 w-4" />
+            )}
+           Sign up with Google
+        </Button>
       </CardContent>
     </Card>
   );
