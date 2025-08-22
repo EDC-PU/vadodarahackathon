@@ -4,7 +4,7 @@
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Loader2, Search } from "lucide-react";
-import { ProblemStatement } from "@/lib/types";
+import { ProblemStatement, ProblemStatementCategory } from "@/lib/types";
 import { db } from "@/lib/firebase";
 import { collection, getDocs, query, orderBy, doc, updateDoc } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
@@ -15,12 +15,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useAuth } from "@/hooks/use-auth";
 import { useRouter } from "next/navigation";
 
+type CategoryFilter = ProblemStatementCategory | "All";
+
 export default function SelectProblemStatementPage() {
   const [problemStatements, setProblemStatements] = useState<ProblemStatement[]>([]);
   const [filteredStatements, setFilteredStatements] = useState<ProblemStatement[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>("All");
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
@@ -53,15 +56,20 @@ export default function SelectProblemStatementPage() {
 
   useEffect(() => {
     const lowercasedFilter = searchTerm.toLowerCase();
-    const filteredData = problemStatements.filter(item => {
-      return (
-        item.title.toLowerCase().includes(lowercasedFilter) ||
-        (item.description && item.description.toLowerCase().includes(lowercasedFilter)) ||
-        (item.problemStatementId && item.problemStatementId.toLowerCase().includes(lowercasedFilter))
-      );
-    });
+    const filteredData = problemStatements
+      .filter(item => {
+        if (categoryFilter === "All") return true;
+        return item.category === categoryFilter;
+      })
+      .filter(item => {
+        return (
+          item.title.toLowerCase().includes(lowercasedFilter) ||
+          (item.description && item.description.toLowerCase().includes(lowercasedFilter)) ||
+          (item.problemStatementId && item.problemStatementId.toLowerCase().includes(lowercasedFilter))
+        );
+      });
     setFilteredStatements(filteredData);
-  }, [searchTerm, problemStatements]);
+  }, [searchTerm, problemStatements, categoryFilter]);
 
   const handleProblemStatementSelect = async (ps: ProblemStatement) => {
     if (!user?.teamId) {
@@ -94,6 +102,8 @@ export default function SelectProblemStatementPage() {
       )
   }
 
+  const filters: CategoryFilter[] = ["All", "Software", "Hardware", "Hardware & Software"];
+
   return (
     <div className="p-4 sm:p-6 lg:p-8">
       <Card>
@@ -104,14 +114,27 @@ export default function SelectProblemStatementPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-            <div className="relative mb-4">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                    placeholder="Search by ID, title or keyword..."
-                    className="pl-9"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                />
+            <div className="flex items-center gap-4 mb-4">
+                 <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                        placeholder="Search by ID, title or keyword..."
+                        className="pl-9"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                    />
+                </div>
+                <div className="flex items-center gap-2">
+                    {filters.map(filter => (
+                         <Button 
+                            key={filter} 
+                            variant={categoryFilter === filter ? "default" : "outline"}
+                            onClick={() => setCategoryFilter(filter)}
+                         >
+                            {filter}
+                         </Button>
+                    ))}
+                </div>
             </div>
             <ScrollArea className="h-[60vh]">
             <div className="space-y-3 pr-4">
