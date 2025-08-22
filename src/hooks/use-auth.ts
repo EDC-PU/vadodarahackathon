@@ -9,6 +9,7 @@ import { UserProfile, Team } from '@/lib/types';
 import { useRouter } from 'next/navigation';
 import { useToast } from './use-toast';
 import { getAdminAuth } from '@/lib/firebase-admin';
+import { notifyAdminsOfSpocRequest } from '@/ai/flows/notify-admins-flow';
 
 async function findTeamByMemberEmail(email: string): Promise<Team | null> {
     if (!email) return null;
@@ -188,10 +189,11 @@ export function useAuth() {
         // User document doesn't exist. This is a brand new user signing up.
         const signUpForm = JSON.parse(sessionStorage.getItem('sign-up-form') || '{}');
         const { role, contactNumber, institute } = signUpForm;
+        const newUserName = loggedInUser.displayName || 'New User';
 
         const newProfile: Partial<UserProfile> = {
             uid: loggedInUser.uid,
-            name: loggedInUser.displayName || 'New User',
+            name: newUserName,
             email: loggedInUser.email!,
             role: role,
             photoURL: loggedInUser.photoURL || '',
@@ -207,6 +209,19 @@ export function useAuth() {
             newProfile.institute = institute;
             toastTitle = "Registration Submitted";
             toastDescription = "Your request has been sent for admin approval. You will be notified via email.";
+
+            // Notify admins
+            notifyAdminsOfSpocRequest({
+                spocName: newUserName,
+                spocEmail: loggedInUser.email!,
+                spocInstitute: institute,
+            }).then(result => {
+                if (!result.success) {
+                    console.error("Failed to send admin notification:", result.message);
+                    // Non-critical error, so we don't need to block the user.
+                    // We can log this for monitoring.
+                }
+            });
         }
 
         await setDoc(doc(db, "users", loggedInUser.uid), newProfile);
@@ -237,5 +252,3 @@ export function useAuth() {
 
   return { user, firebaseUser, loading, handleSignOut, redirectToDashboard, handleLogin };
 }
-
-    

@@ -22,6 +22,9 @@ const generatePassword = (length = 10) => {
 };
 
 async function sendSpocCredentialsEmail(name: string, email: string, password: string, institute: string) {
+    if (!process.env.GMAIL_EMAIL || !process.env.GMAIL_PASSWORD) {
+        throw new Error("Missing GMAIL_EMAIL or GMAIL_PASSWORD environment variables.");
+    }
     const transporter = nodemailer.createTransport({
         service: 'gmail',
         auth: {
@@ -111,6 +114,7 @@ const createSpocFlow = ai.defineFlow(
         department: 'N/A', // Department not needed for SPOC
         role: 'spoc',
         passwordChanged: false, // User must change this password
+        spocStatus: 'approved', // Admins create pre-approved SPOCs
       });
 
       // 3. Send email with credentials
