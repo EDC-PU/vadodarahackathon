@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
@@ -183,17 +182,20 @@ export function useAuth() {
         } else {
             // No profile exists at all. This is a brand new user.
             // Create a placeholder user profile.
+            const signUpForm = JSON.parse(sessionStorage.getItem('sign-up-form') || '{}');
             const newProfile: Partial<UserProfile> = {
                 uid: loggedInUser.uid,
                 name: loggedInUser.displayName || 'New User',
                 email: loggedInUser.email!,
+                role: signUpForm?.role,
                 photoURL: loggedInUser.photoURL || '',
                 // No role assigned yet. This is the key for the new flow.
             };
             await setDoc(doc(db, "users", loggedInUser.uid), newProfile);
+            sessionStorage.removeItem('sign-up-form');
             toast({
                 title: "Account Created!",
-                description: "Let's get your team set up.",
+                description: "Let's get your team setup.",
             });
             redirectToDashboard(newProfile as UserProfile);
         }

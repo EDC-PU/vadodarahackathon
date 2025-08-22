@@ -6,7 +6,15 @@ import { useForm } from "react-hook-form";
 import * as z from "zod";
 import { Button } from "@/components/ui/button";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import {
   Form,
+
   FormControl,
   FormField,
   FormItem,
@@ -28,9 +36,11 @@ import { Alert, AlertTitle, AlertDescription } from "./ui/alert";
 const formSchema = z.object({
   email: z.string().email({ message: "Invalid email address." }),
   password: z.string().min(6, { message: "Password must be at least 6 characters." }),
+  role: z.string().optional(),
 });
 
 export function SignupForm() {
+
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -68,10 +78,13 @@ export function SignupForm() {
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
+    sessionStorage.setItem('sign-up-form', JSON.stringify(values));
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
       await handleLogin(userCredential.user);
     } catch (error: any) {
+
+
       console.error("Sign-up Error:", error);
       let errorMessage = "An unexpected error occurred.";
        if (error.code === 'auth/email-already-in-use') {
@@ -172,10 +185,33 @@ export function SignupForm() {
                 </FormItem>
               )}
             />
+            <FormField
+              control={form.control}
+              name="role"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Role</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a role" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="member">Member</SelectItem>
+                      <SelectItem value="leader">Leader</SelectItem>
+                      <SelectItem value="spoc">SPOC</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
             <Button type="submit" className="w-full" disabled={isLoading || isGoogleLoading}>
               {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Sign Up with Email
             </Button>
+
           </form>
         </Form>
         <div className="relative my-6">

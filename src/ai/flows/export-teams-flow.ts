@@ -1,4 +1,3 @@
-
 'use server';
 
 /**
@@ -7,7 +6,7 @@
 
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
-import { adminDb } from '@/lib/firebase-admin'; // Use admin DB for full access
+import { getAdminDb } from '@/lib/firebase-admin'; // Use admin DB for full access
 import { Team, UserProfile, ProblemStatement } from '@/lib/types';
 import ExcelJS from 'exceljs';
 
@@ -32,9 +31,10 @@ const exportTeamsFlow = ai.defineFlow(
   async () => {
     try {
         // 1. Fetch all necessary data using the admin SDK
-        const teamsSnapshot = await adminDb.collection('teams').get();
-        const usersSnapshot = await adminDb.collection('users').get();
-        const problemStatementsSnapshot = await adminDb.collection('problemStatements').get();
+        const db = getAdminDb();
+        const teamsSnapshot = await db.collection('teams').get();
+        const usersSnapshot = await db.collection('users').get();
+        const problemStatementsSnapshot = await db.collection('problemStatements').get();
 
         const teamsData = teamsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Team));
         const usersData = usersSnapshot.docs.map(doc => ({ uid: doc.id, ...doc.data() } as UserProfile));

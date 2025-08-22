@@ -132,7 +132,7 @@ const systemHealthCheckFlow = ai.defineFlow(
             storage.bucket = bucket.name;
             storage.success = exists;
             storage.message = exists ? "Firebase Storage connection successful." : "Default storage bucket not found.";
-        } catch (e: any)_ {
+        } catch (e: any){} {
             storage.message = `Firebase Storage check failed: ${e.message}`;
         }
     }
