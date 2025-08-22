@@ -293,7 +293,7 @@ function AllTeamsContent() {
                 </SelectTrigger>
                 <SelectContent>
                     <SelectItem value="All Problem Statements">All Problem Statements</SelectItem>
-                    {problemStatements.map(ps => <SelectItem key={ps.id} value={ps.id}>{ps.problemStatementId} - {ps.title}</SelectItem>)}
+                    {problemStatements.map(ps => <SelectItem key={ps.id} value={ps.id}>{ps.problemStatementId}</SelectItem>)}
                 </SelectContent>
             </Select>
             <Button variant="outline" onClick={handleExport} disabled={isExporting}>
