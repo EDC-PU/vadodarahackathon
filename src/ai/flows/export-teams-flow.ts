@@ -9,6 +9,7 @@ import { ai } from '@/ai/genkit';
 import { getAdminDb } from '@/lib/firebase-admin'; // Use admin DB for full access
 import { Team, UserProfile, ProblemStatement, ExportTeamsOutput, ExportTeamsOutputSchema, ExportTeamsInputSchema, ExportTeamsInput } from '@/lib/types';
 import ExcelJS from 'exceljs';
+import type { Query as AdminQuery } from 'firebase-admin/firestore';
 
 
 export async function exportTeams(input: ExportTeamsInput): Promise<ExportTeamsOutput> {
@@ -26,13 +27,12 @@ const exportTeamsFlow = ai.defineFlow(
     console.log("exportTeamsFlow started with filters:", { institute, category });
     try {
         console.log("Fetching data from Firestore...");
-        // 1. Fetch all necessary data using the admin SDK
         const db = getAdminDb();
         if (!db) {
             throw new Error("Firebase Admin SDK not initialized. Check server environment variables.");
         }
 
-        let teamsQuery: admin.firestore.Query<admin.firestore.DocumentData> = db.collection('teams');
+        let teamsQuery: AdminQuery = db.collection('teams');
         if (institute && institute !== 'All Institutes') {
             teamsQuery = teamsQuery.where('institute', '==', institute);
         }
