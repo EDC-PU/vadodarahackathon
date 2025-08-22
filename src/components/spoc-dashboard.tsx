@@ -33,7 +33,7 @@ type SortDirection = 'asc' | 'desc';
 export default function SpocDashboard() {
   const { user, loading: authLoading } = useAuth();
   const [teams, setTeams] = useState<Team[]>([]);
-  const [users, setUsers] = useState<UserProfile[]>([]);
+  const [users, setUsers] = useState<Map<string, UserProfile>>(new Map());
   const [loading, setLoading] = useState(true);
   const [editingTeam, setEditingTeam] = useState<{ id: string, name: string } | null>(null);
   const [isSaving, setIsSaving] = useState<string | null>(null);
@@ -43,45 +43,57 @@ export default function SpocDashboard() {
 
   useEffect(() => {
     if (!user || user.role !== 'spoc' || !user.institute) {
-        if (!authLoading) {
-            setLoading(false);
-        }
+        if (!authLoading) setLoading(false);
         return;
     }
 
     setLoading(true);
 
     const teamsQuery = query(collection(db, "teams"), where("institute", "==", user.institute));
+    
     const unsubscribeTeams = onSnapshot(teamsQuery, (querySnapshot) => {
         const teamsData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Team));
         setTeams(teamsData);
+
+        const allUserIds = new Set<string>();
+        teamsData.forEach(team => {
+            allUserIds.add(team.leader.uid);
+            team.members.forEach(member => {
+                if (member.uid) allUserIds.add(member.uid);
+            });
+        });
+        
+        const userUnsubscribers: (()=>void)[] = [];
+        if (allUserIds.size > 0) {
+             Array.from(allUserIds).forEach(uid => {
+                const userDocRef = doc(db, 'users', uid);
+                const unsub = onSnapshot(userDocRef, (userDoc) => {
+                    if (userDoc.exists()) {
+                        const userData = { uid: userDoc.id, ...userDoc.data() } as UserProfile;
+                        setUsers(prevUsers => new Map(prevUsers).set(uid, userData));
+                    }
+                });
+                userUnsubscribers.push(unsub);
+            });
+        }
+        
+        setLoading(false);
+        return () => userUnsubscribers.forEach(unsub => unsub());
+
     }, (error) => {
         console.error("Error fetching teams for SPOC:", error);
         toast({ title: "Error", description: "Failed to fetch institute teams.", variant: "destructive" });
-    });
-
-    const usersQuery = query(collection(db, "users"));
-    const unsubscribeUsers = onSnapshot(usersQuery, (snapshot) => {
-        const usersData = snapshot.docs.map(doc => ({ uid: doc.id, ...doc.data() } as UserProfile));
-        setUsers(usersData);
-        setLoading(false);
-    }, (error) => {
-        console.error("Error fetching users for SPOC:", error);
-        toast({ title: "Error", description: "Failed to fetch user data.", variant: "destructive" });
         setLoading(false);
     });
 
-    return () => {
-        unsubscribeTeams();
-        unsubscribeUsers();
-    };
+    return () => unsubscribeTeams();
   }, [user, authLoading, toast]);
   
   const getTeamWithFullDetails = (teamsToProcess: Team[]) => {
     return teamsToProcess.map(team => {
-        const leaderProfile = users.find(u => u.uid === team.leader.uid);
+        const leaderProfile = users.get(team.leader.uid);
         const membersWithDetails = team.members.map(member => {
-            const memberProfile = users.find(u => u.email === member.email);
+            const memberProfile = member.uid ? users.get(member.uid) : undefined;
             return {
                 ...member,
                 uid: memberProfile?.uid,
@@ -89,13 +101,14 @@ export default function SpocDashboard() {
                 contactNumber: memberProfile?.contactNumber || 'N/A',
             };
         });
-        const allMembers = [
+        const allMembers: (TeamMember & { isLeader: boolean })[] = [
             {
-                uid: leaderProfile?.uid,
+                uid: leaderProfile?.uid!,
                 name: leaderProfile?.name || team.leader.name,
                 email: leaderProfile?.email || team.leader.email,
                 enrollmentNumber: leaderProfile?.enrollmentNumber || 'N/A',
                 contactNumber: leaderProfile?.contactNumber || 'N/A',
+                gender: leaderProfile?.gender || 'Other',
                 isLeader: true,
             },
             ...membersWithDetails.map(m => ({...m, isLeader: false})),
