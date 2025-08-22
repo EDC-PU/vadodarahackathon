@@ -17,6 +17,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { useState } from "react";
 import { Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { auth } from "@/lib/firebase";
+import { signInWithEmailAndPassword } from "firebase/auth";
 
 const formSchema = z.object({
   email: z.string().email({ message: "Invalid email address." }),
@@ -35,28 +37,36 @@ export function LoginForm() {
     },
   });
 
-  function onSubmit(values: z.infer<typeof formSchema>) {
+  async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
-    console.log(values);
-    // Mock Firebase login
-    setTimeout(() => {
-      setIsLoading(false);
-
+    try {
+      // This is a special admin account for demo purposes.
       if (values.email === "pranavrathi07@gmail.com" && values.password === "Admin@123") {
-         toast({
+        await signInWithEmailAndPassword(auth, values.email, values.password);
+        toast({
           title: "Admin Login Successful",
           description: "Redirecting to your dashboard...",
         });
         window.location.href = '/admin';
       } else {
-         toast({
+        await signInWithEmailAndPassword(auth, values.email, values.password);
+        toast({
           title: "Login Successful",
           description: "Redirecting to your dashboard...",
         });
+        // This is a simplification. In a real app, you'd check the user's role.
         window.location.href = '/leader';
       }
-
-    }, 1500);
+    } catch (error: any) {
+      console.error("Login Error:", error);
+      toast({
+        title: "Login Failed",
+        description: error.message || "An unexpected error occurred.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   }
 
   return (

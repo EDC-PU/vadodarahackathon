@@ -26,6 +26,8 @@ import { Loader2 } from "lucide-react";
 import { INSTITUTES } from "@/lib/constants";
 import { useToast } from "@/hooks/use-toast";
 import { SmartFieldTip } from "./smart-field-tip";
+import { auth } from "@/lib/firebase";
+import { createUserWithEmailAndPassword } from "firebase/auth";
 
 const formSchema = z.object({
   name: z.string().min(2, { message: "Name must be at least 2 characters." }),
@@ -56,19 +58,29 @@ export function RegistrationForm() {
     },
   });
 
-  function onSubmit(values: z.infer<typeof formSchema>) {
+  async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
-    console.log(values);
-    // Mock Firebase registration
-    setTimeout(() => {
-      setIsLoading(false);
+    try {
+      const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
+      // In a real app, you would also save the other form details to a database like Firestore.
+      console.log("User created:", userCredential.user);
+
       toast({
         title: "Registration Successful!",
         description: "Your account has been created. Redirecting to your dashboard.",
       });
       // Redirect to leader dashboard
-      window.location.href = "/dashboard/leader";
-    }, 1500);
+      window.location.href = "/leader";
+    } catch (error: any) {
+      console.error("Registration Error:", error);
+       toast({
+        title: "Registration Failed",
+        description: error.message || "An unexpected error occurred.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   }
   
   const formDescription = "This is a registration form for the Vadodara Hackathon 6.0. Team leaders should fill out their personal and academic details to create their account and team.";
