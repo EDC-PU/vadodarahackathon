@@ -21,7 +21,7 @@ const generatePassword = (length = 10) => {
 
 async function sendSpocCredentialsEmail(name: string, email: string, password: string, institute: string) {
     if (!process.env.GMAIL_EMAIL || !process.env.GMAIL_PASSWORD) {
-        throw new Error("Missing GMAIL_EMAIL or GMAIL_PASSWORD environment variables.");
+        throw new Error("Missing GMAIL_EMAIL or GMAIL_PASSWORD environment variables. Please set them in your .env file. Note: You must use a Google App Password for GMAIL_PASSWORD.");
     }
     const transporter = nodemailer.createTransport({
         service: 'gmail',
@@ -111,7 +111,7 @@ const createSpocFlow = ai.defineFlow(
       let errorMessage = error.message || "An unknown error occurred.";
       if (error.code === 'auth/email-already-exists') {
           errorMessage = 'A user with this email already exists in Firebase Authentication.';
-      } else if ((error as any).code === 'EAUTH' || errorMessage.toLowerCase().includes('invalid login')) {
+      } else if (errorMessage.toLowerCase().includes('invalid login') || (error as any).code === 'EAUTH') {
           errorMessage = 'Could not send email. Please check your GMAIL_EMAIL and GMAIL_PASSWORD in the .env file. You may need to use a Google App Password.';
       } else if (error.code === 'auth/invalid-password') {
           errorMessage = `The generated password is invalid: ${error.message}`;

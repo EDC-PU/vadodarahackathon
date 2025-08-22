@@ -11,6 +11,10 @@ import { UserProfile, NotifyAdminsInput, NotifyAdminsInputSchema, NotifyAdminsOu
 
 
 async function sendSpocRequestEmail(adminEmails: string[], spocName: string, spocInstitute: string) {
+    if (!process.env.GMAIL_EMAIL || !process.env.GMAIL_PASSWORD) {
+        throw new Error("Missing GMAIL_EMAIL or GMAIL_PASSWORD environment variables. Please set them in your .env file. Note: You must use a Google App Password for GMAIL_PASSWORD.");
+    }
+    
     const transporter = nodemailer.createTransport({
         service: 'gmail',
         auth: {
@@ -61,7 +65,8 @@ const notifyAdminsFlow = ai.defineFlow(
         const adminSnapshot = await adminsQuery.get();
 
         if (adminSnapshot.empty) {
-            return { success: false, message: 'No admins found to notify.' };
+            console.log('No admins found to notify. This might be expected if no admin accounts exist yet.');
+            return { success: true, message: 'No admins found to notify.' };
         }
 
         const adminEmails = adminSnapshot.docs.map(doc => (doc.data() as UserProfile).email);
@@ -82,7 +87,7 @@ const notifyAdminsFlow = ai.defineFlow(
     } catch (error: any) {
       console.error("Error notifying admins:", error);
       let errorMessage = error.message || "An unknown error occurred.";
-       if ((error as any).code === 'EAUTH' || errorMessage.toLowerCase().includes('invalid login')) {
+       if (errorMessage.toLowerCase().includes('invalid login') || (error as any).code === 'EAUTH') {
           errorMessage = 'Could not send email. Please check your GMAIL_EMAIL and GMAIL_PASSWORD in the .env file. You may need to use a Google App Password.';
       }
       return { success: false, message: `Failed to notify admins: ${errorMessage}` };

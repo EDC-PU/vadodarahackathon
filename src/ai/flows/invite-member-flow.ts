@@ -23,8 +23,10 @@ const generatePassword = (length = 10) => {
 
 
 async function sendCredentialsEmail(name: string, email: string, password: string, teamName: string) {
-    // Note: You must use an "App Password" for Gmail if 2-Step Verification is enabled.
-    // See: https://support.google.com/accounts/answer/185833
+    if (!process.env.GMAIL_EMAIL || !process.env.GMAIL_PASSWORD) {
+        throw new Error("Missing GMAIL_EMAIL or GMAIL_PASSWORD environment variables. Please set them in your .env file. Note: You must use a Google App Password for GMAIL_PASSWORD.");
+    }
+
     const transporter = nodemailer.createTransport({
         service: 'gmail',
         auth: {
@@ -115,7 +117,7 @@ const inviteMemberFlow = ai.defineFlow(
         
         if (error.code === 'auth/email-already-exists') {
             errorMessage = 'This email is already registered. Please check if they are already part of another team.';
-        } else if ((error as any).code === 'EAUTH' || errorMessage.toLowerCase().includes('invalid login')) {
+        } else if (errorMessage.toLowerCase().includes('invalid login') || (error as any).code === 'EAUTH') {
              errorMessage = 'Could not send email. Please check your GMAIL_EMAIL and GMAIL_PASSWORD in the .env file. You may need to use a Google App Password.';
         }
         
