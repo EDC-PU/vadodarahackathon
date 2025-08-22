@@ -14,7 +14,7 @@ export default function LoginPage() {
       </div>
       <LoginForm />
       <p className="mt-4 text-center text-sm text-muted-foreground">
-        Don&apos;t have a team yet?{" "}
+        Don&apos;t have an account yet?{" "}
         <Link href="/register" className="font-medium text-primary hover:underline">
           Register here
         </Link>

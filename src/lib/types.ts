@@ -4,15 +4,15 @@ export type UserRole = "leader" | "member" | "spoc" | "admin";
 
 export interface UserProfile {
   uid: string;
-  role: UserRole;
+  role?: UserRole; // Role is optional until team registration is complete
   name: string;
   email: string;
   photoURL?: string;
-  institute: string;
-  department: string;
-  enrollmentNumber: string;
-  contactNumber: string;
-  gender: "Male" | "Female" | "Other";
+  institute?: string;
+  department?: string;
+  enrollmentNumber?: string;
+  contactNumber?: string;
+  gender?: "Male" | "Female" | "Other";
   teamId?: string;
   passwordChanged?: boolean; // Flag to check if the user has changed the initial password
 }

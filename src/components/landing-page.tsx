@@ -33,7 +33,7 @@ export default function LandingPage() {
   const [selectedInstitute, setSelectedInstitute] = useState<string | null>(null);
   const [spocDetails, setSpocDetails] = useState<SpocDetails>({});
   const [loadingSpocs, setLoadingSpocs] = useState(true);
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, redirectToDashboard: goToDashboard } = useAuth();
 
 
   useEffect(() => {
@@ -48,7 +48,7 @@ export default function LandingPage() {
             spocs[spocData.institute] = {
               name: spocData.name,
               email: spocData.email,
-              contact: spocData.contactNumber,
+              contact: spocData.contactNumber!,
             };
           }
         });
@@ -83,7 +83,11 @@ export default function LandingPage() {
     "https://i.ibb.co/dJjj99f/IMG-8415.jpg",
   ];
   
-  const dashboardUrl = user ? `/${user.role}` : '/login';
+  const handleDashboardRedirect = () => {
+    if (user) {
+        goToDashboard(user);
+    }
+  }
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
@@ -104,10 +108,8 @@ export default function LandingPage() {
                 {authLoading ? (
                     <Skeleton className="h-10 w-40" />
                 ) : user ? (
-                    <Button asChild>
-                        <Link href={dashboardUrl}>
-                            <LayoutDashboard className="mr-2 h-4 w-4" /> Go to Dashboard
-                        </Link>
+                    <Button onClick={handleDashboardRedirect}>
+                        <LayoutDashboard className="mr-2 h-4 w-4" /> Go to Dashboard
                     </Button>
                 ) : (
                     <>
@@ -138,12 +140,12 @@ export default function LandingPage() {
             </p>
             <div className="flex flex-col sm:flex-row justify-center gap-4 mb-8">
               <Button size="lg" asChild className="hover:scale-105 transition-transform">
-                <Link href="/register?category=Software">
+                <Link href="/register">
                   <Code className="mr-2 h-5 w-5" /> Register (Software)
                 </Link>
               </Button>
               <Button size="lg" variant="outline" asChild className="hover:scale-105 transition-transform">
-                <Link href="/register?category=Hardware">
+                <Link href="/register">
                   <Cpu className="mr-2 h-5 w-5" /> Register (Hardware)
                 </Link>
               </Button>

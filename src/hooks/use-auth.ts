@@ -40,6 +40,12 @@ export function useAuth() {
         return;
      }
 
+     // If the user is a new signup with no role, they need to create a team
+     if (!userProfile.role) {
+         router.push('/create-team');
+         return;
+     }
+
      // Then, check if the user has completed their profile
      if ((userProfile.role === 'member' || userProfile.role === 'leader') && !userProfile.enrollmentNumber) {
         router.push('/complete-profile');
@@ -60,7 +66,8 @@ export function useAuth() {
           router.push("/member");
           break;
         default:
-          router.push("/login");
+           // If role is somehow null or undefined, send to create a team
+          router.push("/create-team");
       }
   }, [router]);
 
@@ -80,16 +87,14 @@ export function useAuth() {
                     description: "The team leader has removed you from the team. You can now register as a new leader.",
                     variant: "destructive"
                 });
-                setUser({ ...userProfile, teamId: undefined });
-                router.push('/register');
+                setUser({ ...userProfile, teamId: undefined, role: undefined });
+                router.push('/create-team');
                 return;
             }
 
             setUser(userProfile);
           } else {
              // If user doc doesn't exist, handleLogin will be responsible for creating it
-             // This can happen if a user authenticates but their Firestore doc creation fails
-             // We don't set user to null here to allow handleLogin to do its job.
           }
            setLoading(false);
         }, (error) => {
@@ -116,11 +121,9 @@ export function useAuth() {
     let userDoc = await getDoc(userDocRef);
 
     // Super Admin Check
-    // Note: This requires ADMIN_EMAIL to be set in environment variables.
     const adminEmail = process.env.NEXT_PUBLIC_ADMIN_EMAIL;
     if (adminEmail && loggedInUser.email === adminEmail) {
         if (!userDoc.exists()) {
-            console.log("Admin user does not exist in Firestore. Creating...");
             const adminProfile: UserProfile = {
                 uid: loggedInUser.uid,
                 name: "Super Admin",
@@ -135,9 +138,8 @@ export function useAuth() {
                 passwordChanged: true,
             };
             await setDoc(userDocRef, adminProfile);
-            userDoc = await getDoc(userDocRef); // Re-fetch the document
+            userDoc = await getDoc(userDocRef);
         } else {
-            // Ensure the role is admin if the doc already exists
             const userProfile = userDoc.data() as UserProfile;
             if (userProfile.role !== 'admin') {
                 await updateDoc(userDocRef, { role: 'admin' });
@@ -153,14 +155,13 @@ export function useAuth() {
       });
       redirectToDashboard(userProfile);
     } else {
-        // User document doesn't exist for the current UID.
-        // Check if a user profile exists with this email (e.g., created by an admin or leader).
+        // User document doesn't exist. Check for profiles created by others.
         const usersRef = collection(db, "users");
         const q = query(usersRef, where("email", "==", loggedInUser.email!));
         const userSnapshot = await getDocs(q);
 
         if (!userSnapshot.empty) {
-            // A profile with this email exists. Let's link it to the new auth UID.
+            // A profile with this email exists. Link it to the new auth UID.
             const existingUserDoc = userSnapshot.docs[0];
             const userProfile = existingUserDoc.data() as UserProfile;
 
@@ -176,42 +177,25 @@ export function useAuth() {
             }
             await batch.commit();
 
-            toast({ title: "Login Successful", description: "Redirecting to your dashboard..." });
+            toast({ title: "Login Successful", description: "Redirecting..." });
             redirectToDashboard(finalProfile);
 
         } else {
-            // No profile exists. Maybe they are a newly added team member?
-            const team = await findTeamByMemberEmail(loggedInUser.email!);
-            if (team) {
-                const memberDetails = team.members.find(m => m.email.toLowerCase() === loggedInUser.email!.toLowerCase())!;
-                const newProfile: UserProfile = {
-                    uid: loggedInUser.uid,
-                    name: loggedInUser.displayName || memberDetails.name,
-                    email: loggedInUser.email!,
-                    role: 'member',
-                    institute: team.institute,
-                    department: '', // To be filled out
-                    enrollmentNumber: '', // To be filled out
-                    contactNumber: '', // To be filled out
-                    gender: "Other", 
-                    teamId: team.id,
-                    photoURL: loggedInUser.photoURL || '',
-                    passwordChanged: false, // Force password change
-                };
-                
-                await setDoc(userDocRef, newProfile);
-                
-                toast({ title: "Welcome!", description: "Please complete your profile information." });
-                redirectToDashboard(newProfile);
-            } else {
-                 toast({
-                    title: "Registration Required",
-                    description: "Your account was not found. Please complete the registration form.",
-                    variant: "destructive",
-                });
-                await signOut(auth); // Sign out to prevent being stuck in a logged-in but no-profile state
-                router.push('/register'); // Redirect to registration page
-            }
+            // No profile exists at all. This is a brand new user.
+            // Create a placeholder user profile.
+            const newProfile: Partial<UserProfile> = {
+                uid: loggedInUser.uid,
+                name: loggedInUser.displayName || 'New User',
+                email: loggedInUser.email!,
+                photoURL: loggedInUser.photoURL || '',
+                // No role assigned yet. This is the key for the new flow.
+            };
+            await setDoc(doc(db, "users", loggedInUser.uid), newProfile);
+            toast({
+                title: "Account Created!",
+                description: "Let's get your team set up.",
+            });
+            redirectToDashboard(newProfile as UserProfile);
         }
     }
   }, [redirectToDashboard, toast, router]);
