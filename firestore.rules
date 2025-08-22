@@ -1,88 +1,44 @@
-
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    
-    // Helper functions
-    function isUserAuthenticated() {
+
+    // Helper functions to check user roles
+    function isSignedIn() {
       return request.auth != null;
+    }
+
+    function isRole(role) {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == role;
     }
 
     function isOwner(userId) {
       return request.auth.uid == userId;
     }
-    
-    function getUserRole(userId) {
-      return get(/databases/$(database)/documents/users/$(userId)).data.role;
-    }
 
-    function getTeamId(userId) {
-      return get(/databases/$(database)/documents/users/$(userId)).data.teamId;
-    }
-    
-    function isTeamLeader(teamId) {
-      let team = get(/databases/$(database)/documents/teams/$(teamId)).data;
-      return team.leader.uid == request.auth.uid;
-    }
-
-    function isTeamMember(teamId) {
-        let team = get(/databases/$(database)/documents/teams/$(teamId)).data;
-        return request.auth.uid in team.members || isTeamLeader(teamId);
-    }
-    
-    function isSpocForInstitute(institute) {
-        let userRole = getUserRole(request.auth.uid);
-        let userInstitute = get(/databases/$(database)/documents/users/$(request.auth.uid)).data.institute;
-        return userRole == 'spoc' && userInstitute == institute;
-    }
-
-    function isAdmin() {
-      return isUserAuthenticated() && getUserRole(request.auth.uid) == 'admin';
-    }
-
-    // Rules for the 'users' collection
+    // Users can read their own profile, admins can read any.
     match /users/{userId} {
-      // Allow any authenticated user to create their OWN user document.
-      allow create: if isUserAuthenticated();
-      
-      // Allow a user to read their own profile.
-      // Allow admins to read any profile.
-      allow read: if isUserAuthenticated() && (isOwner(userId) || isAdmin());
-      
-      // Allow a user to update their own profile.
-      // Allow an admin to update any user's role (e.g., to make another admin or spoc).
-      allow update: if isUserAuthenticated() && (isOwner(userId) || isAdmin());
-      
-      // Only admins can delete user profiles (use with caution).
-      allow delete: if isAdmin();
+      allow read: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update: if isSignedIn() && isOwner(userId);
+      allow delete: if isRole('admin');
     }
 
-    // Rules for the 'teams' collection
-    match /teams/{teamId} {
-      // Allow authenticated users with the role 'leader' to create teams.
-      allow create: if isUserAuthenticated() && getUserRole(request.auth.uid) == 'leader';
-      
-      // Allow read access to:
-      // - Any member of that specific team.
-      // - The SPOC of the team's institute.
-      // - Any admin.
-      allow read: if isUserAuthenticated() && 
-                     (isTeamMember(teamId) || 
-                      isSpocForInstitute(resource.data.institute) || 
-                      isAdmin());
-                      
-      // Allow write access (updating team details, adding/removing members) to:
-      // - The team leader.
-      // - The SPOC of the team's institute.
-      // - Any admin.
-      allow update: if isUserAuthenticated() && 
-                       (isTeamLeader(teamId) || 
-                        isSpocForInstitute(resource.data.institute) || 
-                        isAdmin());
+    // Authenticated users can read problem statements, only admins can write.
+    match /problemStatements/{statementId} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn() && isRole('admin');
+    }
 
-      // Only admins can delete teams.
-      allow delete: if isAdmin();
+    // Rules for teams collection
+    match /teams/{teamId} {
+      allow read: if isSignedIn();
+      // Only the team leader can update the team.
+      allow update: if isSignedIn() && get(/databases/$(database)/documents/teams/$(teamId)).data.leader.uid == request.auth.uid;
+      // Team leader can create a team
+      allow create: if isSignedIn();
+      // Only admin can delete a team
+      allow delete: if isRole('admin');
     }
   }
 }
