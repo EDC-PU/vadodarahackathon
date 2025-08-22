@@ -209,7 +209,7 @@ export function useAuth() {
 
     let finalUserProfile;
     if (userDoc.exists()) {
-      let userProfile = userDoc.data() as UserProfile;
+      let userProfile = { uid: userDoc.id, ...userDoc.data() } as UserProfile;
       console.log("handleLogin: User document exists.", userProfile);
       
       finalUserProfile = userProfile;
