@@ -183,12 +183,57 @@ export default function LeaderDashboard() {
         <p className="text-muted-foreground">Manage your team and review your registration status.</p>
       </header>
 
-       <div className="mb-8">
-          <AnnouncementsSection audience="teams_and_all" />
-      </div>
-
       <div className="grid gap-8 lg:grid-cols-3">
+        {/* Left Column */}
         <div className="lg:col-span-2 space-y-8">
+            <AnnouncementsSection audience="teams_and_all" />
+             <Card>
+                <CardHeader>
+                    <CardTitle>Team Members ({1 + team.members.length} / 6)</CardTitle>
+                    <CardDescription>Your current team roster.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                    <div className="flex items-center gap-4 p-3 bg-primary/10 rounded-md">
+                        <User className="h-6 w-6 text-primary"/>
+                        <div>
+                            <p className="font-semibold">{user.name} (Leader)</p>
+                            <p className="text-sm text-muted-foreground">{user.email}</p>
+                        </div>
+                    </div>
+                    {team.members.map((member, index) => (
+                        <div key={member.email || index} className="flex items-center gap-4 p-3 border rounded-md">
+                            <User className="h-6 w-6 text-muted-foreground"/>
+                            <div className="flex-1">
+                                <p className="font-semibold">{member.name}</p>
+                                <p className="text-sm text-muted-foreground">{member.email}</p>
+                            </div>
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-destructive" disabled={isRemoving === member.email}>
+                                  {isRemoving === member.email ? <Loader2 className="h-4 w-4 animate-spin"/> : <Trash2 className="h-4 w-4"/>}
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    This action will remove {member.name} from the team. They will need to be invited again to rejoin.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                  <AlertDialogAction onClick={() => handleRemoveMember(member)} className="bg-destructive hover:bg-destructive/90">Remove</AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                        </div>
+                    ))}
+                </CardContent>
+             </Card>
+        </div>
+        
+        {/* Right Column */}
+        <div className="lg:col-span-1 space-y-8">
             <Card>
                 <CardHeader>
                     <CardTitle>Team Status</CardTitle>
@@ -279,52 +324,6 @@ export default function LeaderDashboard() {
                    )}
                 </CardContent>
             </Card>
-        </div>
-        
-        <div className="lg:col-span-1">
-             <Card>
-                <CardHeader>
-                    <CardTitle>Team Members ({1 + team.members.length} / 6)</CardTitle>
-                    <CardDescription>Your current team roster.</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                    <div className="flex items-center gap-4 p-3 bg-primary/10 rounded-md">
-                        <User className="h-6 w-6 text-primary"/>
-                        <div>
-                            <p className="font-semibold">{user.name} (Leader)</p>
-                            <p className="text-sm text-muted-foreground">{user.email}</p>
-                        </div>
-                    </div>
-                    {team.members.map((member, index) => (
-                        <div key={member.email || index} className="flex items-center gap-4 p-3 border rounded-md">
-                            <User className="h-6 w-6 text-muted-foreground"/>
-                            <div className="flex-1">
-                                <p className="font-semibold">{member.name}</p>
-                                <p className="text-sm text-muted-foreground">{member.email}</p>
-                            </div>
-                            <AlertDialog>
-                              <AlertDialogTrigger asChild>
-                                <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-destructive" disabled={isRemoving === member.email}>
-                                  {isRemoving === member.email ? <Loader2 className="h-4 w-4 animate-spin"/> : <Trash2 className="h-4 w-4"/>}
-                                </Button>
-                              </AlertDialogTrigger>
-                              <AlertDialogContent>
-                                <AlertDialogHeader>
-                                  <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                                  <AlertDialogDescription>
-                                    This action will remove {member.name} from the team. They will need to be invited again to rejoin.
-                                  </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                  <AlertDialogAction onClick={() => handleRemoveMember(member)} className="bg-destructive hover:bg-destructive/90">Remove</AlertDialogAction>
-                                </AlertDialogFooter>
-                              </AlertDialogContent>
-                            </AlertDialog>
-                        </div>
-                    ))}
-                </CardContent>
-             </Card>
         </div>
       </div>
     </div>
