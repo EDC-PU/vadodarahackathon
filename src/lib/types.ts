@@ -74,3 +74,14 @@ export interface EventInfo {
   brochureUrl: string;
   problemStatementsUrl: string;
 }
+
+export interface Announcement {
+  id: string;
+  title: string;
+  content: string;
+  authorName: string;
+  createdAt: {
+    seconds: number;
+    nanoseconds: number;
+  };
+}

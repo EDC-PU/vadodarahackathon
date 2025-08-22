@@ -15,6 +15,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { inviteMember } from "@/ai/flows/invite-member-flow";
 import { SelectProblemStatementDialog } from "./select-problem-statement-dialog";
+import { AnnouncementsSection } from "./announcements-section";
 
 
 export default function LeaderDashboard() {
@@ -191,6 +192,10 @@ export default function LeaderDashboard() {
         <h1 className="text-3xl font-bold font-headline">Team Dashboard: {team.name}</h1>
         <p className="text-muted-foreground">Manage your team and review your registration status.</p>
       </header>
+
+       <div className="mb-8">
+          <AnnouncementsSection />
+      </div>
 
       <div className="grid gap-8 lg:grid-cols-3">
         <div className="lg:col-span-2 space-y-8">

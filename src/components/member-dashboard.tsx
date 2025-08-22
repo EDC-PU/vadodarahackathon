@@ -9,6 +9,7 @@ import { doc, getDoc, onSnapshot, collection, query, where } from "firebase/fire
 import { Team, UserProfile, Spoc } from "@/lib/types";
 import { Alert, AlertDescription, AlertTitle } from "./ui/alert";
 import { useAuth } from "@/hooks/use-auth";
+import { AnnouncementsSection } from "./announcements-section";
 
 export default function MemberDashboard() {
   const { user, loading: authLoading } = useAuth();
@@ -82,6 +83,10 @@ export default function MemberDashboard() {
         <p className="text-muted-foreground">Here is your team and hackathon information.</p>
       </header>
       
+      <div className="mb-8">
+        <AnnouncementsSection />
+      </div>
+
       <div className="grid gap-8 lg:grid-cols-2">
         <Card>
             <CardHeader>

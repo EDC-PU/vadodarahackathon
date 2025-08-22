@@ -22,6 +22,7 @@ import { collection, getDocs, query, where } from 'firebase/firestore';
 import { UserProfile } from '@/lib/types';
 import { useAuth } from '@/hooks/use-auth';
 import { Skeleton } from './ui/skeleton';
+import { AnnouncementsSection } from './announcements-section';
 
 
 interface SpocDetails {
@@ -148,6 +149,12 @@ export default function LandingPage() {
               </Button>
             </div>
             <p className="text-muted-foreground">Brochure & Problem Statements Coming Soon!</p>
+          </div>
+        </section>
+
+        <section id="announcements" className="py-20">
+          <div className="container max-w-4xl">
+            <AnnouncementsSection />
           </div>
         </section>
 

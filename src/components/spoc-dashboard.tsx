@@ -1,3 +1,4 @@
+
 "use client";
 
 import { Button } from "@/components/ui/button";
@@ -12,6 +13,7 @@ import { onAuthStateChanged } from "firebase/auth";
 import { doc, getDoc, collection, query, where, onSnapshot } from "firebase/firestore";
 import { Team, UserProfile } from "@/lib/types";
 import { Alert, AlertTitle, AlertDescription } from "./ui/alert";
+import { AnnouncementsSection } from "./announcements-section";
 
 export default function SpocDashboard() {
   const [user, setUser] = useState<UserProfile | null>(null);
@@ -73,6 +75,10 @@ export default function SpocDashboard() {
         <h1 className="text-3xl font-bold font-headline">SPOC Dashboard</h1>
         <p className="text-muted-foreground">Manage teams from your institute: <strong>{user?.institute}</strong></p>
       </header>
+
+      <div className="mb-8">
+        <AnnouncementsSection />
+      </div>
 
       <Card>
         <CardHeader>

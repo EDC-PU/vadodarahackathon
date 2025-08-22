@@ -24,6 +24,7 @@ import {
   Wrench,
   BookUser,
   Building2,
+  Megaphone,
 } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { Button } from "./ui/button";
@@ -34,6 +35,7 @@ import { Skeleton } from "./ui/skeleton";
 const navItems = {
   admin: [
     { href: "/admin", icon: <LayoutDashboard />, label: "Dashboard" },
+    { href: "/admin/announcements", icon: <Megaphone />, label: "Announcements" },
     { href: "/admin/problem-statements", icon: <FileQuestion />, label: "Problem Statements" },
     { href: "/admin/teams", icon: <Users />, label: "All Teams" },
     { href: "/admin/spocs", icon: <Building2 />, label: "Manage SPOCs" },
