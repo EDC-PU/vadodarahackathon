@@ -23,6 +23,7 @@ import { signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from 
 import { Separator } from "./ui/separator";
 import { Chrome } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
+import Link from "next/link";
 
 
 const formSchema = z.object({
@@ -91,7 +92,7 @@ export function LoginForm() {
     <Card>
       <CardContent className="p-6">
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <FormField
               control={form.control}
               name="email"
@@ -110,7 +111,12 @@ export function LoginForm() {
               name="password"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Password</FormLabel>
+                  <div className="flex justify-between items-center">
+                    <FormLabel>Password</FormLabel>
+                     <Link href="/forgot-password" passHref legacyBehavior>
+                      <a className="text-sm font-medium text-primary hover:underline">Forgot password?</a>
+                    </Link>
+                  </div>
                   <FormControl>
                     <div className="relative">
                       <Input 
