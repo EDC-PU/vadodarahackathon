@@ -96,25 +96,41 @@ export function useAuth() {
             const teamDocRef = doc(db, 'teams', user.teamId);
 
             unsubscribe = onSnapshot(teamDocRef, async (teamDoc) => {
-                if (teamDoc.exists()) {
+                if (teamDoc.exists() && user) {
                     const teamData = teamDoc.data() as Team;
-                    const memberEmails = teamData.members.map(m => m.email);
-                    const allEmails = [teamData.leader.email, ...memberEmails];
+                    // Always include the current user if they are the leader.
+                    const leaderProfile = user.role === 'leader' ? user : null;
 
-                    if (allEmails.length > 0) {
-                        const usersQuery = query(collection(db, 'users'), where('email', 'in', allEmails));
+                    const memberEmails = teamData.members.map(m => m.email).filter(email => email !== user.email);
+                    
+                    let membersData: UserProfile[] = [];
+
+                    if (memberEmails.length > 0) {
+                        const usersQuery = query(collection(db, 'users'), where('email', 'in', memberEmails));
                         const usersSnapshot = await getDocs(usersQuery);
-                        const usersData = usersSnapshot.docs.map(d => d.data() as UserProfile);
-                        setTeamMembers(usersData);
+                        membersData = usersSnapshot.docs.map(d => d.data() as UserProfile);
+                    }
+                    
+                    const allMembers = leaderProfile ? [leaderProfile, ...membersData] : membersData;
+                    setTeamMembers(allMembers);
+
+                } else {
+                    // If team doesn't exist or user is not available, clear members.
+                    // If the current user is a leader and the team exists, they should at least be in the list.
+                    if(user && user.role === 'leader') {
+                        setTeamMembers([user]);
                     } else {
                         setTeamMembers([]);
                     }
-                } else {
-                    setTeamMembers([]);
                 }
             });
         } else {
-            setTeamMembers([]);
+            // If user has no teamId, but is a leader, it means they are creating a team. Show them in the list.
+            if(user && user.role === 'leader') {
+                setTeamMembers([user]);
+            } else {
+                 setTeamMembers([]);
+            }
         }
 
         return () => {
@@ -122,14 +138,14 @@ export function useAuth() {
                 unsubscribe();
             }
         };
-    }, [user?.teamId]);
+    }, [user]);
 
 
   useEffect(() => {
-    if (loading || isNavigating || !user) {
+    if (loading || isNavigating) {
         return;
     }
-
+    
     const performRedirect = (path: string) => {
         if (pathname !== path) {
             setIsNavigating(true);
@@ -140,6 +156,16 @@ export function useAuth() {
     };
     
     // --- Start of Redirection and Route Protection Logic ---
+    if (!user) {
+        // If there's no user and we're not on a public page, redirect to login
+        const publicPaths = ['/login', '/register', '/forgot-password', '/'];
+        if (!publicPaths.includes(pathname)) {
+            console.log(`Redirect Check: No user found, redirecting from protected path ${pathname} to /login.`);
+            performRedirect('/login');
+        }
+        return;
+    }
+
     console.log("Redirect Check: Starting for user:", user);
      
      // 1. Password change check
