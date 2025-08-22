@@ -8,7 +8,7 @@
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
 import { collection, getDocs } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { db as adminDb } from '@/lib/firebase-admin'; // Use admin DB for full access
 import { Team, UserProfile, ProblemStatement } from '@/lib/types';
 import ExcelJS from 'exceljs';
 
@@ -32,10 +32,10 @@ const exportTeamsFlow = ai.defineFlow(
   },
   async () => {
     try {
-        // 1. Fetch all necessary data
-        const teamsSnapshot = await getDocs(collection(db, 'teams'));
-        const usersSnapshot = await getDocs(collection(db, 'users'));
-        const problemStatementsSnapshot = await getDocs(collection(db, 'problemStatements'));
+        // 1. Fetch all necessary data using the admin SDK
+        const teamsSnapshot = await adminDb.collection('teams').get();
+        const usersSnapshot = await adminDb.collection('users').get();
+        const problemStatementsSnapshot = await adminDb.collection('problemStatements').get();
 
         const teamsData = teamsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Team));
         const usersData = usersSnapshot.docs.map(doc => ({ uid: doc.id, ...doc.data() } as UserProfile));
@@ -90,21 +90,19 @@ const exportTeamsFlow = ai.defineFlow(
 
              // Add members' rows
              for (const member of team.members) {
-                // The member object in the team collection might be more up-to-date for new members
-                // but the user profile will have gender, department etc. if they've completed it.
-                const memberProfile = usersData.find(u => u.uid === member.uid);
+                const memberProfile = usersData.find(u => u.uid === member.uid || u.email === member.email);
                 worksheet.addRow({
                     teamName: team.name,
                     teamLeaderName: leaderProfile?.name,
                     name: memberProfile?.name || member.name,
                     email: memberProfile?.email || member.email,
-                    contactNumber: memberProfile?.contactNumber || member.contactNumber,
+                    contactNumber: memberProfile?.contactNumber || 'N/A',
                     institute: team.institute,
-                    enrollmentNumber: memberProfile?.enrollmentNumber || member.enrollmentNumber,
-                    gender: memberProfile?.gender || member.gender,
+                    enrollmentNumber: memberProfile?.enrollmentNumber || 'N/A',
+                    gender: memberProfile?.gender || 'N/A',
                     problemStatementId: problemStatement?.problemStatementId,
                     problemStatementTitle: team.problemStatementTitle,
-                    department: team.department, // Members share team department
+                    department: memberProfile?.department,
                 });
              }
         }
