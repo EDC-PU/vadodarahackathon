@@ -86,13 +86,21 @@ export default function LandingPage() {
     { name: 'Home', href: '#home' },
     { name: 'About', href: '#about' },
     { name: 'Rewards', href: '#rewards' },
+    { name: 'SPOCs', href: '#spocs'},
     { name: 'Contact', href: '#contact' },
   ];
   
-  const images = [
+  const aboutImages = [
     "https://i.ibb.co/ZYrrS9h/Screenshot-2024-08-19-111659.png",
     "https://i.ibb.co/MgFsf84/Screenshot-2024-08-19-111647.png",
     "https://i.ibb.co/3dTYdbL/Screenshot-2024-08-19-111637.png",
+  ];
+
+  const galleryImages = [
+    '/vadodarahackathon/image1.png',
+    '/vadodarahackathon/image2.png',
+    '/vadodarahackathon/image3.png',
+    '/vadodarahackathon/image4.png',
   ];
   
   const handleDashboardRedirect = () => {
@@ -235,7 +243,7 @@ export default function LandingPage() {
             <div>
               <Carousel className="w-full max-w-xl mx-auto">
                 <CarouselContent>
-                  {images.map((src, index) => (
+                  {aboutImages.map((src, index) => (
                     <CarouselItem key={index}>
                       <Image
                         src={src}
@@ -252,6 +260,91 @@ export default function LandingPage() {
               </Carousel>
             </div>
           </div>
+        </AnimatedSection>
+
+        <AnimatedSection id="gallery">
+            <div className="container max-w-7xl">
+                <h2 className="text-3xl font-bold text-center mb-12 font-headline">Gallery</h2>
+                 <Carousel className="w-full" opts={{ loop: true }}>
+                    <CarouselContent>
+                    {galleryImages.map((src, index) => (
+                        <CarouselItem key={index} className="md:basis-1/2 lg:basis-1/3">
+                            <div className="p-1">
+                                <Card className="overflow-hidden glass-card">
+                                    <CardContent className="p-0">
+                                        <Image
+                                            src={src}
+                                            alt={`Gallery Image ${index + 1}`}
+                                            width={600}
+                                            height={400}
+                                            className="w-full h-full object-cover aspect-video transition-transform hover:scale-105"
+                                        />
+                                    </CardContent>
+                                </Card>
+                            </div>
+                        </CarouselItem>
+                    ))}
+                    </CarouselContent>
+                    <CarouselPrevious />
+                    <CarouselNext />
+                </Carousel>
+            </div>
+        </AnimatedSection>
+        
+        <AnimatedSection id="spocs">
+            <div className="container max-w-4xl text-center">
+                <h2 className="text-3xl font-bold mb-4 font-headline">Institute SPOCs</h2>
+                <p className="max-w-2xl mx-auto text-foreground/80 mb-8">
+                  Find the Single Point of Contact (SPOC) for your institute.
+                </p>
+                {loadingSpocs ? (
+                     <div className="flex justify-center items-center h-40">
+                        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                     </div>
+                ) : (
+                <div className="flex flex-col items-center gap-4">
+                    <Select onValueChange={setSelectedInstitute}>
+                        <SelectTrigger className="w-full max-w-md glass-card !border-primary/50">
+                            <SelectValue placeholder="Select your institute to view SPOC details" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {INSTITUTES.map((institute) => (
+                            <SelectItem key={institute} value={institute}>
+                                {institute}
+                            </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                    {selectedInstitute && (
+                        <Card className="w-full max-w-md mt-4 glass-card text-left animate-in fade-in-50">
+                            <CardHeader>
+                                <CardTitle>{selectedInstitute}</CardTitle>
+                            </CardHeader>
+                             <CardContent>
+                                {spocDetails[selectedInstitute] ? (
+                                <div className="space-y-3">
+                                    <div className="flex items-center gap-3">
+                                        <Users className="h-5 w-5 text-primary" />
+                                        <span>{spocDetails[selectedInstitute].name}</span>
+                                    </div>
+                                    <div className="flex items-center gap-3">
+                                        <Mail className="h-5 w-5 text-primary" />
+                                        <a href={`mailto:${spocDetails[selectedInstitute].email}`} className="hover:underline">{spocDetails[selectedInstitute].email}</a>
+                                    </div>
+                                    <div className="flex items-center gap-3">
+                                        <Phone className="h-5 w-5 text-primary" />
+                                         <a href={`tel:${spocDetails[selectedInstitute].contact}`} className="hover:underline">{spocDetails[selectedInstitute].contact}</a>
+                                    </div>
+                                </div>
+                                ) : (
+                                <p className="text-foreground/80">No SPOC assigned for this institute yet. Please check back later.</p>
+                                )}
+                            </CardContent>
+                        </Card>
+                    )}
+                </div>
+                )}
+            </div>
         </AnimatedSection>
 
 
@@ -297,3 +390,5 @@ export default function LandingPage() {
     </div>
   );
 }
+
+    
