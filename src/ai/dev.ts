@@ -7,3 +7,4 @@ import '@/ai/flows/make-admin-flow.ts';
 import '@/ai/flows/create-spoc-flow.ts';
 import '@/ai/flows/export-teams-flow.ts';
 import '@/ai/flows/invite-member-flow.ts';
+import '@/ai/flows/system-health-flow.ts';

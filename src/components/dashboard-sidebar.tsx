@@ -27,6 +27,7 @@ import {
   Megaphone,
   User as UserIcon,
   BarChart2,
+  HeartPulse,
 } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { Button } from "./ui/button";
@@ -44,6 +45,7 @@ const navItems = {
     { href: "/admin/spocs", icon: <Building2 />, label: "Manage SPOCs" },
     { href: "/admin/admins", icon: <Shield />, label: "Manage Admins" },
     { href: "/admin/settings", icon: <Wrench />, label: "Event Settings" },
+    { href: "/admin/system-health", icon: <HeartPulse />, label: "System Health" },
   ],
   spoc: [
     { href: "/spoc", icon: <LayoutDashboard />, label: "Dashboard" },

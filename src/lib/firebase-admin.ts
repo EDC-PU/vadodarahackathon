@@ -1,34 +1,47 @@
 
-import * as admin from 'firebase-admin';
+import admin from 'firebase-admin';
+import { getApps } from 'firebase-admin/app';
+import { getAuth } from 'firebase-admin/auth';
+import { getFirestore } from 'firebase-admin/firestore';
+import { getStorage } from 'firebase-admin/storage';
 
-// Check if the app is already initialized to prevent errors
-if (!admin.apps.length) {
-  try {
+
+function initializeAdminApp() {
+    if (getApps().length > 0) {
+        return admin.app();
+    }
+
     const privateKey = (process.env.FIREBASE_PRIVATE_KEY || '').replace(/\\n/g, '\n');
 
-    if (!process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID) {
-      throw new Error("NEXT_PUBLIC_FIREBASE_PROJECT_ID is not set in the environment variables.");
-    }
-    if (!process.env.FIREBASE_CLIENT_EMAIL) {
-        throw new Error("FIREBASE_CLIENT_EMAIL is not set in the environment variables.");
-    }
-    if (!privateKey) {
-        throw new Error("FIREBASE_PRIVATE_KEY is not set in the environment variables.");
+    if (!process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || !process.env.FIREBASE_CLIENT_EMAIL || !privateKey) {
+        throw new Error("Required Firebase Admin environment variables are not set.");
     }
 
-    admin.initializeApp({
-      credential: admin.credential.cert({
-        projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-        clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-        privateKey: privateKey,
-      }),
+    return admin.initializeApp({
+        credential: admin.credential.cert({
+            projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+            clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+            privateKey: privateKey,
+        }),
+        storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
     });
-  } catch (error: any) {
-    console.error('Firebase admin initialization error', error.stack);
-  }
 }
 
-const adminDb = admin.firestore();
+// Export functions to get the services, ensuring initialization
+export function getAdminApp() {
+    return initializeAdminApp();
+}
 
-export { adminDb };
+export function getAdminDb() {
+    return getFirestore(getAdminApp());
+}
+
+export function getAdminAuth() {
+    return getAuth(getAdminApp());
+}
+
+export function getAdminStorage() {
+    return getStorage(getAdminApp());
+}
+
 export default admin;
