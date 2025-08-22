@@ -52,7 +52,7 @@ export interface Team {
   };
   institute: string;
   department: string;
-  category: "Software" | "Hardware";
+  category?: "Software" | "Hardware" | "Hardware & Software";
   members: TeamMember[];
   problemStatementId?: string;
   problemStatementTitle?: string;

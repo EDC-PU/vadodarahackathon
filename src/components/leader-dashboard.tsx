@@ -135,8 +135,9 @@ export default function LeaderDashboard() {
         await updateDoc(teamDocRef, {
             problemStatementId: ps.id,
             problemStatementTitle: ps.title,
+            category: ps.category, // Automatically set team category based on PS
         });
-        toast({ title: "Success", description: "Problem statement selected." });
+        toast({ title: "Success", description: "Problem statement selected and team category updated." });
         setIsSelectProblemStatementOpen(false);
     } catch (error) {
         console.error("Error selecting problem statement:", error);
@@ -184,7 +185,6 @@ export default function LeaderDashboard() {
     <SelectProblemStatementDialog 
         isOpen={isSelectProblemStatementOpen}
         onOpenChange={setIsSelectProblemStatementOpen}
-        teamCategory={team.category}
         onProblemStatementSelect={handleProblemStatementSelect}
     />
     <div className="p-4 sm:p-6 lg:p-8">
@@ -237,14 +237,15 @@ export default function LeaderDashboard() {
             
             <Card>
                 <CardHeader>
-                    <CardTitle>Problem Statement</CardTitle>
-                    <CardDescription>Select a problem statement for your team to work on.</CardDescription>
+                    <CardTitle>Problem Statement & Category</CardTitle>
+                    <CardDescription>Select a problem statement. Your team's category will be set automatically.</CardDescription>
                 </CardHeader>
                 <CardContent>
                     {team.problemStatementId ? (
                         <div className="space-y-3">
                             <p className="text-muted-foreground">Your team has selected:</p>
                             <h3 className="text-lg font-semibold">{team.problemStatementTitle}</h3>
+                            <p className="text-sm">Team Category: <span className="font-semibold">{team.category}</span></p>
                              <Button variant="outline" onClick={() => setIsSelectProblemStatementOpen(true)}>
                                 <Pencil className="mr-2 h-4 w-4" /> Change Problem Statement
                             </Button>

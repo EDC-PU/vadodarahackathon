@@ -36,7 +36,6 @@ import { useAuth } from "@/hooks/use-auth";
 
 const formSchema = z.object({
   teamName: z.string().min(3, { message: "Team name must be at least 3 characters." }),
-  category: z.enum(["Software", "Hardware"], { required_error: "Please select a category." }),
   name: z.string().min(2, { message: "Name must be at least 2 characters." }),
   gender: z.enum(["Male", "Female", "Other"], { required_error: "Please select a gender." }),
   institute: z.string({ required_error: "Please select an institute." }),
@@ -96,7 +95,6 @@ export function RegistrationForm() {
       },
       institute: values.institute,
       department: values.department,
-      category: values.category as "Software" | "Hardware",
       members: [], // Start with empty members array
     };
     batch.set(teamDocRef, teamData);
@@ -159,55 +157,23 @@ export function RegistrationForm() {
                 <h3 className="text-lg font-medium">Team Details</h3>
                 <Separator />
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-               <FormField
-                control={form.control}
-                name="teamName"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Team Name</FormLabel>
-                    <FormControl>
-                       <div className="flex items-center gap-2">
-                          <Input placeholder="e.g., Tech Titans" {...field} disabled={isLoading}/>
-                          <SmartFieldTip fieldName="Team Name" formContext={formDescription} />
-                        </div>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="category"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Category</FormLabel>
-                     <FormControl>
-                        <RadioGroup
-                          onValueChange={field.onChange}
-                          defaultValue={field.value}
-                          className="flex items-center space-x-4 pt-2"
-                           disabled={isLoading}
-                        >
-                          <FormItem className="flex items-center space-x-2 space-y-0">
-                            <FormControl>
-                              <RadioGroupItem value="Software" />
-                            </FormControl>
-                            <FormLabel className="font-normal">Software</FormLabel>
-                          </FormItem>
-                          <FormItem className="flex items-center space-x-2 space-y-0">
-                            <FormControl>
-                              <RadioGroupItem value="Hardware" />
-                            </FormControl>
-                            <FormLabel className="font-normal">Hardware</FormLabel>
-                          </FormItem>
-                        </RadioGroup>
-                      </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
+            
+            <FormField
+              control={form.control}
+              name="teamName"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Team Name</FormLabel>
+                  <FormControl>
+                     <div className="flex items-center gap-2">
+                        <Input placeholder="e.g., Tech Titans" {...field} disabled={isLoading}/>
+                        <SmartFieldTip fieldName="Team Name" formContext={formDescription} />
+                      </div>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
             
             <div className="space-y-2 pt-4">
                 <h3 className="text-lg font-medium">Team Leader&apos;s Details</h3>

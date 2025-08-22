@@ -23,11 +23,10 @@ import { cn } from "@/lib/utils";
 interface SelectProblemStatementDialogProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
-  teamCategory: 'Software' | 'Hardware';
   onProblemStatementSelect: (problemStatement: ProblemStatement) => void;
 }
 
-export function SelectProblemStatementDialog({ isOpen, onOpenChange, teamCategory, onProblemStatementSelect }: SelectProblemStatementDialogProps) {
+export function SelectProblemStatementDialog({ isOpen, onOpenChange, onProblemStatementSelect }: SelectProblemStatementDialogProps) {
   const [problemStatements, setProblemStatements] = useState<ProblemStatement[]>([]);
   const [filteredStatements, setFilteredStatements] = useState<ProblemStatement[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -39,11 +38,8 @@ export function SelectProblemStatementDialog({ isOpen, onOpenChange, teamCategor
       const fetchProblemStatements = async () => {
         setIsLoading(true);
         try {
-          // Fetch statements that match the team's category OR are "Hardware & Software"
-          const applicableCategories = [teamCategory, "Hardware & Software"];
           const q = query(
             collection(db, "problemStatements"), 
-            where("category", "in", applicableCategories),
             orderBy("problemStatementId")
           );
           
@@ -64,7 +60,7 @@ export function SelectProblemStatementDialog({ isOpen, onOpenChange, teamCategor
       };
       fetchProblemStatements();
     }
-  }, [isOpen, teamCategory, toast]);
+  }, [isOpen, toast]);
   
   useEffect(() => {
     const lowercasedFilter = searchTerm.toLowerCase();
@@ -84,7 +80,7 @@ export function SelectProblemStatementDialog({ isOpen, onOpenChange, teamCategor
         <DialogHeader>
           <DialogTitle>Select a Problem Statement</DialogTitle>
           <DialogDescription>
-            Choose a problem statement for your team. Your selection is based on your team's category ({teamCategory}).
+            Choose a problem statement for your team. Your team category will be set based on your selection.
           </DialogDescription>
         </DialogHeader>
         <div className="relative">
@@ -111,7 +107,7 @@ export function SelectProblemStatementDialog({ isOpen, onOpenChange, teamCategor
                 >
                     <div className="flex justify-between items-start mb-2">
                         <h3 className="font-semibold">{ps.title} ({ps.problemStatementId})</h3>
-                        <Badge variant={ps.category === teamCategory ? 'default' : 'secondary'}>{ps.category}</Badge>
+                        <Badge variant={ps.category === 'Software' ? 'default' : 'secondary'}>{ps.category}</Badge>
                     </div>
                   <p className="text-sm text-muted-foreground line-clamp-2">{ps.description}</p>
                 </div>
