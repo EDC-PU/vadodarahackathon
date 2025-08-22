@@ -8,12 +8,12 @@ import { getFirestore } from "firebase/firestore";
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
-  apiKey: "AIzaSyDLIhhiTEWmX4sl0N4pqJi8NbdwCvnbltA",
-  authDomain: "vadodara-hackathon-60-portal.firebaseapp.com",
-  projectId: "vadodara-hackathon-60-portal",
-  storageBucket: "vadodara-hackathon-60-portal.appspot.com",
-  messagingSenderId: "493806724265",
-  appId: "1:493806724265:web:8556c5865871ec6b7ef5b8"
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID
 };
 
 // Initialize Firebase
@@ -22,4 +22,3 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 
 export { app, auth, db };
-
