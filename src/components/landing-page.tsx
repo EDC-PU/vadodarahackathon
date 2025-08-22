@@ -54,7 +54,7 @@ export default function LandingPage() {
   const [selectedInstitute, setSelectedInstitute] = useState<string | null>(null);
   const [spocDetails, setSpocDetails] = useState<SpocDetails>({});
   const [loadingSpocs, setLoadingSpocs] = useState(true);
-  const { user, loading: authLoading, redirectToDashboard: goToDashboard } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const autoplayPlugin = useRef(Autoplay({ delay: 2000, stopOnInteraction: true }));
 
 
@@ -119,11 +119,6 @@ export default function LandingPage() {
     '/VadodaraHackathon/17.jpg',
   ];
   
-  const handleDashboardRedirect = () => {
-    if (user) {
-        goToDashboard(user);
-    }
-  }
 
   return (
     <div className="flex min-h-screen flex-col bg-background text-foreground selection:bg-primary/40">
@@ -146,8 +141,10 @@ export default function LandingPage() {
               {authLoading ? (
                   <Skeleton className="h-10 w-40 rounded-full" />
               ) : user ? (
-                  <Button onClick={handleDashboardRedirect} className="rounded-full glass-button hover:scale-105 transition-transform !text-foreground">
+                  <Button asChild className="rounded-full glass-button hover:scale-105 transition-transform !text-foreground">
+                    <Link href={`/${user.role}`}>
                       <LayoutDashboard className="mr-2 h-4 w-4" /> Go to Dashboard
+                    </Link>
                   </Button>
               ) : (
                   <>

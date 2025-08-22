@@ -28,7 +28,9 @@ export function useAuth() {
     const userDocRef = doc(db, 'users', currentUser.uid);
     const userDoc = await getDoc(userDocRef);
     if (userDoc.exists()) {
-        setUser({ uid: userDoc.id, ...userDoc.data() } as UserProfile);
+        const userProfile = { uid: userDoc.id, ...userDoc.data() } as UserProfile;
+        setUser(userProfile);
+        // This will trigger the redirect logic in the useEffect below
     }
   }, []);
 
@@ -98,8 +100,8 @@ export function useAuth() {
             unsubscribe = onSnapshot(teamDocRef, async (teamDoc) => {
                 if (teamDoc.exists() && user) {
                     const teamData = teamDoc.data() as Team;
-                    // Always include the current user if they are the leader.
-                    const leaderProfile = user.role === 'leader' ? user : null;
+                    
+                    const leaderProfile = teamData.leader.uid === user.uid ? user : (await getDoc(doc(db, 'users', teamData.leader.uid))).data() as UserProfile;
 
                     const memberEmails = teamData.members.map(m => m.email).filter(email => email !== user.email);
                     
@@ -115,22 +117,11 @@ export function useAuth() {
                     setTeamMembers(allMembers);
 
                 } else {
-                    // If team doesn't exist or user is not available, clear members.
-                    // If the current user is a leader and the team exists, they should at least be in the list.
-                    if(user && user.role === 'leader') {
-                        setTeamMembers([user]);
-                    } else {
-                        setTeamMembers([]);
-                    }
+                    setTeamMembers(user && user.role === 'leader' ? [user] : []);
                 }
             });
         } else {
-            // If user has no teamId, but is a leader, it means they are creating a team. Show them in the list.
-            if(user && user.role === 'leader') {
-                setTeamMembers([user]);
-            } else {
-                 setTeamMembers([]);
-            }
+            setTeamMembers(user && user.role === 'leader' ? [user] : []);
         }
 
         return () => {
@@ -215,25 +206,17 @@ export function useAuth() {
     
     // 4. Role-based route protection
     const currentRole = user.role;
+    if (!currentRole) return; // Exit if role is not yet defined
     const isProtectedPath = pathname.startsWith('/admin') || pathname.startsWith('/leader') || pathname.startsWith('/spoc') || pathname.startsWith('/member');
               
     if (isProtectedPath) {
-        if (pathname.startsWith(`/admin`) && currentRole !== 'admin') {
-            console.warn(`SECURITY: Role '${currentRole}' attempted to access admin path '${pathname}'. Redirecting.`);
-            performRedirect(`/${currentRole}`);
-        } else if (pathname.startsWith('/leader') && currentRole !== 'leader') {
-            console.warn(`SECURITY: Role '${currentRole}' attempted to access leader path '${pathname}'. Redirecting.`);
-            performRedirect(`/${currentRole}`);
-        } else if (pathname.startsWith('/spoc') && currentRole !== 'spoc') {
-            console.warn(`SECURITY: Role '${currentRole}' attempted to access spoc path '${pathname}'. Redirecting.`);
-            performRedirect(`/${currentRole}`);
-        } else if (pathname.startsWith('/member') && currentRole !== 'member') {
-            console.warn(`SECURITY: Role '${currentRole}' attempted to access member path '${pathname}'. Redirecting.`);
-            performRedirect(`/${currentRole}`);
+        if (!pathname.startsWith(`/${currentRole}`)) {
+             console.warn(`SECURITY: Role '${currentRole}' attempted to access '${pathname}'. Redirecting.`);
+             performRedirect(`/${currentRole}`);
         }
-    } else if (pathname === '/login' || pathname === '/register' || pathname === '/create-team' || pathname === '/complete-profile' || pathname === '/complete-spoc-profile') {
-        // If user is on an auth page but should be on their dashboard
-        console.log(`Redirect Check: User is on auth page '${pathname}', redirecting to their dashboard.`);
+    } else if (['/login', '/register', '/create-team', '/complete-profile', '/complete-spoc-profile', '/change-password'].includes(pathname)) {
+        // If user is on an auth/setup page but should be on their dashboard
+        console.log(`Redirect Check: User is on setup page '${pathname}', redirecting to their dashboard.`);
         performRedirect(`/${currentRole}`);
     }
 
