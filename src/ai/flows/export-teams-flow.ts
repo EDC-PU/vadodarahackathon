@@ -7,27 +7,40 @@
 
 import { ai } from '@/ai/genkit';
 import { getAdminDb } from '@/lib/firebase-admin'; // Use admin DB for full access
-import { Team, UserProfile, ProblemStatement, ExportTeamsOutput, ExportTeamsOutputSchema } from '@/lib/types';
+import { Team, UserProfile, ProblemStatement, ExportTeamsOutput, ExportTeamsOutputSchema, ExportTeamsInputSchema, ExportTeamsInput } from '@/lib/types';
 import ExcelJS from 'exceljs';
 
 
-export async function exportTeams(): Promise<ExportTeamsOutput> {
+export async function exportTeams(input: ExportTeamsInput): Promise<ExportTeamsOutput> {
     console.log("Executing exportTeams function...");
-    return exportTeamsFlow();
+    return exportTeamsFlow(input);
 }
 
 const exportTeamsFlow = ai.defineFlow(
   {
     name: 'exportTeamsFlow',
+    inputSchema: ExportTeamsInputSchema,
     outputSchema: ExportTeamsOutputSchema,
   },
-  async () => {
-    console.log("exportTeamsFlow started.");
+  async ({ institute, category }) => {
+    console.log("exportTeamsFlow started with filters:", { institute, category });
     try {
         console.log("Fetching data from Firestore...");
         // 1. Fetch all necessary data using the admin SDK
         const db = getAdminDb();
-        const teamsSnapshot = await db.collection('teams').get();
+        if (!db) {
+            throw new Error("Firebase Admin SDK not initialized. Check server environment variables.");
+        }
+
+        let teamsQuery: admin.firestore.Query<admin.firestore.DocumentData> = db.collection('teams');
+        if (institute && institute !== 'All Institutes') {
+            teamsQuery = teamsQuery.where('institute', '==', institute);
+        }
+        if (category && category !== 'All Categories') {
+            teamsQuery = teamsQuery.where('category', '==', category);
+        }
+
+        const teamsSnapshot = await teamsQuery.get();
         const usersSnapshot = await db.collection('users').get();
         const problemStatementsSnapshot = await db.collection('problemStatements').get();
         console.log(`Fetched ${teamsSnapshot.size} teams, ${usersSnapshot.size} users, and ${problemStatementsSnapshot.size} problem statements.`);
@@ -37,8 +50,8 @@ const exportTeamsFlow = ai.defineFlow(
         const problemStatementsData = problemStatementsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ProblemStatement));
         
         if (teamsData.length === 0) {
-            console.warn("No teams found to export.");
-            return { success: false, message: "No teams to export." };
+            console.warn("No teams found to export with the selected filters.");
+            return { success: false, message: "No teams to export with the selected filters." };
         }
 
         console.log("Creating Excel workbook...");

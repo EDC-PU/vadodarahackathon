@@ -4,14 +4,18 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Loader2, Download, Save } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { db } from "@/lib/firebase";
 import { collection, onSnapshot, doc, updateDoc } from "firebase/firestore";
-import { Team, UserProfile } from "@/lib/types";
+import { Team, UserProfile, ProblemStatementCategory } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { exportTeams } from "@/ai/flows/export-teams-flow";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { INSTITUTES } from "@/lib/constants";
+
+type CategoryFilter = ProblemStatementCategory | "All Categories";
 
 export default function AllTeamsPage() {
   const [teams, setTeams] = useState<Team[]>([]);
@@ -20,7 +24,11 @@ export default function AllTeamsPage() {
   const [isExporting, setIsExporting] = useState(false);
   const [teamNumberInputs, setTeamNumberInputs] = useState<{ [key: string]: string }>({});
   const [isSaving, setIsSaving] = useState<string | null>(null);
+  const [instituteFilter, setInstituteFilter] = useState<string>("All Institutes");
+  const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>("All Categories");
   const { toast } = useToast();
+  
+  const categories: CategoryFilter[] = ["All Categories", "Software", "Hardware", "Hardware & Software"];
 
   useEffect(() => {
     setLoading(true);
@@ -54,11 +62,22 @@ export default function AllTeamsPage() {
       unsubscribeUsers();
     };
   }, [toast]);
+
+  const filteredTeams = useMemo(() => {
+    return teams.filter(team => {
+        const instituteMatch = instituteFilter === 'All Institutes' || team.institute === instituteFilter;
+        const categoryMatch = categoryFilter === 'All Categories' || team.category === categoryFilter;
+        return instituteMatch && categoryMatch;
+    });
+  }, [teams, instituteFilter, categoryFilter]);
   
   const handleExport = async () => {
     setIsExporting(true);
     try {
-        const result = await exportTeams();
+        const result = await exportTeams({
+            institute: instituteFilter,
+            category: categoryFilter,
+        });
         if (result.success && result.fileContent) {
             const blob = new Blob([Buffer.from(result.fileContent, 'base64')], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
             const url = window.URL.createObjectURL(blob);
@@ -81,9 +100,8 @@ export default function AllTeamsPage() {
     }
   };
 
-
-  const getTeamWithFullDetails = () => {
-    return teams.map(team => {
+  const getTeamWithFullDetails = (teamsToProcess: Team[]) => {
+    return teamsToProcess.map(team => {
         const leaderProfile = users.find(u => u.uid === team.leader.uid);
         const membersWithDetails = team.members.map(member => {
             const memberProfile = users.find(u => u.email === member.email);
@@ -132,26 +150,45 @@ export default function AllTeamsPage() {
     }
   };
   
-  const teamsWithDetails = getTeamWithFullDetails();
+  const teamsWithDetails = getTeamWithFullDetails(filteredTeams);
 
   return (
     <div className="p-4 sm:p-6 lg:p-8">
-      <header className="mb-8 flex justify-between items-center">
+      <header className="mb-8 flex flex-col sm:flex-row justify-between sm:items-center gap-4">
         <div>
             <h1 className="text-3xl font-bold font-headline">All Teams</h1>
             <p className="text-muted-foreground">View and manage all registered teams.</p>
         </div>
-        <Button variant="outline" onClick={handleExport} disabled={isExporting}>
-            {isExporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
-            Export to Excel
-        </Button>
+        <div className="flex gap-2">
+            <Select value={instituteFilter} onValueChange={setInstituteFilter}>
+                <SelectTrigger className="w-48">
+                    <SelectValue placeholder="Filter by Institute" />
+                </SelectTrigger>
+                <SelectContent>
+                    <SelectItem value="All Institutes">All Institutes</SelectItem>
+                    {INSTITUTES.map(inst => <SelectItem key={inst} value={inst}>{inst}</SelectItem>)}
+                </SelectContent>
+            </Select>
+            <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                <SelectTrigger className="w-48">
+                    <SelectValue placeholder="Filter by Category" />
+                </SelectTrigger>
+                <SelectContent>
+                    {categories.map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}
+                </SelectContent>
+            </Select>
+            <Button variant="outline" onClick={handleExport} disabled={isExporting}>
+                {isExporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
+                Export
+            </Button>
+        </div>
       </header>
 
       <Card>
         <CardHeader>
           <CardTitle>Registered Teams List</CardTitle>
           <CardDescription>
-            {teams.length} team(s) registered across all institutes.
+            {teamsWithDetails.length} team(s) found with the current filters.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -159,7 +196,7 @@ export default function AllTeamsPage() {
             <div className="flex justify-center items-center h-48">
               <Loader2 className="h-8 w-8 animate-spin" />
             </div>
-          ) : teams.length > 0 ? (
+          ) : teamsWithDetails.length > 0 ? (
             <Table>
                 <TableHeader>
                     <TableRow>
@@ -210,7 +247,7 @@ export default function AllTeamsPage() {
                 </TableBody>
             </Table>
           ) : (
-            <p className="text-center text-muted-foreground py-4">No teams have registered yet.</p>
+            <p className="text-center text-muted-foreground py-4">No teams match the current filters.</p>
           )}
         </CardContent>
       </Card>

@@ -1,5 +1,6 @@
 
 import {z} from 'genkit';
+import type {Query} from 'firebase-admin/firestore';
 
 export type UserRole = "leader" | "member" | "spoc" | "admin";
 export type SpocStatus = "pending" | "approved" | "rejected";
@@ -132,6 +133,12 @@ export type CreateSpocOutput = z.infer<typeof CreateSpocOutputSchema>;
 
 
 // export-teams-flow
+export const ExportTeamsInputSchema = z.object({
+    institute: z.string().optional().describe("Filter teams by institute. 'All Institutes' for no filter."),
+    category: z.string().optional().describe("Filter teams by category. 'All Categories' for no filter."),
+});
+export type ExportTeamsInput = z.infer<typeof ExportTeamsInputSchema>;
+
 export const ExportTeamsOutputSchema = z.object({
     success: z.boolean(),
     message: z.string().optional(),

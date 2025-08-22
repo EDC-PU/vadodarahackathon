@@ -1,6 +1,6 @@
 
 import { config } from 'dotenv';
-config();
+config({ path: '.env.local' });
 
 import '@/ai/flows/registration-tips.ts';
 import '@/ai/flows/make-admin-flow.ts';
