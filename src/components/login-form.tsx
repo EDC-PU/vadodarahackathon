@@ -18,10 +18,12 @@ import { Card, CardContent } from "@/components/ui/card";
 import { useState } from "react";
 import { Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { auth } from "@/lib/firebase";
-import { signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from "firebase/auth";
+import { auth, db } from "@/lib/firebase";
+import { signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, User } from "firebase/auth";
+import { doc, getDoc } from "firebase/firestore";
 import { Separator } from "./ui/separator";
 import { Chrome } from "lucide-react";
+import { UserProfile } from "@/lib/types";
 
 
 const formSchema = z.object({
@@ -42,23 +44,50 @@ export function LoginForm() {
     },
   });
 
-  async function onSubmit(values: z.infer<typeof formSchema>) {
-    setIsLoading(true);
-    try {
-      // In a real app, you would check the user's role from a database/custom claims
-      // after login and redirect accordingly.
-      const userCredential = await signInWithEmailAndPassword(auth, values.email, values.password);
+  const handleLogin = async (user: User) => {
+    const userDocRef = doc(db, "users", user.uid);
+    const userDoc = await getDoc(userDocRef);
 
+    if (userDoc.exists()) {
+      const userProfile = userDoc.data() as UserProfile;
       toast({
         title: "Login Successful",
         description: "Redirecting to your dashboard...",
       });
-
-      if (userCredential.user.email === "pranavrathi07@gmail.com") {
-        window.location.href = '/admin';
-      } else {
-        window.location.href = '/leader';
+      switch (userProfile.role) {
+        case "admin":
+          window.location.href = "/admin";
+          break;
+        case "leader":
+          window.location.href = "/leader";
+          break;
+        case "spoc":
+            window.location.href = "/spoc";
+            break;
+        case "member":
+            window.location.href = "/member";
+            break;
+        default:
+          window.location.href = "/login";
       }
+    } else {
+        // This case might happen if user registered but profile creation failed.
+        // Or if it's a new sign-in via Google that needs a profile.
+        toast({
+            title: "Profile Incomplete",
+            description: "Please complete your registration.",
+            variant: "destructive",
+        });
+        // Potentially redirect to a profile completion page
+        window.location.href = "/register";
+    }
+  }
+
+  async function onSubmit(values: z.infer<typeof formSchema>) {
+    setIsLoading(true);
+    try {
+      const userCredential = await signInWithEmailAndPassword(auth, values.email, values.password);
+      await handleLogin(userCredential.user);
     } catch (error: any) {
       console.error("Login Error:", error);
       toast({
@@ -76,15 +105,7 @@ export function LoginForm() {
     const provider = new GoogleAuthProvider();
     try {
       const result = await signInWithPopup(auth, provider);
-      toast({
-        title: "Login Successful",
-        description: "Redirecting to your dashboard...",
-      });
-      if (result.user.email === "pranavrathi07@gmail.com") {
-        window.location.href = '/admin';
-      } else {
-        window.location.href = '/leader';
-      }
+      await handleLogin(result.user);
     } catch (error: any) {
       console.error("Google Sign-In Error:", error);
       toast({

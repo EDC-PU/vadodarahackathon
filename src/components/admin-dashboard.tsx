@@ -3,25 +3,79 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Download, PlusCircle, User, Users, Wrench, Shield } from "lucide-react";
+import { Download, PlusCircle, User, Users, Shield, Loader2 } from "lucide-react";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
-
-const spocs = [
-  { name: "Dr. Smith", email: "smith@msu.ac.in", phone: "9876543210", institute: "Maharaja Sayajirao University" },
-  { name: "Prof. Jones", email: "jones@nuv.ac.in", phone: "8765432109", institute: "Navrachana University" },
-];
-
-const teams = [
-    { name: "Tech Titans", institute: "Parul University", members: 6, category: "Software" },
-    { name: "Circuit Breakers", institute: "MSU", members: 5, category: "Hardware" },
-];
-
-const admins = [
-    { email: "pranavrathi07@gmail.com" }
-]
+import { useEffect, useState } from "react";
+import { db } from "@/lib/firebase";
+import { collection, getDocs, doc, setDoc, query, where } from "firebase/firestore";
+import { Team, UserProfile } from "@/lib/types";
+import { useToast } from "@/hooks/use-toast";
 
 export default function AdminDashboard() {
+  const [teams, setTeams] = useState<Team[]>([]);
+  const [spocs, setSpocs] = useState<UserProfile[]>([]);
+  const [admins, setAdmins] = useState<UserProfile[]>([]);
+  const [stats, setStats] = useState({ teams: 0, participants: 0 });
+  const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
+
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      // Fetch Teams
+      const teamsCollection = collection(db, 'teams');
+      const teamSnapshot = await getDocs(teamsCollection);
+      const teamsData = teamSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Team));
+      setTeams(teamsData);
+
+      // Fetch Users (SPOCs and Admins)
+      const usersCollection = collection(db, 'users');
+      const spocsQuery = query(usersCollection, where("role", "==", "spoc"));
+      const adminsQuery = query(usersCollection, where("role", "==", "admin"));
+      
+      const spocSnapshot = await getDocs(spocsQuery);
+      const spocsData = spocSnapshot.docs.map(doc => ({ uid: doc.id, ...doc.data() } as UserProfile));
+      setSpocs(spocsData);
+
+      const adminSnapshot = await getDocs(adminsQuery);
+      const adminsData = adminSnapshot.docs.map(doc => ({ uid: doc.id, ...doc.data() } as UserProfile));
+      setAdmins(adminsData);
+      
+      // Calculate stats
+      const totalParticipants = teamsData.reduce((acc, team) => acc + 1 + team.members.length, 0);
+      setStats({ teams: teamsData.length, participants: totalParticipants });
+
+    } catch (error) {
+      console.error("Error fetching data:", error);
+      toast({ title: "Error", description: "Failed to fetch dashboard data.", variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const handleCreateAdmin = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const formData = new FormData(event.currentTarget);
+    const email = formData.get('admin-email') as string;
+
+    // This is a simplified version. In a real app, you'd use a Cloud Function
+    // to look up the user by email, get their UID, and set a custom claim or Firestore doc.
+    toast({ title: "Info", description: "In a real app, a Cloud Function would handle admin creation securely." });
+  };
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-screen">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
+
   return (
     <div className="p-4 sm:p-6 lg:p-8">
       <header className="mb-8">
@@ -52,8 +106,7 @@ export default function AdminDashboard() {
                         <Users className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold">150</div>
-                        <p className="text-xs text-muted-foreground">+20 since last week</p>
+                        <div className="text-2xl font-bold">{stats.teams}</div>
                     </CardContent>
                 </Card>
                  <Card>
@@ -62,7 +115,7 @@ export default function AdminDashboard() {
                         <User className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold">850</div>
+                        <div className="text-2xl font-bold">{stats.participants}</div>
                          <p className="text-xs text-muted-foreground">Across all teams</p>
                     </CardContent>
                 </Card>
@@ -74,15 +127,18 @@ export default function AdminDashboard() {
             <CardHeader className="flex flex-row items-center justify-between">
               <div>
                 <CardTitle>SPOC Management</CardTitle>
-                <CardDescription>Create and manage institute SPOCs.</CardDescription>
+                <CardDescription>Create and manage institute SPOCs. ({spocs.length} SPOCs)</CardDescription>
               </div>
               <Button>
                 <PlusCircle className="mr-2 h-4 w-4" /> Add SPOC
               </Button>
             </CardHeader>
             <CardContent>
-                {/* SPOC Table would go here */}
-                <p>SPOC list will be displayed here.</p>
+                {spocs.length > 0 ? (
+                  <ul className="space-y-2">
+                    {spocs.map(spoc => <li key={spoc.uid}>{spoc.name} - {spoc.email} ({spoc.institute})</li>)}
+                  </ul>
+                ) : <p>No SPOCs found.</p>}
             </CardContent>
           </Card>
         </TabsContent>
@@ -95,10 +151,10 @@ export default function AdminDashboard() {
                         <CardDescription>Add a new administrator by email.</CardDescription>
                     </CardHeader>
                     <CardContent>
-                        <form className="space-y-4">
+                        <form onSubmit={handleCreateAdmin} className="space-y-4">
                             <div>
                                 <Label htmlFor="admin-email">Admin Email</Label>
-                                <Input id="admin-email" type="email" placeholder="admin@example.com" />
+                                <Input id="admin-email" name="admin-email" type="email" placeholder="admin@example.com" />
                             </div>
                             <Button type="submit"><PlusCircle className="mr-2 h-4 w-4" /> Create Admin</Button>
                         </form>
@@ -110,12 +166,12 @@ export default function AdminDashboard() {
                         <CardDescription>The following users have admin privileges.</CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-3">
-                        {admins.map(admin => (
-                            <div key={admin.email} className="flex items-center gap-3 p-3 bg-secondary rounded-md">
+                        {admins.length > 0 ? admins.map(admin => (
+                            <div key={admin.uid} className="flex items-center gap-3 p-3 bg-secondary rounded-md">
                                 <Shield className="h-5 w-5 text-primary"/>
                                 <span className="font-medium">{admin.email}</span>
                             </div>
-                        ))}
+                        )) : <p>No other admins found.</p>}
                     </CardContent>
                 </Card>
             </div>
@@ -125,11 +181,18 @@ export default function AdminDashboard() {
            <Card>
             <CardHeader>
               <CardTitle>All Registered Teams</CardTitle>
-              <CardDescription>View and manage all teams across all institutes.</CardDescription>
+              <CardDescription>View and manage all teams across all institutes. ({teams.length} teams)</CardDescription>
             </CardHeader>
             <CardContent>
-                {/* All Teams Table would go here */}
-                <p>A table with all team data will be displayed here.</p>
+                {teams.length > 0 ? (
+                  <ul className="space-y-2">
+                      {teams.map(team => (
+                          <li key={team.id}>
+                              <strong>{team.name}</strong> ({team.institute}) - {team.members.length + 1} members
+                          </li>
+                      ))}
+                  </ul>
+                ): <p>No teams have registered yet.</p>}
             </CardContent>
           </Card>
         </TabsContent>

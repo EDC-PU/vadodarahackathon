@@ -9,6 +9,8 @@ export interface UserProfile {
   institute?: string;
   teamId?: string;
   enrollmentNumber?: string;
+  department?: string;
+  gender?: "Male" | "Female" | "Other";
 }
 
 export interface TeamMember {
@@ -23,7 +25,11 @@ export interface TeamMember {
 export interface Team {
   id: string;
   name: string;
-  leader: UserProfile;
+  leader: {
+    uid: string;
+    name: string;
+    email: string;
+  };
   institute: string;
   department: string;
   category: "Software" | "Hardware";
