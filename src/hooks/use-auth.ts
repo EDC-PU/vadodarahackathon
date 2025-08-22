@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { onAuthStateChanged, signOut, User as FirebaseUser } from 'firebase/auth';
-import { doc, getDoc, onSnapshot, collection, query, where, getDocs, writeBatch, updateDoc } from 'firebase/firestore';
+import { doc, getDoc, onSnapshot, collection, query, where, getDocs, writeBatch, updateDoc, setDoc } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import { UserProfile, Team } from '@/lib/types';
 import { useRouter } from 'next/navigation';
@@ -118,52 +118,60 @@ export function useAuth() {
       });
       redirectToDashboard(userProfile);
     } else {
-        const team = await findTeamByMemberEmail(loggedInUser.email!);
-        if (team) {
-            const memberDetails = team.members.find(m => m.email === loggedInUser.email)!;
-            const newProfile: UserProfile = {
-                uid: loggedInUser.uid,
-                name: loggedInUser.displayName || memberDetails.name,
-                email: loggedInUser.email!,
-                role: 'member',
-                institute: team.institute,
-                // These will be filled out on the complete-profile page
-                department: '',
-                enrollmentNumber: '',
-                contactNumber: '',
-                gender: "Other", 
-                teamId: team.id,
-            };
+        // User document doesn't exist for the current UID.
+        // Let's check if a user profile exists with this email (e.g., created by an admin).
+        const usersRef = collection(db, "users");
+        const q = query(usersRef, where("email", "==", loggedInUser.email!));
+        const userSnapshot = await getDocs(q);
+
+        if (!userSnapshot.empty) {
+            // A profile with this email exists. Let's link it to the new auth UID.
+            const existingUserDoc = userSnapshot.docs[0];
+            const userProfile = existingUserDoc.data() as UserProfile;
+
+            // This handles cases where the doc ID is not the same as the auth UID (e.g. SPOC creation)
+            const oldDocRef = doc(db, 'users', existingUserDoc.id);
+            const newDocRef = doc(db, 'users', loggedInUser.uid);
+            const batch = writeBatch(db);
             
-            await setDoc(userDocRef, newProfile);
-            
-            toast({ title: "Welcome!", description: "Please complete your profile information." });
-            redirectToDashboard(newProfile);
+            batch.set(newDocRef, { ...userProfile, uid: loggedInUser.uid, photoURL: loggedInUser.photoURL || userProfile.photoURL || '' });
+            // Only delete the old doc if the ID is different.
+            if (existingUserDoc.id !== loggedInUser.uid) {
+               batch.delete(oldDocRef);
+            }
+            await batch.commit();
+
+            toast({ title: "Login Successful", description: "Redirecting to your dashboard..." });
+            redirectToDashboard({ ...userProfile, uid: loggedInUser.uid });
 
         } else {
-            const usersRef = collection(db, "users");
-            const q = query(usersRef, where("email", "==", loggedInUser.email!));
-            const userSnapshot = await getDocs(q);
-
-            if (!userSnapshot.empty) {
-                const existingUserDoc = userSnapshot.docs[0];
-                const userProfile = existingUserDoc.data() as UserProfile;
-
-                if (existingUserDoc.id !== loggedInUser.uid) {
-                    const oldDocRef = doc(db, 'users', existingUserDoc.id);
-                    const newDocRef = doc(db, 'users', loggedInUser.uid);
-                    const batch = writeBatch(db);
-                    batch.set(newDocRef, {...userProfile, uid: loggedInUser.uid });
-                    batch.delete(oldDocRef);
-                    await batch.commit();
-                    redirectToDashboard({...userProfile, uid: loggedInUser.uid });
-                } else {
-                    redirectToDashboard(userProfile);
-                }
+            // No profile exists. Maybe they are a newly added team member?
+            const team = await findTeamByMemberEmail(loggedInUser.email!);
+            if (team) {
+                const memberDetails = team.members.find(m => m.email === loggedInUser.email)!;
+                const newProfile: UserProfile = {
+                    uid: loggedInUser.uid,
+                    name: loggedInUser.displayName || memberDetails.name,
+                    email: loggedInUser.email!,
+                    role: 'member',
+                    institute: team.institute,
+                    // These will be filled out on the complete-profile page
+                    department: '',
+                    enrollmentNumber: '',
+                    contactNumber: '',
+                    gender: "Other", 
+                    teamId: team.id,
+                };
+                
+                await setDoc(userDocRef, newProfile);
+                
+                toast({ title: "Welcome!", description: "Please complete your profile information." });
+                redirectToDashboard(newProfile);
             } else {
+                 // No profile and not a team member. They must register.
                  toast({
                     title: "Registration Incomplete",
-                    description: "Your account is not associated with a team. Please register first or ask your team leader to add you.",
+                    description: "Your account is not associated with a team or role. Please register first.",
                     variant: "destructive",
                 });
                 await signOut(auth);
