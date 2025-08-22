@@ -108,7 +108,7 @@ export default function LandingPage() {
         <div className="container flex h-20 max-w-7xl items-center justify-between">
           <Link href="/" className="flex items-center gap-2 font-bold text-xl" prefetch={false}>
              <Image src="https://www.pierc.org/vhlogo.png" alt="Vadodara Hackathon Logo" width={48} height={48}/>
-             <span className="hidden sm:inline">Vadodara Hackathon 6.0</span>
+             <span className="hidden sm:inline">Vadodara Hackathon</span>
           </Link>
           <nav className="hidden md:flex items-center gap-1">
             {navLinks.map((link) => (
@@ -123,7 +123,7 @@ export default function LandingPage() {
               {authLoading ? (
                   <Skeleton className="h-10 w-40 rounded-full" />
               ) : user ? (
-                  <Button onClick={handleDashboardRedirect} className="rounded-full glass-button hover:scale-105 transition-transform">
+                  <Button onClick={handleDashboardRedirect} className="rounded-full glass-button hover:scale-105 transition-transform !text-foreground">
                       <LayoutDashboard className="mr-2 h-4 w-4" /> Go to Dashboard
                   </Button>
               ) : (
@@ -131,7 +131,7 @@ export default function LandingPage() {
                       <Button variant="ghost" asChild className="rounded-full">
                         <Link href="/login">Login</Link>
                       </Button>
-                      <Button asChild className="rounded-full glass-button hover:scale-105 transition-transform">
+                      <Button asChild className="rounded-full glass-button hover:scale-105 transition-transform !text-foreground">
                         <Link href="/register">Register <MoveRight className="ml-2 h-4 w-4" /></Link>
                       </Button>
                   </>
@@ -148,14 +148,14 @@ export default function LandingPage() {
 
           <div className="container max-w-7xl grid md:grid-cols-2 items-center gap-8 text-center md:text-left">
             <div className="space-y-6 scroll-animate in-view">
-              <h1 className="text-4xl md:text-6xl font-bold tracking-tighter bg-clip-text text-transparent bg-gradient-to-r from-primary to-accent">
+              <h1 className="text-4xl md:text-6xl font-bold tracking-tighter bg-clip-text text-transparent bg-gradient-to-r from-amber-400 via-primary to-accent">
                 Your Gateway to Smart India Hackathon 2025
               </h1>
               <p className="max-w-xl mx-auto md:mx-0 text-lg md:text-xl text-foreground/80">
                 Join us for an electrifying competition of innovation, collaboration, and groundbreaking solutions. Build the future, one line of code at a time.
               </p>
               <div className="flex flex-col sm:flex-row justify-center md:justify-start gap-4">
-                <Button size="lg" asChild className="rounded-full glass-button hover:scale-105 transition-transform">
+                <Button size="lg" asChild className="rounded-full glass-button hover:scale-105 transition-transform !text-foreground shadow-[0_0_25px_hsl(var(--primary)/0.2)]">
                   <Link href="/register">
                     <Code className="mr-2 h-5 w-5" /> Register Now
                   </Link>
@@ -168,7 +168,7 @@ export default function LandingPage() {
               </div>
             </div>
             <div className="relative h-96 w-full flex items-center justify-center">
-                 <Image src="https://placehold.co/600x600.png" alt="3D Character" layout="fill" objectFit="contain" data-ai-hint="futuristic coder robot" className="animate-float" />
+                 <Image src="https://placehold.co/600x600.png" alt="3D Character" layout="fill" objectFit="contain" data-ai-hint="futuristic coder orange glow" className="animate-float" />
             </div>
           </div>
         </section>
@@ -188,7 +188,7 @@ export default function LandingPage() {
                 </p>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                     <Card className="glass-card p-6 text-center transform hover:-translate-y-2 transition-transform duration-300">
-                        <Trophy className="h-10 w-10 text-yellow-400 mx-auto mb-4" />
+                        <Trophy className="h-10 w-10 text-amber-400 mx-auto mb-4" />
                         <CardTitle className="text-2xl mt-2">Winners Circle</CardTitle>
                         <CardContent className="mt-4 text-foreground/80 p-0">
                             <p>Direct recommendation to SIH 2025 and grand felicitation.</p>

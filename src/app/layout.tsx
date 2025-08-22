@@ -10,8 +10,8 @@ const fontInter = Inter({
 })
 
 export const metadata: Metadata = {
-  title: 'Vadodara Hackathon 6.0 Portal',
-  description: 'Welcome to the Vadodara Hackathon 6.0, hosted by Parul University, PIERC.',
+  title: 'Vadodara Hackathon Portal',
+  description: 'Welcome to the Vadodara Hackathon, hosted by Parul University, PIERC.',
 };
 
 export default function RootLayout({
@@ -23,7 +23,7 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body
         className={cn(
-          "min-h-screen bg-background font-body antialiased",
+          "min-h-screen bg-background font-body antialiased dark",
           fontInter.variable
         )}
         suppressHydrationWarning={true}
