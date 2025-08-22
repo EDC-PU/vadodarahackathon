@@ -18,12 +18,10 @@ import { Card, CardContent } from "@/components/ui/card";
 import { useState } from "react";
 import { Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { auth, db } from "@/lib/firebase";
-import { signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, User } from "firebase/auth";
-import { doc, getDoc, setDoc } from "firebase/firestore";
+import { auth } from "@/lib/firebase";
+import { signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from "firebase/auth";
 import { Separator } from "./ui/separator";
 import { Chrome } from "lucide-react";
-import { UserProfile } from "@/lib/types";
 import { useAuth } from "@/hooks/use-auth";
 
 
@@ -36,7 +34,7 @@ export function LoginForm() {
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const { toast } = useToast();
-  const { redirectToDashboard } = useAuth();
+  const { handleLogin } = useAuth();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -45,29 +43,6 @@ export function LoginForm() {
       password: "",
     },
   });
-
-  const handleLogin = async (user: User) => {
-    const userDocRef = doc(db, "users", user.uid);
-    const userDoc = await getDoc(userDocRef);
-
-    if (userDoc.exists()) {
-      const userProfile = userDoc.data() as UserProfile;
-      toast({
-        title: "Login Successful",
-        description: "Redirecting to your dashboard...",
-      });
-      redirectToDashboard(userProfile);
-    } else {
-      // This is a new sign in via Google that doesn't have a profile yet.
-      // Admins are created in the console, so they should always have a profile.
-      toast({
-        title: "Registration Incomplete",
-        description: "This Google account is not registered. Please sign up first.",
-        variant: "destructive",
-      });
-      // We don't create a user profile here because we need more details from the registration form.
-    }
-  }
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
@@ -164,3 +139,5 @@ export function LoginForm() {
     </Card>
   );
 }
+
+    

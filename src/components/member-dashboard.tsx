@@ -1,54 +1,61 @@
+
 "use client";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { User, Users, Phone, Mail, FileText, Trophy, Calendar, Loader2, AlertCircle } from "lucide-react";
 import { useEffect, useState } from "react";
-import { auth, db } from "@/lib/firebase";
-import { onAuthStateChanged } from "firebase/auth";
-import { doc, getDoc } from "firebase/firestore";
+import { db } from "@/lib/firebase";
+import { doc, getDoc, onSnapshot, collection, query, where } from "firebase/firestore";
 import { Team, UserProfile, Spoc } from "@/lib/types";
 import { Alert, AlertDescription, AlertTitle } from "./ui/alert";
+import { useAuth } from "@/hooks/use-auth";
 
 export default function MemberDashboard() {
-  const [user, setUser] = useState<UserProfile | null>(null);
+  const { user, loading: authLoading } = useAuth();
   const [team, setTeam] = useState<Team | null>(null);
   const [spoc, setSpoc] = useState<Spoc | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-      if (currentUser) {
-        const userDocRef = doc(db, "users", currentUser.uid);
-        const userDoc = await getDoc(userDocRef);
-
-        if (userDoc.exists()) {
-          const userData = userDoc.data() as UserProfile;
-          setUser(userData);
-
-          if (userData.teamId) {
-            const teamDocRef = doc(db, "teams", userData.teamId);
-            const teamDoc = await getDoc(teamDocRef);
-            if (teamDoc.exists()) {
-              setTeam({ id: teamDoc.id, ...teamDoc.data() } as Team);
-
-              // Assuming SPOC is assigned per institute and their data is in a 'spocs' collection
-              // This is a simplification. A real app might have a more complex lookup.
-              const spocQuery = doc(db, "spocs", teamDoc.data().institute); // Just an example
-              const spocDoc = await getDoc(spocQuery);
-              if (spocDoc.exists()) {
-                setSpoc(spocDoc.data() as Spoc);
-              }
-            }
-          }
+    let unsubscribeTeam: () => void = () => {};
+    
+    const fetchSpoc = async (institute: string) => {
+        // Simplified: Assuming one SPOC per institute, stored in 'users' with role 'spoc'
+        const spocsQuery = query(collection(db, "users"), where("institute", "==", institute), where("role", "==", "spoc"));
+        const spocSnapshot = await getDoc(spocsQuery.docs[0].ref); // Get first one
+        if (spocSnapshot.exists()) {
+             setSpoc(spocSnapshot.data() as Spoc);
         }
-      }
-      setLoading(false);
-    });
+    };
 
-    return () => unsubscribe();
-  }, []);
+    if (user && user.teamId) {
+        const teamDocRef = doc(db, "teams", user.teamId);
+        unsubscribeTeam = onSnapshot(teamDocRef, (teamDoc) => {
+            if (teamDoc.exists()) {
+                const teamData = { id: teamDoc.id, ...teamDoc.data() } as Team;
+                setTeam(teamData);
+                if (teamData.institute) {
+                    fetchSpoc(teamData.institute);
+                }
+            } else {
+                // Team document was deleted
+                setTeam(null);
+            }
+             setLoading(false);
+        }, (error) => {
+            console.error("Error fetching team data:", error);
+            setLoading(false);
+        });
+    } else {
+        setLoading(false);
+    }
+
+    return () => {
+        unsubscribeTeam();
+    };
+  }, [user]);
   
-  if (loading) {
+  if (authLoading || loading) {
     return (
       <div className="flex justify-center items-center h-screen">
         <Loader2 className="h-8 w-8 animate-spin" />
@@ -61,8 +68,8 @@ export default function MemberDashboard() {
         <div className="p-4 sm:p-6 lg:p-8">
             <Alert variant="destructive">
                 <AlertCircle className="h-4 w-4" />
-                <AlertTitle>Error</AlertTitle>
-                <AlertDescription>Could not load your data. You may not be part of a team.</AlertDescription>
+                <AlertTitle>No Team Found</AlertTitle>
+                <AlertDescription>You are not currently part of a team. If you believe this is an error, please contact your team leader.</AlertDescription>
             </Alert>
         </div>
     );
@@ -112,7 +119,7 @@ export default function MemberDashboard() {
                             </div>
                             <div className="flex items-center gap-3">
                                 <Phone className="h-5 w-5 text-primary"/>
-                                <a href={`tel:${spoc.phone}`} className="text-muted-foreground hover:text-primary">{spoc.phone}</a>
+                                <a href={`tel:${spoc.contactNumber}`} className="text-muted-foreground hover:text-primary">{spoc.contactNumber}</a>
                             </div>
                         </>
                     ) : (
@@ -142,3 +149,5 @@ export default function MemberDashboard() {
     </div>
   );
 }
+
+    

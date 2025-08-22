@@ -1,3 +1,4 @@
+
 "use client";
 
 import { Button } from "@/components/ui/button";
@@ -10,50 +11,44 @@ import { Label } from "./ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { useEffect, useState } from "react";
 import { auth, db } from "@/lib/firebase";
-import { onAuthStateChanged } from "firebase/auth";
-import { doc, getDoc, onSnapshot, updateDoc, arrayUnion, arrayRemove } from "firebase/firestore";
+import { doc, onSnapshot, updateDoc, arrayUnion, arrayRemove, collection, query, where, getDocs, writeBatch } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/use-auth";
 
 export default function LeaderDashboard() {
-  const [user, setUser] = useState<UserProfile | null>(null);
+  const { user, loading: authLoading } = useAuth();
   const [team, setTeam] = useState<Team | null>(null);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
   useEffect(() => {
-    const unsubscribeAuth = onAuthStateChanged(auth, async (currentUser) => {
-      if (currentUser) {
-        const userDocRef = doc(db, "users", currentUser.uid);
-        const userDoc = await getDoc(userDocRef);
-        if (userDoc.exists()) {
-          const userData = userDoc.data() as UserProfile;
-          setUser(userData);
-          if (userData.teamId) {
-            const teamDocRef = doc(db, "teams", userData.teamId);
-            const unsubscribeSnapshot = onSnapshot(teamDocRef, (doc) => {
-              if (doc.exists()) {
+    if (user?.teamId) {
+        const teamDocRef = doc(db, "teams", user.teamId);
+        const unsubscribe = onSnapshot(teamDocRef, (doc) => {
+            if (doc.exists()) {
                 setTeam({ id: doc.id, ...doc.data() } as Team);
-              } else {
+            } else {
                 setTeam(null);
-              }
-              setLoading(false);
-            });
-            return () => unsubscribeSnapshot();
-          }
-        }
-      }
-      setLoading(false);
-    });
-    return () => unsubscribeAuth();
-  }, []);
+            }
+            setLoading(false);
+        });
+        return () => unsubscribe();
+    } else {
+        setLoading(false);
+    }
+  }, [user]);
 
   const handleAddMember = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!team) return;
 
+    // In a real app, this should send an invitation link.
+    // For now, we'll just add them by email, assuming they'll sign up with it later.
+    // The `useAuth` hook will handle associating them with the team on their first login.
     const formData = new FormData(event.currentTarget);
     const newMember: TeamMember = {
-      uid: Math.random().toString(36).substring(2), // temporary UID
+      // The UID will be properly set when the user first signs up/logs in.
+      uid: `pending-${formData.get("new-member-email") as string}`,
       name: formData.get("new-member-name") as string,
       email: formData.get("new-member-email") as string,
       enrollmentNumber: formData.get("new-member-enrollment") as string,
@@ -66,7 +61,7 @@ export default function LeaderDashboard() {
       await updateDoc(teamDocRef, {
         members: arrayUnion(newMember)
       });
-      toast({ title: "Success", description: "Team member added." });
+      toast({ title: "Success", description: "Team member added. They will be able to access the dashboard once they log in." });
       (event.target as HTMLFormElement).reset();
     } catch (error) {
       console.error("Error adding member:", error);
@@ -76,19 +71,36 @@ export default function LeaderDashboard() {
 
   const handleRemoveMember = async (memberToRemove: TeamMember) => {
     if (!team) return;
+
     try {
+        const batch = writeBatch(db);
         const teamDocRef = doc(db, "teams", team.id);
-        await updateDoc(teamDocRef, {
+
+        // 1. Remove member from the team's array
+        batch.update(teamDocRef, {
             members: arrayRemove(memberToRemove)
         });
+
+        // 2. Find the user by email and clear their teamId
+        const usersRef = collection(db, "users");
+        const q = query(usersRef, where("email", "==", memberToRemove.email));
+        const querySnapshot = await getDocs(q);
+
+        if (!querySnapshot.empty) {
+            const userDoc = querySnapshot.docs[0];
+            const userDocRef = doc(db, "users", userDoc.id);
+            batch.update(userDocRef, { teamId: "" });
+        }
+
+        await batch.commit();
         toast({ title: "Success", description: "Team member removed." });
     } catch (error) {
         console.error("Error removing member:", error);
         toast({ title: "Error", description: "Failed to remove member.", variant: "destructive" });
     }
   };
-  
-  if (loading) {
+
+  if (authLoading || loading) {
     return (
       <div className="flex justify-center items-center h-screen">
         <Loader2 className="h-8 w-8 animate-spin" />
@@ -102,7 +114,7 @@ export default function LeaderDashboard() {
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
           <AlertTitle>Error</AlertTitle>
-          <AlertDescription>Could not load your team data. Please try again later.</AlertDescription>
+          <AlertDescription>Could not load your team data. Please try again later or contact support if you believe this is an error.</AlertDescription>
         </Alert>
       </div>
     );
@@ -234,8 +246,8 @@ export default function LeaderDashboard() {
                             <p className="text-sm text-muted-foreground">{user.email}</p>
                         </div>
                     </div>
-                    {team.members.map(member => (
-                        <div key={member.uid} className="flex items-center gap-4 p-3 border rounded-md">
+                    {team.members.map((member, index) => (
+                        <div key={member.email || index} className="flex items-center gap-4 p-3 border rounded-md">
                             <User className="h-6 w-6 text-muted-foreground"/>
                             <div className="flex-1">
                                 <p className="font-semibold">{member.name}</p>
@@ -253,3 +265,5 @@ export default function LeaderDashboard() {
     </div>
   );
 }
+
+    
