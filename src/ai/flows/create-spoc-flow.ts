@@ -9,6 +9,7 @@ import { z } from 'genkit';
 import { db } from '@/lib/firebase';
 import { doc, setDoc } from 'firebase/firestore';
 import nodemailer from 'nodemailer';
+import admin from '@/lib/firebase-admin';
 
 // Helper to generate a random password
 const generatePassword = (length = 10) => {
@@ -85,8 +86,19 @@ const createSpocFlow = ai.defineFlow(
   async (input) => {
     try {
       const tempPassword = generatePassword();
-      const uid = `spoc_${Date.now()}_${Math.random().toString(36).substring(2)}`;
+      
+      // 1. Create Firebase Auth user
+      const userRecord = await admin.auth().createUser({
+          email: input.email,
+          emailVerified: true,
+          password: tempPassword,
+          displayName: input.name,
+          disabled: false,
+      });
+
+      const uid = userRecord.uid;
        
+      // 2. Create user profile in Firestore
       const userDocRef = doc(db, 'users', uid);
       await setDoc(userDocRef, {
         uid: uid,
@@ -99,20 +111,24 @@ const createSpocFlow = ai.defineFlow(
         passwordChanged: false, // User must change this password
       });
 
-      // Send email with credentials
+      // 3. Send email with credentials
       await sendSpocCredentialsEmail(input.name, input.email, tempPassword, input.institute);
 
       return {
         success: true,
-        message: `SPOC profile created for ${input.name} and an email has been sent. IMPORTANT: Manually create Auth user in Firebase Console with Email: ${input.email}, UID: ${uid}, and Temp Password: ${tempPassword}`,
+        message: `SPOC profile and login for ${input.name} created. An email with credentials has been sent.`,
         uid: uid,
       };
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error creating SPOC:", error);
-      const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
-       if ((error as any).code === 'EAUTH' || errorMessage.toLowerCase().includes('invalid login')) {
-             return { success: false, message: 'Could not send email. Please check your GMAIL_EMAIL and GMAIL_PASSWORD in the .env file. You may need to use a Google App Password.' };
-        }
+      let errorMessage = error.message || "An unknown error occurred.";
+      if (error.code === 'auth/email-already-exists') {
+          errorMessage = 'A user with this email already exists in Firebase Authentication.';
+      } else if ((error as any).code === 'EAUTH' || errorMessage.toLowerCase().includes('invalid login')) {
+          errorMessage = 'Could not send email. Please check your GMAIL_EMAIL and GMAIL_PASSWORD in the .env file. You may need to use a Google App Password.';
+      } else if (error.code === 'auth/invalid-password') {
+          errorMessage = `The generated password is invalid: ${error.message}`;
+      }
       
       return { success: false, message: `Failed to create SPOC: ${errorMessage}` };
     }

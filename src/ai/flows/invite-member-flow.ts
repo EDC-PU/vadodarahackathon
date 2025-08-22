@@ -8,6 +8,8 @@ import { z } from 'genkit';
 import { db } from '@/lib/firebase';
 import { doc, updateDoc, arrayUnion } from 'firebase/firestore';
 import nodemailer from 'nodemailer';
+import admin from '@/lib/firebase-admin';
+
 
 // Helper to generate a random password
 const generatePassword = (length = 10) => {
@@ -20,21 +22,20 @@ const generatePassword = (length = 10) => {
 };
 
 
+export type InviteMemberInput = z.infer<typeof InviteMemberInputSchema>;
 const InviteMemberInputSchema = z.object({
   teamId: z.string().describe("The ID of the team to add the member to."),
   teamName: z.string().describe("The name of the team."),
   memberName: z.string().describe("The full name of the new member."),
   memberEmail: z.string().email().describe("The email address of the new member."),
 });
-export type InviteMemberInput = z.infer<typeof InviteMemberInputSchema>;
 
-
+export type InviteMemberOutput = z.infer<typeof InviteMemberOutputSchema>;
 const InviteMemberOutputSchema = z.object({
   success: z.boolean(),
   message: z.string(),
   uid: z.string().optional(),
 });
-export type InviteMemberOutput = z.infer<typeof InviteMemberOutputSchema>;
 
 
 async function sendCredentialsEmail(name: string, email: string, password: string, teamName: string) {
@@ -89,11 +90,18 @@ const inviteMemberFlow = ai.defineFlow(
     try {
         const tempPassword = generatePassword();
         
-        // This is a workaround for the demo. Instead of programmatically creating the user,
-        // we create a placeholder in Firestore and instruct the Leader to create the Auth account.
-        const uid = `member_${Date.now()}_${Math.random().toString(36).substring(2)}`;
+        // 1. Create Firebase Auth user
+        const userRecord = await admin.auth().createUser({
+            email: input.memberEmail,
+            emailVerified: true,
+            password: tempPassword,
+            displayName: input.memberName,
+            disabled: false,
+        });
+
+        const uid = userRecord.uid;
        
-        // Add member to the team's array in Firestore
+        // 2. Add member to the team's array in Firestore
         const teamDocRef = doc(db, "teams", input.teamId);
         await updateDoc(teamDocRef, {
             members: arrayUnion({
@@ -107,25 +115,23 @@ const inviteMemberFlow = ai.defineFlow(
             })
         });
 
-        // Send email with credentials
+        // 3. Send email with credentials
         await sendCredentialsEmail(input.memberName, input.memberEmail, tempPassword, input.teamName);
 
         return {
             success: true,
-            message: `Invitation sent to ${input.memberName}. IMPORTANT: Please instruct them to use this temporary password: ${tempPassword}`,
+            message: `Invitation sent to ${input.memberName}. Their account has been created.`,
             uid: uid,
         };
 
-    } catch (error) {
+    } catch (error: any) {
         console.error("Error inviting member:", error);
-        const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
+        let errorMessage = error.message || "An unknown error occurred.";
         
-        if (errorMessage.includes('auth/email-already-in-use')) {
-            return { success: false, message: 'This email is already registered.' };
-        }
-        // Catch nodemailer specific auth errors
-        if ((error as any).code === 'EAUTH' || errorMessage.toLowerCase().includes('invalid login')) {
-             return { success: false, message: 'Could not send email. Please check your GMAIL_EMAIL and GMAIL_PASSWORD in the .env file. You may need to use a Google App Password.' };
+        if (error.code === 'auth/email-already-exists') {
+            errorMessage = 'This email is already registered. Please check if they are already part of another team.';
+        } else if ((error as any).code === 'EAUTH' || errorMessage.toLowerCase().includes('invalid login')) {
+             errorMessage = 'Could not send email. Please check your GMAIL_EMAIL and GMAIL_PASSWORD in the .env file. You may need to use a Google App Password.';
         }
         
         return { success: false, message: `Failed to invite member: ${errorMessage}` };
