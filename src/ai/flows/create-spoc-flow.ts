@@ -76,10 +76,18 @@ const createSpocFlow = ai.defineFlow(
   },
   async (input) => {
     console.log("createSpocFlow started with input:", input);
+    
+    const adminAuth = getAdminAuth();
+    const adminDb = getAdminDb();
+
+    if (!adminAuth || !adminDb) {
+      const errorMessage = "Firebase Admin SDK is not initialized. Please check server-side environment variables.";
+      console.error(errorMessage);
+      return { success: false, message: `Failed to create SPOC: ${errorMessage}` };
+    }
+
     try {
       const tempPassword = generatePassword();
-      const adminAuth = getAdminAuth();
-      const adminDb = getAdminDb();
       
       console.log("Creating Firebase Auth user...");
       // 1. Create Firebase Auth user

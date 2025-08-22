@@ -26,6 +26,13 @@ const manageTeamBySpocFlow = ai.defineFlow(
     console.log(`manageTeamBySpocFlow started. TeamID: ${teamId}, Action: ${action}, MemberEmail: ${memberEmail}`);
     const adminDb = getAdminDb();
     const adminAuth = getAdminAuth();
+
+    if (!adminAuth || !adminDb) {
+      const errorMessage = "Firebase Admin SDK is not initialized. Please check server-side environment variables.";
+      console.error(errorMessage);
+      return { success: false, message: `Failed to ${action.replace('-', ' ')}: ${errorMessage}` };
+    }
+    
     const teamDocRef = adminDb.collection('teams').doc(teamId);
 
     try {
