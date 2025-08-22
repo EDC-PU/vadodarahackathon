@@ -7,7 +7,7 @@ import { Loader2, Download, Save, Pencil, X, Trash2, MinusCircle } from "lucide-
 import { useEffect, useState, useMemo } from "react";
 import { db } from "@/lib/firebase";
 import { collection, onSnapshot, doc, updateDoc } from "firebase/firestore";
-import { Team, UserProfile, ProblemStatementCategory, TeamMember } from "@/lib/types";
+import { Team, UserProfile, ProblemStatementCategory, TeamMember, ProblemStatement } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { exportTeams } from "@/ai/flows/export-teams-flow";
@@ -32,6 +32,7 @@ type CategoryFilter = ProblemStatementCategory | "All Categories";
 export default function AllTeamsPage() {
   const [teams, setTeams] = useState<Team[]>([]);
   const [users, setUsers] = useState<UserProfile[]>([]);
+  const [problemStatements, setProblemStatements] = useState<ProblemStatement[]>([]);
   const [loading, setLoading] = useState(true);
   const [isExporting, setIsExporting] = useState(false);
   
@@ -49,6 +50,7 @@ export default function AllTeamsPage() {
     setLoading(true);
     const teamsCollection = collection(db, 'teams');
     const usersCollection = collection(db, 'users');
+    const problemStatementsCollection = collection(db, 'problemStatements');
 
     const unsubscribeTeams = onSnapshot(teamsCollection, (snapshot) => {
       const teamsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Team));
@@ -65,16 +67,26 @@ export default function AllTeamsPage() {
       console.error("Error fetching users:", error);
       toast({ title: "Error", description: "Failed to fetch user data.", variant: "destructive" });
     });
+    
+    const unsubscribeProblemStatements = onSnapshot(problemStatementsCollection, (snapshot) => {
+      const psData = snapshot.docs.map(doc => ({id: doc.id, ...doc.data()} as ProblemStatement));
+      setProblemStatements(psData);
+    }, (error) => {
+      console.error("Error fetching problem statements:", error);
+      toast({ title: "Error", description: "Failed to fetch problem statements.", variant: "destructive" });
+    });
 
-    // Wait for both snapshots to load initially
+    // Wait for all snapshots to load initially
     Promise.all([
         new Promise(res => { const unsub = onSnapshot(teamsCollection, () => { res(true); unsub(); }); }),
-        new Promise(res => { const unsub = onSnapshot(usersCollection, () => { res(true); unsub(); }); })
+        new Promise(res => { const unsub = onSnapshot(usersCollection, () => { res(true); unsub(); }); }),
+        new Promise(res => { const unsub = onSnapshot(problemStatementsCollection, () => { res(true); unsub(); }); })
     ]).then(() => setLoading(false));
 
     return () => {
       unsubscribeTeams();
       unsubscribeUsers();
+      unsubscribeProblemStatements();
     };
   }, [toast]);
 
@@ -179,6 +191,7 @@ export default function AllTeamsPage() {
             return {
                 ...member,
                 uid: memberProfile?.uid,
+                email: memberProfile?.email || member.email,
                 enrollmentNumber: memberProfile?.enrollmentNumber || member.enrollmentNumber || 'N/A',
                 contactNumber: memberProfile?.contactNumber || member.contactNumber || 'N/A',
                 yearOfStudy: memberProfile?.yearOfStudy || 'N/A',
@@ -199,9 +212,11 @@ export default function AllTeamsPage() {
             },
             ...membersWithDetails.map(m => ({...m, isLeader: false})),
         ];
+        const problemStatement = problemStatements.find(ps => ps.id === team.problemStatementId);
         return {
             ...team,
             allMembers,
+            problemStatementId: problemStatement?.problemStatementId,
         };
     });
   };
@@ -257,7 +272,9 @@ export default function AllTeamsPage() {
                 <TableHeader>
                     <TableRow>
                         <TableHead>Team Name</TableHead>
+                        <TableHead>Problem Statement</TableHead>
                         <TableHead>Member Name</TableHead>
+                        <TableHead>Email</TableHead>
                         <TableHead>Enrollment No.</TableHead>
                         <TableHead>Contact No.</TableHead>
                         <TableHead>Year</TableHead>
@@ -270,33 +287,37 @@ export default function AllTeamsPage() {
                        team.allMembers.map((member, memberIndex) => (
                          <TableRow key={`${team.id}-${memberIndex}`}>
                             {memberIndex === 0 && (
-                                <TableCell rowSpan={team.allMembers.length} className="font-medium align-top">
-                                    {editingTeam?.id === team.id ? (
-                                        <div className="flex items-center gap-2">
-                                            <Input 
-                                                value={editingTeam.name}
-                                                onChange={(e) => setEditingTeam({ ...editingTeam, name: e.target.value })}
-                                                className="w-40 h-8"
-                                                disabled={isSaving === team.id}
-                                            />
-                                            <Button size="icon" className="h-8 w-8" onClick={() => handleSaveTeamName(team.id)} disabled={isSaving === team.id}>
-                                                {isSaving === team.id ? <Loader2 className="h-4 w-4 animate-spin"/> : <Save className="h-4 w-4"/>}
-                                            </Button>
-                                            <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setEditingTeam(null)} disabled={isSaving === team.id}>
-                                                <X className="h-4 w-4"/>
-                                            </Button>
-                                        </div>
-                                    ) : (
-                                        <div className="flex items-center gap-2 group">
-                                            <span>{team.name}</span>
-                                            <Button size="icon" variant="ghost" className="h-7 w-7 opacity-0 group-hover:opacity-100" onClick={() => handleEditTeamName(team.id)}>
-                                                <Pencil className="h-4 w-4 text-muted-foreground"/>
-                                            </Button>
-                                        </div>
-                                    )}
-                                </TableCell>
+                                <>
+                                    <TableCell rowSpan={team.allMembers.length} className="font-medium align-top">
+                                        {editingTeam?.id === team.id ? (
+                                            <div className="flex items-center gap-2">
+                                                <Input 
+                                                    value={editingTeam.name}
+                                                    onChange={(e) => setEditingTeam({ ...editingTeam, name: e.target.value })}
+                                                    className="w-40 h-8"
+                                                    disabled={isSaving === team.id}
+                                                />
+                                                <Button size="icon" className="h-8 w-8" onClick={() => handleSaveTeamName(team.id)} disabled={isSaving === team.id}>
+                                                    {isSaving === team.id ? <Loader2 className="h-4 w-4 animate-spin"/> : <Save className="h-4 w-4"/>}
+                                                </Button>
+                                                <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setEditingTeam(null)} disabled={isSaving === team.id}>
+                                                    <X className="h-4 w-4"/>
+                                                </Button>
+                                            </div>
+                                        ) : (
+                                            <div className="flex items-center gap-2 group">
+                                                <span>{team.name}</span>
+                                                <Button size="icon" variant="ghost" className="h-7 w-7 opacity-0 group-hover:opacity-100" onClick={() => handleEditTeamName(team.id)}>
+                                                    <Pencil className="h-4 w-4 text-muted-foreground"/>
+                                                </Button>
+                                            </div>
+                                        )}
+                                    </TableCell>
+                                    <TableCell rowSpan={team.allMembers.length} className="align-top">{team.problemStatementId || 'Not Selected'}</TableCell>
+                                </>
                             )}
                             <TableCell>{member.name} {member.isLeader && '(Leader)'}</TableCell>
+                            <TableCell>{member.email}</TableCell>
                             <TableCell>{member.enrollmentNumber}</TableCell>
                             <TableCell>{member.contactNumber}</TableCell>
                             <TableCell>{member.yearOfStudy}</TableCell>
