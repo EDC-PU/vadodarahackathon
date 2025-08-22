@@ -109,6 +109,8 @@ export default function AllTeamsPage() {
                 ...member,
                 enrollmentNumber: memberProfile?.enrollmentNumber || member.enrollmentNumber || 'N/A',
                 contactNumber: memberProfile?.contactNumber || member.contactNumber || 'N/A',
+                yearOfStudy: memberProfile?.yearOfStudy || 'N/A',
+                semester: memberProfile?.semester || 'N/A',
             };
         });
         const allMembers = [
@@ -116,6 +118,8 @@ export default function AllTeamsPage() {
                 name: leaderProfile?.name || team.leader.name,
                 enrollmentNumber: leaderProfile?.enrollmentNumber || 'N/A',
                 contactNumber: leaderProfile?.contactNumber || 'N/A',
+                yearOfStudy: leaderProfile?.yearOfStudy || 'N/A',
+                semester: leaderProfile?.semester || 'N/A',
                 isLeader: true,
             },
             ...membersWithDetails.map(m => ({...m, isLeader: false})),
@@ -205,6 +209,8 @@ export default function AllTeamsPage() {
                         <TableHead>Member Name</TableHead>
                         <TableHead>Enrollment No.</TableHead>
                         <TableHead>Contact No.</TableHead>
+                        <TableHead>Year</TableHead>
+                        <TableHead>Sem</TableHead>
                     </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -241,6 +247,8 @@ export default function AllTeamsPage() {
                             <TableCell>{member.name} {member.isLeader && '(Leader)'}</TableCell>
                             <TableCell>{member.enrollmentNumber}</TableCell>
                             <TableCell>{member.contactNumber}</TableCell>
+                            <TableCell>{member.yearOfStudy}</TableCell>
+                            <TableCell>{member.semester}</TableCell>
                          </TableRow>
                        ))
                     ))}
