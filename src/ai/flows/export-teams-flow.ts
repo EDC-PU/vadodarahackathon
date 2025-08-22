@@ -7,7 +7,6 @@
 
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
-import { collection, getDocs } from 'firebase/firestore';
 import { adminDb } from '@/lib/firebase-admin'; // Use admin DB for full access
 import { Team, UserProfile, ProblemStatement } from '@/lib/types';
 import ExcelJS from 'exceljs';
