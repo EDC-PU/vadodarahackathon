@@ -34,7 +34,6 @@ const spocSchema = z.object({
   email: z.string().email("Invalid email address."),
   institute: z.string().min(1, "Please select an institute."),
   contactNumber: z.string().regex(/^\d{10}$/, "Please enter a valid 10-digit phone number."),
-  department: z.string().min(2, "Department is required."),
 });
 
 export function AddSpocDialog({ isOpen, onOpenChange, onSpocAdded }: AddSpocDialogProps) {
@@ -48,7 +47,6 @@ export function AddSpocDialog({ isOpen, onOpenChange, onSpocAdded }: AddSpocDial
       email: "",
       institute: "",
       contactNumber: "",
-      department: "",
     },
   });
 
@@ -143,19 +141,6 @@ export function AddSpocDialog({ isOpen, onOpenChange, onSpocAdded }: AddSpocDial
                   </FormItem>
                 )}
               />
-               <FormField
-              control={form.control}
-              name="department"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Department</FormLabel>
-                  <FormControl>
-                    <Input placeholder="e.g., Computer Engineering" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
             <FormField
               control={form.control}
               name="contactNumber"

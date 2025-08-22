@@ -61,7 +61,6 @@ const CreateSpocInputSchema = z.object({
   email: z.string().email().describe('Email address for the SPOC account.'),
   institute: z.string().describe('The institute the SPOC belongs to.'),
   contactNumber: z.string().describe('The contact number of the SPOC.'),
-  department: z.string().describe('The department of the SPOC.'),
 });
 
 export type CreateSpocOutput = z.infer<typeof CreateSpocOutputSchema>;
@@ -95,7 +94,7 @@ const createSpocFlow = ai.defineFlow(
         email: input.email,
         institute: input.institute,
         contactNumber: input.contactNumber,
-        department: input.department,
+        department: 'N/A', // Department not needed for SPOC
         role: 'spoc',
         passwordChanged: false, // User must change this password
       });

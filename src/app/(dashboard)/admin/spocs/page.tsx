@@ -79,7 +79,7 @@ export default function ManageSpocsPage() {
                             <div>
                                 <p className="font-semibold text-lg">{spoc.name}</p>
                                 <p className="text-sm text-muted-foreground">{spoc.email}</p>
-                                <p className="text-sm text-muted-foreground">{spoc.department}</p>
+                                <p className="text-sm text-muted-foreground">{spoc.contactNumber}</p>
                             </div>
                             <Badge variant="secondary">{spoc.institute}</Badge>
                         </li>
