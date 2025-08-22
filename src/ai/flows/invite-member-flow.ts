@@ -20,7 +20,7 @@ const generatePassword = (length = 10) => {
 };
 
 
-export const InviteMemberInputSchema = z.object({
+const InviteMemberInputSchema = z.object({
   teamId: z.string().describe("The ID of the team to add the member to."),
   teamName: z.string().describe("The name of the team."),
   memberName: z.string().describe("The full name of the new member."),
@@ -29,7 +29,7 @@ export const InviteMemberInputSchema = z.object({
 export type InviteMemberInput = z.infer<typeof InviteMemberInputSchema>;
 
 
-export const InviteMemberOutputSchema = z.object({
+const InviteMemberOutputSchema = z.object({
   success: z.boolean(),
   message: z.string(),
   uid: z.string().optional(),
