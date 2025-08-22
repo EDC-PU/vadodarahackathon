@@ -16,7 +16,7 @@ export interface UserProfile {
 }
 
 export interface TeamMember {
-  uid: string;
+  uid?: string; // UID is optional until member logs in
   name: string;
   email: string;
   enrollmentNumber: string;

@@ -22,6 +22,7 @@ export default function LeaderDashboard() {
   const { toast } = useToast();
 
   useEffect(() => {
+    if (authLoading) return;
     if (user?.teamId) {
         const teamDocRef = doc(db, "teams", user.teamId);
         const unsubscribe = onSnapshot(teamDocRef, (doc) => {
@@ -31,38 +32,50 @@ export default function LeaderDashboard() {
                 setTeam(null);
             }
             setLoading(false);
+        }, (error) => {
+            console.error("Error fetching team:", error);
+            setLoading(false);
         });
         return () => unsubscribe();
     } else {
         setLoading(false);
     }
-  }, [user]);
+  }, [user, authLoading]);
 
   const handleAddMember = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!team) return;
 
-    // In a real app, this should send an invitation link.
-    // For now, we'll just add them by email, assuming they'll sign up with it later.
-    // The `useAuth` hook will handle associating them with the team on their first login.
-    const formData = new FormData(event.currentTarget);
-    const newMember: TeamMember = {
-      // The UID will be properly set when the user first signs up/logs in.
-      uid: `pending-${formData.get("new-member-email") as string}`,
+    const form = event.currentTarget;
+    const formData = new FormData(form);
+    const memberEmail = formData.get("new-member-email") as string;
+    
+    // Check if member already exists by email
+    const isAlreadyInTeam = team.members.some(m => m.email.toLowerCase() === memberEmail.toLowerCase()) || team.leader.email.toLowerCase() === memberEmail.toLowerCase();
+    if (isAlreadyInTeam) {
+        toast({ title: "Error", description: "This user is already in the team.", variant: "destructive" });
+        return;
+    }
+
+    const newMember: Omit<TeamMember, 'uid' | 'enrollmentNumber' | 'contactNumber' | 'gender'> = {
       name: formData.get("new-member-name") as string,
-      email: formData.get("new-member-email") as string,
-      enrollmentNumber: formData.get("new-member-enrollment") as string,
-      contactNumber: formData.get("new-member-contact") as string,
-      gender: formData.get("new-member-gender") as "Male" | "Female" | "Other",
+      email: memberEmail,
     };
 
     try {
       const teamDocRef = doc(db, "teams", team.id);
       await updateDoc(teamDocRef, {
-        members: arrayUnion(newMember)
+        members: arrayUnion({
+            ...newMember,
+            // These are placeholders until the user logs in and completes their profile
+            uid: `pending-${newMember.email}`, 
+            enrollmentNumber: '',
+            contactNumber: '',
+            gender: 'Other',
+        })
       });
-      toast({ title: "Success", description: "Team member added. They will be able to access the dashboard once they log in." });
-      (event.target as HTMLFormElement).reset();
+      toast({ title: "Success", description: "Team member invited. They can now log in to complete their registration." });
+      form.reset();
     } catch (error) {
       console.error("Error adding member:", error);
       toast({ title: "Error", description: "Failed to add member.", variant: "destructive" });
@@ -76,9 +89,15 @@ export default function LeaderDashboard() {
         const batch = writeBatch(db);
         const teamDocRef = doc(db, "teams", team.id);
 
+        const memberDataForRemoval = team.members.find(m => m.email === memberToRemove.email);
+        if (!memberDataForRemoval) {
+            toast({ title: "Error", description: "Could not find member data to remove.", variant: "destructive" });
+            return;
+        }
+
         // 1. Remove member from the team's array
         batch.update(teamDocRef, {
-            members: arrayRemove(memberToRemove)
+            members: arrayRemove(memberDataForRemoval)
         });
 
         // 2. Find the user by email and clear their teamId
@@ -200,33 +219,10 @@ export default function LeaderDashboard() {
                                 <Input id="new-member-email" name="new-member-email" type="email" placeholder="member@example.com" required/>
                             </div>
                         </div>
-                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <div>
-                                <Label htmlFor="new-member-enrollment">Enrollment No.</Label>
-                                <Input id="new-member-enrollment" name="new-member-enrollment" placeholder="2003031XXXX" required/>
-                            </div>
-                            <div>
-                                <Label htmlFor="new-member-contact">Contact Number</Label>
-                                <Input id="new-member-contact" name="new-member-contact" placeholder="9876543210" required/>
-                            </div>
-                            <div>
-                                <Label htmlFor="new-member-gender">Gender</Label>
-                                <Select name="new-member-gender" required>
-                                    <SelectTrigger id="new-member-gender">
-                                        <SelectValue placeholder="Select Gender" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="Male">Male</SelectItem>
-                                        <SelectItem value="Female">Female</SelectItem>
-                                        <SelectItem value="Other">Other</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                        </div>
-                        <Button type="submit"><PlusCircle className="mr-2 h-4 w-4" /> Add Member</Button>
+                        <Button type="submit"><PlusCircle className="mr-2 h-4 w-4" /> Invite Member</Button>
                     </form>
                    ): (
-                    <p className="text-sm text-muted-foreground">You cannot add more members.</p>
+                    <p className="text-sm text-muted-foreground">You have reached the maximum number of team members.</p>
                    )}
                 </CardContent>
             </Card>
@@ -235,7 +231,7 @@ export default function LeaderDashboard() {
         <div className="lg:col-span-1">
              <Card>
                 <CardHeader>
-                    <CardTitle>Team Members</CardTitle>
+                    <CardTitle>Team Members ({1 + team.members.length} / 6)</CardTitle>
                     <CardDescription>Your current team roster.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -265,5 +261,3 @@ export default function LeaderDashboard() {
     </div>
   );
 }
-
-    
