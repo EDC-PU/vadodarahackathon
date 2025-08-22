@@ -26,6 +26,7 @@ import {
   Building2,
   Megaphone,
   User as UserIcon,
+  BarChart2,
 } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { Button } from "./ui/button";
@@ -36,6 +37,7 @@ import { Skeleton } from "./ui/skeleton";
 const navItems = {
   admin: [
     { href: "/admin", icon: <LayoutDashboard />, label: "Dashboard" },
+    { href: "/admin/analytics", icon: <BarChart2 />, label: "Analytics" },
     { href: "/admin/announcements", icon: <Megaphone />, label: "Announcements" },
     { href: "/admin/problem-statements", icon: <FileQuestion />, label: "Problem Statements" },
     { href: "/admin/teams", icon: <Users />, label: "All Teams" },
@@ -165,5 +167,3 @@ export default function DashboardSidebar() {
     </>
   );
 }
-
-    
