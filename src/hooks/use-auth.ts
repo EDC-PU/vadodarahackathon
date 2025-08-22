@@ -6,7 +6,7 @@ import { onAuthStateChanged, signOut, User as FirebaseUser } from 'firebase/auth
 import { doc, getDoc, onSnapshot, collection, query, where, getDocs, writeBatch, updateDoc, setDoc } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import { UserProfile, Team } from '@/lib/types';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { useToast } from './use-toast';
 import { getAdminAuth } from '@/lib/firebase-admin';
 import { notifyAdminsOfSpocRequest } from '@/ai/flows/notify-admins-flow';
@@ -39,6 +39,7 @@ export function useAuth() {
   const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
+  const pathname = usePathname();
   const { toast } = useToast();
 
   const redirectToDashboard = useCallback((userProfile: UserProfile) => {
@@ -119,6 +120,30 @@ export function useAuth() {
             const userProfile = { uid: userDoc.id, ...userDoc.data() } as UserProfile;
             console.log("useAuth onSnapshot: User profile data received:", userProfile);
             
+            // --- Start of Role-Based Route Protection ---
+            if (userProfile.role && !loading) {
+              const currentRole = userProfile.role;
+              const isProtectedPath = pathname.startsWith('/admin') || pathname.startsWith('/leader') || pathname.startsWith('/spoc') || pathname.startsWith('/member');
+              
+              if (isProtectedPath) {
+                if (pathname.startsWith('/admin') && currentRole !== 'admin') {
+                    console.warn(`SECURITY: Role '${currentRole}' attempted to access admin path '${pathname}'. Redirecting.`);
+                    redirectToDashboard(userProfile);
+                } else if (pathname.startsWith('/leader') && currentRole !== 'leader') {
+                    console.warn(`SECURITY: Role '${currentRole}' attempted to access leader path '${pathname}'. Redirecting.`);
+                    redirectToDashboard(userProfile);
+                } else if (pathname.startsWith('/spoc') && currentRole !== 'spoc') {
+                    console.warn(`SECURITY: Role '${currentRole}' attempted to access spoc path '${pathname}'. Redirecting.`);
+                    redirectToDashboard(userProfile);
+                } else if (pathname.startsWith('/member') && currentRole !== 'member') {
+                   console.warn(`SECURITY: Role '${currentRole}' attempted to access member path '${pathname}'. Redirecting.`);
+                   redirectToDashboard(userProfile);
+                }
+              }
+            }
+            // --- End of Role-Based Route Protection ---
+
+
             if (user?.teamId && !userProfile.teamId) {
                 console.warn(`useAuth onSnapshot: User was part of team ${user.teamId} but is no longer. Resetting role.`);
                 toast({
@@ -161,7 +186,7 @@ export function useAuth() {
       unsubscribeAuth();
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [pathname]); // Rerun effect when path changes to enforce rules on navigation
 
 
   const handleLogin = useCallback(async (loggedInUser: FirebaseUser) => {
