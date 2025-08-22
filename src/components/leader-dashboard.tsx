@@ -16,6 +16,17 @@ import { useAuth } from "@/hooks/use-auth";
 import { inviteMember } from "@/ai/flows/invite-member-flow";
 import { AnnouncementsSection } from "./announcements-section";
 import Link from "next/link";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 
 export default function LeaderDashboard() {
@@ -23,6 +34,7 @@ export default function LeaderDashboard() {
   const [team, setTeam] = useState<Team | null>(null);
   const [loading, setLoading] = useState(true);
   const [isInviting, setIsInviting] = useState(false);
+  const [isRemoving, setIsRemoving] = useState<string | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -38,13 +50,14 @@ export default function LeaderDashboard() {
             setLoading(false);
         }, (error) => {
             console.error("Error fetching team:", error);
+            toast({ title: "Error", description: "Could not fetch team data.", variant: "destructive" });
             setLoading(false);
         });
         return () => unsubscribe();
     } else {
         setLoading(false);
     }
-  }, [user, authLoading]);
+  }, [user, authLoading, toast]);
 
   const handleAddMember = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -90,6 +103,7 @@ export default function LeaderDashboard() {
 
   const handleRemoveMember = async (memberToRemove: TeamMember) => {
     if (!team) return;
+    setIsRemoving(memberToRemove.email);
 
     try {
         const batch = writeBatch(db);
@@ -114,7 +128,7 @@ export default function LeaderDashboard() {
         if (!querySnapshot.empty) {
             const userDoc = querySnapshot.docs[0];
             const userDocRef = doc(db, "users", userDoc.id);
-            batch.update(userDocRef, { teamId: "", role: "member" }); // Reset role, keep as member
+            batch.update(userDocRef, { teamId: "" }); // keep role
         }
 
         await batch.commit();
@@ -122,6 +136,8 @@ export default function LeaderDashboard() {
     } catch (error) {
         console.error("Error removing member:", error);
         toast({ title: "Error", description: "Failed to remove member.", variant: "destructive" });
+    } finally {
+        setIsRemoving(null);
     }
   };
 
@@ -286,9 +302,25 @@ export default function LeaderDashboard() {
                                 <p className="font-semibold">{member.name}</p>
                                 <p className="text-sm text-muted-foreground">{member.email}</p>
                             </div>
-                            <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-destructive" onClick={() => handleRemoveMember(member)}>
-                                <Trash2 className="h-4 w-4"/>
-                            </Button>
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-destructive" disabled={isRemoving === member.email}>
+                                  {isRemoving === member.email ? <Loader2 className="h-4 w-4 animate-spin"/> : <Trash2 className="h-4 w-4"/>}
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    This action will remove {member.name} from the team. They will need to be invited again to rejoin.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                  <AlertDialogAction onClick={() => handleRemoveMember(member)} className="bg-destructive hover:bg-destructive/90">Remove</AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
                         </div>
                     ))}
                 </CardContent>
@@ -298,5 +330,3 @@ export default function LeaderDashboard() {
     </div>
   );
 }
-
-    
