@@ -50,7 +50,7 @@ export default function LandingPage() {
       <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="container flex h-16 max-w-7xl items-center justify-between">
           <Link href="#" className="flex items-center gap-2 font-bold text-lg" prefetch={false}>
-            <Image src="/vhlogo.png" alt="VH Logo" width={32} height={32} />
+            <Image src="https://www.pierc.org/vhlogo.png" alt="Vadodara Hackathon Logo" width={32} height={32} />
             <span>Vadodara Hackathon 6.0</span>
           </Link>
           <nav className="hidden md:flex items-center gap-6 text-sm font-medium">
@@ -75,7 +75,7 @@ export default function LandingPage() {
         <section className="py-20 md:py-32">
           <div className="container max-w-7xl text-center">
             <div className="flex justify-center mb-6">
-                <Image src="/vhlogo.png" alt="Vadodara Hackathon Logo" width={150} height={150} className="rounded-full" />
+                <Image src="https://www.pierc.org/vhlogo.png" alt="Vadodara Hackathon Logo" width={150} height={150} className="rounded-full" />
             </div>
             <h1 className="text-4xl md:text-6xl font-bold tracking-tighter mb-4 font-headline bg-clip-text text-transparent bg-gradient-to-r from-primary to-blue-400">
               Vadodara Hackathon 6.0

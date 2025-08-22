@@ -1,5 +1,5 @@
 import { LoginForm } from "@/components/login-form";
-import { Logo } from "@/components/logo";
+import Image from "next/image";
 import Link from "next/link";
 
 export default function LoginPage() {
@@ -7,7 +7,7 @@ export default function LoginPage() {
     <div className="w-full max-w-md">
       <div className="flex flex-col items-center justify-center text-center mb-8">
         <Link href="/" className="flex items-center gap-2 mb-4">
-          <Logo className="h-12 w-12 text-primary" />
+           <Image src="https://www.pierc.org/vhlogo.png" alt="Vadodara Hackathon Logo" width={48} height={48} />
         </Link>
         <h1 className="text-3xl font-bold font-headline">Welcome Back</h1>
         <p className="text-muted-foreground">Enter your credentials to access your dashboard.</p>
