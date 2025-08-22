@@ -29,9 +29,16 @@ export type ProblemStatementCategory = "Software" | "Hardware" | "Hardware & Sof
 
 export interface ProblemStatement {
   id: string;
+  problemStatementId: string;
   title: string;
   description: string;
   category: ProblemStatementCategory;
+  organization: string;
+  department: string;
+  theme: string;
+  youtubeLink?: string;
+  datasetLink?: string;
+  contactInfo?: string;
 }
 
 export interface Team {

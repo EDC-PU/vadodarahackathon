@@ -16,6 +16,7 @@ import { makeAdmin } from "@/ai/flows/make-admin-flow";
 import { exportTeams } from "@/ai/flows/export-teams-flow";
 import { AddSpocDialog } from "./add-spoc-dialog";
 import { AddProblemStatementDialog } from "./add-problem-statement-dialog";
+import { Badge } from "./ui/badge";
 
 
 export default function AdminDashboard() {
@@ -72,7 +73,7 @@ export default function AdminDashboard() {
     const problemStatementsCollection = collection(db, 'problemStatements');
     const unsubscribe = onSnapshot(problemStatementsCollection, (snapshot) => {
         const statementsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ProblemStatement));
-        setProblemStatements(statementsData);
+        setProblemStatements(statementsData.sort((a, b) => a.problemStatementId.localeCompare(b.problemStatementId)));
     }, (error) => {
         console.error("Error fetching problem statements:", error);
         toast({ title: "Error", description: "Failed to fetch problem statements.", variant: "destructive" });
@@ -226,16 +227,22 @@ export default function AdminDashboard() {
             </CardHeader>
             <CardContent>
                 {problemStatements.length > 0 ? (
-                  <ul className="space-y-3">
+                  <ul className="space-y-4">
                     {problemStatements.map(ps => (
-                        <li key={ps.id} className="p-3 border rounded-md">
-                           <div className="flex justify-between items-start">
-                             <div>
-                               <p className="font-bold">{ps.title}</p>
-                               <p className="text-sm text-muted-foreground mt-1">{ps.description}</p>
-                             </div>
-                             <span className="text-xs font-semibold uppercase px-2 py-1 bg-secondary rounded-full">{ps.category}</span>
+                        <li key={ps.id} className="p-4 border rounded-md">
+                           <div className="flex justify-between items-start mb-2">
+                             <h3 className="font-bold text-lg">{ps.title} <span className="text-sm font-normal text-muted-foreground">(ID: {ps.problemStatementId})</span></h3>
+                             <Badge variant={ps.category === 'Software' ? 'default' : 'secondary'}>{ps.category}</Badge>
                            </div>
+                           <p className="text-sm text-muted-foreground mb-3">{ps.description}</p>
+                           <div className="grid grid-cols-2 md:grid-cols-3 gap-2 text-sm">
+                              <div><strong>Organization:</strong> {ps.organization}</div>
+                              <div><strong>Department:</strong> {ps.department}</div>
+                              <div><strong>Theme:</strong> {ps.theme}</div>
+                              {ps.youtubeLink && <div><strong>YouTube:</strong> <a href={ps.youtubeLink} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Link</a></div>}
+                              {ps.datasetLink && <div><strong>Dataset:</strong> <a href={ps.datasetLink} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Link</a></div>}
+                           </div>
+                           {ps.contactInfo && <div className="mt-2 text-sm"><strong>Contact:</strong> {ps.contactInfo}</div>}
                         </li>
                     ))}
                   </ul>
@@ -343,5 +350,3 @@ export default function AdminDashboard() {
     </>
   );
 }
-
-    
