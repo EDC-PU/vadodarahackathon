@@ -4,28 +4,31 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Download, PlusCircle, User, Users, Shield, Loader2, UserPlus } from "lucide-react";
+import { Download, PlusCircle, User, Users, Shield, Loader2, UserPlus, FileText } from "lucide-react";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { useEffect, useState } from "react";
 import { db } from "@/lib/firebase";
-import { collection, getDocs, doc, setDoc, query, where } from "firebase/firestore";
-import { Team, UserProfile } from "@/lib/types";
+import { collection, getDocs, doc, setDoc, query, where, onSnapshot } from "firebase/firestore";
+import { Team, UserProfile, ProblemStatement } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 import { makeAdmin } from "@/ai/flows/make-admin-flow";
 import { exportTeams } from "@/ai/flows/export-teams-flow";
 import { AddSpocDialog } from "./add-spoc-dialog";
+import { AddProblemStatementDialog } from "./add-problem-statement-dialog";
 
 
 export default function AdminDashboard() {
   const [teams, setTeams] = useState<Team[]>([]);
   const [spocs, setSpocs] = useState<UserProfile[]>([]);
   const [admins, setAdmins] = useState<UserProfile[]>([]);
+  const [problemStatements, setProblemStatements] = useState<ProblemStatement[]>([]);
   const [stats, setStats] = useState({ teams: 0, participants: 0 });
   const [loading, setLoading] = useState(true);
   const [isCreatingAdmin, setIsCreatingAdmin] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [isAddSpocOpen, setIsAddSpocOpen] = useState(false);
+  const [isAddProblemStatementOpen, setIsAddProblemStatementOpen] = useState(false);
   const { toast } = useToast();
 
   const fetchData = async () => {
@@ -55,15 +58,27 @@ export default function AdminDashboard() {
       setStats({ teams: teamsData.length, participants: totalParticipants });
 
     } catch (error) {
-      console.error("Error fetching data:", error);
+      console.error("Error fetching base data:", error);
       toast({ title: "Error", description: "Failed to fetch dashboard data.", variant: "destructive" });
     } finally {
       setLoading(false);
     }
   };
-
+  
   useEffect(() => {
     fetchData();
+    
+    // Setup listener for problem statements
+    const problemStatementsCollection = collection(db, 'problemStatements');
+    const unsubscribe = onSnapshot(problemStatementsCollection, (snapshot) => {
+        const statementsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ProblemStatement));
+        setProblemStatements(statementsData);
+    }, (error) => {
+        console.error("Error fetching problem statements:", error);
+        toast({ title: "Error", description: "Failed to fetch problem statements.", variant: "destructive" });
+    });
+    
+    return () => unsubscribe();
   }, []);
 
   const handleCreateAdmin = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -130,6 +145,10 @@ export default function AdminDashboard() {
       onOpenChange={setIsAddSpocOpen}
       onSpocAdded={fetchData} // Refresh data after adding a SPOC
     />
+     <AddProblemStatementDialog
+      isOpen={isAddProblemStatementOpen}
+      onOpenChange={setIsAddProblemStatementOpen}
+    />
     <div className="p-4 sm:p-6 lg:p-8">
       <header className="mb-8">
         <h1 className="text-3xl font-bold font-headline">Admin Dashboard</h1>
@@ -140,6 +159,7 @@ export default function AdminDashboard() {
         <div className="flex items-center justify-between mb-4">
             <TabsList>
               <TabsTrigger value="overview">Overview</TabsTrigger>
+              <TabsTrigger value="problem-statements">Problem Statements</TabsTrigger>
               <TabsTrigger value="spocs">Manage SPOCs</TabsTrigger>
               <TabsTrigger value="admins">Manage Admins</TabsTrigger>
               <TabsTrigger value="teams">All Teams</TabsTrigger>
@@ -191,6 +211,37 @@ export default function AdminDashboard() {
                     </CardContent>
                 </Card>
             </div>
+        </TabsContent>
+        
+        <TabsContent value="problem-statements">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle>Problem Statements</CardTitle>
+                <CardDescription>Manage hackathon problem statements. ({problemStatements.length} statements)</CardDescription>
+              </div>
+              <Button onClick={() => setIsAddProblemStatementOpen(true)}>
+                <PlusCircle className="mr-2 h-4 w-4" /> Add Statement
+              </Button>
+            </CardHeader>
+            <CardContent>
+                {problemStatements.length > 0 ? (
+                  <ul className="space-y-3">
+                    {problemStatements.map(ps => (
+                        <li key={ps.id} className="p-3 border rounded-md">
+                           <div className="flex justify-between items-start">
+                             <div>
+                               <p className="font-bold">{ps.title}</p>
+                               <p className="text-sm text-muted-foreground mt-1">{ps.description}</p>
+                             </div>
+                             <span className="text-xs font-semibold uppercase px-2 py-1 bg-secondary rounded-full">{ps.category}</span>
+                           </div>
+                        </li>
+                    ))}
+                  </ul>
+                ) : <p className="text-center text-muted-foreground py-4">No problem statements have been added yet.</p>}
+            </CardContent>
+          </Card>
         </TabsContent>
 
         <TabsContent value="spocs">
@@ -292,3 +343,5 @@ export default function AdminDashboard() {
     </>
   );
 }
+
+    

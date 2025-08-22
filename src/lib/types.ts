@@ -1,4 +1,5 @@
 
+
 export type UserRole = "leader" | "member" | "spoc" | "admin";
 
 export interface UserProfile {
@@ -24,6 +25,15 @@ export interface TeamMember {
   gender: "Male" | "Female" | "Other";
 }
 
+export type ProblemStatementCategory = "Software" | "Hardware" | "Hardware & Software";
+
+export interface ProblemStatement {
+  id: string;
+  title: string;
+  description: string;
+  category: ProblemStatementCategory;
+}
+
 export interface Team {
   id: string;
   name: string;
@@ -36,6 +46,8 @@ export interface Team {
   department: string;
   category: "Software" | "Hardware";
   members: TeamMember[];
+  problemStatementId?: string;
+  problemStatementTitle?: string;
 }
 
 export interface Institute {
@@ -54,3 +66,5 @@ export interface EventInfo {
   brochureUrl: string;
   problemStatementsUrl: string;
 }
+
+    
