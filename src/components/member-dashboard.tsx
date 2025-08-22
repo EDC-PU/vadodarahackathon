@@ -10,6 +10,7 @@ import { Team, UserProfile, Spoc } from "@/lib/types";
 import { Alert, AlertDescription, AlertTitle } from "./ui/alert";
 import { useAuth } from "@/hooks/use-auth";
 import { AnnouncementsSection } from "./announcements-section";
+import { InvitationsSection } from "./invitations-section";
 
 export default function MemberDashboard() {
   const { user, loading: authLoading } = useAuth();
@@ -64,13 +65,13 @@ export default function MemberDashboard() {
     );
   }
 
-  if (!user || !team) {
+  if (!user) {
     return (
         <div className="p-4 sm:p-6 lg:p-8">
             <Alert variant="destructive">
                 <AlertCircle className="h-4 w-4" />
-                <AlertTitle>No Team Found</AlertTitle>
-                <AlertDescription>You are not currently part of a team. If you believe this is an error, please contact your team leader.</AlertDescription>
+                <AlertTitle>Error</AlertTitle>
+                <AlertDescription>Could not load user data. Please try again later.</AlertDescription>
             </Alert>
         </div>
     );
@@ -83,76 +84,91 @@ export default function MemberDashboard() {
         <p className="text-muted-foreground">Here is your team and hackathon information.</p>
       </header>
       
+      {/* Show invitations only if user is not on a team */}
+      {!user.teamId && (
+        <div className="mb-8">
+            <InvitationsSection />
+        </div>
+      )}
+      
       <div className="mb-8">
         <AnnouncementsSection audience="teams_and_all" />
       </div>
-
-      <div className="grid gap-8 lg:grid-cols-2">
-        <Card>
-            <CardHeader>
-                <CardTitle className="flex items-center gap-2"><Users/> Team Details</CardTitle>
-                <CardDescription>Your team, "{team.name}", from {team.institute}.</CardDescription>
-            </CardHeader>
-            <CardContent>
-                <p className="font-semibold mb-2">Team Leader: {team.leader.name} ({team.leader.email})</p>
-                <div className="space-y-2">
-                    <p className="font-semibold">Members:</p>
-                    <ul className="list-disc list-inside pl-2 text-muted-foreground space-y-1">
-                        <li>{team.leader.name} (Leader)</li>
-                        {team.members.map(m => <li key={m.uid}>{m.name}</li>)}
-                    </ul>
-                </div>
-            </CardContent>
-        </Card>
-
-        <div className="space-y-8">
+      
+      {team ? (
+        <div className="grid gap-8 lg:grid-cols-2">
             <Card>
                 <CardHeader>
-                    <CardTitle className="flex items-center gap-2"><FileText/> Institute SPOC Details</CardTitle>
-                    <CardDescription>Your point of contact for any queries.</CardDescription>
+                    <CardTitle className="flex items-center gap-2"><Users/> Team Details</CardTitle>
+                    <CardDescription>Your team, "{team.name}", from {team.institute}.</CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-3">
-                    {spoc ? (
-                        <>
-                            <div className="flex items-center gap-3">
-                                <User className="h-5 w-5 text-primary"/>
-                                <span className="font-medium">{spoc.name}</span>
-                            </div>
-                            <div className="flex items-center gap-3">
-                                <Mail className="h-5 w-5 text-primary"/>
-                                <a href={`mailto:${spoc.email}`} className="text-muted-foreground hover:text-primary">{spoc.email}</a>
-                            </div>
-                            <div className="flex items-center gap-3">
-                                <Phone className="h-5 w-5 text-primary"/>
-                                <a href={`tel:${spoc.contactNumber}`} className="text-muted-foreground hover:text-primary">{spoc.contactNumber}</a>
-                            </div>
-                        </>
-                    ) : (
-                        <p className="text-muted-foreground">SPOC details are not available yet.</p>
-                    )}
+                <CardContent>
+                    <p className="font-semibold mb-2">Team Leader: {team.leader.name} ({team.leader.email})</p>
+                    <div className="space-y-2">
+                        <p className="font-semibold">Members:</p>
+                        <ul className="list-disc list-inside pl-2 text-muted-foreground space-y-1">
+                            <li>{team.leader.name} (Leader)</li>
+                            {team.members.map(m => <li key={m.uid}>{m.name}</li>)}
+                        </ul>
+                    </div>
                 </CardContent>
             </Card>
 
-             <Card>
-                <CardHeader>
-                    <CardTitle>Hackathon Information</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                    {/* This can be fetched from a 'config' document in Firestore */}
-                    <div className="flex items-center gap-3">
-                        <Calendar className="h-5 w-5 text-primary"/>
-                        <p><strong>Dates:</strong> To be Announced</p>
-                    </div>
-                    <div className="flex items-center gap-3">
-                        <Trophy className="h-5 w-5 text-primary"/>
-                        <p><strong>Rewards:</strong> Check the homepage for details.</p>
-                    </div>
-                </CardContent>
-            </Card>
+            <div className="space-y-8">
+                <Card>
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-2"><FileText/> Institute SPOC Details</CardTitle>
+                        <CardDescription>Your point of contact for any queries.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                        {spoc ? (
+                            <>
+                                <div className="flex items-center gap-3">
+                                    <User className="h-5 w-5 text-primary"/>
+                                    <span className="font-medium">{spoc.name}</span>
+                                </div>
+                                <div className="flex items-center gap-3">
+                                    <Mail className="h-5 w-5 text-primary"/>
+                                    <a href={`mailto:${spoc.email}`} className="text-muted-foreground hover:text-primary">{spoc.email}</a>
+                                </div>
+                                <div className="flex items-center gap-3">
+                                    <Phone className="h-5 w-5 text-primary"/>
+                                    <a href={`tel:${spoc.contactNumber}`} className="text-muted-foreground hover:text-primary">{spoc.contactNumber}</a>
+                                </div>
+                            </>
+                        ) : (
+                            <p className="text-muted-foreground">SPOC details are not available yet.</p>
+                        )}
+                    </CardContent>
+                </Card>
+
+                 <Card>
+                    <CardHeader>
+                        <CardTitle>Hackathon Information</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                        {/* This can be fetched from a 'config' document in Firestore */}
+                        <div className="flex items-center gap-3">
+                            <Calendar className="h-5 w-5 text-primary"/>
+                            <p><strong>Dates:</strong> To be Announced</p>
+                        </div>
+                        <div className="flex items-center gap-3">
+                            <Trophy className="h-5 w-5 text-primary"/>
+                            <p><strong>Rewards:</strong> Check the homepage for details.</p>
+                        </div>
+                    </CardContent>
+                </Card>
+            </div>
         </div>
-      </div>
+      ) : !user.teamId ? (
+         <Alert>
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>You are not on a team yet.</AlertTitle>
+            <AlertDescription>
+              Once your team leader invites you, you will see the invitation above. If you believe this is an error, please contact your team leader.
+            </AlertDescription>
+          </Alert>
+      ) : null}
     </div>
   );
 }
-
-    

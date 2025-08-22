@@ -11,55 +11,6 @@ import { useToast } from './use-toast';
 import { getAdminAuth } from '@/lib/firebase-admin';
 import { notifyAdminsOfSpocRequest } from '@/ai/flows/notify-admins-flow';
 
-async function checkAndAcceptInvitation(loggedInUser: FirebaseUser, userProfile: UserProfile) {
-    console.log(`Checking for invitations for email: ${loggedInUser.email}`);
-    if (!loggedInUser.email) return userProfile;
-
-    const invitationsRef = collection(db, "invitations");
-    const q = query(invitationsRef, where("email", "==", loggedInUser.email));
-    const invitationSnapshot = await getDocs(q);
-
-    if (invitationSnapshot.empty) {
-        console.log("No pending invitations found.");
-        return userProfile;
-    }
-
-    const invitationDoc = invitationSnapshot.docs[0];
-    const { teamId } = invitationDoc.data();
-    console.log(`Invitation found for team ID: ${teamId}`);
-
-    const batch = writeBatch(db);
-
-    // 1. Add member to the team
-    const teamDocRef = doc(db, "teams", teamId);
-    batch.update(teamDocRef, {
-        members: arrayUnion({
-            uid: loggedInUser.uid,
-            name: userProfile.name,
-            email: userProfile.email,
-            enrollmentNumber: userProfile.enrollmentNumber || '',
-            contactNumber: userProfile.contactNumber || '',
-            gender: userProfile.gender || 'Other',
-        })
-    });
-    console.log(`Batch update: Added user ${loggedInUser.uid} to team ${teamId}`);
-
-    // 2. Update the user's profile with teamId and role
-    const userDocRef = doc(db, "users", loggedInUser.uid);
-    const updatedProfileData = { teamId, role: 'member' };
-    batch.update(userDocRef, updatedProfileData);
-    console.log(`Batch update: Updated user ${loggedInUser.uid} profile with teamId and role.`);
-
-    // 3. Delete the invitation
-    batch.delete(invitationDoc.ref);
-    console.log(`Batch delete: Removed invitation document for ${loggedInUser.email}`);
-
-    await batch.commit();
-    console.log("Invitation batch commit successful.");
-
-    return { ...userProfile, ...updatedProfileData };
-}
-
 export function useAuth() {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
@@ -107,8 +58,8 @@ export function useAuth() {
      }
 
      // If the user is a new signup with role 'member', but has no teamId yet (hasn't been added)
-     if (userProfile.role === 'member' && !userProfile.teamId) {
-        console.log("redirectToDashboard: User is a member but has no team. Redirecting to /complete-profile to wait.");
+     if (userProfile.role === 'member' && !userProfile.teamId && !userProfile.enrollmentNumber) {
+        console.log("redirectToDashboard: User is a member but has no team and incomplete profile. Redirecting to /complete-profile.");
         router.push('/complete-profile');
         return;
      }
@@ -261,8 +212,7 @@ export function useAuth() {
       let userProfile = userDoc.data() as UserProfile;
       console.log("handleLogin: User document exists.", userProfile);
       
-      // Check for and accept invitations for existing users
-      finalUserProfile = await checkAndAcceptInvitation(loggedInUser, userProfile);
+      finalUserProfile = userProfile;
       
       if (loggedInUser.disabled) {
         console.warn(`handleLogin: Login attempt by disabled user: ${loggedInUser.email}`);
@@ -305,8 +255,7 @@ export function useAuth() {
         console.log("handleLogin: Creating new user document with profile:", newProfile);
         await setDoc(doc(db, "users", loggedInUser.uid), newProfile);
         
-        // Check for and accept invitations for new users
-        finalUserProfile = await checkAndAcceptInvitation(loggedInUser, newProfile);
+        finalUserProfile = newProfile;
         
         toast({ title: "Account Created!", description: "Let's complete your profile." });
     }
@@ -331,5 +280,3 @@ export function useAuth() {
 
   return { user, firebaseUser, loading, handleSignOut, redirectToDashboard, handleLogin };
 }
-
-    

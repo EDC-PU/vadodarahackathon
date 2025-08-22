@@ -3,6 +3,7 @@ import {z} from 'genkit';
 
 export type UserRole = "leader" | "member" | "spoc" | "admin";
 export type SpocStatus = "pending" | "approved" | "rejected";
+export type InvitationStatus = "pending" | "accepted" | "rejected";
 
 export interface UserProfile {
   uid: string;
@@ -19,6 +20,16 @@ export interface UserProfile {
   passwordChanged?: boolean; // Flag to check if the user has changed the initial password
   spocStatus?: SpocStatus;
 }
+
+export interface Invitation {
+  id: string;
+  teamId: string;
+  teamName: string;
+  email: string;
+  status: InvitationStatus;
+  createdAt: any;
+}
+
 
 export interface TeamMember {
   uid: string; 
@@ -250,5 +261,3 @@ export const SystemHealthStateSchema = z.object({
   timestamp: z.string(),
 });
 export type SystemHealthState = z.infer<typeof SystemHealthStateSchema>;
-
-    

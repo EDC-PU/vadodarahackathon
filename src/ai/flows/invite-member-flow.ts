@@ -33,7 +33,7 @@ async function sendInvitationEmail(email: string, teamName: string) {
         html: `
             <h1>You're Invited!</h1>
             <p>You have been invited to join <strong>${teamName}</strong> for the Vadodara Hackathon 6.0.</p>
-            <p>To accept the invitation, please register or log in to the portal using this email address.</p>
+            <p>To accept the invitation, please register or log in to the portal using this email address. You will see a notification on your dashboard.</p>
             <p><a href="http://localhost:9002/register">Click here to register or log in</a></p>
             <p>If you already have an account, simply log in to be added to the team. If not, please sign up as a "Team Member (Invited)".</p>
             <p>We're excited to have you on board!</p>
@@ -87,13 +87,13 @@ const inviteMemberFlow = ai.defineFlow(
             }
         }
 
-        // 2. Check if an invitation for this email already exists
+        // 2. Check if a pending invitation for this email already exists
         console.log(`Checking existing invitation for email: ${input.memberEmail}`);
         const invitationsRef = collection(db, "invitations");
-        const invitationQuery = query(invitationsRef, where("email", "==", input.memberEmail));
+        const invitationQuery = query(invitationsRef, where("email", "==", input.memberEmail), where("status", "==", "pending"));
         const invitationSnapshot = await getDocs(invitationQuery);
         if (!invitationSnapshot.empty) {
-            const errorMessage = "An invitation has already been sent to this email address.";
+            const errorMessage = "An invitation has already been sent to this email address and is pending.";
             console.error(errorMessage);
             return { success: false, message: errorMessage };
         }
@@ -104,6 +104,7 @@ const inviteMemberFlow = ai.defineFlow(
             teamId: input.teamId,
             teamName: input.teamName,
             email: input.memberEmail,
+            status: 'pending', // Set initial status
             createdAt: new Date(),
         });
         console.log(`Invitation document created for ${input.memberEmail} to join ${input.teamName}`);
@@ -132,5 +133,3 @@ const inviteMemberFlow = ai.defineFlow(
     }
   }
 );
-
-    
