@@ -49,7 +49,7 @@ const formSchema = z.object({
 export function RegistrationForm() {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
-  const { user, loading: authLoading, redirectToDashboard } = useAuth();
+  const { user, loading: authLoading, reloadUser } = useAuth();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -60,7 +60,7 @@ export function RegistrationForm() {
       department: "",
       enrollmentNumber: "",
       contactNumber: "",
-      gender: undefined,
+      gender: "Male",
       semester: undefined,
       yearOfStudy: "",
     },
@@ -76,7 +76,7 @@ export function RegistrationForm() {
             department: user.department || "",
             enrollmentNumber: user.enrollmentNumber || "",
             contactNumber: user.contactNumber || "",
-            gender: user.gender || undefined,
+            gender: user.gender || "Male",
             yearOfStudy: "",
         });
     }
@@ -87,7 +87,7 @@ export function RegistrationForm() {
     if (!user) {
       toast({ title: "Error", description: "You must be logged in to create a team.", variant: "destructive" });
       console.error("Team creation failed: User not logged in.");
-      return null;
+      return;
     }
 
     console.log(`Checking for uniqueness of team name: "${values.teamName}"`);
@@ -103,7 +103,7 @@ export function RegistrationForm() {
         description: "A team with this name already exists. Please choose another name.",
         variant: "destructive",
       });
-      return null;
+      return;
     }
     console.log("Team name is unique. Proceeding with creation.");
 
@@ -149,21 +149,21 @@ export function RegistrationForm() {
     await batch.commit();
     console.log("Batch write successful.");
 
-    return { ...user, ...userProfileUpdate };
+    return true;
   }
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     console.log("RegistrationForm onSubmit triggered.");
     setIsLoading(true);
     try {
-      const updatedUser = await createTeamAndAssignLeader(values);
-      if (updatedUser) {
+      const success = await createTeamAndAssignLeader(values);
+      if (success) {
         toast({
           title: "Team Registered!",
           description: `Your team "${values.teamName}" has been successfully created.`,
         });
-        console.log("Team registration successful, redirecting to dashboard...");
-        redirectToDashboard(updatedUser);
+        console.log("Team registration successful, reloading user to trigger redirect...");
+        await reloadUser();
       } else {
         console.log("Team registration failed, not redirecting.");
       }

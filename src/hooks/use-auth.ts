@@ -15,80 +15,33 @@ export function useAuth() {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isNavigating, setIsNavigating] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
   const { toast } = useToast();
+  
+  const reloadUser = useCallback(async () => {
+    const currentUser = auth.currentUser;
+    if (!currentUser) return;
+    console.log("reloadUser: Forcing refetch of user profile.");
+    const userDocRef = doc(db, 'users', currentUser.uid);
+    const userDoc = await getDoc(userDocRef);
+    if (userDoc.exists()) {
+        setUser({ uid: userDoc.id, ...userDoc.data() } as UserProfile);
+    }
+  }, []);
 
-  const redirectToDashboard = useCallback((userProfile: UserProfile) => {
-     console.log("redirectToDashboard: Starting redirection logic for user:", userProfile);
-     
-     // First, check if the user needs to change their password
-     if (userProfile.passwordChanged === false) {
-        console.log("redirectToDashboard: User needs to change password. Redirecting to /change-password.");
-        router.push('/change-password');
-        return;
-     }
-     
-     // Handle pending SPOCs
-     if (userProfile.role === 'spoc' && userProfile.spocStatus === 'pending') {
-        console.log("redirectToDashboard: SPOC is pending approval. Signing out.");
-        signOut(auth);
-        toast({
-            title: "Pending Approval",
-            description: "Your SPOC account is awaiting admin approval. You will be notified via email once it's approved.",
-            variant: "default",
-            duration: 10000,
-        });
-        router.push('/login');
-        return;
-     }
-     
-      // If SPOC hasn't completed their profile
-     if (userProfile.role === 'spoc' && (!userProfile.institute || !userProfile.contactNumber)) {
-        console.log("redirectToDashboard: SPOC profile is incomplete. Redirecting to /complete-spoc-profile.");
-        router.push('/complete-spoc-profile');
-        return;
-     }
-
-     // If the user is a new signup with role 'leader', they need to create a team
-     if (userProfile.role === 'leader' && !userProfile.teamId) {
-         console.log("redirectToDashboard: User is a leader but has no team. Redirecting to /create-team.");
-         router.push('/create-team');
-         return;
-     }
-
-     // If the user is a new signup with role 'member', but has no teamId yet (hasn't been added)
-     if (userProfile.role === 'member' && !userProfile.teamId && !userProfile.enrollmentNumber) {
-        console.log("redirectToDashboard: User is a member but has no team and incomplete profile. Redirecting to /complete-profile.");
-        router.push('/complete-profile');
-        return;
-     }
-
-     // Then, check if the user has completed their profile
-     if ((userProfile.role === 'member' || userProfile.role === 'leader') && !userProfile.enrollmentNumber) {
-        console.log("redirectToDashboard: Member/Leader profile is incomplete. Redirecting to /complete-profile.");
-        router.push('/complete-profile');
-        return;
-     }
-
-     console.log(`redirectToDashboard: User role is ${userProfile.role}. Redirecting to respective dashboard.`);
-     switch (userProfile.role) {
-        case "admin":
-          router.push("/admin");
-          break;
-        case "leader":
-          router.push("/leader");
-          break;
-        case "spoc":
-          router.push("/spoc");
-          break;
-        case "member":
-          router.push("/member");
-          break;
-        default:
-          console.log("redirectToDashboard: User has unknown role or default case. Redirecting to /register.");
-          router.push("/register");
-      }
+  const handleSignOut = useCallback(async () => {
+    console.log("handleSignOut: Attempting to sign out user.");
+    try {
+      await signOut(auth);
+      router.push('/login');
+      toast({ title: "Signed Out", description: "You have been successfully signed out." });
+      console.log("handleSignOut: Sign-out successful.");
+    } catch (error) {
+      console.error("Sign Out Error:", error);
+      toast({ title: "Error", description: "Failed to sign out.", variant: "destructive" });
+    }
   }, [router, toast]);
 
   useEffect(() => {
@@ -103,46 +56,10 @@ export function useAuth() {
           if (userDoc.exists()) {
             const userProfile = { uid: userDoc.id, ...userDoc.data() } as UserProfile;
             console.log("useAuth onSnapshot: User profile data received:", userProfile);
-            
-            // --- Start of Role-Based Route Protection ---
-            if (userProfile.role && !loading) {
-              const currentRole = userProfile.role;
-              const isProtectedPath = pathname.startsWith('/admin') || pathname.startsWith('/leader') || pathname.startsWith('/spoc') || pathname.startsWith('/member');
-              
-              if (isProtectedPath) {
-                if (pathname.startsWith('/admin') && currentRole !== 'admin') {
-                    console.warn(`SECURITY: Role '${currentRole}' attempted to access admin path '${pathname}'. Redirecting.`);
-                    redirectToDashboard(userProfile);
-                } else if (pathname.startsWith('/leader') && currentRole !== 'leader') {
-                    console.warn(`SECURITY: Role '${currentRole}' attempted to access leader path '${pathname}'. Redirecting.`);
-                    redirectToDashboard(userProfile);
-                } else if (pathname.startsWith('/spoc') && currentRole !== 'spoc') {
-                    console.warn(`SECURITY: Role '${currentRole}' attempted to access spoc path '${pathname}'. Redirecting.`);
-                    redirectToDashboard(userProfile);
-                } else if (pathname.startsWith('/member') && currentRole !== 'member') {
-                   console.warn(`SECURITY: Role '${currentRole}' attempted to access member path '${pathname}'. Redirecting.`);
-                   redirectToDashboard(userProfile);
-                }
-              }
-            }
-            // --- End of Role-Based Route Protection ---
-
-
-            if (user?.teamId && !userProfile.teamId) {
-                console.warn(`useAuth onSnapshot: User was part of team ${user.teamId} but is no longer. Resetting role.`);
-                toast({
-                    title: "Removed from Team",
-                    description: "The team leader or a SPOC has removed you from the team. You can now register as a new leader.",
-                    variant: "destructive"
-                });
-                setUser({ ...userProfile, teamId: undefined, role: 'leader' }); // Default to leader so they can create a new team
-                router.push('/create-team');
-                return;
-            }
-
             setUser(userProfile);
           } else {
             console.warn(`useAuth onSnapshot: User document for UID ${currentUser.uid} does not exist.`);
+            setUser(null);
           }
            setLoading(false);
            console.log("useAuth: Loading state set to false.");
@@ -169,8 +86,97 @@ export function useAuth() {
       console.log("useAuth: Unsubscribing from onAuthStateChanged listener.");
       unsubscribeAuth();
     }
+  }, []);
+
+
+  useEffect(() => {
+    if (loading || isNavigating || !user) {
+        return;
+    }
+
+    const performRedirect = (path: string) => {
+        if (pathname !== path) {
+            setIsNavigating(true);
+            router.push(path);
+            // Reset navigating state after a short delay
+            setTimeout(() => setIsNavigating(false), 1000);
+        }
+    };
+    
+    // --- Start of Redirection and Route Protection Logic ---
+    console.log("Redirect Check: Starting for user:", user);
+     
+     // 1. Password change check
+     if (user.passwordChanged === false) {
+        console.log("Redirect Check: User needs to change password.");
+        performRedirect('/change-password');
+        return;
+     }
+     
+     // 2. SPOC status check
+     if (user.role === 'spoc' && user.spocStatus === 'pending') {
+        console.log("Redirect Check: SPOC is pending approval. Signing out.");
+        handleSignOut();
+        toast({
+            title: "Pending Approval",
+            description: "Your SPOC account is awaiting admin approval. You will be notified via email once it's approved.",
+            variant: "default",
+            duration: 10000,
+        });
+        return;
+     }
+     
+     // 3. Profile completion checks
+     if (user.role === 'spoc' && (!user.institute || !user.contactNumber)) {
+        console.log("Redirect Check: SPOC profile is incomplete.");
+        performRedirect('/complete-spoc-profile');
+        return;
+     }
+
+     if (user.role === 'leader' && !user.teamId) {
+         console.log("Redirect Check: User is a leader but has no team.");
+         performRedirect('/create-team');
+         return;
+     }
+
+     if (user.role === 'member' && !user.teamId && !user.enrollmentNumber) {
+        console.log("Redirect Check: User is a member but has no team and incomplete profile.");
+        performRedirect('/complete-profile');
+        return;
+     }
+
+     if ((user.role === 'member' || user.role === 'leader') && !user.enrollmentNumber) {
+        console.log("Redirect Check: Member/Leader profile is incomplete.");
+        performRedirect('/complete-profile');
+        return;
+     }
+    
+    // 4. Role-based route protection
+    const currentRole = user.role;
+    const isProtectedPath = pathname.startsWith('/admin') || pathname.startsWith('/leader') || pathname.startsWith('/spoc') || pathname.startsWith('/member');
+              
+    if (isProtectedPath) {
+        if (pathname.startsWith(`/admin`) && currentRole !== 'admin') {
+            console.warn(`SECURITY: Role '${currentRole}' attempted to access admin path '${pathname}'. Redirecting.`);
+            performRedirect(`/${currentRole}`);
+        } else if (pathname.startsWith('/leader') && currentRole !== 'leader') {
+            console.warn(`SECURITY: Role '${currentRole}' attempted to access leader path '${pathname}'. Redirecting.`);
+            performRedirect(`/${currentRole}`);
+        } else if (pathname.startsWith('/spoc') && currentRole !== 'spoc') {
+            console.warn(`SECURITY: Role '${currentRole}' attempted to access spoc path '${pathname}'. Redirecting.`);
+            performRedirect(`/${currentRole}`);
+        } else if (pathname.startsWith('/member') && currentRole !== 'member') {
+            console.warn(`SECURITY: Role '${currentRole}' attempted to access member path '${pathname}'. Redirecting.`);
+            performRedirect(`/${currentRole}`);
+        }
+    } else if (pathname === '/login' || pathname === '/register' || pathname === '/create-team' || pathname === '/complete-profile' || pathname === '/complete-spoc-profile') {
+        // If user is on an auth page but should be on their dashboard
+        console.log(`Redirect Check: User is on auth page '${pathname}', redirecting to their dashboard.`);
+        performRedirect(`/${currentRole}`);
+    }
+
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pathname]); // Rerun effect when path changes to enforce rules on navigation
+  }, [user, loading, pathname, router, handleSignOut]);
 
 
   const handleLogin = useCallback(async (loggedInUser: FirebaseUser) => {
@@ -207,12 +213,9 @@ export function useAuth() {
         }
     }
 
-    let finalUserProfile;
     if (userDoc.exists()) {
       let userProfile = { uid: userDoc.id, ...userDoc.data() } as UserProfile;
       console.log("handleLogin: User document exists.", userProfile);
-      
-      finalUserProfile = userProfile;
       
       if (loggedInUser.disabled) {
         console.warn(`handleLogin: Login attempt by disabled user: ${loggedInUser.email}`);
@@ -230,6 +233,7 @@ export function useAuth() {
         title: "Login Successful",
         description: "Redirecting to your dashboard...",
       });
+      setUser(userProfile); // This will trigger the redirect useEffect
       
     } else {
         console.log("handleLogin: New user detected. Creating profile from sessionStorage role.");
@@ -255,28 +259,11 @@ export function useAuth() {
         console.log("handleLogin: Creating new user document with profile:", newProfile);
         await setDoc(doc(db, "users", loggedInUser.uid), newProfile);
         
-        finalUserProfile = newProfile;
-        
         toast({ title: "Account Created!", description: "Let's complete your profile." });
+        setUser(newProfile); // This will trigger the redirect useEffect
     }
-
-    redirectToDashboard(finalUserProfile);
-
-  }, [redirectToDashboard, toast]);
-
-  const handleSignOut = useCallback(async () => {
-    console.log("handleSignOut: Attempting to sign out user.");
-    try {
-      await signOut(auth);
-      router.push('/login');
-      toast({ title: "Signed Out", description: "You have been successfully signed out." });
-      console.log("handleSignOut: Sign-out successful.");
-    } catch (error) {
-      console.error("Sign Out Error:", error);
-      toast({ title: "Error", description: "Failed to sign out.", variant: "destructive" });
-    }
-  }, [router, toast]);
+  }, [toast]);
   
 
-  return { user, firebaseUser, loading, handleSignOut, redirectToDashboard, handleLogin };
+  return { user, firebaseUser, loading, handleSignOut, handleLogin, reloadUser };
 }
