@@ -1,76 +1,78 @@
-
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
+  
+    // Helper function to get a user's role from their profile document
+    function getUserRole(userId) {
+      return get(/databases/$(database)/documents/users/$(userId)).data.role;
+    }
     
-    // Helper function to check if the user is an admin
-    function isAdmin() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    // Helper function to check if a user is an admin
+    function isAdmin(userId) {
+      return getUserRole(userId) == 'admin';
     }
 
-    // Helper function to check if the user is a SPOC
-    function isSpoc() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'spoc';
-    }
-    
-    // Helper function to check if the user is the owner of the document
-    function isOwner(userId) {
-      return request.auth.uid == userId;
-    }
-
-    // Admins can read/write anything
-    match /{document=**} {
-      allow read, write: if isAdmin();
-    }
-    
-    // Users can be read by any authenticated user, but only updated by the owner.
+    // `users` collection rules
     match /users/{userId} {
-      allow read: if request.auth != null;
-      allow create: if request.auth.uid == userId;
-      allow update: if isOwner(userId);
-      // Delete is disallowed for now to prevent orphaned data. Can be handled by admin functions.
-      allow delete: if false; 
+      // Allow users to read and update their OWN profile
+      allow read, update: if request.auth.uid == userId;
+      // Admins can read any user profile
+      allow get: if isAdmin(request.auth.uid);
+      // Admins can create or delete user docs (used by server-side flows)
+      allow create, delete: if isAdmin(request.auth.uid);
+      // Public read access for some pages like SPOC list.
+      // More specific queries should be used to protect data.
+      allow list: if request.auth != null;
     }
-    
-    // Teams can be read by any authenticated user.
-    // Create/Update/Delete rules are more specific.
+
+    // `teams` collection rules
     match /teams/{teamId} {
+      // Only authenticated users can create teams
+      allow create: if request.auth != null;
+      
+      // Team leaders and admins can update team details
+      allow update: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'leader' && get(/databases/$(database)/documents/teams/$(teamId)).data.leader.uid == request.auth.uid
+                      || isAdmin(request.auth.uid);
+
+      // Team members, leaders, SPOCs, and admins can read team data
+      allow read: if request.auth.uid in resource.data.members..uid 
+                   || request.auth.uid == resource.data.leader.uid
+                   || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.institute == resource.data.institute
+                   || isAdmin(request.auth.uid);
+                   
+      // Admins and SPOCs (of the same institute) can delete teams
+      allow delete: if isAdmin(request.auth.uid)
+                     || (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'spoc' && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.institute == resource.data.institute);
+    }
+    
+    // `problemStatements` collection rules
+    match /problemStatements/{statementId} {
+      // Any authenticated user can read problem statements
       allow read: if request.auth != null;
-      
-      // Team leader can create their own team
-      allow create: if request.auth.uid == request.resource.data.leader.uid;
-      
-      // Team leader can update team details (e.g. invite members, change problem statement)
-      allow update: if request.auth.uid == resource.data.leader.uid
-      						|| (isSpoc() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.institute == resource.data.institute);
-      
-      // Team leader or SPOC of the same institute can delete the team
-      allow delete: if request.auth.uid == resource.data.leader.uid 
-      						|| (isSpoc() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.institute == resource.data.institute);
+      // Only admins can create, update, or delete them
+      allow write: if isAdmin(request.auth.uid);
     }
     
-    // Config can be read by anyone, but only written by admins.
-    match /config/{docId} {
-      allow read: if true;
-      allow write: if isAdmin();
-    }
-    
-    // Announcements can be read by anyone, written by admins.
+    // `announcements` collection rules
     match /announcements/{announcementId} {
+        // Any authenticated user can read announcements
         allow read: if request.auth != null;
-        allow create, update, delete: if isAdmin();
+        // Only admins can create or delete them
+        allow create, delete: if isAdmin(request.auth.uid);
     }
     
-    // Problem Statements can be read by anyone, written by admins.
-    match /problemStatements/{psId} {
-        allow read: if request.auth != null;
-        allow create, update, delete: if isAdmin();
+    // `config` collection rules (for event settings like deadlines)
+    match /config/{configId} {
+      // Anyone can read config settings
+      allow read: if true;
+      // Only admins can change them
+      allow write: if isAdmin(request.auth.uid);
     }
     
-    // Health check collection is writable by admin for tests
+     // Health check collection (server-side only)
     match /__healthchecks__/{docId} {
-      allow read, write, delete: if isAdmin();
+      allow read, write: if false; // No client access
     }
   }
 }
