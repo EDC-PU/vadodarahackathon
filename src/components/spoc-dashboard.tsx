@@ -77,7 +77,7 @@ export default function SpocDashboard() {
       </header>
 
       <div className="mb-8">
-        <AnnouncementsSection />
+        <AnnouncementsSection audience="spocs_and_all" />
       </div>
 
       <Card>

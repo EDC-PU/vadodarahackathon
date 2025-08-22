@@ -154,7 +154,7 @@ export default function LandingPage() {
 
         <section id="announcements" className="py-20">
           <div className="container max-w-4xl">
-            <AnnouncementsSection />
+            <AnnouncementsSection audience="all" />
           </div>
         </section>
 

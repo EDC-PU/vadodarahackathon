@@ -3,11 +3,11 @@
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { PlusCircle, Loader2, Trash2 } from "lucide-react";
+import { PlusCircle, Loader2, Trash2, Link as LinkIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 import { db } from "@/lib/firebase";
 import { collection, onSnapshot, query, orderBy, addDoc, serverTimestamp, deleteDoc, doc } from "firebase/firestore";
-import { Announcement } from "@/lib/types";
+import { Announcement, AnnouncementAudience } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
@@ -24,6 +24,8 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import Link from "next/link";
 
 export default function AnnouncementsPage() {
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
@@ -61,11 +63,21 @@ export default function AnnouncementsPage() {
     const formData = new FormData(event.currentTarget);
     const title = formData.get('title') as string;
     const content = formData.get('content') as string;
+    const url = formData.get('url') as string;
+    const audience = formData.get('audience') as AnnouncementAudience;
+
+    if (!audience) {
+        toast({ title: "Error", description: "Please select an audience for the announcement.", variant: "destructive" });
+        setIsCreating(false);
+        return;
+    }
 
     try {
         await addDoc(collection(db, "announcements"), {
             title,
             content,
+            url,
+            audience,
             authorName: user.name,
             createdAt: serverTimestamp(),
         });
@@ -112,6 +124,23 @@ export default function AnnouncementsPage() {
                             <Label htmlFor="content">Content</Label>
                             <Textarea id="content" name="content" placeholder="Write the main content of your announcement here." required disabled={isCreating} className="min-h-32"/>
                         </div>
+                        <div>
+                            <Label htmlFor="url">URL (Optional)</Label>
+                            <Input id="url" name="url" type="url" placeholder="https://example.com/more-info" disabled={isCreating} />
+                        </div>
+                        <div>
+                            <Label htmlFor="audience">Audience</Label>
+                            <Select name="audience" required disabled={isCreating}>
+                                <SelectTrigger id="audience">
+                                    <SelectValue placeholder="Select who will see this" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">All Users</SelectItem>
+                                    <SelectItem value="teams">Teams (Leaders & Members)</SelectItem>
+                                    <SelectItem value="spocs">SPOCs</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
                         <Button type="submit" disabled={isCreating}>
                             {isCreating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <PlusCircle className="mr-2 h-4 w-4" />}
                             Post Announcement
@@ -133,8 +162,14 @@ export default function AnnouncementsPage() {
                         <div key={announcement.id} className="p-4 border rounded-md relative group">
                             <h3 className="font-bold text-lg">{announcement.title}</h3>
                             <p className="text-sm text-muted-foreground whitespace-pre-wrap">{announcement.content}</p>
+                            {announcement.url && (
+                                <Link href={announcement.url} target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline flex items-center gap-1.5 mt-2">
+                                    <LinkIcon className="h-3 w-3" />
+                                    <span>Related Link</span>
+                                </Link>
+                            )}
                             <p className="text-xs text-muted-foreground mt-2">
-                                Posted by {announcement.authorName} on {announcement.createdAt ? new Date(announcement.createdAt.seconds * 1000).toLocaleDateString() : '...'}
+                                Posted for <span className="font-medium capitalize">{announcement.audience}</span> by {announcement.authorName} on {announcement.createdAt ? new Date(announcement.createdAt.seconds * 1000).toLocaleDateString() : '...'}
                             </p>
                             <AlertDialog>
                               <AlertDialogTrigger asChild>

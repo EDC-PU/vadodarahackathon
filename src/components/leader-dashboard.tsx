@@ -194,7 +194,7 @@ export default function LeaderDashboard() {
       </header>
 
        <div className="mb-8">
-          <AnnouncementsSection />
+          <AnnouncementsSection audience="teams_and_all" />
       </div>
 
       <div className="grid gap-8 lg:grid-cols-3">
