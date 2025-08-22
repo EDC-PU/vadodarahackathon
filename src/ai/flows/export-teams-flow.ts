@@ -12,7 +12,7 @@ import { db } from '@/lib/firebase';
 import { Team } from '@/lib/types';
 import ExcelJS from 'exceljs';
 
-export const ExportTeamsOutputSchema = z.object({
+const ExportTeamsOutputSchema = z.object({
     success: z.boolean(),
     message: z.string().optional(),
     fileContent: z.string().optional().describe("Base64 encoded content of the Excel file."),
