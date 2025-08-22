@@ -32,6 +32,7 @@ import { Separator } from "./ui/separator";
 import { useAuth } from "@/hooks/use-auth";
 import { doc, getDoc } from "firebase/firestore";
 import { Alert, AlertTitle, AlertDescription } from "./ui/alert";
+import { INSTITUTES } from "@/lib/constants";
 
 const formSchema = z.object({
   email: z.string().email({ message: "Invalid email address." }),
@@ -39,6 +40,7 @@ const formSchema = z.object({
   confirmPassword: z.string().min(6, { message: "Password must be at least 6 characters." }),
   role: z.enum(["leader", "member", "spoc"], { required_error: "Please select a role." }),
   contactNumber: z.string().optional(),
+  institute: z.string().optional(),
 }).refine((data) => data.password === data.confirmPassword, {
     message: "Passwords don't match",
     path: ["confirmPassword"],
@@ -56,6 +58,13 @@ const formSchema = z.object({
                 code: z.ZodIssueCode.custom,
                 message: "Please enter a valid 10-digit phone number.",
                 path: ["contactNumber"],
+            });
+        }
+        if (!data.institute) {
+             ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                message: "Please select an institute.",
+                path: ["institute"],
             });
         }
     }
@@ -95,6 +104,7 @@ export function SignupForm() {
       password: "",
       confirmPassword: "",
       contactNumber: "",
+      institute: "",
     },
   });
 
@@ -194,20 +204,30 @@ export function SignupForm() {
                 </FormItem>
               )}
             />
-            <FormField
-              control={form.control}
-              name="email"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Email</FormLabel>
-                  <FormControl>
-                    <Input placeholder="name@example.com" {...field} disabled={isLoading || isGoogleLoading} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-             {selectedRole === 'spoc' && (
+            {selectedRole === 'spoc' && (
+               <>
+                <FormField
+                control={form.control}
+                name="institute"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Institute</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select your institute" />
+                          </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {INSTITUTES.map((inst) => (
+                          <SelectItem key={inst} value={inst}>{inst}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
                 <FormField
                 control={form.control}
                 name="contactNumber"
@@ -221,7 +241,21 @@ export function SignupForm() {
                     </FormItem>
                 )}
                 />
+               </>
             )}
+            <FormField
+              control={form.control}
+              name="email"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Email</FormLabel>
+                  <FormControl>
+                    <Input placeholder="name@example.com" {...field} disabled={isLoading || isGoogleLoading} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
             <FormField
               control={form.control}
               name="password"
@@ -295,3 +329,5 @@ export function SignupForm() {
     </Card>
   );
 }
+
+    

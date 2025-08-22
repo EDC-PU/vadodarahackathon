@@ -187,7 +187,7 @@ export function useAuth() {
     } else {
         // User document doesn't exist. This is a brand new user signing up.
         const signUpForm = JSON.parse(sessionStorage.getItem('sign-up-form') || '{}');
-        const { role, contactNumber } = signUpForm;
+        const { role, contactNumber, institute } = signUpForm;
 
         const newProfile: Partial<UserProfile> = {
             uid: loggedInUser.uid,
@@ -203,7 +203,8 @@ export function useAuth() {
 
         if (role === 'spoc') {
             newProfile.spocStatus = 'pending';
-            newProfile.contactNumber = contactNumber; // Save contact number for SPOC
+            newProfile.contactNumber = contactNumber;
+            newProfile.institute = institute;
             toastTitle = "Registration Submitted";
             toastDescription = "Your request has been sent for admin approval. You will be notified via email.";
         }
@@ -236,3 +237,5 @@ export function useAuth() {
 
   return { user, firebaseUser, loading, handleSignOut, redirectToDashboard, handleLogin };
 }
+
+    
