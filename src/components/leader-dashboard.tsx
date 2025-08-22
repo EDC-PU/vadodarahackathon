@@ -73,7 +73,11 @@ export default function LeaderDashboard() {
         });
 
         if (result.success) {
-            toast({ title: "Invitation Sent", description: result.message });
+            toast({ 
+                title: "Invitation Sent", 
+                description: result.message,
+                duration: 10000,
+            });
             form.reset();
         } else {
              toast({ title: "Error", description: result.message, variant: "destructive" });
@@ -317,5 +321,3 @@ export default function LeaderDashboard() {
     </>
   );
 }
-
-    

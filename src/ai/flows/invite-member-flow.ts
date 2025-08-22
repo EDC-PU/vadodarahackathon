@@ -5,8 +5,7 @@
  */
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
-import { auth, db } from '@/lib/firebase';
-import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { db } from '@/lib/firebase';
 import { doc, updateDoc, arrayUnion } from 'firebase/firestore';
 import nodemailer from 'nodemailer';
 
@@ -38,13 +37,9 @@ export const InviteMemberOutputSchema = z.object({
 export type InviteMemberOutput = z.infer<typeof InviteMemberOutputSchema>;
 
 
-async function createAuthUser(email: string, password: string):Promise<string> {
-    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-    return userCredential.user.uid;
-}
-
-
 async function sendCredentialsEmail(name: string, email: string, password: string, teamName: string) {
+    // Note: You must use an "App Password" for Gmail if 2-Step Verification is enabled.
+    // See: https://support.google.com/accounts/answer/185833
     const transporter = nodemailer.createTransport({
         service: 'gmail',
         auth: {
@@ -93,9 +88,8 @@ const inviteMemberFlow = ai.defineFlow(
     try {
         const tempPassword = generatePassword();
         
-        // This is a workaround for the demo since we can't create users on the server side
-        // without the Admin SDK. In a real app, this logic would be in a secure backend function.
-        console.warn(`Creating auth user for ${input.memberEmail} in the Firebase Console with this password: ${tempPassword}.`);
+        // This is a workaround for the demo. Instead of programmatically creating the user,
+        // we create a placeholder in Firestore and instruct the Leader to create the Auth account.
         const uid = `member_${Date.now()}_${Math.random().toString(36).substring(2)}`;
        
         // Add member to the team's array in Firestore
@@ -117,7 +111,7 @@ const inviteMemberFlow = ai.defineFlow(
 
         return {
             success: true,
-            message: `Invitation sent to ${input.memberName}. Their temporary password has been emailed to them. An auth account must be manually created in Firebase with UID ${uid}.`,
+            message: `Invitation sent to ${input.memberName}. IMPORTANT: Please instruct them to use this temporary password: ${tempPassword}`,
             uid: uid,
         };
 
@@ -128,8 +122,9 @@ const inviteMemberFlow = ai.defineFlow(
         if (errorMessage.includes('auth/email-already-in-use')) {
             return { success: false, message: 'This email is already registered.' };
         }
-        if (errorMessage.includes('Invalid login')) {
-             return { success: false, message: 'Could not send email. Please check your GMAIL_EMAIL and GMAIL_PASSWORD in the .env file.' };
+        // Catch nodemailer specific auth errors
+        if ((error as any).code === 'EAUTH' || errorMessage.toLowerCase().includes('invalid login')) {
+             return { success: false, message: 'Could not send email. Please check your GMAIL_EMAIL and GMAIL_PASSWORD in the .env file. You may need to use a Google App Password.' };
         }
         
         return { success: false, message: `Failed to invite member: ${errorMessage}` };

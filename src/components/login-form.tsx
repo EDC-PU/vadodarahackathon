@@ -55,7 +55,7 @@ export function LoginForm() {
       const errorCode = error.code;
       let errorMessage = "An unexpected error occurred.";
       if (errorCode === 'auth/user-not-found' || errorCode === 'auth/wrong-password' || errorCode === 'auth/invalid-credential') {
-        errorMessage = "Invalid email or password. Please try again."
+        errorMessage = "Invalid email or password. Please check your credentials and try again."
       } else {
         errorMessage = error.message;
       }
