@@ -3,17 +3,29 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Loader2, Download, Save } from "lucide-react";
+import { Loader2, Download, Save, Pencil, X, Trash2, MinusCircle } from "lucide-react";
 import { useEffect, useState, useMemo } from "react";
 import { db } from "@/lib/firebase";
 import { collection, onSnapshot, doc, updateDoc } from "firebase/firestore";
-import { Team, UserProfile, ProblemStatementCategory } from "@/lib/types";
+import { Team, UserProfile, ProblemStatementCategory, TeamMember } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { exportTeams } from "@/ai/flows/export-teams-flow";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { INSTITUTES } from "@/lib/constants";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { manageTeamBySpoc } from "@/ai/flows/manage-team-by-spoc-flow";
 
 type CategoryFilter = ProblemStatementCategory | "All Categories";
 
@@ -22,8 +34,11 @@ export default function AllTeamsPage() {
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [isExporting, setIsExporting] = useState(false);
-  const [teamNumberInputs, setTeamNumberInputs] = useState<{ [key: string]: string }>({});
+  
+  const [editingTeam, setEditingTeam] = useState<{ id: string, name: string } | null>(null);
   const [isSaving, setIsSaving] = useState<string | null>(null);
+  const [isProcessing, setIsProcessing] = useState<string | null>(null);
+
   const [instituteFilter, setInstituteFilter] = useState<string>("All Institutes");
   const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>("All Categories");
   const { toast } = useToast();
@@ -44,7 +59,7 @@ export default function AllTeamsPage() {
     });
 
     const unsubscribeUsers = onSnapshot(usersCollection, (snapshot) => {
-      const usersData = snapshot.docs.map(doc => doc.data() as UserProfile);
+      const usersData = snapshot.docs.map(doc => ({uid: doc.id, ...doc.data()} as UserProfile));
       setUsers(usersData);
     }, (error) => {
       console.error("Error fetching users:", error);
@@ -99,6 +114,62 @@ export default function AllTeamsPage() {
         setIsExporting(false);
     }
   };
+  
+  const handleEditTeamName = (teamId: string) => {
+    const team = teams.find(t => t.id === teamId);
+    if (team) {
+        setEditingTeam({ id: teamId, name: team.name });
+    }
+  };
+
+  const handleSaveTeamName = async (teamId: string) => {
+      if (!editingTeam || editingTeam.id !== teamId) return;
+
+      setIsSaving(teamId);
+      try {
+          const teamDocRef = doc(db, "teams", teamId);
+          await updateDoc(teamDocRef, { name: editingTeam.name });
+          toast({ title: "Success", description: "Team name updated." });
+          setEditingTeam(null);
+      } catch (error) {
+          console.error("Error updating team name:", error);
+          toast({ title: "Error", description: "Could not update team name.", variant: "destructive" });
+      } finally {
+          setIsSaving(null);
+      }
+  };
+
+  const handleRemoveMember = async (teamId: string, memberToRemove: TeamMember) => {
+    setIsProcessing(`${teamId}-${memberToRemove.uid}`);
+    try {
+        const result = await manageTeamBySpoc({ teamId, action: 'remove-member', memberEmail: memberToRemove.email });
+        if (result.success) {
+            toast({ title: "Success", description: result.message });
+        } else {
+            toast({ title: "Error", description: result.message, variant: "destructive" });
+        }
+    } catch (error) {
+         toast({ title: "Error", description: "An unexpected error occurred.", variant: "destructive" });
+    } finally {
+        setIsProcessing(null);
+    }
+  }
+
+  const handleDeleteTeam = async (teamId: string) => {
+    setIsProcessing(teamId);
+    try {
+        const result = await manageTeamBySpoc({ teamId, action: 'delete-team' });
+        if (result.success) {
+            toast({ title: "Success", description: result.message });
+        } else {
+            toast({ title: "Error", description: result.message, variant: "destructive" });
+        }
+    } catch (error) {
+         toast({ title: "Error", description: "An unexpected error occurred.", variant: "destructive" });
+    } finally {
+        setIsProcessing(null);
+    }
+  }
 
   const getTeamWithFullDetails = (teamsToProcess: Team[]) => {
     return teamsToProcess.map(team => {
@@ -107,19 +178,23 @@ export default function AllTeamsPage() {
             const memberProfile = users.find(u => u.email === member.email);
             return {
                 ...member,
+                uid: memberProfile?.uid,
                 enrollmentNumber: memberProfile?.enrollmentNumber || member.enrollmentNumber || 'N/A',
                 contactNumber: memberProfile?.contactNumber || member.contactNumber || 'N/A',
                 yearOfStudy: memberProfile?.yearOfStudy || 'N/A',
-                semester: memberProfile?.semester || 'N/A',
+                semester: memberProfile?.semester,
             };
         });
-        const allMembers = [
+        const allMembers: (TeamMember & {isLeader: boolean})[] = [
             {
+                uid: leaderProfile?.uid!,
                 name: leaderProfile?.name || team.leader.name,
+                email: leaderProfile?.email || team.leader.email,
                 enrollmentNumber: leaderProfile?.enrollmentNumber || 'N/A',
                 contactNumber: leaderProfile?.contactNumber || 'N/A',
                 yearOfStudy: leaderProfile?.yearOfStudy || 'N/A',
-                semester: leaderProfile?.semester || 'N/A',
+                semester: leaderProfile?.semester,
+                gender: leaderProfile?.gender || 'Other',
                 isLeader: true,
             },
             ...membersWithDetails.map(m => ({...m, isLeader: false})),
@@ -129,29 +204,6 @@ export default function AllTeamsPage() {
             allMembers,
         };
     });
-  };
-
-  const handleTeamNumberChange = (teamId: string, value: string) => {
-    setTeamNumberInputs(prev => ({...prev, [teamId]: value}));
-  };
-  
-  const handleSaveTeamNumber = async (teamId: string) => {
-    const teamNumber = teamNumberInputs[teamId];
-    if (!teamNumber) {
-        toast({ title: "Error", description: "Team number cannot be empty.", variant: "destructive" });
-        return;
-    }
-    setIsSaving(teamId);
-    try {
-        const teamDocRef = doc(db, 'teams', teamId);
-        await updateDoc(teamDocRef, { teamNumber: teamNumber });
-        toast({ title: "Success", description: "Team number has been allocated." });
-    } catch (error) {
-        console.error("Error allocating team number:", error);
-        toast({ title: "Error", description: "Could not allocate team number.", variant: "destructive" });
-    } finally {
-        setIsSaving(null);
-    }
   };
   
   const teamsWithDetails = getTeamWithFullDetails(filteredTeams);
@@ -204,13 +256,13 @@ export default function AllTeamsPage() {
             <Table>
                 <TableHeader>
                     <TableRow>
-                        <TableHead className="w-[200px]">Team No.</TableHead>
                         <TableHead>Team Name</TableHead>
                         <TableHead>Member Name</TableHead>
                         <TableHead>Enrollment No.</TableHead>
                         <TableHead>Contact No.</TableHead>
                         <TableHead>Year</TableHead>
                         <TableHead>Sem</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -218,37 +270,81 @@ export default function AllTeamsPage() {
                        team.allMembers.map((member, memberIndex) => (
                          <TableRow key={`${team.id}-${memberIndex}`}>
                             {memberIndex === 0 && (
-                                <>
-                                    <TableCell rowSpan={team.allMembers.length} className="font-medium align-top">
-                                        {team.teamNumber ? (
-                                            <span className="font-bold text-lg">{team.teamNumber}</span>
-                                        ) : (
+                                <TableCell rowSpan={team.allMembers.length} className="font-medium align-top">
+                                    <div className="flex flex-col gap-2">
+                                        {editingTeam?.id === team.id ? (
                                             <div className="flex items-center gap-2">
                                                 <Input 
-                                                    placeholder="e.g., T001" 
-                                                    value={teamNumberInputs[team.id] || ''}
-                                                    onChange={(e) => handleTeamNumberChange(team.id, e.target.value)}
+                                                    value={editingTeam.name}
+                                                    onChange={(e) => setEditingTeam({ ...editingTeam, name: e.target.value })}
+                                                    className="w-40 h-8"
                                                     disabled={isSaving === team.id}
-                                                    className="w-24"
                                                 />
-                                                <Button 
-                                                    size="sm" 
-                                                    onClick={() => handleSaveTeamNumber(team.id)}
-                                                    disabled={isSaving === team.id}
-                                                >
-                                                    {isSaving === team.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4"/>}
+                                                <Button size="icon" className="h-8 w-8" onClick={() => handleSaveTeamName(team.id)} disabled={isSaving === team.id}>
+                                                    {isSaving === team.id ? <Loader2 className="h-4 w-4 animate-spin"/> : <Save className="h-4 w-4"/>}
+                                                </Button>
+                                                <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setEditingTeam(null)} disabled={isSaving === team.id}>
+                                                    <X className="h-4 w-4"/>
+                                                </Button>
+                                            </div>
+                                        ) : (
+                                            <div className="flex items-center gap-2 group">
+                                                <span>{team.name}</span>
+                                                <Button size="icon" variant="ghost" className="h-7 w-7 opacity-0 group-hover:opacity-100" onClick={() => handleEditTeamName(team.id)}>
+                                                    <Pencil className="h-4 w-4 text-muted-foreground"/>
                                                 </Button>
                                             </div>
                                         )}
-                                    </TableCell>
-                                    <TableCell rowSpan={team.allMembers.length} className="font-medium align-top">{team.name}</TableCell>
-                                </>
+                                        <AlertDialog>
+                                            <AlertDialogTrigger asChild>
+                                                <Button variant="destructive" size="sm" className="w-fit" disabled={isProcessing === team.id}>
+                                                    <Trash2 className="mr-2 h-4 w-4"/> Delete Team
+                                                </Button>
+                                            </AlertDialogTrigger>
+                                            <AlertDialogContent>
+                                                <AlertDialogHeader>
+                                                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                                <AlertDialogDescription>
+                                                    This will permanently delete the team "{team.name}" and remove all its members. This action cannot be undone.
+                                                </AlertDialogDescription>
+                                                </AlertDialogHeader>
+                                                <AlertDialogFooter>
+                                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                <AlertDialogAction onClick={() => handleDeleteTeam(team.id)} className="bg-destructive hover:bg-destructive/90">Delete</AlertDialogAction>
+                                                </AlertDialogFooter>
+                                            </AlertDialogContent>
+                                        </AlertDialog>
+                                    </div>
+                                </TableCell>
                             )}
                             <TableCell>{member.name} {member.isLeader && '(Leader)'}</TableCell>
                             <TableCell>{member.enrollmentNumber}</TableCell>
                             <TableCell>{member.contactNumber}</TableCell>
                             <TableCell>{member.yearOfStudy}</TableCell>
                             <TableCell>{member.semester}</TableCell>
+                            <TableCell className="text-right">
+                                {!member.isLeader && (
+                                     <AlertDialog>
+                                        <AlertDialogTrigger asChild>
+                                            <Button variant="ghost" size="icon" className="h-8 w-8" disabled={isProcessing === `${team.id}-${member.uid}`}>
+                                                {isProcessing === `${team.id}-${member.uid}` ? <Loader2 className="h-4 w-4 animate-spin"/> : <MinusCircle className="h-4 w-4 text-destructive"/>}
+                                            </Button>
+                                        </AlertDialogTrigger>
+                                        <AlertDialogContent>
+                                            <AlertDialogHeader>
+                                            <AlertDialogTitle>Remove {member.name}?</AlertDialogTitle>
+                                            <AlertDialogDescription>
+                                                Are you sure you want to remove {member.name} from this team? Their account will not be deleted, but they will be removed from the team.
+                                            </AlertDialogDescription>
+                                            </AlertDialogHeader>
+                                            <AlertDialogFooter>
+                                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                            <AlertDialogAction onClick={() => handleRemoveMember(team.id, member)} className="bg-destructive hover:bg-destructive/90">Remove Member</AlertDialogAction>
+                                            </AlertDialogFooter>
+                                        </AlertDialogContent>
+                                    </AlertDialog>
+                                )}
+                            </TableCell>
                          </TableRow>
                        ))
                     ))}
@@ -262,3 +358,5 @@ export default function AllTeamsPage() {
     </div>
   );
 }
+
+    
