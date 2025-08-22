@@ -16,11 +16,14 @@ const generatePassword = (length = 10) => {
     for (let i = 0, n = charset.length; i < length; ++i) {
         retVal += charset.charAt(Math.floor(Math.random() * n));
     }
+    console.log("Generated temporary password.");
     return retVal;
 };
 
 async function sendSpocCredentialsEmail(name: string, email: string, password: string, institute: string) {
+    console.log("Attempting to send SPOC credentials email...");
     if (!process.env.GMAIL_EMAIL || !process.env.GMAIL_PASSWORD) {
+        console.error("GMAIL_EMAIL or GMAIL_PASSWORD environment variables not set.");
         throw new Error("Missing GMAIL_EMAIL or GMAIL_PASSWORD environment variables. Please set them in your .env file. Note: You must use a Google App Password for GMAIL_PASSWORD.");
     }
     const transporter = nodemailer.createTransport({
@@ -30,6 +33,7 @@ async function sendSpocCredentialsEmail(name: string, email: string, password: s
             pass: process.env.GMAIL_PASSWORD,
         },
     });
+    console.log("Nodemailer transporter created for Gmail.");
 
     const mailOptions = {
         from: process.env.GMAIL_EMAIL,
@@ -55,9 +59,11 @@ async function sendSpocCredentialsEmail(name: string, email: string, password: s
 
     console.log(`Sending SPOC creation email to: ${email}`);
     await transporter.sendMail(mailOptions);
+    console.log(`Successfully sent email to ${email}.`);
 }
 
 export async function createSpoc(input: CreateSpocInput): Promise<CreateSpocOutput> {
+  console.log("Executing createSpoc function...");
   return createSpocFlow(input);
 }
 
@@ -69,11 +75,13 @@ const createSpocFlow = ai.defineFlow(
     outputSchema: CreateSpocOutputSchema,
   },
   async (input) => {
+    console.log("createSpocFlow started with input:", input);
     try {
       const tempPassword = generatePassword();
       const adminAuth = getAdminAuth();
       const adminDb = getAdminDb();
       
+      console.log("Creating Firebase Auth user...");
       // 1. Create Firebase Auth user
       const userRecord = await adminAuth.createUser({
           email: input.email,
@@ -84,7 +92,9 @@ const createSpocFlow = ai.defineFlow(
       });
 
       const uid = userRecord.uid;
+      console.log(`Successfully created Firebase Auth user with UID: ${uid}`);
        
+      console.log("Creating user profile in Firestore...");
       // 2. Create user profile in Firestore
       const userDocRef = adminDb.collection('users').doc(uid);
       await userDocRef.set({
@@ -98,15 +108,19 @@ const createSpocFlow = ai.defineFlow(
         passwordChanged: false, // User must change this password
         spocStatus: 'approved', // Admins create pre-approved SPOCs
       });
+      console.log(`Successfully created Firestore profile for UID: ${uid}`);
 
+      console.log("Sending credentials email...");
       // 3. Send email with credentials
       await sendSpocCredentialsEmail(input.name, input.email, tempPassword, input.institute);
 
-      return {
+      const result: CreateSpocOutput = {
         success: true,
         message: `SPOC profile and login for ${input.name} created. An email with credentials has been sent.`,
         uid: uid,
       };
+      console.log("createSpocFlow finished successfully.", result);
+      return result;
     } catch (error: any) {
       console.error("Error creating SPOC:", error);
       let errorMessage = error.message || "An unknown error occurred.";
@@ -118,7 +132,9 @@ const createSpocFlow = ai.defineFlow(
           errorMessage = `The generated password is invalid: ${error.message}`;
       }
       
-      return { success: false, message: `Failed to create SPOC: ${errorMessage}` };
+      const result: CreateSpocOutput = { success: false, message: `Failed to create SPOC: ${errorMessage}` };
+      console.error("createSpocFlow failed.", result);
+      return result;
     }
   }
 );

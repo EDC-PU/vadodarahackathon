@@ -17,8 +17,19 @@ const firebaseConfig = {
 };
 
 // Initialize Firebase
-const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
+let app;
+if (getApps().length === 0) {
+    console.log("Firebase Client: Initializing a new Firebase app...");
+    app = initializeApp(firebaseConfig);
+    console.log("Firebase Client: New app initialized.");
+} else {
+    console.log("Firebase Client: Using existing Firebase app.");
+    app = getApp();
+}
+
 const auth = getAuth(app);
 const db = getFirestore(app);
+
+console.log("Firebase Client: Auth and Firestore services have been initialized.");
 
 export { app, auth, db };

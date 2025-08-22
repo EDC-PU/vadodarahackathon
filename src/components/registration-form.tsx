@@ -68,6 +68,7 @@ export function RegistrationForm() {
 
   useEffect(() => {
     if (user) {
+        console.log("RegistrationForm: Auth user loaded, resetting form values.", user);
         form.reset({
             teamName: "",
             name: user.name || "",
@@ -82,17 +83,21 @@ export function RegistrationForm() {
   }, [user, form]);
   
   const createTeamAndAssignLeader = async (values: z.infer<typeof formSchema>) => {
+    console.log("createTeamAndAssignLeader function called with values:", values);
     if (!user) {
       toast({ title: "Error", description: "You must be logged in to create a team.", variant: "destructive" });
-      return;
+      console.error("Team creation failed: User not logged in.");
+      return null;
     }
 
+    console.log(`Checking for uniqueness of team name: "${values.teamName}"`);
     // Check for team name uniqueness
     const teamsRef = collection(db, "teams");
     const q = query(teamsRef, where("name", "==", values.teamName));
     const querySnapshot = await getDocs(q);
 
     if (!querySnapshot.empty) {
+      console.error("Team name already exists.");
       toast({
         title: "Team Name Taken",
         description: "A team with this name already exists. Please choose another name.",
@@ -100,11 +105,14 @@ export function RegistrationForm() {
       });
       return null;
     }
+    console.log("Team name is unique. Proceeding with creation.");
 
     const batch = writeBatch(db);
+    console.log("Write batch created.");
 
     // 1. Create Team
     const teamDocRef = doc(collection(db, "teams"));
+    console.log(`Generated new team document ID: ${teamDocRef.id}`);
     const teamData = {
       id: teamDocRef.id,
       name: values.teamName,
@@ -119,6 +127,7 @@ export function RegistrationForm() {
       category: undefined,
     };
     batch.set(teamDocRef, teamData);
+    console.log("Batch operation: Set new team data.", teamData);
 
     // 2. Update User Profile to be a leader and link to team
     const userDocRef = doc(db, "users", user.uid);
@@ -134,13 +143,17 @@ export function RegistrationForm() {
       passwordChanged: true, // They are creating their team, so they've passed the initial password change step
     };
     batch.update(userDocRef, userProfileUpdate);
+    console.log("Batch operation: Update user profile.", userProfileUpdate);
     
+    console.log("Committing batch write...");
     await batch.commit();
+    console.log("Batch write successful.");
 
     return { ...user, ...userProfileUpdate };
   }
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
+    console.log("RegistrationForm onSubmit triggered.");
     setIsLoading(true);
     try {
       const updatedUser = await createTeamAndAssignLeader(values);
@@ -149,7 +162,10 @@ export function RegistrationForm() {
           title: "Team Registered!",
           description: `Your team "${values.teamName}" has been successfully created.`,
         });
+        console.log("Team registration successful, redirecting to dashboard...");
         redirectToDashboard(updatedUser);
+      } else {
+        console.log("Team registration failed, not redirecting.");
       }
     } catch (error: any) {
        console.error("Team Registration Error:", error);
@@ -166,6 +182,7 @@ export function RegistrationForm() {
   const formDescription = "This is a registration form for the Vadodara Hackathon 6.0. Team leaders should fill out their personal and academic details to create their account and team.";
 
   if (authLoading) {
+    console.log("RegistrationForm: Auth is loading...");
     return <div className="flex items-center justify-center p-8"><Loader2 className="h-8 w-8 animate-spin" /></div>
   }
 

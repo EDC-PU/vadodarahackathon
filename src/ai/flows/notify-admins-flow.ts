@@ -11,7 +11,9 @@ import { UserProfile, NotifyAdminsInput, NotifyAdminsInputSchema, NotifyAdminsOu
 
 
 async function sendSpocRequestEmail(adminEmails: string[], spocName: string, spocInstitute: string) {
+    console.log("Attempting to send SPOC request notification email...");
     if (!process.env.GMAIL_EMAIL || !process.env.GMAIL_PASSWORD) {
+        console.error("GMAIL_EMAIL or GMAIL_PASSWORD environment variables not set.");
         throw new Error("Missing GMAIL_EMAIL or GMAIL_PASSWORD environment variables. Please set them in your .env file. Note: You must use a Google App Password for GMAIL_PASSWORD.");
     }
     
@@ -22,6 +24,7 @@ async function sendSpocRequestEmail(adminEmails: string[], spocName: string, spo
             pass: process.env.GMAIL_PASSWORD,
         },
     });
+    console.log("Nodemailer transporter created for Gmail.");
 
     const mailOptions = {
         from: process.env.GMAIL_EMAIL,
@@ -43,10 +46,12 @@ async function sendSpocRequestEmail(adminEmails: string[], spocName: string, spo
 
     console.log(`Sending SPOC request notification email to admins: ${adminEmails.join(', ')}`);
     await transporter.sendMail(mailOptions);
+    console.log(`Successfully sent notification to ${adminEmails.length} admin(s).`);
 }
 
 
 export async function notifyAdminsOfSpocRequest(input: NotifyAdminsInput): Promise<NotifyAdminsOutput> {
+    console.log("Executing notifyAdminsOfSpocRequest function...");
     return notifyAdminsFlow(input);
 }
 
@@ -58,9 +63,11 @@ const notifyAdminsFlow = ai.defineFlow(
     outputSchema: NotifyAdminsOutputSchema,
   },
   async ({ spocName, spocEmail, spocInstitute }) => {
+    console.log("notifyAdminsFlow started with input:", { spocName, spocEmail, spocInstitute });
     try {
         const adminDb = getAdminDb();
         
+        console.log("Fetching admin users from Firestore...");
         // 1. Fetch all admin users
         const adminsQuery = adminDb.collection('users').where('role', '==', 'admin');
         const adminSnapshot = await adminsQuery.get();
@@ -71,13 +78,17 @@ const notifyAdminsFlow = ai.defineFlow(
         }
 
         const adminEmails = adminSnapshot.docs.map(doc => (doc.data() as UserProfile).email);
+        console.log(`Found ${adminEmails.length} admin(s) to notify:`, adminEmails);
 
+        console.log("Sending email notification to all admins...");
         // 2. Send email notification to all admins
         await sendSpocRequestEmail(adminEmails, spocName, spocInstitute);
         
         // 3. (Future) Create in-app notification document in Firestore
+        // console.log("Creating in-app notification...");
         // const notificationRef = adminDb.collection('notifications').doc();
         // await notificationRef.set({ ... });
+        // console.log("In-app notification created.");
 
 
         return {

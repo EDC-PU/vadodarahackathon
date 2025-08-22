@@ -12,6 +12,7 @@ import { getAdminAuth } from '@/lib/firebase-admin';
 import { notifyAdminsOfSpocRequest } from '@/ai/flows/notify-admins-flow';
 
 async function findTeamByMemberEmail(email: string): Promise<Team | null> {
+    console.log(`findTeamByMemberEmail: Searching for team with member email: ${email}`);
     if (!email) return null;
     const teamsRef = collection(db, "teams");
     const querySnapshot = await getDocs(teamsRef);
@@ -19,12 +20,17 @@ async function findTeamByMemberEmail(email: string): Promise<Team | null> {
     for (const doc of querySnapshot.docs) {
         const team = { id: doc.id, ...doc.data() } as Team;
         // Check both leader and members
-        if (team.leader.email.toLowerCase() === email.toLowerCase()) return team;
+        if (team.leader.email.toLowerCase() === email.toLowerCase()) {
+            console.log(`findTeamByMemberEmail: Found user as leader of team ${team.id}`);
+            return team;
+        }
         const member = team.members.find(m => m.email.toLowerCase() === email.toLowerCase());
         if (member) {
+            console.log(`findTeamByMemberEmail: Found user as member of team ${team.id}`);
             return team;
         }
     }
+    console.log(`findTeamByMemberEmail: No team found for email ${email}`);
     return null;
 }
 
@@ -36,14 +42,18 @@ export function useAuth() {
   const { toast } = useToast();
 
   const redirectToDashboard = useCallback((userProfile: UserProfile) => {
+     console.log("redirectToDashboard: Starting redirection logic for user:", userProfile);
+     
      // First, check if the user needs to change their password
      if (userProfile.passwordChanged === false) {
+        console.log("redirectToDashboard: User needs to change password. Redirecting to /change-password.");
         router.push('/change-password');
         return;
      }
      
      // Handle pending SPOCs
      if (userProfile.role === 'spoc' && userProfile.spocStatus === 'pending') {
+        console.log("redirectToDashboard: SPOC is pending approval. Signing out.");
         signOut(auth);
         toast({
             title: "Pending Approval",
@@ -57,22 +67,26 @@ export function useAuth() {
      
       // If SPOC hasn't completed their profile
      if (userProfile.role === 'spoc' && (!userProfile.institute || !userProfile.contactNumber)) {
+        console.log("redirectToDashboard: SPOC profile is incomplete. Redirecting to /complete-spoc-profile.");
         router.push('/complete-spoc-profile');
         return;
      }
 
      // If the user is a new signup with no role, they need to create a team
      if (!userProfile.role) {
+         console.log("redirectToDashboard: User has no role. Redirecting to /create-team.");
          router.push('/create-team');
          return;
      }
 
      // Then, check if the user has completed their profile
      if ((userProfile.role === 'member' || userProfile.role === 'leader') && !userProfile.enrollmentNumber) {
+        console.log("redirectToDashboard: Member/Leader profile is incomplete. Redirecting to /complete-profile.");
         router.push('/complete-profile');
         return;
      }
 
+     console.log(`redirectToDashboard: User role is ${userProfile.role}. Redirecting to respective dashboard.`);
      switch (userProfile.role) {
         case "admin":
           router.push("/admin");
@@ -87,21 +101,26 @@ export function useAuth() {
           router.push("/member");
           break;
         default:
+          console.log("redirectToDashboard: User has unknown role or default case. Redirecting to /create-team.");
           router.push("/create-team");
       }
   }, [router, toast]);
 
   useEffect(() => {
+    console.log("useAuth: Setting up onAuthStateChanged listener.");
     const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
       setFirebaseUser(currentUser);
       if (currentUser) {
+        console.log(`useAuth onAuthStateChanged: User is logged in. UID: ${currentUser.uid}`);
         const userDocRef = doc(db, 'users', currentUser.uid);
         
         const unsubscribeProfile = onSnapshot(userDocRef, (userDoc) => {
           if (userDoc.exists()) {
             const userProfile = { uid: userDoc.id, ...userDoc.data() } as UserProfile;
+            console.log("useAuth onSnapshot: User profile data received:", userProfile);
             
             if (user?.teamId && !userProfile.teamId) {
+                console.warn(`useAuth onSnapshot: User was part of team ${user.teamId} but is no longer. Resetting role.`);
                 toast({
                     title: "Removed from Team",
                     description: "The team leader has removed you from the team. You can now register as a new leader.",
@@ -113,34 +132,48 @@ export function useAuth() {
             }
 
             setUser(userProfile);
+          } else {
+            console.warn(`useAuth onSnapshot: User document for UID ${currentUser.uid} does not exist.`);
           }
            setLoading(false);
+           console.log("useAuth: Loading state set to false.");
         }, (error) => {
-            console.error("Error listening to user profile:", error);
+            console.error("useAuth onSnapshot: Error listening to user profile:", error);
             setUser(null);
             setLoading(false);
         });
 
-        return () => unsubscribeProfile();
+        return () => {
+            console.log("useAuth: Unsubscribing from user profile snapshot listener.");
+            unsubscribeProfile();
+        };
 
       } else {
+        console.log("useAuth onAuthStateChanged: User is not logged in.");
         setUser(null);
         setLoading(false);
+        console.log("useAuth: Loading state set to false.");
       }
     });
 
-    return () => unsubscribeAuth();
+    return () => {
+      console.log("useAuth: Unsubscribing from onAuthStateChanged listener.");
+      unsubscribeAuth();
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
 
   const handleLogin = useCallback(async (loggedInUser: FirebaseUser) => {
+    console.log("handleLogin: Starting login process for user:", loggedInUser.email);
     const userDocRef = doc(db, "users", loggedInUser.uid);
     let userDoc = await getDoc(userDocRef);
 
     const adminEmail = process.env.NEXT_PUBLIC_ADMIN_EMAIL;
     if (adminEmail && loggedInUser.email === adminEmail) {
+        console.log("handleLogin: User is designated Super Admin.");
         if (!userDoc.exists()) {
+            console.log("handleLogin: Super Admin profile does not exist. Creating it now.");
             const adminProfile: UserProfile = {
                 uid: loggedInUser.uid,
                 name: "Super Admin",
@@ -159,6 +192,7 @@ export function useAuth() {
         } else {
             const userProfile = userDoc.data() as UserProfile;
             if (userProfile.role !== 'admin') {
+                console.log("handleLogin: Existing user is Super Admin but role is not 'admin'. Updating role.");
                 await updateDoc(userDocRef, { role: 'admin' });
             }
         }
@@ -166,8 +200,10 @@ export function useAuth() {
 
     if (userDoc.exists()) {
       const userProfile = userDoc.data() as UserProfile;
+      console.log("handleLogin: User document exists.", userProfile);
 
       if (loggedInUser.disabled) {
+        console.warn(`handleLogin: Login attempt by disabled user: ${loggedInUser.email}`);
         toast({
             title: "Account Pending Approval",
             description: "Your SPOC account is awaiting admin approval. Please check back later.",
@@ -184,10 +220,12 @@ export function useAuth() {
       });
       redirectToDashboard(userProfile);
     } else {
+        console.log("handleLogin: New user detected. Creating profile from sessionStorage role.");
         const role = sessionStorage.getItem('sign-up-role');
         sessionStorage.removeItem('sign-up-role');
 
         if (!role) {
+            console.error("handleLogin: New user signed up, but role was not found in sessionStorage.");
             toast({ title: "Error", description: "Role selection was not found. Please try signing up again.", variant: "destructive" });
             signOut(auth);
             return;
@@ -199,22 +237,25 @@ export function useAuth() {
             email: loggedInUser.email!,
             role: role as UserProfile['role'],
             photoURL: loggedInUser.photoURL || '',
-            passwordChanged: true, 
+            passwordChanged: true, // Assumed true for Google Sign-In or initial signup
         };
         
+        console.log("handleLogin: Creating new user document with profile:", newProfile);
         await setDoc(doc(db, "users", loggedInUser.uid), newProfile);
         
         toast({ title: "Account Created!", description: "Let's complete your profile." });
         
         redirectToDashboard(newProfile as UserProfile);
     }
-  }, [redirectToDashboard, toast, router]);
+  }, [redirectToDashboard, toast]);
 
   const handleSignOut = useCallback(async () => {
+    console.log("handleSignOut: Attempting to sign out user.");
     try {
       await signOut(auth);
       router.push('/login');
       toast({ title: "Signed Out", description: "You have been successfully signed out." });
+      console.log("handleSignOut: Sign-out successful.");
     } catch (error) {
       console.error("Sign Out Error:", error);
       toast({ title: "Error", description: "Failed to sign out.", variant: "destructive" });

@@ -24,8 +24,12 @@ export function SmartFieldTip({ fieldName, fieldValue, formContext }: SmartField
   const [error, setError] = useState<string | null>(null);
 
   const fetchTip = async () => {
-    if (tip) return; // Don't re-fetch if tip is already loaded
+    if (tip) {
+      console.log("SmartFieldTip: Tip already loaded, not re-fetching.");
+      return;
+    }
 
+    console.log(`SmartFieldTip: Fetching tip for field: ${fieldName}`);
     setIsLoading(true);
     setError(null);
     try {
@@ -35,6 +39,7 @@ export function SmartFieldTip({ fieldName, fieldValue, formContext }: SmartField
         formContext: formContext,
       } as RegistrationTipsInput);
       setTip(result.tip);
+      console.log(`SmartFieldTip: Tip received:`, result.tip);
     } catch (err) {
       console.error("Error fetching AI tip:", err);
       setError("Could not load tip.");

@@ -12,6 +12,7 @@ import ExcelJS from 'exceljs';
 
 
 export async function exportTeams(): Promise<ExportTeamsOutput> {
+    console.log("Executing exportTeams function...");
     return exportTeamsFlow();
 }
 
@@ -21,21 +22,26 @@ const exportTeamsFlow = ai.defineFlow(
     outputSchema: ExportTeamsOutputSchema,
   },
   async () => {
+    console.log("exportTeamsFlow started.");
     try {
+        console.log("Fetching data from Firestore...");
         // 1. Fetch all necessary data using the admin SDK
         const db = getAdminDb();
         const teamsSnapshot = await db.collection('teams').get();
         const usersSnapshot = await db.collection('users').get();
         const problemStatementsSnapshot = await db.collection('problemStatements').get();
+        console.log(`Fetched ${teamsSnapshot.size} teams, ${usersSnapshot.size} users, and ${problemStatementsSnapshot.size} problem statements.`);
 
         const teamsData = teamsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Team));
         const usersData = usersSnapshot.docs.map(doc => ({ uid: doc.id, ...doc.data() } as UserProfile));
         const problemStatementsData = problemStatementsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ProblemStatement));
         
         if (teamsData.length === 0) {
+            console.warn("No teams found to export.");
             return { success: false, message: "No teams to export." };
         }
 
+        console.log("Creating Excel workbook...");
         const workbook = new ExcelJS.Workbook();
         const worksheet = workbook.addWorksheet('Teams');
 
@@ -56,8 +62,10 @@ const exportTeamsFlow = ai.defineFlow(
         
         // Style header
         worksheet.getRow(1).font = { bold: true };
+        console.log("Excel columns defined and styled.");
 
         // 3. Add data rows
+        console.log("Populating Excel with team data...");
         for (const team of teamsData) {
              const problemStatement = problemStatementsData.find(ps => ps.id === team.problemStatementId);
              const leaderProfile = usersData.find(u => u.uid === team.leader.uid);
@@ -97,10 +105,13 @@ const exportTeamsFlow = ai.defineFlow(
                 });
              }
         }
+        console.log("Finished populating Excel data.");
         
+        console.log("Generating Excel file buffer...");
         const buffer = await workbook.xlsx.writeBuffer();
         const fileContent = Buffer.from(buffer).toString('base64');
         const fileName = `Vadodara_Hackathon_Teams_${new Date().toISOString().split('T')[0]}.xlsx`;
+        console.log(`File "${fileName}" generated successfully.`);
 
         return {
             success: true,

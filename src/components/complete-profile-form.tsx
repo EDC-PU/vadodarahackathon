@@ -50,13 +50,16 @@ export function CompleteProfileForm() {
   });
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
+    console.log("CompleteProfileForm onSubmit triggered with values:", values);
     if (!user) {
         toast({ title: "Error", description: "You are not logged in.", variant: "destructive" });
+        console.error("Profile completion failed: User not logged in.");
         return;
     }
     
     setIsLoading(true);
     try {
+        console.log("Starting batch write for profile completion...");
         const batch = writeBatch(db);
 
         // 1. Update the user's own profile document
@@ -69,12 +72,15 @@ export function CompleteProfileForm() {
             contactNumber: values.contactNumber,
         };
         batch.update(userDocRef, updatedProfileData);
+        console.log(`Batch update queued for user document: ${user.uid}`);
 
         // 2. If user is a member of a team, update their details in the team document
         if (user.role === 'member' && user.teamId) {
+            console.log(`User is a member of team ${user.teamId}. Fetching team document.`);
             const teamDocRef = doc(db, "teams", user.teamId);
             const teamDoc = await getDoc(teamDocRef);
             if (teamDoc.exists()) {
+                console.log("Team document found. Updating member details in team array.");
                 const teamData = teamDoc.data() as Team;
                 const memberIndex = teamData.members.findIndex(m => m.email === user.email);
                 
@@ -88,11 +94,18 @@ export function CompleteProfileForm() {
                         contactNumber: values.contactNumber,
                     };
                     batch.update(teamDocRef, { members: updatedMembers });
+                    console.log(`Batch update queued for team document ${user.teamId} at member index ${memberIndex}.`);
+                } else {
+                    console.warn(`Could not find member with email ${user.email} in team ${user.teamId} to update details.`);
                 }
+            } else {
+                 console.warn(`Team document ${user.teamId} not found.`);
             }
         }
         
+        console.log("Committing batch write...");
         await batch.commit();
+        console.log("Batch write committed successfully.");
 
         toast({
             title: "Profile Updated!",

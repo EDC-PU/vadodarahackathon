@@ -18,12 +18,15 @@ const generatePassword = (length = 10) => {
   for (let i = 0, n = charset.length; i < length; ++i) {
     retVal += charset.charAt(Math.floor(Math.random() * n));
   }
+  console.log("Generated temporary password for new member.");
   return retVal;
 };
 
 
 async function sendCredentialsEmail(name: string, email: string, password: string, teamName: string) {
+    console.log("Attempting to send new member credentials email...");
     if (!process.env.GMAIL_EMAIL || !process.env.GMAIL_PASSWORD) {
+        console.error("GMAIL_EMAIL or GMAIL_PASSWORD environment variables not set.");
         throw new Error("Missing GMAIL_EMAIL or GMAIL_PASSWORD environment variables. Please set them in your .env file. Note: You must use a Google App Password for GMAIL_PASSWORD.");
     }
 
@@ -34,6 +37,7 @@ async function sendCredentialsEmail(name: string, email: string, password: strin
             pass: process.env.GMAIL_PASSWORD,
         },
     });
+    console.log("Nodemailer transporter created for Gmail.");
 
     const mailOptions = {
         from: process.env.GMAIL_EMAIL,
@@ -59,10 +63,12 @@ async function sendCredentialsEmail(name: string, email: string, password: strin
 
     console.log(`Sending member invitation email to: ${email}`);
     await transporter.sendMail(mailOptions);
+    console.log(`Successfully sent email to ${email}.`);
 }
 
 
 export async function inviteMember(input: InviteMemberInput): Promise<InviteMemberOutput> {
+  console.log("Executing inviteMember function...");
   return inviteMemberFlow(input);
 }
 
@@ -74,10 +80,12 @@ const inviteMemberFlow = ai.defineFlow(
     outputSchema: InviteMemberOutputSchema,
   },
   async (input) => {
+    console.log("inviteMemberFlow started with input:", input);
     try {
         const tempPassword = generatePassword();
         const adminAuth = getAdminAuth();
         
+        console.log(`Creating Firebase Auth user for ${input.memberEmail}...`);
         // 1. Create Firebase Auth user
         const userRecord = await adminAuth.createUser({
             email: input.memberEmail,
@@ -88,7 +96,9 @@ const inviteMemberFlow = ai.defineFlow(
         });
 
         const uid = userRecord.uid;
+        console.log(`Successfully created Firebase Auth user with UID: ${uid}`);
        
+        console.log(`Adding member to team document ${input.teamId}...`);
         // 2. Add member to the team's array in Firestore
         const teamDocRef = doc(db, "teams", input.teamId);
         await updateDoc(teamDocRef, {
@@ -102,15 +112,19 @@ const inviteMemberFlow = ai.defineFlow(
                 gender: 'Other',
             })
         });
+        console.log("Successfully updated team document.");
 
+        console.log("Sending credentials email...");
         // 3. Send email with credentials
         await sendCredentialsEmail(input.memberName, input.memberEmail, tempPassword, input.teamName);
 
-        return {
+        const result: InviteMemberOutput = {
             success: true,
             message: `Invitation sent to ${input.memberName}. Their account has been created.`,
             uid: uid,
         };
+        console.log("inviteMemberFlow finished successfully.", result);
+        return result;
 
     } catch (error: any) {
         console.error("Error inviting member:", error);
@@ -122,7 +136,9 @@ const inviteMemberFlow = ai.defineFlow(
              errorMessage = 'Could not send email. Please check your GMAIL_EMAIL and GMAIL_PASSWORD in the .env file. You may need to use a Google App Password.';
         }
         
-        return { success: false, message: `Failed to invite member: ${errorMessage}` };
+        const result: InviteMemberOutput = { success: false, message: `Failed to invite member: ${errorMessage}` };
+        console.error("inviteMemberFlow failed.", result);
+        return result;
     }
   }
 );

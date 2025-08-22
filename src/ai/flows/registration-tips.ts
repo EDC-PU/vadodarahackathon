@@ -14,6 +14,7 @@ import { RegistrationTipsInput, RegistrationTipsInputSchema, RegistrationTipsOut
 
 
 export async function getRegistrationTips(input: RegistrationTipsInput): Promise<RegistrationTipsOutput> {
+  console.log("Executing getRegistrationTips function with input:", input);
   return registrationTipsFlow(input);
 }
 
@@ -58,14 +59,19 @@ const registrationTipsFlow = ai.defineFlow(
     outputSchema: RegistrationTipsOutputSchema,
   },
   async input => {
+    console.log("registrationTipsFlow started with input:", input);
     let promptToUse;
     if (input.field === 'Team Name') {
+        console.log("Using teamNameTipsPrompt.");
         promptToUse = teamNamePrompt;
     } else {
+        console.log("Using defaultRegistrationTipsPrompt.");
         promptToUse = defaultPrompt;
     }
 
+    console.log("Generating tip with selected prompt...");
     const {output} = await promptToUse(input);
+    console.log("Tip generated successfully:", output);
     return output!;
   }
 );

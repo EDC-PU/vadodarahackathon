@@ -19,34 +19,40 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     const fetchData = async () => {
+        console.log("AdminDashboard: Starting to fetch data...");
         setLoading(true);
         try {
-          // Fetch Teams
+          console.log("AdminDashboard: Fetching teams collection...");
           const teamsCollection = collection(db, 'teams');
           const teamSnapshot = await getDocs(teamsCollection);
           const teamsData = teamSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Team));
+          console.log(`AdminDashboard: Fetched ${teamsData.length} teams.`);
     
-          // Fetch Users (SPOCs and Admins)
+          console.log("AdminDashboard: Fetching users collection for SPOCs and Admins...");
           const usersCollection = collection(db, 'users');
           const spocsQuery = query(usersCollection, where("role", "==", "spoc"));
           const adminsQuery = query(usersCollection, where("role", "==", "admin"));
           
           const spocSnapshot = await getDocs(spocsQuery);
           const adminSnapshot = await getDocs(adminsQuery);
+          console.log(`AdminDashboard: Fetched ${spocSnapshot.size} SPOCs and ${adminSnapshot.size} Admins.`);
           
           // Calculate stats
           const totalParticipants = teamsData.reduce((acc, team) => acc + 1 + team.members.length, 0);
-          setStats({
+          const newStats = {
               teams: teamsData.length,
               participants: totalParticipants,
               spocs: spocSnapshot.size,
               admins: adminSnapshot.size,
-          });
+          };
+          setStats(newStats);
+          console.log("AdminDashboard: Stats calculated and set:", newStats);
     
         } catch (error) {
-          console.error("Error fetching base data:", error);
+          console.error("Error fetching admin dashboard data:", error);
           toast({ title: "Error", description: "Failed to fetch dashboard data.", variant: "destructive" });
         } finally {
+          console.log("AdminDashboard: Data fetching finished.");
           setLoading(false);
         }
       };

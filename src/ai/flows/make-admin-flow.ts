@@ -16,6 +16,7 @@ import { db } from '@/lib/firebase';
 
 
 export async function makeAdmin(input: MakeAdminInput): Promise<MakeAdminOutput> {
+    console.log("Executing makeAdmin function...");
     return makeAdminFlow(input);
 }
 
@@ -27,21 +28,27 @@ const makeAdminFlow = ai.defineFlow(
     outputSchema: MakeAdminOutputSchema,
   },
   async ({email}) => {
+    console.log(`makeAdminFlow started for email: ${email}`);
     const usersRef = collection(db, 'users');
     const q = query(usersRef, where('email', '==', email));
     
     try {
+      console.log(`Querying for user with email: ${email}`);
       const querySnapshot = await getDocs(q);
+      
       if (querySnapshot.empty) {
+        console.warn(`User with email ${email} not found.`);
         return { success: false, message: `User with email ${email} not found.` };
       }
       
       const userDoc = querySnapshot.docs[0];
       const userDocRef = doc(db, 'users', userDoc.id);
       
+      console.log(`Found user with ID: ${userDoc.id}. Updating role to 'admin'.`);
       await updateDoc(userDocRef, {
         role: 'admin'
       });
+      console.log(`Successfully updated role for user ${userDoc.id}.`);
 
       return { success: true, message: `User ${email} has been made an admin.`, uid: userDoc.id };
 
