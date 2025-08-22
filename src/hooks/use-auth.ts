@@ -16,6 +16,7 @@ export function useAuth() {
   const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [isNavigating, setIsNavigating] = useState(false);
+  const [teamMembers, setTeamMembers] = useState<UserProfile[]>([]);
   const router = useRouter();
   const pathname = usePathname();
   const { toast } = useToast();
@@ -87,6 +88,41 @@ export function useAuth() {
       unsubscribeAuth();
     }
   }, []);
+
+    useEffect(() => {
+        let unsubscribe: (() => void) | undefined;
+
+        if (user?.teamId) {
+            const teamDocRef = doc(db, 'teams', user.teamId);
+
+            unsubscribe = onSnapshot(teamDocRef, async (teamDoc) => {
+                if (teamDoc.exists()) {
+                    const teamData = teamDoc.data() as Team;
+                    const memberEmails = teamData.members.map(m => m.email);
+                    const allEmails = [teamData.leader.email, ...memberEmails];
+
+                    if (allEmails.length > 0) {
+                        const usersQuery = query(collection(db, 'users'), where('email', 'in', allEmails));
+                        const usersSnapshot = await getDocs(usersQuery);
+                        const usersData = usersSnapshot.docs.map(d => d.data() as UserProfile);
+                        setTeamMembers(usersData);
+                    } else {
+                        setTeamMembers([]);
+                    }
+                } else {
+                    setTeamMembers([]);
+                }
+            });
+        } else {
+            setTeamMembers([]);
+        }
+
+        return () => {
+            if (unsubscribe) {
+                unsubscribe();
+            }
+        };
+    }, [user?.teamId]);
 
 
   useEffect(() => {
@@ -265,5 +301,5 @@ export function useAuth() {
   }, [toast]);
   
 
-  return { user, firebaseUser, loading, handleSignOut, handleLogin, reloadUser };
+  return { user, firebaseUser, loading, teamMembers, handleSignOut, handleLogin, reloadUser };
 }

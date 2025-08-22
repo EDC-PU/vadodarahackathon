@@ -4,7 +4,7 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Team, TeamMember, UserProfile } from "@/lib/types";
-import { AlertCircle, CheckCircle, PlusCircle, Trash2, User, Loader2, FileText, Pencil } from "lucide-react";
+import { AlertCircle, CheckCircle, PlusCircle, Trash2, User, Loader2, FileText, Pencil, Users2 } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "./ui/alert";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
@@ -27,10 +27,11 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";
 
 
 export default function LeaderDashboard() {
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, teamMembers } = useAuth();
   const [team, setTeam] = useState<Team | null>(null);
   const [loading, setLoading] = useState(true);
   const [isInviting, setIsInviting] = useState(false);
@@ -101,7 +102,7 @@ export default function LeaderDashboard() {
     }
   };
 
-  const handleRemoveMember = async (memberToRemove: TeamMember) => {
+  const handleRemoveMember = async (memberToRemove: UserProfile) => {
     if (!team) return;
     setIsRemoving(memberToRemove.email);
 
@@ -163,18 +164,18 @@ export default function LeaderDashboard() {
 
   const teamValidation = {
     memberCount: {
-        current: 1 + team.members.length,
+        current: teamMembers.length,
         required: 6,
-        isMet: (1 + team.members.length) === 6,
+        isMet: teamMembers.length === 6,
     },
     femaleCount: {
-        current: team.members.filter(m => m.gender === "Female").length + (user.gender === 'Female' ? 1: 0),
+        current: teamMembers.filter(m => m.gender === "Female").length,
         required: 1,
-        isMet: team.members.filter(m => m.gender === "Female").length + (user.gender === 'Female' ? 1: 0) >= 1,
+        isMet: teamMembers.filter(m => m.gender === "Female").length >= 1,
     }
   }
 
-  const canAddMoreMembers = team.members.length < 5;
+  const canAddMoreMembers = teamMembers.length < 6;
 
   return (
     <div className="p-4 sm:p-6 lg:p-8">
@@ -189,45 +190,65 @@ export default function LeaderDashboard() {
             <AnnouncementsSection audience="teams_and_all" />
              <Card>
                 <CardHeader>
-                    <CardTitle>Team Members ({1 + team.members.length} / 6)</CardTitle>
+                    <CardTitle className="flex items-center gap-2">
+                        <Users2 />
+                        Team Members ({teamMembers.length} / 6)
+                    </CardTitle>
                     <CardDescription>Your current team roster.</CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                    <div className="flex items-center gap-4 p-3 bg-primary/10 rounded-md">
-                        <User className="h-6 w-6 text-primary"/>
-                        <div>
-                            <p className="font-semibold">{user.name} (Leader)</p>
-                            <p className="text-sm text-muted-foreground">{user.email}</p>
-                        </div>
-                    </div>
-                    {team.members.map((member, index) => (
-                        <div key={member.email || index} className="flex items-center gap-4 p-3 border rounded-md">
-                            <User className="h-6 w-6 text-muted-foreground"/>
-                            <div className="flex-1">
-                                <p className="font-semibold">{member.name}</p>
-                                <p className="text-sm text-muted-foreground">{member.email}</p>
-                            </div>
-                            <AlertDialog>
-                              <AlertDialogTrigger asChild>
-                                <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-destructive" disabled={isRemoving === member.email}>
-                                  {isRemoving === member.email ? <Loader2 className="h-4 w-4 animate-spin"/> : <Trash2 className="h-4 w-4"/>}
-                                </Button>
-                              </AlertDialogTrigger>
-                              <AlertDialogContent>
-                                <AlertDialogHeader>
-                                  <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                                  <AlertDialogDescription>
-                                    This action will remove {member.name} from the team. They will need to be invited again to rejoin.
-                                  </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                  <AlertDialogAction onClick={() => handleRemoveMember(member)} className="bg-destructive hover:bg-destructive/90">Remove</AlertDialogAction>
-                                </AlertDialogFooter>
-                              </AlertDialogContent>
-                            </AlertDialog>
-                        </div>
-                    ))}
+                <CardContent>
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>Name</TableHead>
+                                <TableHead>Role</TableHead>
+                                <TableHead>Email</TableHead>
+                                <TableHead>Phone</TableHead>
+                                <TableHead>Department</TableHead>
+                                <TableHead>Enrollment No.</TableHead>
+                                <TableHead className="text-right">Actions</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {teamMembers.map((member) => (
+                                <TableRow key={member.uid}>
+                                    <TableCell className="font-medium">{member.name}</TableCell>
+                                    <TableCell>
+                                        <span className={`px-2 py-1 text-xs rounded-full ${member.role === 'leader' ? 'bg-primary/20 text-primary' : 'bg-secondary text-secondary-foreground'}`}>
+                                            {member.role}
+                                        </span>
+                                    </TableCell>
+                                    <TableCell>{member.email}</TableCell>
+                                    <TableCell>{member.contactNumber || 'N/A'}</TableCell>
+                                    <TableCell>{member.department || 'N/A'}</TableCell>
+                                    <TableCell>{member.enrollmentNumber || 'N/A'}</TableCell>
+                                    <TableCell className="text-right">
+                                        {member.role !== 'leader' && (
+                                            <AlertDialog>
+                                                <AlertDialogTrigger asChild>
+                                                    <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-destructive" disabled={isRemoving === member.email}>
+                                                    {isRemoving === member.email ? <Loader2 className="h-4 w-4 animate-spin"/> : <Trash2 className="h-4 w-4"/>}
+                                                    </Button>
+                                                </AlertDialogTrigger>
+                                                <AlertDialogContent>
+                                                    <AlertDialogHeader>
+                                                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                                    <AlertDialogDescription>
+                                                        This action will remove {member.name} from the team. They will need to be invited again to rejoin.
+                                                    </AlertDialogDescription>
+                                                    </AlertDialogHeader>
+                                                    <AlertDialogFooter>
+                                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                    <AlertDialogAction onClick={() => handleRemoveMember(member)} className="bg-destructive hover:bg-destructive/90">Remove</AlertDialogAction>
+                                                    </AlertDialogFooter>
+                                                </AlertDialogContent>
+                                            </AlertDialog>
+                                        )}
+                                    </TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
                 </CardContent>
              </Card>
         </div>
@@ -304,7 +325,7 @@ export default function LeaderDashboard() {
                 <CardHeader>
                     <CardTitle>Add New Member</CardTitle>
                     <CardDescription>
-                        {canAddMoreMembers ? `You can invite ${5 - team.members.length} more members.` : "Your team is full."}
+                        {canAddMoreMembers ? `You can invite ${6 - teamMembers.length} more members.` : "Your team is full."}
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
