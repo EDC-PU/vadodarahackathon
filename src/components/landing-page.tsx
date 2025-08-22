@@ -115,8 +115,7 @@ export default function LandingPage() {
       <header className="sticky top-0 z-50 w-full border-b border-border/20 bg-background/50 backdrop-blur-lg">
         <div className="container flex h-20 max-w-7xl items-center justify-between">
           <Link href="/" className="flex items-center gap-2 font-bold text-xl" prefetch={false}>
-             <Image src="https://www.pierc.org/vhlogo.png" alt="Vadodara Hackathon Logo" width={48} height={48}/>
-             <span className="hidden sm:inline">Vadodara Hackathon</span>
+             <Image src="https://www.pierc.org/_next/static/media/PIERC%20WHITE.a9ef7cc8.svg" alt="Vadodara Hackathon Logo" width={150} height={150}/>
           </Link>
           <nav className="hidden md:flex items-center gap-1">
             {navLinks.map((link) => (
@@ -390,5 +389,3 @@ export default function LandingPage() {
     </div>
   );
 }
-
-    
