@@ -1,67 +1,63 @@
 rules_version = '2';
-
 service cloud.firestore {
   match /databases/{database}/documents {
 
     // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+    
     function isAdmin() {
-      return request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+      // Check if the user document exists and has the 'admin' role.
+      return exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
 
     function isSpoc() {
-      return request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'spoc';
+        return exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+               get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'spoc';
     }
 
     function isLeader(teamId) {
-      let team = get(/databases/$(database)/documents/teams/$(teamId)).data;
-      return request.auth != null && request.auth.uid == team.leader.uid;
-    }
-
-    function isMember(teamId) {
-        let team = get(/databases/$(database)/documents/teams/$(teamId)).data;
-        let isTeamLeader = request.auth != null && request.auth.uid == team.leader.uid;
-        let isTeamMember = request.auth != null && team.members.exists(member, member.uid == request.auth.uid);
-        return isTeamLeader || isTeamMember;
-    }
-    
-    function isOwner(userId) {
-      return request.auth != null && request.auth.uid == userId;
+        return exists(/databases/$(database)/documents/teams/$(teamId)) &&
+               get(/databases/$(database)/documents/teams/$(teamId)).data.leader.uid == request.auth.uid;
     }
 
     // Users collection rules
     match /users/{userId} {
-      // Anyone can create their own user profile during sign up.
-      allow create: if request.auth != null && request.auth.uid == userId;
-      // Users can read their own data. Admins can read anyone's data.
-      allow read: if isOwner(userId) || isAdmin();
-      // Users can update their own data. Admins can update anyone's data.
-      allow update: if isOwner(userId) || isAdmin();
-      // Only admins can delete user profiles.
-      allow delete: if isAdmin();
+      // Allow document creation only if the user is creating their own document.
+      // This is crucial for both email/password and Google Sign-In registration.
+      allow create: if isSignedIn() && isOwner(userId);
+      
+      // Users can read their own data.
+      // Admins and SPOCs can read any user's data for management purposes.
+      allow read: if isSignedIn() && (isOwner(userId) || isAdmin() || isSpoc());
+      
+      // Users can only update their own profile.
+      // Admins can update any user's data.
+      allow update: if isSignedIn() && (isOwner(userId) || isAdmin());
+      
+      // Only admins can delete users.
+      allow delete: if isSignedIn() && isAdmin();
     }
 
     // Teams collection rules
     match /teams/{teamId} {
-      // Only authenticated users (leaders) can create a team.
-      allow create: if request.auth != null;
-      // Only members of the team, the institute's SPOC, or an admin can read team data.
-      allow read: if request.auth != null && (isMember(teamId) || isSpoc() || isAdmin());
-       // Only the team leader or an admin can update team details.
-      allow update: if request.auth != null && (isLeader(teamId) || isAdmin());
-      // Only the team leader or an admin can delete a team.
-      allow delete: if request.auth != null && (isLeader(teamId) || isAdmin());
-    }
+        // Any signed-in user can create a new team. The logic in the app ensures they become the leader.
+        allow create: if isSignedIn();
 
-    // SPOCs collection: Assuming only admins can manage SPOCs
-    match /spocs/{spocId} {
-      allow read: if request.auth != null; // Any authenticated user can see SPOC details
-      allow write: if isAdmin(); // Only admins can create, update, or delete SPOCs
-    }
+        // Any signed-in user can read public team data.
+        allow read: if isSignedIn();
 
-     // Institutes collection: Read-only for authenticated users
-    match /institutes/{instituteId} {
-      allow read: if request.auth != null;
-      allow write: if false; // Nobody can write directly
+        // Only the team leader, an admin, or a SPOC from the same institute can update the team.
+        allow update: if isSignedIn() && (isLeader(teamId) || isAdmin() || (isSpoc() && get(/databases/$(database)/documents/teams/$(teamId)).data.institute == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.institute));
+
+        // Only the team leader or an admin can delete a team.
+        allow delete: if isSignedIn() && (isLeader(teamId) || isAdmin());
     }
   }
 }
