@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Logo } from '@/components/logo';
-import { Award, Code, Cpu, Mail, MapPin, Phone, Users, Calendar, Trophy, FileText, BarChart, FileQuestion, Loader2 } from 'lucide-react';
+import { Award, Code, Cpu, Mail, MapPin, Phone, Users, Calendar, Trophy, FileText, BarChart, FileQuestion, Loader2, LayoutDashboard } from 'lucide-react';
 import Image from 'next/image';
 import { INSTITUTES } from '@/lib/constants';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
@@ -20,6 +20,8 @@ import {
 import { db } from '@/lib/firebase';
 import { collection, getDocs, query, where } from 'firebase/firestore';
 import { UserProfile } from '@/lib/types';
+import { useAuth } from '@/hooks/use-auth';
+import { Skeleton } from './ui/skeleton';
 
 
 interface SpocDetails {
@@ -30,6 +32,8 @@ export default function LandingPage() {
   const [selectedInstitute, setSelectedInstitute] = useState<string | null>(null);
   const [spocDetails, setSpocDetails] = useState<SpocDetails>({});
   const [loadingSpocs, setLoadingSpocs] = useState(true);
+  const { user, loading: authLoading } = useAuth();
+
 
   useEffect(() => {
     const fetchSpocs = async () => {
@@ -77,6 +81,8 @@ export default function LandingPage() {
     "https://i.ibb.co/DCgrKCR/IMG-8411.jpg",
     "https://i.ibb.co/dJjj99f/IMG-8415.jpg",
   ];
+  
+  const dashboardUrl = user ? `/${user.role}` : '/login';
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
@@ -94,12 +100,24 @@ export default function LandingPage() {
           </nav>
           <div className="flex items-center gap-4">
              <div className="flex items-center gap-2">
-                <Button variant="ghost" asChild>
-                  <Link href="/login">Login</Link>
-                </Button>
-                <Button asChild>
-                  <Link href="/register">Register</Link>
-                </Button>
+                {authLoading ? (
+                    <Skeleton className="h-10 w-40" />
+                ) : user ? (
+                    <Button asChild>
+                        <Link href={dashboardUrl}>
+                            <LayoutDashboard className="mr-2 h-4 w-4" /> Go to Dashboard
+                        </Link>
+                    </Button>
+                ) : (
+                    <>
+                        <Button variant="ghost" asChild>
+                          <Link href="/login">Login</Link>
+                        </Button>
+                        <Button asChild>
+                          <Link href="/register">Register</Link>
+                        </Button>
+                    </>
+                )}
               </div>
               <Link href="https://pierc.org/" target="_blank" rel="noopener noreferrer" className="items-center hidden sm:flex" prefetch={false}>
                  <img src="https://www.pierc.org/assets/PIERC.svg" alt="PIERC Logo" className="h-14" />
