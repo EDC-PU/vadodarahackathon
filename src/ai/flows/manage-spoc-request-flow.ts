@@ -28,7 +28,7 @@ const manageSpocRequestFlow = ai.defineFlow(
     if (!adminAuth || !adminDb) {
       const errorMessage = "Firebase Admin SDK is not initialized. Please check server-side environment variables.";
       console.error(errorMessage);
-      return { success: false, message: `Failed to ${action} SPOC: ${errorMessage}` };
+      return Promise.resolve({ success: false, message: `Failed to ${action} SPOC: ${errorMessage}` });
     }
 
     const userDocRef = adminDb.collection('users').doc(uid);
