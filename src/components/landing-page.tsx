@@ -213,13 +213,13 @@ export default function LandingPage() {
                   </div>
                   <div className="p-4 rounded-lg bg-card">
                       <Users className="h-8 w-8 text-primary mx-auto mb-2" />
-                      <p className="text-2xl font-bold">35</p>
+                      <p className="text-2xl font-bold">89</p>
                       <p className="text-sm text-muted-foreground">Teams for Finale</p>
                   </div>
                    <div className="p-4 rounded-lg bg-card">
                        <Trophy className="h-8 w-8 text-primary mx-auto mb-2" />
-                      <p className="text-2xl font-bold">5</p>
-                      <p className="text-sm text-muted-foreground">Teams Nominated for SIH 2025</p>
+                      <p className="text-2xl font-bold">45</p>
+                      <p className="text-sm text-muted-foreground">Teams Nominated for SIH</p>
                   </div>
                   <div className="p-4 rounded-lg bg-card">
                       <FileQuestion className="h-8 w-8 text-primary mx-auto mb-2" />
