@@ -381,7 +381,7 @@ export default function LandingPage({ spocDetails, announcements }: LandingPageP
         <div className="container max-w-7xl py-8">
           <div className="flex flex-col md:flex-row items-center justify-between gap-6">
               <div className="flex items-center gap-4">
-                  <Image src="https://www.paruluniversity.ac.in/logos/pu-logo-2.png" alt="Parul University Logo" width={250} height={70} />
+                  <img src="https://www.pierc.org/assets/logopu.svg" alt="Parul University Logo" className="h-12" />
                   <div className="w-px h-10 bg-border"></div>
                   <img src="https://www.pierc.org/_next/static/media/PIERC%20WHITE.a9ef7cc8.svg" alt="PIERC Logo" className="h-10" />
               </div>
