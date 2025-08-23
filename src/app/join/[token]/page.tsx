@@ -9,6 +9,7 @@ import { Suspense, useEffect, useState } from "react";
 import { Loader2, AlertCircle, CheckCircle } from "lucide-react";
 import { getInviteDetails } from "@/ai/flows/get-invite-details-flow";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
 import { addMemberToTeam } from "@/ai/flows/add-member-to-team-flow";
 import { useToast } from "@/hooks/use-toast";
@@ -29,18 +30,29 @@ function JoinPageContent() {
     const [teamInfo, setTeamInfo] = useState<TeamInfo | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [processingJoin, setProcessingJoin] = useState(false);
+    const [joinCompleted, setJoinCompleted] = useState(false);
     
     const { user, loading: authLoading } = useAuth();
     const { toast } = useToast();
 
     useEffect(() => {
+        // Check if we just completed a join process from profile completion
+        const justCompletedJoin = sessionStorage.getItem('justCompletedJoin');
+        if (justCompletedJoin === 'true') {
+            sessionStorage.removeItem('justCompletedJoin');
+            // Redirect to dashboard instead of processing join again
+            router.push(user?.role === 'leader' ? '/leader' : '/member');
+            return;
+        }
+
         const processJoinRequest = async () => {
             if (!token) {
                 setError("Invalid invitation link.");
                 setLoading(false);
                 return;
             }
-            if (authLoading) {
+            if (authLoading || processingJoin || joinCompleted) {
                 return; 
             }
 
@@ -73,6 +85,7 @@ function JoinPageContent() {
                     }
                     
                     // Profile is complete, proceed to join team
+                    setProcessingJoin(true);
                     const joinResult = await addMemberToTeam({
                         userId: user.uid,
                         teamId: currentTeamInfo.teamId,
@@ -105,15 +118,18 @@ function JoinPageContent() {
                         }
 
                         toast({ title: "Success!", description: `You have joined ${currentTeamInfo.teamName}.` });
+                        setJoinCompleted(true);
                         router.push('/member');
                     } else {
                         setError(joinResult.message);
+                        setProcessingJoin(false);
                     }
                 }
                 
             } catch (err: any) {
                 console.error("Error processing join request:", err);
                 setError(err.message || "An unexpected error occurred.");
+                setProcessingJoin(false);
             } finally {
                 // Only stop loading if user is not logged in, otherwise they get redirected.
                 if (!user) {
@@ -123,7 +139,7 @@ function JoinPageContent() {
         };
 
         processJoinRequest();
-    }, [token, user, authLoading, router, toast]);
+    }, [token, user, authLoading, router, toast, processingJoin, joinCompleted]);
 
     if (loading || authLoading) {
         return (

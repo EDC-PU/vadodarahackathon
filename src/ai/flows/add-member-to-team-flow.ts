@@ -7,7 +7,6 @@
 import { ai } from '@/ai/genkit';
 import { getAdminDb } from '@/lib/firebase-admin';
 import { AddMemberToTeamInput, AddMemberToTeamInputSchema, AddMemberToTeamOutput, AddMemberToTeamOutputSchema, Team, UserProfile } from '@/lib/types';
-import { arrayUnion } from 'firebase/firestore';
 
 export async function addMemberToTeam(input: AddMemberToTeamInput): Promise<AddMemberToTeamOutput> {
   console.log("Executing addMemberToTeam function...");
@@ -67,9 +66,11 @@ const addMemberToTeamFlow = ai.defineFlow(
 
       const batch = adminDb.batch();
       
-      // 1. Add member to the team's array
+      // 1. Get current members and add the new member
+      const currentMembers = teamData.members || [];
+      currentMembers.push(newMember);
       batch.update(teamDocRef, {
-        members: arrayUnion(newMember)
+        members: currentMembers
       });
       
       // 2. Update the user's profile with the teamId

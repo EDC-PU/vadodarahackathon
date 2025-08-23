@@ -128,6 +128,8 @@ export function CompleteProfileForm() {
                         });
                     }
 
+                    // Set flag to indicate join was just completed to prevent loop
+                    sessionStorage.setItem('justCompletedJoin', 'true');
                     sessionStorage.removeItem('inviteToken');
                 } else {
                     toast({ title: "Could Not Join Team", description: joinResult.message, variant: "destructive" });

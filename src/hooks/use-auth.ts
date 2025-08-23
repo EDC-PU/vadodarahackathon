@@ -162,12 +162,12 @@ export function useAuth() {
          return;
      }
      
-     // This rule is now ignored on the join page to prevent loops.
-     if ((user.role === 'member' || user.role === 'leader') && !user.enrollmentNumber && !pathname.startsWith('/join/')) {
+    // This rule is now ignored on the join page to prevent loops.
+    if ((user.role === 'member' || user.role === 'leader') && !user.enrollmentNumber && !pathname.startsWith('/join/')) {
         console.log("Redirect Check: Member/Leader profile is incomplete.");
         performRedirect('/complete-profile');
         return;
-     }
+    }
     
     // 4. Role-based route protection
     const currentRole = user.role;
