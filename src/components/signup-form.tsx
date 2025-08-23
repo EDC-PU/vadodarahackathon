@@ -39,6 +39,7 @@ import { Checkbox } from "./ui/checkbox";
 
 interface SignupFormProps {
     inviteToken?: string;
+    deadlineMillis?: number | null;
 }
 
 const formSchema = z.object({
@@ -54,31 +55,20 @@ const formSchema = z.object({
     path: ["confirmPassword"],
 });
 
-export function SignupForm({ inviteToken }: SignupFormProps) {
+export function SignupForm({ inviteToken, deadlineMillis }: SignupFormProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [deadline, setDeadline] = useState<Date | null>(null);
-  const [isDeadlineLoading, setIsDeadlineLoading] = useState(true);
+  const [isDeadlineLoading, setIsDeadlineLoading] = useState(false);
   const { toast } = useToast();
   const { handleLogin } = useAuth();
   
   useEffect(() => {
-    const fetchDeadline = async () => {
-        try {
-            const configDocRef = doc(db, "config", "event");
-            const configDoc = await getDoc(configDocRef);
-            if (configDoc.exists() && configDoc.data().registrationDeadline) {
-                setDeadline(configDoc.data().registrationDeadline.toDate());
-            }
-        } catch (error) {
-            console.error("Error fetching registration deadline:", error);
-        } finally {
-            setIsDeadlineLoading(false);
-        }
-    };
-    fetchDeadline();
-  }, []);
+    if (deadlineMillis) {
+        setDeadline(new Date(deadlineMillis));
+    }
+  }, [deadlineMillis]);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
