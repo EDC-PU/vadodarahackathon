@@ -12,7 +12,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useAuth } from "@/hooks/use-auth";
 import { addMemberToTeam } from "@/ai/flows/add-member-to-team-flow";
 import { useToast } from "@/hooks/use-toast";
-import { doc, setDoc, collection, getDocs } from "firebase/firestore";
+import { doc, setDoc, collection, getDocs, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
 interface TeamInfo {
@@ -54,19 +54,25 @@ function JoinPageContent() {
                 const currentTeamInfo = { teamId: inviteResult.teamId, teamName: inviteResult.teamName, leaderName: inviteResult.leaderName };
                 setTeamInfo(currentTeamInfo);
 
-                // If user is logged in, attempt to join the team automatically
+                // If user is logged in, handle them
                 if (user) {
+                    // Check if user is already on a team
                     if (user.teamId) {
                          setError("You are already on a team. To join a new team, you must first be removed from your current one.");
                          setLoading(false);
                          return;
                     }
+                    // Check if profile is complete
                     if (!user.enrollmentNumber) {
-                        toast({ title: "Profile Incomplete", description: "Please complete your profile before joining a team.", variant: "destructive" });
+                        // Profile is not complete, redirect to complete it.
+                        // Store token so we can add them to team after profile completion.
+                        sessionStorage.setItem('inviteToken', token);
+                        toast({ title: "Profile Incomplete", description: "Please complete your profile to join the team.", variant: "default" });
                         router.push('/complete-profile');
-                        return;
+                        return; // Stop execution here
                     }
                     
+                    // Profile is complete, proceed to join team
                     const joinResult = await addMemberToTeam({
                         userId: user.uid,
                         teamId: currentTeamInfo.teamId,
