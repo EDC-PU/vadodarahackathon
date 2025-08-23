@@ -15,7 +15,7 @@ async function getRegistrationDeadline() {
     try {
         const configDocRef = adminDb.collection("config").doc("event");
         const configDoc = await configDocRef.get();
-        if (configDoc.exists() && configDoc.data()?.registrationDeadline) {
+        if (configDoc.exists && configDoc.data()?.registrationDeadline) {
             // Return serializable timestamp
             return configDoc.data()?.registrationDeadline.toMillis();
         }
