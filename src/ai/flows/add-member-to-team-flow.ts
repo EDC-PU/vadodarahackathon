@@ -20,7 +20,17 @@ const addMemberToTeamFlow = ai.defineFlow(
     inputSchema: AddMemberToTeamInputSchema,
     outputSchema: AddMemberToTeamOutputSchema,
   },
-  async ({ userId, teamId }) => {
+  async ({
+    userId,
+    teamId,
+    name,
+    email,
+    enrollmentNumber,
+    contactNumber,
+    gender,
+    semester,
+    yearOfStudy
+  }) => {
     console.log(`addMemberToTeamFlow started for User ID: ${userId}, Team ID: ${teamId}`);
     const adminDb = getAdminDb();
     
@@ -34,12 +44,6 @@ const addMemberToTeamFlow = ai.defineFlow(
     const teamDocRef = adminDb.collection('teams').doc(teamId);
 
     try {
-      const userDoc = await userDocRef.get();
-      if (!userDoc.exists) {
-        throw new Error(`User with ID ${userId} not found.`);
-      }
-      const userData = userDoc.data() as UserProfile;
-
       const teamDoc = await teamDocRef.get();
       if (!teamDoc.exists) {
         throw new Error(`Team with ID ${teamId} not found.`);
@@ -51,14 +55,14 @@ const addMemberToTeamFlow = ai.defineFlow(
       }
 
       const newMember = {
-          uid: userData.uid,
-          name: userData.name,
-          email: userData.email,
-          enrollmentNumber: userData.enrollmentNumber || 'N/A',
-          contactNumber: userData.contactNumber || 'N/A',
-          gender: userData.gender || 'Other',
-          semester: userData.semester,
-          yearOfStudy: userData.yearOfStudy,
+          uid: userId,
+          name: name,
+          email: email,
+          enrollmentNumber: enrollmentNumber || 'N/A',
+          contactNumber: contactNumber || 'N/A',
+          gender: gender || 'Other',
+          semester: semester,
+          yearOfStudy: yearOfStudy,
       };
 
       const batch = adminDb.batch();
@@ -77,7 +81,7 @@ const addMemberToTeamFlow = ai.defineFlow(
 
       return {
         success: true,
-        message: `Successfully added ${userData.name} to ${teamData.name}.`,
+        message: `Successfully added ${name} to ${teamData.name}.`,
       };
 
     } catch (error) {

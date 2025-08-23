@@ -130,6 +130,13 @@ export interface Announcement {
 export const AddMemberToTeamInputSchema = z.object({
   userId: z.string().describe("The UID of the new user to add."),
   teamId: z.string().describe("The ID of the team to join."),
+  name: z.string().describe("The name of the user."),
+  email: z.string().email().describe("The email of the user."),
+  enrollmentNumber: z.string().optional().describe("The enrollment number of the user."),
+  contactNumber: z.string().optional().describe("The contact number of the user."),
+  gender: z.enum(["Male", "Female", "Other"]).optional().describe("The gender of the user."),
+  semester: z.number().optional().describe("The semester of the user."),
+  yearOfStudy: z.string().optional().describe("The year of study of the user."),
 });
 export type AddMemberToTeamInput = z.infer<typeof AddMemberToTeamInputSchema>;
 

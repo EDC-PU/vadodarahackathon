@@ -275,7 +275,19 @@ export function useAuth() {
         const inviteDoc = await getDoc(inviteDocRef);
         if (inviteDoc.exists()) {
             const inviteData = inviteDoc.data() as TeamInvite;
-            const result = await addMemberToTeam({ userId: userProfile.uid, teamId: inviteData.teamId });
+            
+            // Call the secure flow with all necessary user data
+            const result = await addMemberToTeam({ 
+                userId: userProfile.uid, 
+                teamId: inviteData.teamId,
+                name: userProfile.name,
+                email: userProfile.email,
+                enrollmentNumber: userProfile.enrollmentNumber,
+                contactNumber: userProfile.contactNumber,
+                gender: userProfile.gender,
+                semester: userProfile.semester,
+                yearOfStudy: userProfile.yearOfStudy,
+            });
             
             if (result.success) {
                  toast({ title: "Welcome!", description: `You have successfully joined ${inviteData.teamName}.` });
