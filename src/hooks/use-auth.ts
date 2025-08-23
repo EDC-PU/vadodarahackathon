@@ -5,10 +5,9 @@ import { useState, useEffect, useCallback } from 'react';
 import { onAuthStateChanged, signOut, User as FirebaseUser } from 'firebase/auth';
 import { doc, getDoc, onSnapshot, collection, query, where, getDocs, writeBatch, updateDoc, setDoc, arrayUnion, deleteDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
-import { UserProfile, Team } from '@/lib/types';
-import { useRouter, usePathname } from 'next/navigation';
+import { UserProfile, Team, TeamInvite } from '@/lib/types';
+import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { useToast } from './use-toast';
-import { getAdminAuth } from '@/lib/firebase-admin';
 import { notifyAdminsOfSpocRequest } from '@/ai/flows/notify-admins-flow';
 
 export function useAuth() {
@@ -18,6 +17,7 @@ export function useAuth() {
   const [isNavigating, setIsNavigating] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const { toast } = useToast();
   
   const reloadUser = useCallback(async () => {
@@ -45,6 +45,15 @@ export function useAuth() {
       toast({ title: "Error", description: "Failed to sign out.", variant: "destructive" });
     }
   }, [router, toast]);
+
+  useEffect(() => {
+    const inviteToken = searchParams.get('inviteToken');
+    if (inviteToken) {
+        sessionStorage.setItem('inviteToken', inviteToken);
+        // Clean the URL
+        router.replace(pathname);
+    }
+  }, [searchParams, pathname, router]);
 
   useEffect(() => {
     console.log("useAuth: Setting up onAuthStateChanged listener.");
@@ -233,19 +242,6 @@ export function useAuth() {
       let userProfile = { uid: userDoc.id, ...userDoc.data() } as UserProfile;
       console.log("handleLogin: User document exists.", userProfile);
       
-      const authUser = await getAdminAuth()?.getUser(loggedInUser.uid);
-      if (authUser?.disabled) {
-        console.warn(`handleLogin: Login attempt by disabled user: ${loggedInUser.email}`);
-        toast({
-            title: "Account Pending Approval",
-            description: "Your SPOC account is awaiting admin approval. Please check back later.",
-            variant: "destructive",
-            duration: 8000,
-        });
-        signOut(auth);
-        return;
-      }
-      
       toast({
         title: "Login Successful",
         description: "Redirecting to your dashboard...",
@@ -255,7 +251,10 @@ export function useAuth() {
     } else {
         console.log("handleLogin: New user detected. Creating profile from sessionStorage role.");
         const role = sessionStorage.getItem('sign-up-role');
+        const inviteToken = sessionStorage.getItem('inviteToken');
         sessionStorage.removeItem('sign-up-role');
+        sessionStorage.removeItem('inviteToken');
+
 
         if (!role) {
             console.error("handleLogin: New user signed up, but role was not found in sessionStorage.");
@@ -274,13 +273,53 @@ export function useAuth() {
             createdAt: serverTimestamp() as any,
         };
         
-        console.log("handleLogin: Creating new user document with profile:", newProfile);
-        await setDoc(doc(db, "users", loggedInUser.uid), newProfile);
+        // Handle team invite
+        if (inviteToken && role === 'member') {
+            console.log("Handling invite token:", inviteToken);
+            const inviteDocRef = doc(db, "teamInvites", inviteToken);
+            const inviteDoc = await getDoc(inviteDocRef);
+            if (inviteDoc.exists()) {
+                const inviteData = inviteDoc.data() as TeamInvite;
+                const teamDocRef = doc(db, "teams", inviteData.teamId);
+                const teamDoc = await getDoc(teamDocRef);
+
+                if (teamDoc.exists() && teamDoc.data().members.length < 5) {
+                    newProfile.teamId = inviteData.teamId;
+                    
+                    const batch = writeBatch(db);
+                    // Add the user to the team's member list (initially with partial data)
+                    const newMember = { 
+                        uid: newProfile.uid,
+                        email: newProfile.email,
+                        name: newProfile.name
+                    };
+                    batch.update(teamDocRef, {
+                        members: arrayUnion(newMember)
+                    });
+                     // Set the user's profile
+                    batch.set(userDocRef, newProfile);
+                    // Delete the invite so it can't be reused
+                    batch.delete(inviteDocRef);
+                    await batch.commit();
+
+                    toast({ title: "Welcome!", description: `You have successfully joined ${inviteData.teamName}.` });
+                } else {
+                     await setDoc(userDocRef, newProfile);
+                     toast({ title: "Warning", description: "Could not join team. It might be full.", variant: "destructive" });
+                }
+            } else {
+                 await setDoc(userDocRef, newProfile);
+                 toast({ title: "Warning", description: "The invite link used was invalid or expired.", variant: "destructive" });
+            }
+        } else {
+            await setDoc(userDocRef, newProfile);
+        }
         
+        console.log("handleLogin: Creating new user document with profile:", newProfile);
         toast({ title: "Account Created!", description: "Let's complete your profile." });
         setUser(newProfile); // This will trigger the redirect useEffect
     }
-  }, [toast]);
+  }, [toast, router]);
   
 
   return { user, firebaseUser, loading, handleSignOut, handleLogin, reloadUser, redirectToDashboard };

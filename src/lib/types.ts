@@ -37,6 +37,13 @@ export interface Invitation {
   createdAt: any;
 }
 
+export interface TeamInvite {
+  id: string;
+  teamId: string;
+  teamName: string;
+  createdAt: any;
+}
+
 
 export interface TeamMember {
   uid: string; 
@@ -179,22 +186,6 @@ export const GetInstituteTeamsOutputSchema = z.object({
 export type GetInstituteTeamsOutput = z.infer<typeof GetInstituteTeamsOutputSchema>;
 
 
-// invite-member-flow
-export const InviteMemberInputSchema = z.object({
-  teamId: z.string().describe("The ID of the team to add the member to."),
-  teamName: z.string().describe("The name of the team."),
-  memberEmail: z.string().email().describe("The email address of the new member to invite."),
-});
-export type InviteMemberInput = z.infer<typeof InviteMemberInputSchema>;
-
-export const InviteMemberOutputSchema = z.object({
-  success: z.boolean(),
-  message: z.string(),
-  uid: z.string().optional(),
-});
-export type InviteMemberOutput = z.infer<typeof InviteMemberOutputSchema>;
-
-
 // make-admin-flow
 export const MakeAdminInputSchema = z.object({
   email: z.string().email().describe('The email of the user to make an admin.'),
@@ -304,3 +295,5 @@ export const SystemHealthStateSchema = z.object({
   timestamp: z.string(),
 });
 export type SystemHealthState = z.infer<typeof SystemHealthStateSchema>;
+
+    

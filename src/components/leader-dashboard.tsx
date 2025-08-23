@@ -3,17 +3,16 @@
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Team, UserProfile, TeamMember } from "@/lib/types";
-import { AlertCircle, CheckCircle, PlusCircle, Trash2, User, Loader2, FileText, Pencil, Users2, Badge, ArrowUpDown } from "lucide-react";
+import { Team, UserProfile, TeamMember, TeamInvite } from "@/lib/types";
+import { AlertCircle, CheckCircle, PlusCircle, Trash2, User, Loader2, FileText, Pencil, Users2, Badge, ArrowUpDown, Link as LinkIcon, Copy, RefreshCw } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "./ui/alert";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { db } from "@/lib/firebase";
-import { doc, onSnapshot, updateDoc, arrayRemove, collection, query, where, getDocs, writeBatch } from "firebase/firestore";
+import { doc, onSnapshot, updateDoc, arrayRemove, collection, query, where, getDocs, writeBatch, addDoc, serverTimestamp, limit } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
-import { inviteMember } from "@/ai/flows/invite-member-flow";
 import { AnnouncementsSection } from "./announcements-section";
 import Link from "next/link";
 import {
@@ -37,10 +36,11 @@ export default function LeaderDashboard() {
   const [team, setTeam] = useState<Team | null>(null);
   const [teamMembers, setTeamMembers] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isInviting, setIsInviting] = useState(false);
   const [isRemoving, setIsRemoving] = useState<string | null>(null);
   const [sortConfig, setSortConfig] = useState<{ key: SortKey, direction: SortDirection } | null>(null);
   const { toast } = useToast();
+  const [inviteLink, setInviteLink] = useState<string | null>(null);
+  const [isGeneratingLink, setIsGeneratingLink] = useState(false);
 
   const fetchTeamAndMembers = useCallback(() => {
     if (!user?.teamId) {
@@ -103,49 +103,55 @@ export default function LeaderDashboard() {
     const unsubscribe = fetchTeamAndMembers();
     return () => unsubscribe();
   }, [fetchTeamAndMembers]);
-
-
-  const handleAddMember = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  
+  const generateInviteLink = useCallback(async () => {
     if (!team) return;
-    setIsInviting(true);
-
-    const form = event.currentTarget;
-    const formData = new FormData(form);
-    const memberEmail = formData.get("new-member-email") as string;
-    
-    // Check if member already exists by email
-    const isAlreadyInTeam = team.members.some(m => m.email.toLowerCase() === memberEmail.toLowerCase()) || team.leader.email.toLowerCase() === memberEmail.toLowerCase();
-    if (isAlreadyInTeam) {
-        toast({ title: "Error", description: "This user is already in the team.", variant: "destructive" });
-        setIsInviting(false);
-        return;
-    }
-
+    setIsGeneratingLink(true);
     try {
-        const result = await inviteMember({
+        const invitesRef = collection(db, "teamInvites");
+        const newInviteRef = await addDoc(invitesRef, {
             teamId: team.id,
             teamName: team.name,
-            memberEmail,
+            createdAt: serverTimestamp(),
         });
-
-        if (result.success) {
-            toast({ 
-                title: "Invitation Sent", 
-                description: result.message,
-                duration: 10000,
-            });
-            form.reset();
-        } else {
-             toast({ title: "Error", description: result.message, variant: "destructive" });
-        }
+        const newLink = `${window.location.origin}/register?inviteToken=${newInviteRef.id}`;
+        setInviteLink(newLink);
+        toast({ title: "Success", description: "New invite link generated." });
     } catch (error) {
-      console.error("Error adding member:", error);
-      toast({ title: "Error", description: "Failed to add member.", variant: "destructive" });
+        console.error("Error generating invite link:", error);
+        toast({ title: "Error", description: "Could not generate a new invite link.", variant: "destructive" });
     } finally {
-      setIsInviting(false);
+        setIsGeneratingLink(false);
     }
-  };
+  }, [team, toast]);
+
+  useEffect(() => {
+    if (!team) return;
+
+    const fetchInviteLink = async () => {
+        setIsGeneratingLink(true);
+        try {
+            const q = query(
+                collection(db, "teamInvites"),
+                where("teamId", "==", team.id),
+                orderBy("createdAt", "desc"),
+                limit(1)
+            );
+            const snapshot = await getDocs(q);
+            if (!snapshot.empty) {
+                const doc = snapshot.docs[0];
+                setInviteLink(`${window.location.origin}/register?inviteToken=${doc.id}`);
+            }
+        } catch (error) {
+            console.error("Error fetching invite link:", error);
+        } finally {
+            setIsGeneratingLink(false);
+        }
+    };
+
+    fetchInviteLink();
+  }, [team]);
+
 
   const handleRemoveMember = async (memberToRemove: UserProfile) => {
     if (!team) return;
@@ -268,9 +274,9 @@ export default function LeaderDashboard() {
                 <CardTitle className="flex items-center gap-2">
                     <Users2 />
                     Team Members ({teamMembers.length} / 6)
-                    {team.teamNumber && <Badge variant="secondary">Team No: {team.teamNumber}</Badge>}
+                    {team.teamNumber && <Badge variant="secondary">{`Team No: ${team.teamNumber}`}</Badge>}
                 </CardTitle>
-                <CardDescription>Your current team roster. Invite members to have them appear here.</CardDescription>
+                <CardDescription>Your current team roster. Invite members using the link below.</CardDescription>
             </CardHeader>
             <CardContent>
                 <Table>
@@ -306,9 +312,9 @@ export default function LeaderDashboard() {
                                 <TableRow key={member.uid}>
                                     <TableCell className="font-medium">{member.name}</TableCell>
                                     <TableCell>
-                                        <span className={`px-2 py-1 text-xs rounded-full ${member.role === 'leader' ? 'bg-primary/20 text-primary' : 'bg-secondary text-secondary-foreground'}`}>
+                                        <Badge variant={member.role === 'leader' ? 'default' : 'secondary'}>
                                             {member.role}
-                                        </span>
+                                        </Badge>
                                     </TableCell>
                                     <TableCell>{member.email}</TableCell>
                                     <TableCell>{member.contactNumber || 'N/A'}</TableCell>
@@ -424,23 +430,38 @@ export default function LeaderDashboard() {
 
                 <Card>
                     <CardHeader>
-                        <CardTitle>Add New Member</CardTitle>
+                        <CardTitle className="flex items-center gap-2">
+                           <LinkIcon /> Invite Members
+                        </CardTitle>
                         <CardDescription>
-                            {canAddMoreMembers ? `You can invite ${6 - teamMembers.length} more members.` : "Your team is full."}
+                            {canAddMoreMembers ? `Share this link to invite members to your team.` : "Your team is full."}
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
                        {canAddMoreMembers ? (
-                        <form onSubmit={handleAddMember} className="space-y-4">
-                             <div>
-                                <Label htmlFor="new-member-email">Member's Email</Label>
-                                <Input id="new-member-email" name="new-member-email" type="email" placeholder="member@example.com" required disabled={isInviting}/>
+                        <div className="space-y-4">
+                           {isGeneratingLink && !inviteLink ? (
+                                <div className="flex items-center justify-center h-10">
+                                    <Loader2 className="h-6 w-6 animate-spin"/>
+                                </div>
+                           ) : inviteLink ? (
+                            <div className="flex items-center gap-2">
+                                <Input value={inviteLink} readOnly className="text-sm"/>
+                                <Button size="icon" variant="outline" onClick={() => {
+                                    navigator.clipboard.writeText(inviteLink);
+                                    toast({ title: "Copied!", description: "Invite link copied to clipboard." });
+                                }}>
+                                    <Copy className="h-4 w-4"/>
+                                </Button>
                             </div>
-                            <Button type="submit" disabled={isInviting}>
-                                {isInviting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <PlusCircle className="mr-2 h-4 w-4" />}
-                                 Send Invitation
+                           ) : (
+                            <p className="text-sm text-muted-foreground">No invite link found.</p>
+                           )}
+                            <Button onClick={generateInviteLink} disabled={isGeneratingLink} className="w-full">
+                                {isGeneratingLink ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
+                                Generate New Link
                             </Button>
-                        </form>
+                        </div>
                        ): (
                         <p className="text-sm text-muted-foreground">You have reached the maximum number of team members.</p>
                        )}
@@ -451,3 +472,5 @@ export default function LeaderDashboard() {
     </div>
   );
 }
+
+    
