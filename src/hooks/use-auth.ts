@@ -235,21 +235,16 @@ export function useAuth() {
             }
         }
     }
+    
+    let userProfile: UserProfile;
+
     if (userDoc.exists()) {
-      let userProfile = { uid: userDoc.id, ...userDoc.data() } as UserProfile;
+      userProfile = { uid: userDoc.id, ...userDoc.data() } as UserProfile;
       console.log("handleLogin: User document exists.", userProfile);
-      
-      toast({
-        title: "Login Successful",
-        description: "Redirecting to your dashboard...",
-      });
-      setUser(userProfile); // This will trigger the redirect useEffect
-      
     } else {
         console.log("handleLogin: New user detected. Creating profile from sessionStorage role.");
         const role = sessionStorage.getItem('sign-up-role');
         sessionStorage.removeItem('sign-up-role');
-
 
         if (!role) {
             console.error("handleLogin: New user signed up, but role was not found in sessionStorage.");
@@ -258,7 +253,7 @@ export function useAuth() {
             return;
         }
 
-        const newProfile: UserProfile = {
+        userProfile = {
             uid: loggedInUser.uid,
             name: loggedInUser.displayName || 'New User',
             email: loggedInUser.email!,
@@ -268,34 +263,44 @@ export function useAuth() {
             createdAt: serverTimestamp() as any,
         };
         
-        await setDoc(userDocRef, newProfile);
-        
-        // Handle team invite
-        if (inviteToken && role === 'member') {
-            console.log("Handling invite token:", inviteToken);
-            const inviteDocRef = doc(db, "teamInvites", inviteToken);
-            const inviteDoc = await getDoc(inviteDocRef);
-            if (inviteDoc.exists()) {
-                const inviteData = inviteDoc.data() as TeamInvite;
-                const result = await addMemberToTeam({ userId: newProfile.uid, teamId: inviteData.teamId });
-                
-                if (result.success) {
-                     toast({ title: "Welcome!", description: `You have successfully joined ${inviteData.teamName}.` });
-                } else {
-                    toast({ title: "Warning", description: `Could not join team: ${result.message}`, variant: "destructive" });
-                }
-
-            } else {
-                 toast({ title: "Warning", description: "The invite link used was invalid or expired.", variant: "destructive" });
-            }
-        }
-        
-        console.log("handleLogin: Creating new user document with profile:", newProfile);
+        await setDoc(userDocRef, userProfile);
         toast({ title: "Account Created!", description: "Let's complete your profile." });
-        setUser(newProfile); // This will trigger the redirect useEffect
+        console.log("handleLogin: Creating new user document with profile:", userProfile);
     }
+    
+    // Handle team invite for both new and existing users who are not on a team yet
+    if (inviteToken && userProfile.role === 'member' && !userProfile.teamId) {
+        console.log("Handling invite token for user:", userProfile.email);
+        const inviteDocRef = doc(db, "teamInvites", inviteToken);
+        const inviteDoc = await getDoc(inviteDocRef);
+        if (inviteDoc.exists()) {
+            const inviteData = inviteDoc.data() as TeamInvite;
+            const result = await addMemberToTeam({ userId: userProfile.uid, teamId: inviteData.teamId });
+            
+            if (result.success) {
+                 toast({ title: "Welcome!", description: `You have successfully joined ${inviteData.teamName}.` });
+                 // Manually set teamId on profile to speed up redirect
+                 userProfile.teamId = inviteData.teamId; 
+            } else {
+                toast({ title: "Warning", description: `Could not join team: ${result.message}`, variant: "destructive" });
+            }
+
+        } else {
+             toast({ title: "Warning", description: "The invite link used was invalid or expired.", variant: "destructive" });
+        }
+    }
+    
+    toast({
+        title: userDoc.exists() ? "Login Successful" : "Account Created",
+        description: "Redirecting to your dashboard...",
+    });
+
+    setUser(userProfile); // This will trigger the redirect useEffect
+
   }, [toast, router]);
   
 
   return { user, firebaseUser, loading, handleSignOut, handleLogin, reloadUser, redirectToDashboard };
 }
+
+    
