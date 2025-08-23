@@ -10,7 +10,7 @@ import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { db } from "@/lib/firebase";
-import { doc, onSnapshot, updateDoc, arrayRemove, collection, query, where, getDocs, writeBatch, addDoc, serverTimestamp, limit } from "firebase/firestore";
+import { doc, onSnapshot, updateDoc, arrayRemove, collection, query, where, getDocs, writeBatch, addDoc, serverTimestamp, limit, deleteDoc } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { AnnouncementsSection } from "./announcements-section";
@@ -109,12 +109,28 @@ export default function LeaderDashboard() {
     if (!team) return;
     setIsGeneratingLink(true);
     try {
+        const batch = writeBatch(db);
         const invitesRef = collection(db, "teamInvites");
-        const newInviteRef = await addDoc(invitesRef, {
+
+        // 1. Find and delete any old invites for this team
+        const oldInvitesQuery = query(invitesRef, where("teamId", "==", team.id));
+        const oldInvitesSnapshot = await getDocs(oldInvitesQuery);
+        oldInvitesSnapshot.forEach(doc => {
+            console.log(`Deleting old invite link: ${doc.id}`);
+            batch.delete(doc.ref);
+        });
+        
+        // 2. Create a new invite
+        const newInviteRef = doc(collection(db, "teamInvites")); // generate a new ref with a unique ID
+        batch.set(newInviteRef, {
             teamId: team.id,
             teamName: team.name,
             createdAt: serverTimestamp(),
         });
+        
+        // 3. Commit the batch
+        await batch.commit();
+
         const newLink = `${appBaseUrl}/register?inviteToken=${newInviteRef.id}`;
         setInviteLink(newLink);
         toast({ title: "Success", description: "New invite link generated." });
@@ -142,6 +158,8 @@ export default function LeaderDashboard() {
             if (!snapshot.empty) {
                 const doc = snapshot.docs[0];
                 setInviteLink(`${appBaseUrl}/register?inviteToken=${doc.id}`);
+            } else {
+                setInviteLink(null); // No link found
             }
         } catch (error) {
             console.error("Error fetching invite link:", error);
@@ -441,7 +459,7 @@ export default function LeaderDashboard() {
                     <CardContent>
                        {canAddMoreMembers ? (
                         <div className="space-y-4">
-                           {isGeneratingLink && !inviteLink ? (
+                           {isGeneratingLink ? (
                                 <div className="flex items-center justify-center h-10">
                                     <Loader2 className="h-6 w-6 animate-spin"/>
                                 </div>
@@ -456,7 +474,7 @@ export default function LeaderDashboard() {
                                 </Button>
                             </div>
                            ) : (
-                            <p className="text-sm text-muted-foreground">No invite link found.</p>
+                            <p className="text-sm text-muted-foreground">No invite link found. Generate one below.</p>
                            )}
                             <Button onClick={generateInviteLink} disabled={isGeneratingLink} className="w-full">
                                 {isGeneratingLink ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
