@@ -1,3 +1,5 @@
-// This file is intentionally left blank to resolve a routing conflict.
-// The correct registration page is located at /src/app/(auth)/register/page.tsx
-export default null;
+// This file is intentionally kept to resolve a routing conflict.
+// It should not be used. The correct registration page is at /src/app/(auth)/register/page.tsx
+export default function RegisterPage() {
+    return null;
+}
