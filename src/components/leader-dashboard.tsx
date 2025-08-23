@@ -40,7 +40,7 @@ export default function LeaderDashboard() {
   const [sortConfig, setSortConfig] = useState<{ key: SortKey, direction: SortDirection } | null>(null);
   const { toast } = useToast();
   const [inviteLink, setInviteLink] = useState<string | null>(null);
-  const [isGeneratingLink, setIsGeneratingLink] = useState(false);
+  const [isLoadingLink, setIsLoadingLink] = useState(true);
   const appBaseUrl = "https://vadodarahackathon.pierc.org";
 
   const fetchTeamAndMembers = useCallback(() => {
@@ -105,71 +105,46 @@ export default function LeaderDashboard() {
     return () => unsubscribe();
   }, [fetchTeamAndMembers]);
   
-  const generateInviteLink = useCallback(async () => {
-    if (!team) return;
-    setIsGeneratingLink(true);
-    try {
-        const batch = writeBatch(db);
-        const invitesRef = collection(db, "teamInvites");
-
-        // 1. Find and delete any old invites for this team
-        const oldInvitesQuery = query(invitesRef, where("teamId", "==", team.id));
-        const oldInvitesSnapshot = await getDocs(oldInvitesQuery);
-        oldInvitesSnapshot.forEach(doc => {
-            console.log(`Deleting old invite link: ${doc.id}`);
-            batch.delete(doc.ref);
-        });
-        
-        // 2. Create a new invite
-        const newInviteRef = doc(collection(db, "teamInvites")); // generate a new ref with a unique ID
-        batch.set(newInviteRef, {
-            teamId: team.id,
-            teamName: team.name,
-            createdAt: serverTimestamp(),
-        });
-        
-        // 3. Commit the batch
-        await batch.commit();
-
-        const newLink = `${appBaseUrl}/register?inviteToken=${newInviteRef.id}`;
-        setInviteLink(newLink);
-        toast({ title: "Success", description: "New invite link generated." });
-    } catch (error) {
-        console.error("Error generating invite link:", error);
-        toast({ title: "Error", description: "Could not generate a new invite link.", variant: "destructive" });
-    } finally {
-        setIsGeneratingLink(false);
-    }
-  }, [team, toast, appBaseUrl]);
-
   useEffect(() => {
     if (!team) return;
 
-    const fetchInviteLink = async () => {
-        setIsGeneratingLink(true);
+    const getOrCreateInviteLink = async () => {
+        setIsLoadingLink(true);
         try {
+            const invitesRef = collection(db, "teamInvites");
             const q = query(
-                collection(db, "teamInvites"),
+                invitesRef,
                 where("teamId", "==", team.id),
-                orderBy("createdAt", "desc"),
                 limit(1)
             );
+            
             const snapshot = await getDocs(q);
+            
             if (!snapshot.empty) {
+                // Link exists, just use it
                 const doc = snapshot.docs[0];
                 setInviteLink(`${appBaseUrl}/register?inviteToken=${doc.id}`);
             } else {
-                setInviteLink(null); // No link found
+                // No link exists, create one
+                const newInviteRef = doc(invitesRef);
+                await setDoc(newInviteRef, {
+                    teamId: team.id,
+                    teamName: team.name,
+                    createdAt: serverTimestamp(),
+                });
+                setInviteLink(`${appBaseUrl}/register?inviteToken=${newInviteRef.id}`);
+                toast({ title: "Invite Link Created", description: "Your permanent team invite link is ready." });
             }
         } catch (error) {
-            console.error("Error fetching invite link:", error);
+            console.error("Error getting or creating invite link:", error);
+            toast({ title: "Error", description: "Could not retrieve the invite link.", variant: "destructive" });
         } finally {
-            setIsGeneratingLink(false);
+            setIsLoadingLink(false);
         }
     };
 
-    fetchInviteLink();
-  }, [team, appBaseUrl]);
+    getOrCreateInviteLink();
+  }, [team, appBaseUrl, toast]);
 
 
   const handleRemoveMember = async (memberToRemove: UserProfile) => {
@@ -293,7 +268,7 @@ export default function LeaderDashboard() {
                 <CardTitle className="flex items-center gap-2">
                     <Users2 />
                     Team Members ({teamMembers.length} / 6)
-                    {team.teamNumber && <Badge variant="secondary" className="bg-secondary text-secondary-foreground">{`Team No: ${team.teamNumber}`}</Badge>}
+                    {team.teamNumber && <Badge variant="secondary" className="ml-auto">{`Team No: ${team.teamNumber}`}</Badge>}
                 </CardTitle>
                 <CardDescription>Your current team roster. Invite members using the link below.</CardDescription>
             </CardHeader>
@@ -453,13 +428,13 @@ export default function LeaderDashboard() {
                            <LinkIcon /> Invite Members
                         </CardTitle>
                         <CardDescription>
-                            {canAddMoreMembers ? `Share this link to invite members to your team.` : "Your team is full."}
+                            {canAddMoreMembers ? `Share this permanent link to invite members to your team.` : "Your team is full."}
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
                        {canAddMoreMembers ? (
                         <div className="space-y-4">
-                           {isGeneratingLink ? (
+                           {isLoadingLink ? (
                                 <div className="flex items-center justify-center h-10">
                                     <Loader2 className="h-6 w-6 animate-spin"/>
                                 </div>
@@ -474,12 +449,8 @@ export default function LeaderDashboard() {
                                 </Button>
                             </div>
                            ) : (
-                            <p className="text-sm text-muted-foreground">No invite link found. Generate one below.</p>
+                            <p className="text-sm text-muted-foreground">Could not load the invite link.</p>
                            )}
-                            <Button onClick={generateInviteLink} disabled={isGeneratingLink} className="w-full">
-                                {isGeneratingLink ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
-                                Generate New Link
-                            </Button>
                         </div>
                        ): (
                         <p className="text-sm text-muted-foreground">You have reached the maximum number of team members.</p>

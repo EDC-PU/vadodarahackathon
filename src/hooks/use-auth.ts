@@ -297,8 +297,7 @@ export function useAuth() {
                     });
                      // Set the user's profile
                     batch.set(userDocRef, newProfile);
-                    // Delete the invite so it can't be reused
-                    batch.delete(inviteDocRef);
+                    // DO NOT delete the invite, so it can be reused
                     await batch.commit();
 
                     toast({ title: "Welcome!", description: `You have successfully joined ${inviteData.teamName}.` });
