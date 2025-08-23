@@ -132,7 +132,7 @@ export default function DashboardSidebar() {
     <>
       <SidebarHeader className="border-b">
         <div className="flex items-center justify-center gap-2 w-full p-2 h-16">
-          <Image src="https://www.pierc.org/vhlogo.png" alt="Vadodara Hackathon Logo" width={48} height={48} />
+          <Image src="https://www.pierc.org/vhlogo.png" alt="Vadodara Hackathon Logo" width={164} height={164} />
         </div>
       </SidebarHeader>
       <SidebarContent className="p-2">
