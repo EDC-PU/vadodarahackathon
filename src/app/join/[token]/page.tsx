@@ -21,6 +21,7 @@ function JoinPageContent() {
     const [teamInfo, setTeamInfo] = useState<TeamInfo | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [teamId, setTeamId] = useState<string | null>(null);
 
     useEffect(() => {
         const fetchInviteInfo = async () => {
@@ -37,6 +38,7 @@ function JoinPageContent() {
                         teamName: result.teamName!,
                         leaderName: result.leaderName!,
                     });
+                    setTeamId(result.teamId!);
                 } else {
                     throw new Error(result.message);
                 }

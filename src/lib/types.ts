@@ -126,6 +126,20 @@ export interface Announcement {
 
 // Schemas for Genkit Flows
 
+// add-member-to-team-flow
+export const AddMemberToTeamInputSchema = z.object({
+  userId: z.string().describe("The UID of the new user to add."),
+  teamId: z.string().describe("The ID of the team to join."),
+});
+export type AddMemberToTeamInput = z.infer<typeof AddMemberToTeamInputSchema>;
+
+export const AddMemberToTeamOutputSchema = z.object({
+  success: z.boolean(),
+  message: z.string(),
+});
+export type AddMemberToTeamOutput = z.infer<typeof AddMemberToTeamOutputSchema>;
+
+
 // get-invite-details-flow
 export const GetInviteDetailsInputSchema = z.object({
   inviteId: z.string().describe("The ID of the invitation document."),
@@ -137,6 +151,7 @@ export const GetInviteDetailsOutputSchema = z.object({
   message: z.string(),
   teamName: z.string().optional(),
   leaderName: z.string().optional(),
+  teamId: z.string().optional(),
 });
 export type GetInviteDetailsOutput = z.infer<typeof GetInviteDetailsOutputSchema>;
 

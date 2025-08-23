@@ -53,6 +53,7 @@ const getInviteDetailsFlow = ai.defineFlow(
         message: "Invite details fetched successfully.",
         teamName: teamData.name,
         leaderName: teamData.leader.name,
+        teamId: teamData.id,
       };
 
     } catch (error) {

@@ -8,6 +8,7 @@ import { auth, db } from '@/lib/firebase';
 import { UserProfile, Team, TeamInvite } from '@/lib/types';
 import { useRouter, usePathname } from 'next/navigation';
 import { useToast } from './use-toast';
+import { addMemberToTeam } from '@/ai/flows/add-member-to-team-flow';
 
 export function useAuth() {
   const [user, setUser] = useState<UserProfile | null>(null);
@@ -267,6 +268,8 @@ export function useAuth() {
             createdAt: serverTimestamp() as any,
         };
         
+        await setDoc(userDocRef, newProfile);
+        
         // Handle team invite
         if (inviteToken && role === 'member') {
             console.log("Handling invite token:", inviteToken);
@@ -274,36 +277,17 @@ export function useAuth() {
             const inviteDoc = await getDoc(inviteDocRef);
             if (inviteDoc.exists()) {
                 const inviteData = inviteDoc.data() as TeamInvite;
-                const teamDocRef = doc(db, "teams", inviteData.teamId);
-                const teamDoc = await getDoc(teamDocRef);
-                const teamData = teamDoc.data() as Team | undefined;
-
-                if (teamDoc.exists() && teamData && teamData.members.length < 5) {
-                    newProfile.teamId = inviteData.teamId;
-                    
-                    const batch = writeBatch(db);
-                    const newMember = { 
-                        uid: newProfile.uid,
-                        email: newProfile.email,
-                        name: newProfile.name
-                    };
-                    batch.update(teamDocRef, {
-                        members: arrayUnion(newMember)
-                    });
-                    batch.set(userDocRef, newProfile);
-                    await batch.commit();
-
-                    toast({ title: "Welcome!", description: `You have successfully joined ${inviteData.teamName}.` });
+                const result = await addMemberToTeam({ userId: newProfile.uid, teamId: inviteData.teamId });
+                
+                if (result.success) {
+                     toast({ title: "Welcome!", description: `You have successfully joined ${inviteData.teamName}.` });
                 } else {
-                     await setDoc(userDocRef, newProfile);
-                     toast({ title: "Warning", description: "Could not join team. It might be full.", variant: "destructive" });
+                    toast({ title: "Warning", description: `Could not join team: ${result.message}`, variant: "destructive" });
                 }
+
             } else {
-                 await setDoc(userDocRef, newProfile);
                  toast({ title: "Warning", description: "The invite link used was invalid or expired.", variant: "destructive" });
             }
-        } else {
-            await setDoc(userDocRef, newProfile);
         }
         
         console.log("handleLogin: Creating new user document with profile:", newProfile);
