@@ -8,7 +8,7 @@ import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
 import { getAdminDb } from '@/lib/firebase-admin';
 import { TeamInvite, GetTeamInviteLinkInput, GetTeamInviteLinkInputSchema, GetTeamInviteLinkOutput, GetTeamInviteLinkOutputSchema } from '@/lib/types';
-import { serverTimestamp } from 'firebase/firestore';
+import { FieldValue } from 'firebase-admin/firestore';
 
 
 export async function getTeamInviteLink(input: GetTeamInviteLinkInput): Promise<GetTeamInviteLinkOutput> {
@@ -51,7 +51,7 @@ const getTeamInviteLinkFlow = ai.defineFlow(
             await newInviteRef.set({
                 teamId: teamId,
                 teamName: teamName,
-                createdAt: serverTimestamp(),
+                createdAt: FieldValue.serverTimestamp(),
             });
             inviteId = newInviteRef.id;
             console.log(`New invite link created with ID: ${inviteId}`);
