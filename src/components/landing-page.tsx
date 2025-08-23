@@ -188,7 +188,7 @@ export default function LandingPage() {
               </div>
             </div>
             <div className="relative h-96 w-full flex items-center justify-center">
-                 <Image src="https://placehold.co/600x600.png" alt="3D Character" layout="fill" objectFit="contain" data-ai-hint="futuristic coder orange glow" className="animate-float" />
+                 <Image src="https://pierc-portal-new.vercel.app/_next/image?url=https%3A%2F%2Fwww.pierc.org%2F_next%2Fimage%3Furl%3D%252F_next%252Fstatic%252Fmedia%252FmainBgImage.05039c52.png%26w%3D1920%26q%3D75&w=1200&q=75" alt="3D Character" layout="fill" objectFit="contain" data-ai-hint="futuristic coder orange glow" className="animate-float" />
             </div>
           </div>
         </section>
@@ -388,9 +388,9 @@ export default function LandingPage() {
         <div className="container max-w-7xl py-8">
           <div className="flex flex-col md:flex-row items-center justify-between gap-6">
               <div className="flex items-center gap-4">
-                  <Image src="https://www.paruluniversity.ac.in/pu-web/images/logo.png" alt="Parul University Logo" width={150} height={50} />
+                  <Image src="https://www.pierc.org/assets/logopu.svg" alt="Parul University Logo" width={250} height={70} />
                   <div className="w-px h-10 bg-border"></div>
-                  <img src="https://www.pierc.org/assets/PIERC.svg" alt="PIERC Logo" className="h-10" />
+                  <img src="https://www.pierc.org/_next/static/media/PIERC%20WHITE.a9ef7cc8.svg" alt="PIERC Logo" className="h-15" />
               </div>
               <div className="text-center md:text-right text-sm text-foreground/60">
                 <p>&copy; {new Date().getFullYear()} Vadodara Hackathon. All rights reserved.</p>
