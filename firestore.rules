@@ -1,103 +1,89 @@
-
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Helper functions
+    // Helper function to check if the user is an admin.
     function isAdmin() {
-      // Check if the user making the request has the 'admin' role in their user document.
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
 
-    function isSameUser(userId) {
-      // Check if the requesting user's UID matches the document's UID.
+    // Helper function to check if the user is the owner of a document.
+    function isOwner(userId) {
       return request.auth.uid == userId;
     }
     
-    function getTeamId() {
-        return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.teamId;
-    }
-
-    function isTeamLeader(teamId) {
-        let teamData = get(/databases/$(database)/documents/teams/$(teamId)).data;
-        return request.auth.uid == teamData.leader.uid;
-    }
-
+    // Helper function to check if a user is a member of a specific team
     function isTeamMember(teamId) {
-        let teamData = get(/databases/$(database)/documents/teams/$(teamId)).data;
-        let memberUids = teamData.members.map(member => member.uid);
-        return request.auth.uid in memberUids;
+      let user = get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+      return user.teamId == teamId;
     }
     
-    function isSpocForTeam(teamId) {
-        let teamData = get(/databases/$(database)/documents/teams/$(teamId)).data;
-        let spocData = get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
-        return spocData.role == 'spoc' && spocData.institute == teamData.institute;
+    // Helper function to check if a user is a leader of a specific team
+    function isTeamLeader(teamId) {
+        let team = get(/databases/$(database)/documents/teams/$(teamId)).data;
+        return request.auth.uid == team.leader.uid;
     }
 
-    // Rules for 'users' collection
+    // Helper function to check if a user is the SPOC for a team's institute
+    function isInstituteSpocForTeam(teamId) {
+        let team = get(/databases/$(database)/documents/teams/$(teamId)).data;
+        let user = get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+        return user.role == 'spoc' && user.institute == team.institute && user.spocStatus == 'approved';
+    }
+
+    // Users Collection
     match /users/{userId} {
-      allow read: if isAdmin() || isSameUser(userId);
-      allow create: if request.auth != null; // New users are created via signup flow
-      allow update: if isAdmin() || isSameUser(userId);
-      allow delete: if isAdmin();
-
-      // Allow a user to query for existing SPOCs during registration
-      allow list: if request.query.keys().hasOnly(['institute', 'role', 'spocStatus']) &&
-                     request.query.filters.size() == 3 &&
-                     request.query.filters[0].field == 'institute' && request.query.filters[0].op == '==' &&
-                     request.query.filters[1].field == 'role' && request.query.filters[1].op == '==' && request.query.filters[1].value == 'spoc' &&
-                     request.query.filters[2].field == 'spocStatus' && request.query.filters[2].op == '==';
+      allow read: if isAdmin() || isOwner(userId);
+      allow write: if isAdmin() || isOwner(userId);
+      
+      // Allow authenticated users to query for existing SPOCs during registration
+      allow list: if request.auth != null && 
+                     request.query.keys.hasAll(['institute', 'role']) && 
+                     request.resource.data.role == 'spoc';
     }
     
-    // Rules for 'teams' collection
+    // Teams Collection
     match /teams/{teamId} {
-      allow read: if isAdmin() || isTeamLeader(teamId) || isTeamMember(teamId) || isSpocForTeam(teamId);
-      allow create: if request.auth != null; // Anyone authenticated can create a team initially via the flow
-      allow update: if isAdmin() || isTeamLeader(teamId) || isSpocForTeam(teamId);
-      allow delete: if isAdmin() || isSpocForTeam(teamId);
+      allow read: if isAdmin() || isTeamMember(teamId) || isInstituteSpocForTeam(teamId);
+      allow create: if request.auth != null; // Checked in flow logic
+      allow update: if isAdmin() || isTeamLeader(teamId) || isInstituteSpocForTeam(teamId);
+      allow delete: if isAdmin() || isInstituteSpocForTeam(teamId);
     }
 
-    // Rules for 'invitations' collection (deprecated, but keep for safety)
-    match /invitations/{inviteId} {
-      allow read, write: if request.auth != null;
-    }
-
-    // Rules for 'teamInvites' (permanent links)
+    // Team Invites Collection (for joining via link)
     match /teamInvites/{inviteId} {
-        allow read: if true; // Publicly readable to get team info for the join page
-        // Only an admin or the team's leader can manage the invite link document
-        allow create, update, delete: if isAdmin() || isTeamLeader(get(after.path).data.teamId);
+        allow read: if request.auth != null;
+        allow write: if isAdmin() || isTeamLeader(request.resource.data.teamId);
     }
     
-    // Rules for 'problemStatements' collection
+    // Problem Statements Collection
     match /problemStatements/{psId} {
-        allow read: if request.auth != null; // Any authenticated user can read problem statements
-        allow create, update, delete: if isAdmin();
+      allow read: if request.auth != null;
+      allow write: if isAdmin();
     }
     
-    // Rules for 'announcements' collection
-    match /announcements/{announcementId} {
-      allow read: if true; // All announcements are public
-      allow create, update, delete: if isAdmin();
-    }
-    
-    // Rules for 'config' collection (e.g. registration deadline)
+    // Config Collection (for event settings)
     match /config/{configId} {
-        allow read: if true;
+        allow read: if true; // Publicly readable for registration deadline
         allow write: if isAdmin();
     }
+    
+    // Announcements Collection
+    match /announcements/{announcementId} {
+      allow read: if true; // Publicly readable
+      allow write: if isAdmin();
+    }
 
-    // Rules for 'notifications' collection
+    // Notifications Collection
     match /notifications/{notificationId} {
-        allow read, update, delete: if isSameUser(resource.data.recipientUid);
-        allow create: if request.auth != null; // Flows create notifications
+      allow read, write: if isOwner(request.resource.data.recipientUid);
+      allow create: if request.auth != null; // Checked in flow
     }
     
-     // Rules for 'healthchecks' collection (for system health check flow)
+    // Healthchecks collection (for system health check)
     match /healthchecks/{docId} {
-      allow read, write, delete: if isAdmin();
+        allow read, write: if isAdmin();
     }
   }
 }
