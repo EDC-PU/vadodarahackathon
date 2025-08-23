@@ -10,12 +10,40 @@ import { Team, UserProfile } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "./ui/button";
 import { exportTeams } from "@/ai/flows/export-teams-flow";
+import { Buffer } from 'buffer';
 
 
 export default function AdminDashboard() {
   const [stats, setStats] = useState({ teams: 0, participants: 0, spocs: 0, admins: 0 });
   const [loading, setLoading] = useState(true);
+  const [isExporting, setIsExporting] = useState(false);
   const { toast } = useToast();
+
+  const handleExport = async () => {
+    setIsExporting(true);
+    try {
+        const result = await exportTeams({ institute: "All Institutes", category: "All Categories" });
+        if (result.success && result.fileContent) {
+            const blob = new Blob([Buffer.from(result.fileContent, 'base64')], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = result.fileName || 'teams-export.xlsx';
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            a.remove();
+            toast({ title: "Success", description: "Team data has been exported." });
+        } else {
+            toast({ title: "Export Failed", description: result.message || "Could not generate the export file.", variant: "destructive" });
+        }
+    } catch (error) {
+        console.error("Error exporting data:", error);
+        toast({ title: "Error", description: "An unexpected error occurred during export.", variant: "destructive" });
+    } finally {
+        setIsExporting(false);
+    }
+  };
 
   useEffect(() => {
     const fetchData = async () => {
@@ -117,7 +145,19 @@ export default function AdminDashboard() {
           </Card>
       </div>
 
-      <div className="mt-8">
+      <div className="mt-8 grid gap-8 md:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle>Data Export</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-muted-foreground mb-4">Export all team data to Excel format.</p>
+            <Button onClick={handleExport} className="w-full" disabled={isExporting}>
+              {isExporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
+              {isExporting ? "Exporting..." : "Export Teams to Excel"}
+            </Button>
+          </CardContent>
+        </Card>
         <Card>
           <CardHeader>
             <CardTitle>Recent Activity</CardTitle>

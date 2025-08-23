@@ -55,10 +55,10 @@ export default function AllTeamsPage() {
     };
   }, [toast]);
   
-  const handleExport = async () => {
+const handleExport = async () => {
     setIsExporting(true);
     try {
-        const result = await exportTeams();
+        const result = await exportTeams({ institute: "All Institutes", category: "All Categories" });
         if (result.success && result.fileContent) {
             const blob = new Blob([Buffer.from(result.fileContent, 'base64')], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
             const url = window.URL.createObjectURL(blob);

@@ -4,7 +4,8 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Loader2, AlertCircle, Save, Pencil, X, Trash2, Users, User, MinusCircle, Badge, ArrowUpDown } from "lucide-react";
+import { Loader2, AlertCircle, Save, Pencil, X, Trash2, Users, User, MinusCircle, ArrowUpDown } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { useEffect, useState, useMemo, useCallback } from "react";
 import { auth, db } from "@/lib/firebase";
 import { doc, getDoc, collection, query, where, onSnapshot, updateDoc } from "firebase/firestore";
@@ -27,6 +28,9 @@ import {
 import { manageTeamBySpoc } from "@/ai/flows/manage-team-by-spoc-flow";
 import { useAuth } from "@/hooks/use-auth";
 import { getInstituteTeams } from "@/ai/flows/get-institute-teams-flow";
+import { exportTeams } from "@/ai/flows/export-teams-flow";
+import { Download } from "lucide-react";
+import { Buffer } from 'buffer';
 
 type SortKey = 'teamName' | 'teamNumber' | 'name' | 'email' | 'enrollmentNumber' | 'contactNumber';
 type SortDirection = 'asc' | 'desc';
@@ -39,8 +43,39 @@ export default function SpocDashboard() {
   const [editingTeam, setEditingTeam] = useState<{ id: string, name: string } | null>(null);
   const [isSaving, setIsSaving] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState<string | null>(null);
+  const [isExporting, setIsExporting] = useState(false);
   const [sortConfig, setSortConfig] = useState<{ key: SortKey, direction: SortDirection } | null>(null);
   const { toast } = useToast();
+
+  const handleExport = async () => {
+    setIsExporting(true);
+    try {
+        if (!user?.institute) {
+            throw new Error("Institute information not available");
+        }
+        
+        const result = await exportTeams({ institute: user.institute, category: "All Categories" });
+        if (result.success && result.fileContent) {
+            const blob = new Blob([Buffer.from(result.fileContent, 'base64')], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = result.fileName || `${user.institute}-teams.xlsx`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            a.remove();
+            toast({ title: "Success", description: "Team data has been exported." });
+        } else {
+            toast({ title: "Export Failed", description: result.message || "Could not generate the export file.", variant: "destructive" });
+        }
+    } catch (error) {
+        console.error("Error exporting data:", error);
+        toast({ title: "Error", description: "An unexpected error occurred during export.", variant: "destructive" });
+    } finally {
+        setIsExporting(false);
+    }
+  };
   
   const fetchInstituteData = useCallback(async (institute: string) => {
     setLoading(true);
@@ -87,7 +122,7 @@ export default function SpocDashboard() {
             const memberProfile = member.uid ? users.get(member.uid) : undefined;
             return {
                 ...member,
-                uid: memberProfile?.uid,
+                uid: memberProfile?.uid || '',
                 enrollmentNumber: memberProfile?.enrollmentNumber || 'N/A',
                 contactNumber: memberProfile?.contactNumber || 'N/A',
             };
@@ -115,8 +150,46 @@ export default function SpocDashboard() {
     const detailedTeams = getTeamWithFullDetails(teams);
     if (sortConfig !== null) {
       return [...detailedTeams].sort((a, b) => {
-        const aVal = a[sortConfig.key] || '';
-        const bVal = b[sortConfig.key] || '';
+        let aVal: string = '';
+        let bVal: string = '';
+
+        // Handle team properties
+        if (sortConfig.key === 'teamName') {
+          aVal = a.name || '';
+          bVal = b.name || '';
+        } else if (sortConfig.key === 'teamNumber') {
+          aVal = a.teamNumber || '';
+          bVal = b.teamNumber || '';
+        } else {
+          // For member properties, we'll sort by the first member's value
+          if (a.allMembers.length > 0 && b.allMembers.length > 0) {
+            const firstMemberA = a.allMembers[0];
+            const firstMemberB = b.allMembers[0];
+            
+            switch (sortConfig.key) {
+              case 'name':
+                aVal = firstMemberA.name || '';
+                bVal = firstMemberB.name || '';
+                break;
+              case 'email':
+                aVal = firstMemberA.email || '';
+                bVal = firstMemberB.email || '';
+                break;
+              case 'enrollmentNumber':
+                aVal = firstMemberA.enrollmentNumber || '';
+                bVal = firstMemberB.enrollmentNumber || '';
+                break;
+              case 'contactNumber':
+                aVal = firstMemberA.contactNumber || '';
+                bVal = firstMemberB.contactNumber || '';
+                break;
+              default:
+                aVal = '';
+                bVal = '';
+            }
+          }
+        }
+
         if (aVal < bVal) {
           return sortConfig.direction === 'asc' ? -1 : 1;
         }
@@ -127,7 +200,6 @@ export default function SpocDashboard() {
       });
     }
     return detailedTeams;
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [teams, users, sortConfig]);
 
   const requestSort = (key: SortKey) => {
@@ -338,8 +410,8 @@ export default function SpocDashboard() {
                             )}
                             <TableCell>{member.name} {member.isLeader && '(Leader)'}</TableCell>
                             <TableCell>{member.email}</TableCell>
-                            <TableCell>{member.enrollmentNumber}</TableCell>
-                            <TableCell>{member.contactNumber}</TableCell>
+<TableCell>{member.enrollmentNumber || 'N/A'}</TableCell>
+<TableCell>{member.contactNumber || 'N/A'}</TableCell>
                             <TableCell className="text-right">
                                 {!member.isLeader && (
                                      <AlertDialog>

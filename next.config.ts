@@ -16,7 +16,7 @@ const nextConfig: NextConfig = {
     remotePatterns: [
       {
         protocol: 'https',
-        hostname: 'placehold.co',
+        hostname: 'pierc-portal-new.vercel.app',
         port: '',
         pathname: '/**',
       },
