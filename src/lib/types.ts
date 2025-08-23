@@ -126,6 +126,20 @@ export interface Announcement {
 
 // Schemas for Genkit Flows
 
+// get-invite-details-flow
+export const GetInviteDetailsInputSchema = z.object({
+  inviteId: z.string().describe("The ID of the invitation document."),
+});
+export type GetInviteDetailsInput = z.infer<typeof GetInviteDetailsInputSchema>;
+
+export const GetInviteDetailsOutputSchema = z.object({
+  success: z.boolean(),
+  message: z.string(),
+  teamName: z.string().optional(),
+  leaderName: z.string().optional(),
+});
+export type GetInviteDetailsOutput = z.infer<typeof GetInviteDetailsOutputSchema>;
+
 // delete-user-flow
 export const DeleteUserInputSchema = z.object({
   uid: z.string().describe('The UID of the user to be deleted.'),

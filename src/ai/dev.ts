@@ -13,4 +13,5 @@ import '@/ai/flows/notify-admins-flow.ts';
 import '@/ai/flows/delete-user-flow.ts';
 import '@/ai/flows/get-institute-teams-flow.ts';
 import '@/ai/flows/get-team-invite-link-flow.ts';
+import '@/ai/flows/get-invite-details-flow.ts';
 

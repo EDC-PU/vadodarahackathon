@@ -7,13 +7,11 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 import { Loader2, AlertCircle } from "lucide-react";
-import { doc, getDoc } from "firebase/firestore";
-import { db } from "@/lib/firebase";
-import { Team, TeamInvite } from "@/lib/types";
+import { getInviteDetails } from "@/ai/flows/get-invite-details-flow";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 interface TeamInfo {
-    name: string;
+    teamName: string;
     leaderName: string;
 }
 
@@ -33,27 +31,15 @@ function JoinPageContent() {
             };
 
             try {
-                const inviteDocRef = doc(db, "teamInvites", token);
-                const inviteDoc = await getDoc(inviteDocRef);
-
-                if (!inviteDoc.exists()) {
-                    throw new Error("This invitation is invalid or has expired.");
+                const result = await getInviteDetails({ inviteId: token });
+                if (result.success) {
+                    setTeamInfo({
+                        teamName: result.teamName!,
+                        leaderName: result.leaderName!,
+                    });
+                } else {
+                    throw new Error(result.message);
                 }
-
-                const inviteData = inviteDoc.data() as TeamInvite;
-                const teamDocRef = doc(db, "teams", inviteData.teamId);
-                const teamDoc = await getDoc(teamDocRef);
-
-                if (!teamDoc.exists()) {
-                    throw new Error("The team you are trying to join no longer exists.");
-                }
-                
-                const teamData = teamDoc.data() as Team;
-                setTeamInfo({
-                    name: teamData.name,
-                    leaderName: teamData.leader.name,
-                });
-
             } catch (err: any) {
                 console.error("Error fetching invite info:", err);
                 setError(err.message || "Could not validate the invitation.");
@@ -85,7 +71,7 @@ function JoinPageContent() {
                 <Link href="/" className="flex items-center gap-2 mb-4">
                 <Image src="https://www.pierc.org/vhlogo.png" alt="Vadodara Hackathon Logo" width={64} height={64} />
                 </Link>
-                <h1 className="text-3xl font-bold font-headline">Join {teamInfo?.name || 'the Team'}</h1>
+                <h1 className="text-3xl font-bold font-headline">Join {teamInfo?.teamName || 'the Team'}</h1>
                 <p className="text-muted-foreground">
                     {teamInfo?.leaderName} has invited you to join their team. Create your account to accept the invitation.
                 </p>
