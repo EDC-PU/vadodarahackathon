@@ -257,12 +257,11 @@ export function useAuth() {
 
         userProfile = {
             uid: loggedInUser.uid,
-            name: loggedInUser.displayName || 'New User',
+            name: loggedInUser.displayName || '',
             email: loggedInUser.email!,
             role: role as UserProfile['role'],
             photoURL: loggedInUser.photoURL || '',
-            // If user signs up via Google or is not a SPOC, their password is not temporary.
-            passwordChanged: isGoogleSignIn || role !== 'spoc',
+            passwordChanged: true,
             createdAt: serverTimestamp() as any,
         };
         
@@ -271,7 +270,6 @@ export function useAuth() {
         console.log("handleLogin: Creating new user document with profile:", userProfile);
     }
     
-    // Handle team invite for both new and existing users who are not on a team yet
     if (inviteToken && userProfile.role === 'member' && !userProfile.teamId) {
         console.log("Handling invite token for user:", userProfile.email);
         const inviteDocRef = doc(db, "teamInvites", inviteToken);
@@ -279,7 +277,6 @@ export function useAuth() {
         if (inviteDoc.exists()) {
             const inviteData = inviteDoc.data() as TeamInvite;
             
-            // Call the secure flow with all necessary user data
             const result = await addMemberToTeam({ 
                 userId: userProfile.uid, 
                 teamId: inviteData.teamId,
@@ -294,7 +291,6 @@ export function useAuth() {
             
             if (result.success) {
                  toast({ title: "Welcome!", description: `You have successfully joined ${inviteData.teamName}.` });
-                 // Manually set teamId on profile to speed up redirect
                  userProfile.teamId = inviteData.teamId; 
             } else {
                 toast({ title: "Warning", description: `Could not join team: ${result.message}`, variant: "destructive" });
