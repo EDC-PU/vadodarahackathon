@@ -152,7 +152,7 @@ export default function LandingPage() {
                         <Link href="/login">Login</Link>
                       </Button>
                       <Button asChild className="rounded-full glass-button hover:scale-105 transition-transform !text-foreground">
-                        <Link href="/register-2">Register <MoveRight className="ml-2 h-4 w-4" /></Link>
+                        <Link href="/register">Register <MoveRight className="ml-2 h-4 w-4" /></Link>
                       </Button>
                   </>
               )}
@@ -176,7 +176,7 @@ export default function LandingPage() {
               </p>
               <div className="flex flex-col sm:flex-row justify-center md:justify-start gap-4">
                 <Button size="lg" asChild className="rounded-full glass-button hover:scale-105 transition-transform !text-foreground shadow-[0_0_25px_hsl(var(--primary)/0.2)]">
-                  <Link href="/register-2">
+                  <Link href="/register">
                     <Code className="mr-2 h-5 w-5" /> Register Now
                   </Link>
                 </Button>
