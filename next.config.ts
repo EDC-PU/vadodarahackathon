@@ -37,6 +37,12 @@ const nextConfig: NextConfig = {
         hostname: 'www.paruluniversity.ac.in',
         port: '',
         pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'placehold.co',
+        port: '',
+        pathname: '/**',
       }
     ],
   },
