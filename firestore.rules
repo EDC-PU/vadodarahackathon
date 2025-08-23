@@ -57,14 +57,14 @@ service cloud.firestore {
         }
         
         allow read: if isTeamMember(teamId) || isAdmin() || isSpocForThisTeam();
-        allow create: if isSignedIn();
+        allow create: if isTeamLeader(resource.data.teamId); // Only team leaders can create invitations
         allow update: if isTeamLeader(teamId) || isAdmin() || isSpocForThisTeam();
         allow delete: if isAdmin() || isSpocForThisTeam();
     }
 
     // INVITATIONS
     match /invitations/{invitationId} {
-        allow create: if isSignedIn();
+        allow create: if isTeamLeader(resource.data.teamId); // Only team leaders can create invitations
         allow read, update: if isSignedIn() && (
             resource.data.email == request.auth.email || // User who received the invitation
             isTeamLeader(resource.data.teamId) // Leader of the team who sent it
