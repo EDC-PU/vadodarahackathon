@@ -3,14 +3,14 @@
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Team, UserProfile, TeamMember, TeamInvite } from "@/lib/types";
-import { AlertCircle, CheckCircle, PlusCircle, Trash2, User, Loader2, FileText, Pencil, Users2, Badge, ArrowUpDown, Link as LinkIcon, Copy, RefreshCw } from "lucide-react";
+import { Team, UserProfile, TeamMember, TeamInvite, Notification } from "@/lib/types";
+import { AlertCircle, CheckCircle, PlusCircle, Trash2, User, Loader2, FileText, Pencil, Users2, Badge, ArrowUpDown, Link as LinkIcon, Copy, RefreshCw, Bell, X as CloseIcon } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "./ui/alert";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { db } from "@/lib/firebase";
-import { doc, onSnapshot, updateDoc, arrayRemove, collection, query, where, getDocs, writeBatch, addDoc, serverTimestamp, limit, deleteDoc, setDoc } from "firebase/firestore";
+import { doc, onSnapshot, updateDoc, arrayRemove, collection, query, where, getDocs, writeBatch, addDoc, serverTimestamp, limit, deleteDoc, setDoc, orderBy } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { AnnouncementsSection } from "./announcements-section";
@@ -31,6 +31,67 @@ import { getTeamInviteLink } from "@/ai/flows/get-team-invite-link-flow";
 
 type SortKey = 'name' | 'role' | 'email' | 'contactNumber' | 'enrollmentNumber' | 'yearOfStudy' | 'semester';
 type SortDirection = 'asc' | 'desc';
+
+function NotificationsSection() {
+    const { user } = useAuth();
+    const [notifications, setNotifications] = useState<Notification[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        if (!user) return;
+
+        const q = query(
+            collection(db, "notifications"),
+            where("recipientUid", "==", user.uid),
+            orderBy("createdAt", "desc"),
+            limit(10)
+        );
+
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+            const notifs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Notification));
+            setNotifications(notifs);
+            setLoading(false);
+        });
+
+        return () => unsubscribe();
+    }, [user]);
+
+    const handleMarkAsRead = async (id: string) => {
+        const notifRef = doc(db, 'notifications', id);
+        await updateDoc(notifRef, { read: true });
+    };
+
+    return (
+        <Card>
+            <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                    <Bell className="text-primary"/> Notifications
+                </CardTitle>
+                <CardDescription>Updates about your team and the event.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+                {loading ? <div className="flex justify-center items-center h-24"><Loader2 className="h-6 w-6 animate-spin" /></div>
+                : notifications.length > 0 ? (
+                    notifications.map(notif => (
+                        <div key={notif.id} className={`p-3 border-l-4 rounded-r-md relative ${notif.read ? 'border-border/30 bg-secondary/20' : 'border-primary/50 bg-secondary/50'}`}>
+                             <h4 className="font-semibold">{notif.title}</h4>
+                             <p className="text-sm text-muted-foreground mt-1">{notif.message}</p>
+                             <p className="text-xs text-muted-foreground mt-2">{new Date(notif.createdAt?.seconds * 1000).toLocaleString()}</p>
+                             {!notif.read && (
+                                 <Button variant="ghost" size="icon" className="absolute top-1 right-1 h-6 w-6" onClick={() => handleMarkAsRead(notif.id)}>
+                                     <CloseIcon className="h-4 w-4"/>
+                                 </Button>
+                             )}
+                        </div>
+                    ))
+                ) : (
+                    <p className="text-muted-foreground text-center py-4">No new notifications.</p>
+                )}
+            </CardContent>
+        </Card>
+    );
+}
+
 
 export default function LeaderDashboard() {
   const { user, loading: authLoading } = useAuth();
@@ -342,44 +403,47 @@ export default function LeaderDashboard() {
          </Card>
 
         <div className="grid gap-8 lg:grid-cols-3">
-             <AnnouncementsSection audience="teams_and_all" />
-            <Card>
-                <CardHeader>
-                    <CardTitle>Team Status</CardTitle>
-                    <CardDescription>Check if your team meets the hackathon requirements.</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                    {teamValidation.memberCount.isMet ? (
-                        <Alert variant="default" className="border-green-500">
-                            <CheckCircle className="h-4 w-4 text-green-500"/>
-                            <AlertTitle>Team Size Correct</AlertTitle>
-                            <AlertDescription>You have 6 members in your team. Great job!</AlertDescription>
-                        </Alert>
-                    ) : (
-                        <Alert variant="destructive">
-                            <AlertCircle className="h-4 w-4"/>
-                            <AlertTitle>Incomplete Team</AlertTitle>
-                            <AlertDescription>Your team needs {teamValidation.memberCount.required - teamValidation.memberCount.current} more member(s) to reach the required 6.</AlertDescription>
-                        </Alert>
-                    )}
-
-                    {teamValidation.femaleCount.isMet ? (
-                        <Alert variant="default" className="border-green-500">
-                            <CheckCircle className="h-4 w-4 text-green-500"/>
-                            <AlertTitle>Female Representation Met</AlertTitle>
-                            <AlertDescription>Your team includes at least one female member. Thank you!</AlertDescription>
-                        </Alert>
-                    ) : (
-                         <Alert variant="destructive">
-                            <AlertCircle className="h-4 w-4"/>
-                            <AlertTitle>Female Representation Required</AlertTitle>
-                            <AlertDescription>Your team must include at least one female member.</AlertDescription>
-                        </Alert>
-                    )}
-                </CardContent>
-            </Card>
+             <div className="lg:col-span-2 grid grid-cols-1 gap-8">
+                <AnnouncementsSection audience="teams_and_all" />
+                <NotificationsSection />
+            </div>
             
-            <div className="space-y-8">
+            <div className="space-y-8 lg:col-span-1">
+                 <Card>
+                    <CardHeader>
+                        <CardTitle>Team Status</CardTitle>
+                        <CardDescription>Check if your team meets the hackathon requirements.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                        {teamValidation.memberCount.isMet ? (
+                            <Alert variant="default" className="border-green-500">
+                                <CheckCircle className="h-4 w-4 text-green-500"/>
+                                <AlertTitle>Team Size Correct</AlertTitle>
+                                <AlertDescription>You have 6 members in your team. Great job!</AlertDescription>
+                            </Alert>
+                        ) : (
+                            <Alert variant="destructive">
+                                <AlertCircle className="h-4 w-4"/>
+                                <AlertTitle>Incomplete Team</AlertTitle>
+                                <AlertDescription>Your team needs {teamValidation.memberCount.required - teamValidation.memberCount.current} more member(s) to reach the required 6.</AlertDescription>
+                            </Alert>
+                        )}
+
+                        {teamValidation.femaleCount.isMet ? (
+                            <Alert variant="default" className="border-green-500">
+                                <CheckCircle className="h-4 w-4 text-green-500"/>
+                                <AlertTitle>Female Representation Met</AlertTitle>
+                                <AlertDescription>Your team includes at least one female member. Thank you!</AlertDescription>
+                            </Alert>
+                        ) : (
+                             <Alert variant="destructive">
+                                <AlertCircle className="h-4 w-4"/>
+                                <AlertTitle>Female Representation Required</AlertTitle>
+                                <AlertDescription>Your team must include at least one female member.</AlertDescription>
+                            </Alert>
+                        )}
+                    </CardContent>
+                </Card>
                 <Card>
                     <CardHeader>
                         <CardTitle>Problem Statement & Category</CardTitle>

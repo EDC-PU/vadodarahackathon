@@ -44,6 +44,16 @@ export interface TeamInvite {
   createdAt: any;
 }
 
+export interface Notification {
+    id: string;
+    recipientUid: string;
+    title: string;
+    message: string;
+    read: boolean;
+    createdAt: any;
+    link?: string;
+}
+
 
 export interface TeamMember {
   uid: string; 
