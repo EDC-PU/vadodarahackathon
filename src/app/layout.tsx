@@ -1,3 +1,4 @@
+
 import type {Metadata} from 'next';
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster"
@@ -12,6 +13,9 @@ const fontInter = Inter({
 export const metadata: Metadata = {
   title: 'Vadodara Hackathon Portal',
   description: 'Welcome to the Vadodara Hackathon, hosted by Parul University, PIERC.',
+  icons: {
+    icon: '/favicon.ico',
+  },
 };
 
 export default function RootLayout({
