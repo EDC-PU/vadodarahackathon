@@ -253,13 +253,16 @@ export function useAuth() {
             return;
         }
 
+        const isGoogleSignIn = loggedInUser.providerData.some(p => p.providerId === 'google.com');
+
         userProfile = {
             uid: loggedInUser.uid,
             name: loggedInUser.displayName || 'New User',
             email: loggedInUser.email!,
             role: role as UserProfile['role'],
             photoURL: loggedInUser.photoURL || '',
-            passwordChanged: loggedInUser.providerData.some(p => p.providerId === 'google.com'), // True for Google, false for email
+            // If user signs up via Google or is not a SPOC, their password is not temporary.
+            passwordChanged: isGoogleSignIn || role !== 'spoc',
             createdAt: serverTimestamp() as any,
         };
         
