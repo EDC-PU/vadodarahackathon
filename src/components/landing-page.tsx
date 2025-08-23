@@ -395,7 +395,6 @@ export default function LandingPage() {
               <div className="text-center md:text-right text-sm text-foreground/60">
                 <p>&copy; {new Date().getFullYear()} Vadodara Hackathon. All rights reserved.</p>
                 <div className="flex gap-4 justify-center md:justify-end mt-1">
-                    <Link href="/terms" className="hover:text-primary transition-colors">Terms of Use</Link>
                     <Link href="/privacy" className="hover:text-primary transition-colors">Privacy Policy</Link>
                 </div>
             </div>

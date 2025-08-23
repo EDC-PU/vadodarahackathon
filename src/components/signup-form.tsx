@@ -47,7 +47,7 @@ const formSchema = z.object({
   confirmPassword: z.string().min(6, { message: "Password must be at least 6 characters." }),
   role: z.enum(["leader", "member", "spoc"], { required_error: "Please select a role." }),
   terms: z.boolean().refine((val) => val === true, {
-    message: "You must accept the terms and conditions.",
+    message: "You must accept the privacy policy.",
   }),
 }).refine((data) => data.password === data.confirmPassword, {
     message: "Passwords don't match",
@@ -135,7 +135,7 @@ export function SignupForm({ inviteToken }: SignupFormProps) {
         return;
     }
     if (!termsAccepted) {
-        toast({ title: "Terms Required", description: "You must accept the terms and conditions before signing in.", variant: "destructive" });
+        toast({ title: "Terms Required", description: "You must accept the privacy policy before signing in.", variant: "destructive" });
         setIsGoogleLoading(false);
         return;
     }
@@ -291,7 +291,7 @@ export function SignupForm({ inviteToken }: SignupFormProps) {
                     </FormControl>
                     <div className="space-y-1 leading-none">
                         <FormLabel>
-                            I agree to the <Link href="/terms" target="_blank" className="underline text-primary hover:text-primary/80">Terms of Use</Link> and <Link href="/privacy" target="_blank" className="underline text-primary hover:text-primary/80">Privacy Policy</Link>.
+                            I agree to the <Link href="/privacy" target="_blank" className="underline text-primary hover:text-primary/80">Privacy Policy</Link>.
                         </FormLabel>
                         <FormMessage />
                     </div>
