@@ -118,7 +118,7 @@ export function useAuth() {
     // --- Start of Redirection and Route Protection Logic ---
     if (!user) {
         // If there's no user and we're not on a public page, redirect to login
-        const publicPaths = ['/login', '/register', '/forgot-password', '/'];
+        const publicPaths = ['/login', '/register', '/forgot-password', '/', '/privacy', '/terms'];
         if (!publicPaths.includes(pathname) && !pathname.startsWith('/_next/') && !pathname.startsWith('/join/')) {
             console.log(`Redirect Check: No user found, redirecting from protected path ${pathname} to /login.`);
             performRedirect('/login');
@@ -176,9 +176,16 @@ export function useAuth() {
     // 4. Role-based route protection
     const currentRole = user.role;
     if (!currentRole) return; // Exit if role is not yet defined
-    const isProtectedPath = pathname.startsWith('/admin') || pathname.startsWith('/leader') || pathname.startsWith('/spoc') || pathname.startsWith('/member');
+    const isProtectedPath = pathname.startsWith('/admin') || pathname.startsWith('/leader') || pathname.startsWith('/spoc') || pathname.startsWith('/member') || pathname.startsWith('/profile');
               
     if (isProtectedPath) {
+        // Allow access to own profile regardless of role
+        if (pathname.startsWith('/profile/')) {
+            if (user.enrollmentNumber && pathname.endsWith(user.enrollmentNumber)) {
+                return;
+            }
+        }
+        
         if (!pathname.startsWith(`/${currentRole}`)) {
              console.warn(`SECURITY: Role '${currentRole}' attempted to access '${pathname}'. Redirecting.`);
              performRedirect(`/${currentRole}`);
@@ -271,7 +278,7 @@ export function useAuth() {
                 const teamDoc = await getDoc(teamDocRef);
 
                 if (teamDoc.exists() && teamDoc.data().members.length < 5) {
-                    newProfile.teamId = inviteData.teamId;
+                    newProfile.teamId = inviteData.teamId; // FIX: Assign teamId to the new user's profile
                     
                     const batch = writeBatch(db);
                     // Add the user to the team's member list (initially with partial data)
@@ -283,7 +290,7 @@ export function useAuth() {
                     batch.update(teamDocRef, {
                         members: arrayUnion(newMember)
                     });
-                     // Set the user's profile
+                     // Set the user's profile, now including the teamId
                     batch.set(userDocRef, newProfile);
                     // DO NOT delete the invite, so it can be reused
                     await batch.commit();
