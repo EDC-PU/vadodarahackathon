@@ -1,3 +1,4 @@
+
 'use server';
 
 /**
@@ -126,19 +127,19 @@ const exportTeamsFlow = ai.defineFlow(
             allMembers.forEach((member, index) => {
                 const memberProfile = member as UserProfile; // Cast for easier access
                 sheet.addRow([
-                    team.name, // A
-                    team.teamNumber || '', // B
-                    memberProfile?.name || (member as any)?.name || '', // C
-                    memberProfile?.email || (member as any)?.email || '', // D
-                    memberProfile?.contactNumber || (member as any)?.contactNumber || '', // E
-                    memberProfile?.department || '', // F
-                    team.institute || '', // G
-                    memberProfile?.enrollmentNumber || (member as any)?.enrollmentNumber || '', // H
-                    memberProfile?.gender || (member as any)?.gender || '', // I
-                    memberProfile?.yearOfStudy || (member as any)?.yearOfStudy || '', // J
-                    memberProfile?.semester || (member as any)?.semester || '', // K
-                    problemStatement?.problemStatementId || '', // L
-                    problemStatement?.title || '', // M
+                    team.name || 'N/A', // A
+                    team.teamNumber || 'N/A', // B
+                    memberProfile?.name || (member as any)?.name || 'N/A', // C
+                    memberProfile?.email || (member as any)?.email || 'N/A', // D
+                    memberProfile?.contactNumber || (member as any)?.contactNumber || 'N/A', // E
+                    memberProfile?.department || 'N/A', // F
+                    team.institute || 'N/A', // G
+                    memberProfile?.enrollmentNumber || (member as any)?.enrollmentNumber || 'N/A', // H
+                    memberProfile?.gender || (member as any)?.gender || 'N/A', // I
+                    memberProfile?.yearOfStudy || (member as any)?.yearOfStudy || 'N/A', // J
+                    memberProfile?.semester || (member as any)?.semester || 'N/A', // K
+                    problemStatement?.problemStatementId || 'N/A', // L
+                    problemStatement?.title || 'N/A', // M
                 ]);
             });
 
