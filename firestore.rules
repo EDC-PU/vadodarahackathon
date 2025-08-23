@@ -41,10 +41,10 @@ service cloud.firestore {
     }
     
     // Team invites can be created by authenticated users.
-    // They should not be directly readable/updatable from the client in most cases.
-    // The getInviteDetailsFlow handles secure retrieval.
+    // They should be readable by anyone with the invite ID (for joining teams)
     match /teamInvites/{inviteId} {
-      allow read, write: if request.auth.uid != null;
+      allow read: if true; // Allow public read for invite validation
+      allow write: if request.auth.uid != null; // Only authenticated users can create invites
     }
 
     // Announcements can be read by anyone.
