@@ -276,12 +276,12 @@ export function useAuth() {
                 const inviteData = inviteDoc.data() as TeamInvite;
                 const teamDocRef = doc(db, "teams", inviteData.teamId);
                 const teamDoc = await getDoc(teamDocRef);
+                const teamData = teamDoc.data() as Team | undefined;
 
-                if (teamDoc.exists() && teamDoc.data().members.length < 5) {
-                    newProfile.teamId = inviteData.teamId; // FIX: Assign teamId to the new user's profile
+                if (teamDoc.exists() && teamData && teamData.members.length < 5) {
+                    newProfile.teamId = inviteData.teamId;
                     
                     const batch = writeBatch(db);
-                    // Add the user to the team's member list (initially with partial data)
                     const newMember = { 
                         uid: newProfile.uid,
                         email: newProfile.email,
@@ -290,9 +290,7 @@ export function useAuth() {
                     batch.update(teamDocRef, {
                         members: arrayUnion(newMember)
                     });
-                     // Set the user's profile, now including the teamId
                     batch.set(userDocRef, newProfile);
-                    // DO NOT delete the invite, so it can be reused
                     await batch.commit();
 
                     toast({ title: "Welcome!", description: `You have successfully joined ${inviteData.teamName}.` });
