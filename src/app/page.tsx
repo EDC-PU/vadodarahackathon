@@ -1,3 +1,4 @@
+
 import LandingPage from "@/components/landing-page";
 import { Suspense } from "react";
 import { Loader2 } from "lucide-react";
@@ -39,14 +40,18 @@ async function getPublicAnnouncements() {
     return [];
   }
   try {
+    // Corrected to use Admin SDK query syntax
     const announcementsCollection = db.collection('announcements');
-    const q = query(
-        announcementsCollection,
-        where("audience", "==", "all"),
-        orderBy("createdAt", "desc"),
-        limit(5)
-    );
-    const snapshot = await getDocs(q);
+    const q = announcementsCollection
+        .where("audience", "==", "all")
+        .orderBy("createdAt", "desc")
+        .limit(5);
+    
+    const snapshot = await q.get();
+    if (snapshot.empty) {
+        return [];
+    }
+
     const announcements = snapshot.docs.map(doc => {
         const data = doc.data();
         return {
