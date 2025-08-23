@@ -34,6 +34,8 @@ import { doc, getDoc } from "firebase/firestore";
 import { Alert, AlertTitle, AlertDescription } from "./ui/alert";
 import { INSTITUTES } from "@/lib/constants";
 import { useSearchParams } from "next/navigation";
+import Link from "next/link";
+import { Checkbox } from "./ui/checkbox";
 
 interface SignupFormProps {
     inviteToken?: string;
@@ -44,6 +46,9 @@ const formSchema = z.object({
   password: z.string().min(6, { message: "Password must be at least 6 characters." }),
   confirmPassword: z.string().min(6, { message: "Password must be at least 6 characters." }),
   role: z.enum(["leader", "member", "spoc"], { required_error: "Please select a role." }),
+  terms: z.boolean().refine((val) => val === true, {
+    message: "You must accept the terms and conditions.",
+  }),
 }).refine((data) => data.password === data.confirmPassword, {
     message: "Passwords don't match",
     path: ["confirmPassword"],
@@ -82,6 +87,7 @@ export function SignupForm({ inviteToken }: SignupFormProps) {
       password: "",
       confirmPassword: "",
       role: inviteToken ? 'member' : undefined,
+      terms: false,
     },
   });
 
@@ -121,8 +127,15 @@ export function SignupForm({ inviteToken }: SignupFormProps) {
   async function handleGoogleSignIn() {
     setIsGoogleLoading(true);
     const selectedRole = form.getValues("role");
+    const termsAccepted = form.getValues("terms");
+
     if (!selectedRole) {
         toast({ title: "Role Required", description: "Please select your role before signing in with Google.", variant: "destructive" });
+        setIsGoogleLoading(false);
+        return;
+    }
+    if (!termsAccepted) {
+        toast({ title: "Terms Required", description: "You must accept the terms and conditions before signing in.", variant: "destructive" });
         setIsGoogleLoading(false);
         return;
     }
@@ -262,6 +275,28 @@ export function SignupForm({ inviteToken }: SignupFormProps) {
                   <FormMessage />
                 </FormItem>
               )}
+            />
+
+            <FormField
+                control={form.control}
+                name="terms"
+                render={({ field }) => (
+                    <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4 shadow-sm">
+                    <FormControl>
+                        <Checkbox
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                        disabled={isLoading || isGoogleLoading}
+                        />
+                    </FormControl>
+                    <div className="space-y-1 leading-none">
+                        <FormLabel>
+                            I agree to the <Link href="/terms" target="_blank" className="underline text-primary hover:text-primary/80">Terms of Use</Link> and <Link href="/privacy" target="_blank" className="underline text-primary hover:text-primary/80">Privacy Policy</Link>.
+                        </FormLabel>
+                        <FormMessage />
+                    </div>
+                    </FormItem>
+                )}
             />
            
             <Button type="submit" className="w-full" disabled={isLoading || isGoogleLoading}>

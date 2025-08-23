@@ -188,7 +188,7 @@ export default function LandingPage() {
               </div>
             </div>
             <div className="relative h-96 w-full flex items-center justify-center">
-                 <Image src="https://pierc-portal-new.vercel.app/_next/image?url=https%3A%2F%2Fwww.pierc.org%2F_next%2Fimage%3Furl%3D%252F_next%252Fstatic%252Fmedia%252FmainBgImage.05039c52.png%26w%3D1920%26q%3D75&w=1200&q=75" alt="3D Character" layout="fill" objectFit="contain" data-ai-hint="futuristic coder orange glow" className="animate-float" />
+                 <Image src="https://www.pierc.org/vhlogo.png" alt="3D Character" layout="fill" objectFit="contain" data-ai-hint="futuristic coder orange glow" className="animate-float" />
             </div>
           </div>
         </section>
@@ -394,7 +394,10 @@ export default function LandingPage() {
               </div>
               <div className="text-center md:text-right text-sm text-foreground/60">
                 <p>&copy; {new Date().getFullYear()} Vadodara Hackathon. All rights reserved.</p>
-                <p>An initiative by Parul University, PIERC.</p>
+                <div className="flex gap-4 justify-center md:justify-end mt-1">
+                    <Link href="/terms" className="hover:text-primary transition-colors">Terms of Use</Link>
+                    <Link href="/privacy" className="hover:text-primary transition-colors">Privacy Policy</Link>
+                </div>
             </div>
           </div>
         </div>
