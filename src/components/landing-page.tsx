@@ -61,6 +61,7 @@ export default function LandingPage({ spocDetails, announcements }: LandingPageP
   const navLinks = [
     { name: 'Home', href: '#home' },
     { name: 'About', href: '#about' },
+    { name: 'Timeline', href: '#timeline' },
     { name: 'Rewards', href: '#rewards' },
     { name: 'SPOCs', href: '#spocs'},
     { name: 'Contact', href: '#contact' },
@@ -245,6 +246,31 @@ export default function LandingPage({ spocDetails, announcements }: LandingPageP
               </Carousel>
             </div>
           </div>
+        </AnimatedSection>
+
+        <AnimatedSection id="timeline">
+            <div className="container max-w-4xl text-center">
+                <h2 className="text-3xl font-bold mb-4 font-headline">Timeline</h2>
+                <p className="max-w-2xl mx-auto text-foreground/80 mb-8">
+                  Mark your calendars for these important dates.
+                </p>
+                <div className="flex flex-col md:flex-row justify-center items-center gap-8">
+                   <Card className="glass-card p-6 text-center transform hover:-translate-y-2 transition-transform duration-300">
+                        <Calendar className="h-10 w-10 text-primary mx-auto mb-4" />
+                        <CardTitle className="text-xl mt-2">Intra-Institute Round</CardTitle>
+                        <CardContent className="mt-2 text-foreground/80 p-0">
+                            <p>3rd, 4th & 5th September, 2025</p>
+                        </CardContent>
+                    </Card>
+                    <Card className="glass-card p-6 text-center transform hover:-translate-y-2 transition-transform duration-300">
+                        <Trophy className="h-10 w-10 text-primary mx-auto mb-4" />
+                        <CardTitle className="text-xl mt-2">Grand Finale</CardTitle>
+                        <CardContent className="mt-2 text-foreground/80 p-0">
+                            <p>6th September, 2025</p>
+                        </CardContent>
+                    </Card>
+                </div>
+            </div>
         </AnimatedSection>
 
         <AnimatedSection id="gallery">
