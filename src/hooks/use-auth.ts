@@ -193,7 +193,7 @@ export function useAuth() {
   }, [user, loading, pathname, router, handleSignOut]);
 
 
-  const handleLogin = useCallback(async (loggedInUser: FirebaseUser) => {
+  const handleLogin = useCallback(async (loggedInUser: FirebaseUser, inviteToken?: string) => {
     console.log("handleLogin: Starting login process for user:", loggedInUser.email);
     const userDocRef = doc(db, "users", loggedInUser.uid);
     let userDoc = await getDoc(userDocRef);
@@ -240,9 +240,7 @@ export function useAuth() {
     } else {
         console.log("handleLogin: New user detected. Creating profile from sessionStorage role.");
         const role = sessionStorage.getItem('sign-up-role');
-        const inviteToken = sessionStorage.getItem('inviteToken');
         sessionStorage.removeItem('sign-up-role');
-        sessionStorage.removeItem('inviteToken');
 
 
         if (!role) {

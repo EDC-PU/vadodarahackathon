@@ -96,13 +96,10 @@ export function SignupForm({ inviteToken }: SignupFormProps) {
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
     sessionStorage.setItem('sign-up-role', values.role);
-    if (inviteToken) {
-        sessionStorage.setItem('inviteToken', inviteToken);
-    }
-
+    
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
-      await handleLogin(userCredential.user);
+      await handleLogin(userCredential.user, inviteToken);
     } catch (error: any) {
       console.error("Sign-up Error:", error);
       let errorMessage = "An unexpected error occurred.";
@@ -131,19 +128,23 @@ export function SignupForm({ inviteToken }: SignupFormProps) {
     }
     
     sessionStorage.setItem('sign-up-role', selectedRole);
-    if (inviteToken) {
-        sessionStorage.setItem('inviteToken', inviteToken);
-    }
     
     const provider = new GoogleAuthProvider();
     try {
       const result = await signInWithPopup(auth, provider);
-      await handleLogin(result.user);
-    } catch (error: any) {
+      await handleLogin(result.user, inviteToken);
+    } catch (error: any)
+       {
       console.error("Google Sign-In Error:", error);
+      let errorMessage = "An unexpected error occurred.";
+      if (error.code === 'auth/user-disabled') {
+        errorMessage = "Your account is pending approval or has been disabled. Please contact an administrator."
+      } else {
+        errorMessage = error.message;
+      }
       toast({
         title: "Google Sign-In Failed",
-        description: error.message || "An unexpected error occurred.",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
