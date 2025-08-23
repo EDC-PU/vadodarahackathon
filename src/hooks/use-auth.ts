@@ -241,6 +241,20 @@ export function useAuth() {
     if (userDoc.exists()) {
       userProfile = { uid: userDoc.id, ...userDoc.data() } as UserProfile;
       console.log("handleLogin: User document exists.", userProfile);
+      // Logic for existing user with invite token
+      if (inviteToken && !userProfile.teamId) {
+          const result = await addMemberToTeam({
+              userId: userProfile.uid,
+              teamId: inviteToken, // Assuming token is teamId for simplicity, but it's inviteId
+              name: userProfile.name,
+              email: userProfile.email,
+          });
+          if (result.success) {
+            toast({title: "Success", description: "You have joined the team."})
+          } else {
+            toast({title: "Error", description: result.message, variant: 'destructive'})
+          }
+      }
     } else {
         console.log("handleLogin: New user detected. Creating profile from sessionStorage role.");
         const role = sessionStorage.getItem('sign-up-role');
@@ -252,8 +266,11 @@ export function useAuth() {
             signOut(auth);
             return;
         }
-
-        const isGoogleSignIn = loggedInUser.providerData.some(p => p.providerId === 'google.com');
+        
+        if (inviteToken) {
+            console.log("Storing invite token in session storage for after profile completion.");
+            sessionStorage.setItem('inviteToken', inviteToken);
+        }
 
         userProfile = {
             uid: loggedInUser.uid,
@@ -261,7 +278,7 @@ export function useAuth() {
             email: loggedInUser.email!,
             role: role as UserProfile['role'],
             photoURL: loggedInUser.photoURL || '',
-            passwordChanged: true,
+            passwordChanged: true, // Self-registered users set their own password
             createdAt: serverTimestamp() as any,
         };
         
@@ -270,40 +287,9 @@ export function useAuth() {
         console.log("handleLogin: Creating new user document with profile:", userProfile);
     }
     
-    if (inviteToken && userProfile.role === 'member' && !userProfile.teamId) {
-        console.log("Handling invite token for user:", userProfile.email);
-        const inviteDocRef = doc(db, "teamInvites", inviteToken);
-        const inviteDoc = await getDoc(inviteDocRef);
-        if (inviteDoc.exists()) {
-            const inviteData = inviteDoc.data() as TeamInvite;
-            
-            const result = await addMemberToTeam({ 
-                userId: userProfile.uid, 
-                teamId: inviteData.teamId,
-                name: userProfile.name,
-                email: userProfile.email,
-                enrollmentNumber: userProfile.enrollmentNumber,
-                contactNumber: userProfile.contactNumber,
-                gender: userProfile.gender,
-                semester: userProfile.semester,
-                yearOfStudy: userProfile.yearOfStudy,
-            });
-            
-            if (result.success) {
-                 toast({ title: "Welcome!", description: `You have successfully joined ${inviteData.teamName}.` });
-                 userProfile.teamId = inviteData.teamId; 
-            } else {
-                toast({ title: "Warning", description: `Could not join team: ${result.message}`, variant: "destructive" });
-            }
-
-        } else {
-             toast({ title: "Warning", description: "The invite link used was invalid or expired.", variant: "destructive" });
-        }
-    }
-    
     toast({
         title: userDoc.exists() ? "Login Successful" : "Account Created",
-        description: "Redirecting to your dashboard...",
+        description: "Redirecting...",
     });
 
     setUser(userProfile); // This will trigger the redirect useEffect
@@ -313,5 +299,3 @@ export function useAuth() {
 
   return { user, firebaseUser, loading, handleSignOut, handleLogin, reloadUser, redirectToDashboard };
 }
-
-    

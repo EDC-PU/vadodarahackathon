@@ -19,10 +19,11 @@ import { useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { db } from "@/lib/firebase";
-import { doc, updateDoc, getDoc, writeBatch } from "firebase/firestore";
+import { doc, updateDoc, getDoc, writeBatch, setDoc, collection } from "firebase/firestore";
 import { RadioGroup, RadioGroupItem } from "./ui/radio-group";
 import { useAuth } from "@/hooks/use-auth";
-import { Team, UserProfile } from "@/lib/types";
+import { Team, UserProfile, TeamInvite } from "@/lib/types";
+import { addMemberToTeam } from "@/ai/flows/add-member-to-team-flow";
 
 const formSchema = z.object({
   name: z.string().min(2, { message: "Name must be at least 2 characters." }),
@@ -79,8 +80,6 @@ export function CompleteProfileForm() {
         console.log("Starting batch write for profile completion...");
         const batch = writeBatch(db);
 
-        // 1. Update the user's own profile document
-        const userDocRef = doc(db, "users", user.uid);
         const updatedProfileData: Partial<UserProfile> = {
             name: values.name,
             gender: values.gender,
@@ -90,41 +89,60 @@ export function CompleteProfileForm() {
             semester: values.semester,
             yearOfStudy: values.yearOfStudy,
         };
-        batch.update(userDocRef, updatedProfileData);
-        console.log(`Batch update queued for user document: ${user.uid}`);
+        
+        const inviteToken = sessionStorage.getItem('inviteToken');
+        let finalTeamId: string | undefined = undefined;
 
-        // 2. If user is a member of a team, update their details in the team document
-        if (user.role === 'member' && user.teamId) {
-            console.log(`User is a member of team ${user.teamId}. Fetching team document.`);
-            const teamDocRef = doc(db, "teams", user.teamId);
-            const teamDoc = await getDoc(teamDocRef);
-            if (teamDoc.exists()) {
-                console.log("Team document found. Updating member details in team array.");
-                const teamData = teamDoc.data() as Team;
-                const memberIndex = teamData.members.findIndex(m => m.email === user.email);
-                
-                if (memberIndex !== -1) {
-                    const updatedMembers = [...teamData.members];
-                    updatedMembers[memberIndex] = {
-                        ...updatedMembers[memberIndex],
-                        name: values.name,
-                        gender: values.gender,
-                        enrollmentNumber: values.enrollmentNumber,
-                        contactNumber: values.contactNumber,
-                        semester: values.semester,
-                        yearOfStudy: values.yearOfStudy,
-                    };
-                    batch.update(teamDocRef, { members: updatedMembers });
-                    console.log(`Batch update queued for team document ${user.teamId} at member index ${memberIndex}.`);
+        if (inviteToken) {
+            console.log("Found invite token, attempting to join team after profile completion.");
+            const inviteDocRef = doc(db, "teamInvites", inviteToken);
+            const inviteDoc = await getDoc(inviteDocRef);
+
+            if (inviteDoc.exists()) {
+                const inviteData = inviteDoc.data() as TeamInvite;
+                const teamId = inviteData.teamId;
+
+                const joinResult = await addMemberToTeam({
+                    userId: user.uid,
+                    teamId: teamId,
+                    ...updatedProfileData,
+                    email: user.email,
+                });
+
+                if (joinResult.success) {
+                    finalTeamId = teamId;
+                    toast({ title: "Welcome!", description: `You have successfully joined ${inviteData.teamName}.` });
+                    
+                    const teamDocRef = doc(db, 'teams', teamId);
+                    const teamDoc = await getDoc(teamDocRef);
+                    const leaderId = teamDoc.data()?.leader.uid;
+                    if(leaderId) {
+                        const notificationsCollectionRef = collection(db, 'notifications');
+                        const newNotificationRef = doc(notificationsCollectionRef);
+                        await setDoc(newNotificationRef, {
+                            recipientUid: leaderId,
+                            title: "New Member Joined!",
+                            message: `${values.name} has joined your team, "${inviteData.teamName}".`,
+                            read: false,
+                            createdAt: new Date(),
+                            link: '/leader'
+                        });
+                    }
+
+                    sessionStorage.removeItem('inviteToken');
                 } else {
-                    console.warn(`Could not find member with email ${user.email} in team ${user.teamId} to update details.`);
+                    toast({ title: "Could Not Join Team", description: joinResult.message, variant: "destructive" });
+                    sessionStorage.removeItem('inviteToken');
                 }
-            } else {
-                 console.warn(`Team document ${user.teamId} not found.`);
             }
         }
+
+
+        // Update the user's own profile document
+        const userDocRef = doc(db, "users", user.uid);
+        batch.update(userDocRef, { ...updatedProfileData, teamId: finalTeamId });
+        console.log(`Batch update queued for user document: ${user.uid}`);
         
-        console.log("Committing batch write...");
         await batch.commit();
         console.log("Batch write committed successfully.");
 
@@ -134,7 +152,7 @@ export function CompleteProfileForm() {
         });
 
         // Pass the updated user object to ensure redirection works correctly
-        redirectToDashboard({ ...user, ...updatedProfileData });
+        redirectToDashboard({ ...user, ...updatedProfileData, teamId: finalTeamId });
 
     } catch (error: any) {
       console.error("Profile Update Error:", error);
