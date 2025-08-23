@@ -2,12 +2,13 @@ import LandingPage from "@/components/landing-page";
 import { Suspense } from "react";
 import { Loader2 } from "lucide-react";
 import { getAdminDb } from "@/lib/firebase-admin";
-import { UserProfile } from "@/lib/types";
+import { Announcement, UserProfile } from "@/lib/types";
+import { collection, query, where, orderBy, limit, getDocs } from "firebase/firestore";
 
 async function getSpocDetails() {
   const db = getAdminDb();
   if (!db) {
-    console.error("Could not get admin db instance.");
+    console.error("Could not get admin db instance for SPOCs.");
     return {};
   }
   try {
@@ -31,12 +32,47 @@ async function getSpocDetails() {
   }
 }
 
+async function getPublicAnnouncements() {
+  const db = getAdminDb();
+  if (!db) {
+    console.error("Could not get admin db instance for Announcements.");
+    return [];
+  }
+  try {
+    const announcementsCollection = db.collection('announcements');
+    const q = query(
+        announcementsCollection,
+        where("audience", "==", "all"),
+        orderBy("createdAt", "desc"),
+        limit(5)
+    );
+    const snapshot = await getDocs(q);
+    const announcements = snapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+            id: doc.id,
+            ...data,
+            // Convert Firestore Timestamp to a serializable format
+            createdAt: {
+                seconds: data.createdAt.seconds,
+                nanoseconds: data.createdAt.nanoseconds,
+            },
+        } as Announcement;
+    });
+    return announcements;
+  } catch (error) {
+    console.error("Error fetching announcements on server: ", error);
+    return [];
+  }
+}
+
 export default async function Home() {
   const spocDetails = await getSpocDetails();
+  const announcements = await getPublicAnnouncements();
 
   return (
     <Suspense fallback={<div className="flex h-screen w-full items-center justify-center"><Loader2 className="h-8 w-8 animate-spin" /></div>}>
-        <LandingPage spocDetails={spocDetails} />
+        <LandingPage spocDetails={spocDetails} announcements={announcements} />
     </Suspense>
   );
 }

@@ -22,6 +22,7 @@ import { AnnouncementsSection } from './announcements-section';
 import { cn } from '@/lib/utils';
 import { useScrollAnimation } from '@/hooks/use-scroll-animation';
 import Autoplay from "embla-carousel-autoplay"
+import { Announcement } from '@/lib/types';
 
 
 interface SpocDetails {
@@ -30,6 +31,7 @@ interface SpocDetails {
 
 interface LandingPageProps {
   spocDetails: SpocDetails;
+  announcements: Announcement[];
 }
 
 const AnimatedSection = ({ children, className }: { children: React.ReactNode, className?: string }) => {
@@ -51,7 +53,7 @@ const AnimatedSection = ({ children, className }: { children: React.ReactNode, c
 };
 
 
-export default function LandingPage({ spocDetails }: LandingPageProps) {
+export default function LandingPage({ spocDetails, announcements }: LandingPageProps) {
   const [selectedInstitute, setSelectedInstitute] = useState<string | null>(null);
   const { user, loading: authLoading } = useAuth();
   const autoplayPlugin = useRef(Autoplay({ delay: 2000, stopOnInteraction: true }));
@@ -166,7 +168,7 @@ export default function LandingPage({ spocDetails }: LandingPageProps) {
 
         <AnimatedSection id="announcements">
           <div className="container max-w-4xl">
-            <AnnouncementsSection audience="all" />
+            <AnnouncementsSection audience="all" initialAnnouncements={announcements} />
           </div>
         </AnimatedSection>
         

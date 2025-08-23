@@ -12,16 +12,24 @@ import Link from "next/link";
 interface AnnouncementsSectionProps {
     itemCount?: number;
     audience: AnnouncementAudience | 'teams_and_all' | 'spocs_and_all';
+    initialAnnouncements?: Announcement[]; // Optional prop for server-rendered data
 }
 
-export function AnnouncementsSection({ itemCount = 5, audience }: AnnouncementsSectionProps) {
-  const [announcements, setAnnouncements] = useState<Announcement[]>([]);
-  const [loading, setLoading] = useState(true);
+export function AnnouncementsSection({ itemCount = 5, audience, initialAnnouncements }: AnnouncementsSectionProps) {
+  const [announcements, setAnnouncements] = useState<Announcement[]>(initialAnnouncements || []);
+  const [loading, setLoading] = useState(!initialAnnouncements);
 
   useEffect(() => {
+    // If initialAnnouncements are provided, we don't need to fetch on the client side initially.
+    // The onSnapshot listener will still attach for real-time updates.
+    if (audience === 'all' && initialAnnouncements) {
+      setLoading(false);
+    }
+    
     setLoading(true);
     const announcementsCollection = collection(db, 'announcements');
-    let audiences: AnnouncementAudience[] = [];
+    let audiences: (AnnouncementAudience | "all")[] = [];
+
     if (audience === 'teams_and_all') {
         audiences = ['all', 'teams'];
     } else if (audience === 'spocs_and_all') {
@@ -47,7 +55,7 @@ export function AnnouncementsSection({ itemCount = 5, audience }: AnnouncementsS
     });
     
     return () => unsubscribe();
-  }, [itemCount, audience]);
+  }, [itemCount, audience, initialAnnouncements]);
 
   return (
     <Card>
