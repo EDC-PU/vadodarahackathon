@@ -10,7 +10,7 @@ import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { db } from "@/lib/firebase";
-import { doc, onSnapshot, updateDoc, arrayRemove, collection, query, where, getDocs, writeBatch, addDoc, serverTimestamp, limit, deleteDoc } from "firebase/firestore";
+import { doc, onSnapshot, updateDoc, arrayRemove, collection, query, where, getDocs, writeBatch, addDoc, serverTimestamp, limit, deleteDoc, setDoc } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { AnnouncementsSection } from "./announcements-section";
@@ -27,6 +27,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";
+import { getTeamInviteLink } from "@/ai/flows/get-team-invite-link-flow";
 
 type SortKey = 'name' | 'role' | 'email' | 'contactNumber' | 'enrollmentNumber' | 'yearOfStudy' | 'semester';
 type SortDirection = 'asc' | 'desc';
@@ -111,29 +112,16 @@ export default function LeaderDashboard() {
     const getOrCreateInviteLink = async () => {
         setIsLoadingLink(true);
         try {
-            const invitesRef = collection(db, "teamInvites");
-            const q = query(
-                invitesRef,
-                where("teamId", "==", team.id),
-                limit(1)
-            );
-            
-            const snapshot = await getDocs(q);
-            
-            if (!snapshot.empty) {
-                // Link exists, just use it
-                const doc = snapshot.docs[0];
-                setInviteLink(`${appBaseUrl}/register?inviteToken=${doc.id}`);
+            const result = await getTeamInviteLink({
+                teamId: team.id,
+                teamName: team.name,
+                baseUrl: appBaseUrl,
+            });
+
+            if (result.success && result.inviteLink) {
+                setInviteLink(result.inviteLink);
             } else {
-                // No link exists, create one
-                const newInviteRef = doc(invitesRef);
-                await setDoc(newInviteRef, {
-                    teamId: team.id,
-                    teamName: team.name,
-                    createdAt: serverTimestamp(),
-                });
-                setInviteLink(`${appBaseUrl}/register?inviteToken=${newInviteRef.id}`);
-                toast({ title: "Invite Link Created", description: "Your permanent team invite link is ready." });
+                throw new Error(result.message || "Failed to get invite link.");
             }
         } catch (error) {
             console.error("Error getting or creating invite link:", error);

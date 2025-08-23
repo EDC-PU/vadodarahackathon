@@ -185,6 +185,21 @@ export const GetInstituteTeamsOutputSchema = z.object({
 });
 export type GetInstituteTeamsOutput = z.infer<typeof GetInstituteTeamsOutputSchema>;
 
+// get-team-invite-link-flow
+export const GetTeamInviteLinkInputSchema = z.object({
+  teamId: z.string().describe("The ID of the team."),
+  teamName: z.string().describe("The name of the team."),
+  baseUrl: z.string().url().describe("The base URL of the application."),
+});
+export type GetTeamInviteLinkInput = z.infer<typeof GetTeamInviteLinkInputSchema>;
+
+export const GetTeamInviteLinkOutputSchema = z.object({
+  success: z.boolean(),
+  inviteLink: z.string().url().optional(),
+  message: z.string().optional(),
+});
+export type GetTeamInviteLinkOutput = z.infer<typeof GetTeamInviteLinkOutputSchema>;
+
 
 // make-admin-flow
 export const MakeAdminInputSchema = z.object({

@@ -12,3 +12,5 @@ import '@/ai/flows/manage-team-by-spoc-flow.ts';
 import '@/ai/flows/notify-admins-flow.ts';
 import '@/ai/flows/delete-user-flow.ts';
 import '@/ai/flows/get-institute-teams-flow.ts';
+import '@/ai/flows/get-team-invite-link-flow.ts';
+
