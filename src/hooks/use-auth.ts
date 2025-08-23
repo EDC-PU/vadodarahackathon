@@ -241,20 +241,6 @@ export function useAuth() {
     if (userDoc.exists()) {
       userProfile = { uid: userDoc.id, ...userDoc.data() } as UserProfile;
       console.log("handleLogin: User document exists.", userProfile);
-      // Logic for existing user with invite token
-      if (inviteToken && !userProfile.teamId) {
-          const result = await addMemberToTeam({
-              userId: userProfile.uid,
-              teamId: inviteToken, // Assuming token is teamId for simplicity, but it's inviteId
-              name: userProfile.name,
-              email: userProfile.email,
-          });
-          if (result.success) {
-            toast({title: "Success", description: "You have joined the team."})
-          } else {
-            toast({title: "Error", description: result.message, variant: 'destructive'})
-          }
-      }
     } else {
         console.log("handleLogin: New user detected. Creating profile from sessionStorage role.");
         const role = sessionStorage.getItem('sign-up-role');
@@ -278,7 +264,7 @@ export function useAuth() {
             email: loggedInUser.email!,
             role: role as UserProfile['role'],
             photoURL: loggedInUser.photoURL || '',
-            passwordChanged: true, // Self-registered users set their own password
+            passwordChanged: true, // User set their own password during signup
             createdAt: serverTimestamp() as any,
         };
         
@@ -294,7 +280,7 @@ export function useAuth() {
 
     setUser(userProfile); // This will trigger the redirect useEffect
 
-  }, [toast, router]);
+  }, [toast]);
   
 
   return { user, firebaseUser, loading, handleSignOut, handleLogin, reloadUser, redirectToDashboard };

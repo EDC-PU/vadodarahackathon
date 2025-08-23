@@ -77,10 +77,9 @@ export function CompleteProfileForm() {
     
     setIsLoading(true);
     try {
-        console.log("Starting batch write for profile completion...");
-        const batch = writeBatch(db);
-
-        const updatedProfileData: Partial<UserProfile> = {
+        console.log("Starting transaction for profile completion...");
+        
+        const updatedProfileData = {
             name: values.name,
             gender: values.gender,
             department: values.department,
@@ -105,8 +104,8 @@ export function CompleteProfileForm() {
                 const joinResult = await addMemberToTeam({
                     userId: user.uid,
                     teamId: teamId,
-                    ...updatedProfileData,
                     email: user.email,
+                    ...updatedProfileData,
                 });
 
                 if (joinResult.success) {
@@ -134,18 +133,17 @@ export function CompleteProfileForm() {
                     toast({ title: "Could Not Join Team", description: joinResult.message, variant: "destructive" });
                     sessionStorage.removeItem('inviteToken');
                 }
+            } else {
+                 toast({ title: "Invite Invalid", description: "The invitation link is no longer valid.", variant: "destructive" });
+                 sessionStorage.removeItem('inviteToken');
             }
         }
 
-
         // Update the user's own profile document
         const userDocRef = doc(db, "users", user.uid);
-        batch.update(userDocRef, { ...updatedProfileData, teamId: finalTeamId });
-        console.log(`Batch update queued for user document: ${user.uid}`);
+        await updateDoc(userDocRef, { ...updatedProfileData, teamId: finalTeamId });
+        console.log(`User document updated: ${user.uid}`);
         
-        await batch.commit();
-        console.log("Batch write committed successfully.");
-
         toast({
             title: "Profile Updated!",
             description: "Redirecting to your dashboard.",
