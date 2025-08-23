@@ -4,7 +4,7 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Loader2, AlertCircle, Save, Pencil, X, Trash2, Users, User, MinusCircle, ArrowUpDown } from "lucide-react";
+import { Loader2, AlertCircle, Save, Pencil, X, Trash2, Users, User, MinusCircle, ArrowUpDown, Link as LinkIcon, Copy } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useEffect, useState, useMemo, useCallback } from "react";
 import { auth, db } from "@/lib/firebase";
@@ -31,6 +31,7 @@ import { getInstituteTeams } from "@/ai/flows/get-institute-teams-flow";
 import { exportTeams } from "@/ai/flows/export-teams-flow";
 import { Download } from "lucide-react";
 import { Buffer } from 'buffer';
+import { getTeamInviteLink } from "@/ai/flows/get-team-invite-link-flow";
 
 type SortKey = 'teamName' | 'teamNumber' | 'name' | 'email' | 'enrollmentNumber' | 'contactNumber';
 type SortDirection = 'asc' | 'desc';
@@ -46,6 +47,9 @@ export default function SpocDashboard() {
   const [isExporting, setIsExporting] = useState(false);
   const [sortConfig, setSortConfig] = useState<{ key: SortKey, direction: SortDirection } | null>(null);
   const { toast } = useToast();
+  const [inviteLinks, setInviteLinks] = useState<Map<string, string>>(new Map());
+  const [loadingLink, setLoadingLink] = useState<string | null>(null);
+  const appBaseUrl = "https://vadodarahackathon.pierc.org";
 
   const handleExport = async () => {
     setIsExporting(true);
@@ -275,6 +279,26 @@ export default function SpocDashboard() {
     }
   }
 
+  const handleGetInviteLink = async (teamId: string, teamName: string) => {
+    setLoadingLink(teamId);
+    try {
+        const result = await getTeamInviteLink({
+            teamId: teamId,
+            teamName: teamName,
+            baseUrl: appBaseUrl,
+        });
+        if (result.success && result.inviteLink) {
+            setInviteLinks(prev => new Map(prev).set(teamId, result.inviteLink!));
+        } else {
+            throw new Error(result.message || "Failed to get invite link.");
+        }
+    } catch (error: any) {
+        toast({ title: "Error", description: error.message, variant: "destructive" });
+    } finally {
+        setLoadingLink(null);
+    }
+  };
+
   if (loading || authLoading) {
     return (
       <div className="flex justify-center items-center h-screen">
@@ -344,6 +368,7 @@ export default function SpocDashboard() {
                     <TableRow>
                         <TableHead><Button variant="ghost" onClick={() => requestSort('teamName')}>Team Name {getSortIndicator('teamName')}</Button></TableHead>
                         <TableHead><Button variant="ghost" onClick={() => requestSort('teamNumber')}>Team No. {getSortIndicator('teamNumber')}</Button></TableHead>
+                        <TableHead>Invite Link</TableHead>
                         <TableHead><Button variant="ghost" onClick={() => requestSort('name')}>Member Name {getSortIndicator('name')}</Button></TableHead>
                         <TableHead><Button variant="ghost" onClick={() => requestSort('email')}>Email {getSortIndicator('email')}</Button></TableHead>
                         <TableHead><Button variant="ghost" onClick={() => requestSort('enrollmentNumber')}>Enrollment No. {getSortIndicator('enrollmentNumber')}</Button></TableHead>
@@ -408,10 +433,39 @@ export default function SpocDashboard() {
                                     {team.teamNumber ? <Badge variant="outline">{team.teamNumber}</Badge> : <span className="text-muted-foreground text-xs">Not Assigned</span>}
                                 </TableCell>
                             )}
+                            {memberIndex === 0 && (
+                                <TableCell rowSpan={team.allMembers.length} className="align-top">
+                                    {inviteLinks.has(team.id) ? (
+                                        <div className="flex items-center gap-1">
+                                            <Input value={inviteLinks.get(team.id)} readOnly className="h-8 text-xs"/>
+                                            <Button size="icon" variant="ghost" className="h-8 w-8 shrink-0" onClick={() => {
+                                                navigator.clipboard.writeText(inviteLinks.get(team.id)!);
+                                                toast({ title: "Copied!" });
+                                            }}>
+                                                <Copy className="h-4 w-4" />
+                                            </Button>
+                                        </div>
+                                    ) : (
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => handleGetInviteLink(team.id, team.name)}
+                                            disabled={loadingLink === team.id}
+                                        >
+                                            {loadingLink === team.id ? (
+                                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                            ) : (
+                                                <LinkIcon className="mr-2 h-4 w-4" />
+                                            )}
+                                            View Link
+                                        </Button>
+                                    )}
+                                </TableCell>
+                            )}
                             <TableCell>{member.name} {member.isLeader && '(Leader)'}</TableCell>
                             <TableCell>{member.email}</TableCell>
-<TableCell>{member.enrollmentNumber || 'N/A'}</TableCell>
-<TableCell>{member.contactNumber || 'N/A'}</TableCell>
+                            <TableCell>{member.enrollmentNumber || 'N/A'}</TableCell>
+                            <TableCell>{member.contactNumber || 'N/A'}</TableCell>
                             <TableCell className="text-right">
                                 {!member.isLeader && (
                                      <AlertDialog>
@@ -446,3 +500,4 @@ export default function SpocDashboard() {
     </div>
   );
 }
+
