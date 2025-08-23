@@ -126,6 +126,30 @@ export interface Announcement {
 
 // Schemas for Genkit Flows
 
+// create-team-flow
+export const CreateTeamInputSchema = z.object({
+    teamName: z.string(),
+    leaderUid: z.string(),
+    leaderEmail: z.string().email(),
+    name: z.string(),
+    gender: z.enum(["Male", "Female", "Other"]),
+    institute: z.string(),
+    department: z.string(),
+    enrollmentNumber: z.string(),
+    contactNumber: z.string(),
+    semester: z.number(),
+    yearOfStudy: z.string(),
+});
+export type CreateTeamInput = z.infer<typeof CreateTeamInputSchema>;
+
+export const CreateTeamOutputSchema = z.object({
+  success: z.boolean(),
+  message: z.string(),
+  teamId: z.string().optional(),
+});
+export type CreateTeamOutput = z.infer<typeof CreateTeamOutputSchema>;
+
+
 // add-member-to-team-flow
 export const AddMemberToTeamInputSchema = z.object({
   userId: z.string().describe("The UID of the new user to add."),
@@ -346,5 +370,7 @@ export const SystemHealthStateSchema = z.object({
   timestamp: z.string(),
 });
 export type SystemHealthState = z.infer<typeof SystemHealthStateSchema>;
+
+    
 
     

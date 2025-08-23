@@ -27,12 +27,10 @@ import { Loader2 } from "lucide-react";
 import { INSTITUTES } from "@/lib/constants";
 import { useToast } from "@/hooks/use-toast";
 import { SmartFieldTip } from "./smart-field-tip";
-import { db } from "@/lib/firebase";
-import { doc, setDoc, writeBatch, getDoc, collection, updateDoc, query, where, getDocs } from "firebase/firestore";
 import { Separator } from "./ui/separator";
-import { UserProfile } from "@/lib/types";
 import { RadioGroup, RadioGroupItem } from "./ui/radio-group";
 import { useAuth } from "@/hooks/use-auth";
+import { createTeam, CreateTeamInput } from "@/ai/flows/create-team-flow";
 
 const formSchema = z.object({
   teamName: z.string().min(3, { message: "Team name must be at least 3 characters." }),
@@ -83,83 +81,25 @@ export function RegistrationForm() {
     }
   }, [user, form]);
   
-  const createTeamAndAssignLeader = async (values: z.infer<typeof formSchema>) => {
-    console.log("createTeamAndAssignLeader function called with values:", values);
-    if (!user) {
-      toast({ title: "Error", description: "You must be logged in to create a team.", variant: "destructive" });
-      console.error("Team creation failed: User not logged in.");
-      return;
-    }
-
-    console.log(`Checking for uniqueness of team name: "${values.teamName}"`);
-    // Check for team name uniqueness
-    const teamsRef = collection(db, "teams");
-    const q = query(teamsRef, where("name", "==", values.teamName));
-    const querySnapshot = await getDocs(q);
-
-    if (!querySnapshot.empty) {
-      console.error("Team name already exists.");
-      toast({
-        title: "Team Name Taken",
-        description: "A team with this name already exists. Please choose another name.",
-        variant: "destructive",
-      });
-      return;
-    }
-    console.log("Team name is unique. Proceeding with creation.");
-
-    const batch = writeBatch(db);
-    console.log("Write batch created.");
-
-    // 1. Create Team
-    const teamDocRef = doc(collection(db, "teams"));
-    console.log(`Generated new team document ID: ${teamDocRef.id}`);
-    const teamData = {
-      id: teamDocRef.id,
-      name: values.teamName,
-      leader: {
-          uid: user.uid,
-          name: values.name,
-          email: user.email,
-      },
-      institute: values.institute,
-      department: values.department,
-      members: [], // Start with empty members array
-    };
-    batch.set(teamDocRef, teamData);
-    console.log("Batch operation: Set new team data.", teamData);
-
-    // 2. Update User Profile to be a leader and link to team
-    const userDocRef = doc(db, "users", user.uid);
-    const userProfileUpdate: Partial<UserProfile> = {
-      role: "leader",
-      teamId: teamDocRef.id,
-      name: values.name,
-      gender: values.gender as "Male" | "Female" | "Other",
-      institute: values.institute,
-      department: values.department,
-      enrollmentNumber: values.enrollmentNumber,
-      contactNumber: values.contactNumber,
-      semester: values.semester,
-      yearOfStudy: values.yearOfStudy,
-      passwordChanged: true, // They are creating their team, so they've passed the initial password change step
-    };
-    batch.update(userDocRef, userProfileUpdate);
-    console.log("Batch operation: Update user profile.", userProfileUpdate);
-    
-    console.log("Committing batch write...");
-    await batch.commit();
-    console.log("Batch write successful.");
-
-    return true;
-  }
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     console.log("RegistrationForm onSubmit triggered.");
+    if (!user) {
+        toast({ title: "Error", description: "You are not logged in.", variant: "destructive" });
+        return;
+    }
+    
     setIsLoading(true);
     try {
-      const success = await createTeamAndAssignLeader(values);
-      if (success) {
+      const input: CreateTeamInput = {
+          leaderUid: user.uid,
+          leaderEmail: user.email,
+          ...values,
+      };
+      
+      const result = await createTeam(input);
+
+      if (result.success) {
         toast({
           title: "Team Registered!",
           description: `Your team "${values.teamName}" has been successfully created.`,
@@ -167,7 +107,11 @@ export function RegistrationForm() {
         console.log("Team registration successful, reloading user to trigger redirect...");
         await reloadUser();
       } else {
-        console.log("Team registration failed, not redirecting.");
+        toast({
+            title: "Registration Failed",
+            description: result.message || "An unexpected error occurred.",
+            variant: "destructive",
+        });
       }
     } catch (error: any) {
        console.error("Team Registration Error:", error);
@@ -379,3 +323,5 @@ export function RegistrationForm() {
     </Card>
   );
 }
+
+    
