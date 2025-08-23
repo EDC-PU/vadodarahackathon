@@ -16,9 +16,6 @@ import {
   CarouselNext,
   CarouselPrevious,
 } from "@/components/ui/carousel";
-import { db } from '@/lib/firebase';
-import { collection, getDocs, query, where } from 'firebase/firestore';
-import { UserProfile } from '@/lib/types';
 import { useAuth } from '@/hooks/use-auth';
 import { Skeleton } from './ui/skeleton';
 import { AnnouncementsSection } from './announcements-section';
@@ -29,6 +26,10 @@ import Autoplay from "embla-carousel-autoplay"
 
 interface SpocDetails {
   [key: string]: { name: string; email: string; contact: string }
+}
+
+interface LandingPageProps {
+  spocDetails: SpocDetails;
 }
 
 const AnimatedSection = ({ children, className }: { children: React.ReactNode, className?: string }) => {
@@ -50,40 +51,10 @@ const AnimatedSection = ({ children, className }: { children: React.ReactNode, c
 };
 
 
-export default function LandingPage() {
+export default function LandingPage({ spocDetails }: LandingPageProps) {
   const [selectedInstitute, setSelectedInstitute] = useState<string | null>(null);
-  const [spocDetails, setSpocDetails] = useState<SpocDetails>({});
-  const [loadingSpocs, setLoadingSpocs] = useState(true);
   const { user, loading: authLoading } = useAuth();
   const autoplayPlugin = useRef(Autoplay({ delay: 2000, stopOnInteraction: true }));
-
-
-  useEffect(() => {
-    const fetchSpocs = async () => {
-      try {
-        const spocQuery = query(collection(db, "users"), where("role", "==", "spoc"), where("spocStatus", "==", "approved"));
-        const querySnapshot = await getDocs(spocQuery);
-        const spocs: SpocDetails = {};
-        querySnapshot.forEach(doc => {
-          const spocData = doc.data() as UserProfile;
-          if (spocData.institute) {
-            spocs[spocData.institute] = {
-              name: spocData.name,
-              email: spocData.email,
-              contact: spocData.contactNumber!,
-            };
-          }
-        });
-        setSpocDetails(spocs);
-      } catch (error) {
-        console.error("Error fetching SPOCs: ", error);
-      } finally {
-        setLoadingSpocs(false);
-      }
-    };
-    fetchSpocs();
-  }, []);
-
 
   const navLinks = [
     { name: 'Home', href: '#home' },
@@ -309,11 +280,6 @@ export default function LandingPage() {
                 <p className="max-w-2xl mx-auto text-foreground/80 mb-8">
                   Find the Single Point of Contact (SPOC) for your institute.
                 </p>
-                {loadingSpocs ? (
-                     <div className="flex justify-center items-center h-40">
-                        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                     </div>
-                ) : (
                 <div className="flex flex-col items-center gap-4">
                     <Select onValueChange={setSelectedInstitute}>
                         <SelectTrigger className="w-full max-w-md glass-card !border-primary/50">
@@ -355,7 +321,6 @@ export default function LandingPage() {
                         </Card>
                     )}
                 </div>
-                )}
             </div>
         </AnimatedSection>
 
