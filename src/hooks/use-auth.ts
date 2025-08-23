@@ -161,14 +161,9 @@ export function useAuth() {
          performRedirect('/create-team');
          return;
      }
-
-     if (user.role === 'member' && !user.teamId && !user.enrollmentNumber) {
-        console.log("Redirect Check: User is a member but has no team and incomplete profile.");
-        performRedirect('/complete-profile');
-        return;
-     }
-
-     if ((user.role === 'member' || user.role === 'leader') && !user.enrollmentNumber) {
+     
+     // This rule is now ignored on the join page to prevent loops.
+     if ((user.role === 'member' || user.role === 'leader') && !user.enrollmentNumber && !pathname.startsWith('/join/')) {
         console.log("Redirect Check: Member/Leader profile is incomplete.");
         performRedirect('/complete-profile');
         return;
