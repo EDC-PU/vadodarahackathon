@@ -33,6 +33,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { doc, getDoc } from "firebase/firestore";
 import { Alert, AlertTitle, AlertDescription } from "./ui/alert";
 import { INSTITUTES } from "@/lib/constants";
+import { useSearchParams } from "next/navigation";
 
 const formSchema = z.object({
   email: z.string().email({ message: "Invalid email address." }),
@@ -45,6 +46,8 @@ const formSchema = z.object({
 });
 
 export function SignupForm() {
+  const searchParams = useSearchParams();
+  const inviteToken = searchParams.get('inviteToken');
 
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
@@ -77,8 +80,15 @@ export function SignupForm() {
       email: "",
       password: "",
       confirmPassword: "",
+      role: inviteToken ? 'member' : undefined,
     },
   });
+
+  useEffect(() => {
+    if (inviteToken) {
+        form.setValue('role', 'member');
+    }
+  }, [inviteToken, form]);
 
   const isRegistrationClosed = deadline ? new Date() > deadline : false;
 
@@ -159,7 +169,12 @@ export function SignupForm() {
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>I am registering as a...</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <Select 
+                    onValueChange={field.onChange} 
+                    value={field.value} 
+                    defaultValue={field.value}
+                    disabled={!!inviteToken}
+                  >
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Select your role" />
