@@ -1,0 +1,7 @@
+TeamName,Team ID,Name,Email,Number,Department,Institute,EnrollmentNo,Gender,Year of Study,Semester,Problem Statement Number,ProblemStatement Title
+{team_name},{team_id},{leader_name},{leader_email},{leader_phone},{leader_department},{leader_institute},{leader_enrollment},{leader_gender},{leader_year},{leader_semester},{problem_statement_number},{problem_title}
+,,{member1_name},{member1_email},{member1_phone},{member1_department},{member1_institute},{member1_enrollment},{member1_gender},{member1_year},{member1_semester},,
+,,{member2_name},{member2_email},{member1_phone},{member2_department},{member2_institute},{member2_enrollment},{member2_gender},{member2_year},{member2_semester},,
+,,{member3_name},{member3_email},{member1_phone},{member3_department},{member3_institute},{member3_enrollment},{member3_gender},{member3_year},{member3_semester},,
+,,{member4_name},{member4_email},{member1_phone},{member4_department},{member4_institute},{member4_enrollment},{member4_gender},{member4_year},{member4_semester},,
+,,{member5_name},{member5_email},{member1_phone},{member5_department},{member5_institute},{member5_enrollment},{member5_gender},{member5_year},{member5_semester},,
