@@ -56,7 +56,7 @@ export function RegistrationForm() {
     defaultValues: {
       teamName: "",
       name: "",
-      institute: "",
+      institute: undefined,
       department: "",
       enrollmentNumber: "",
       contactNumber: "",
@@ -72,7 +72,7 @@ export function RegistrationForm() {
         form.reset({
             teamName: "",
             name: user.name || "",
-            institute: user.institute || "",
+            institute: user.institute || undefined,
             department: user.department || "",
             enrollmentNumber: user.enrollmentNumber || "",
             contactNumber: user.contactNumber || "",
