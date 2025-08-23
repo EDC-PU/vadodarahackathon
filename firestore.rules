@@ -3,62 +3,138 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
   
-    // Default deny all
+    // Function to check if user is an admin
+    function isAdmin() {
+      return request.auth != null && request.auth.token.role == 'admin';
+    }
+
+    // Function to check if user is a SPOC
+    function isSPOC() {
+      return request.auth != null && request.auth.token.role == 'spoc';
+    }
+
+    // Function to check if user is a team leader
+    function isTeamLeader() {
+      return request.auth != null && request.auth.token.role == 'teamLeader';
+    }
+
+    // Function to check if user is a team member
+    function isTeamMember() {
+      return request.auth != null && (request.auth.token.role == 'teamMember' || request.auth.token.role == 'teamLeader');
+    }
+
+    // Function to check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Function to check if user is owner of the document
+    function isOwner(userId) {
+      return request.auth != null && request.auth.uid == userId;
+    }
+
+    // Function to check if user belongs to same institute as document
+    function isUserInSameInstitute(instituteId) {
+      return request.auth != null && request.auth.token.instituteId == instituteId;
+    }
+
+    // Function to check if user is member of a team
+    function isUserInTeam(teamId) {
+      return request.auth != null && request.auth.token.teamId == teamId;
+    }
+
+    // Default deny all, but allow admins full access
     match /{document=**} {
-      allow read, write: if false;
+      allow read, write: if isAdmin();
     }
 
-    // Users can read/update their own profile, anyone can create a user profile (for sign-up).
+    // Users collection - sign up allowed for all roles, profile editing for owners, SPOCs can view users from their institute
     match /users/{userId} {
-      allow read, update: if request.auth.uid == userId;
-      allow create: if request.auth.uid != null;
+      allow read: if isOwner(userId) || isAdmin() || (isSPOC() && isUserInSameInstitute(resource.data.instituteId));
+      allow update: if isOwner(userId) || isAdmin();
+      allow create: if true; // Allow sign-up for all roles
+      allow delete: if isAdmin();
     }
 
-    // Config can be read by anyone (for registration deadlines, etc.) but only written by admins
+    // Config can be read by anyone but only written by admins
     match /config/{docId} {
       allow read: if true;
-      // Note: Admin-only write access should be enforced via server-side logic (Genkit flows)
-      // For simplicity, we are not adding complex role-based write rules here.
-      // All sensitive writes are handled by server-side flows with Admin SDK.
-      allow write: if true; // Placeholder, assuming admin-only writes from backend
+      allow write: if isAdmin();
     }
 
-    // Teams can be read by any authenticated user (to see team details)
-    // Writes are more restricted.
+    // Teams collection - granular permissions based on roles
     match /teams/{teamId} {
-      allow read: if request.auth.uid != null;
-      // Allow updates only by server-side logic or authenticated users for specific fields.
-      // This is a simplified rule. Complex logic (like only leader can edit) should be in flows.
-      allow update: if request.auth.uid != null;
-      allow create: if request.auth.uid != null;
+      allow read: if isAdmin() || 
+                   (isSPOC() && isUserInSameInstitute(resource.data.instituteId)) || 
+                   (isTeamMember() && isUserInTeam(teamId));
+      allow write: if isAdmin() || 
+                    (isSPOC() && isUserInSameInstitute(resource.data.instituteId)) || 
+                    (isTeamLeader() && isUserInTeam(teamId));
+      allow create: if isAdmin() || isTeamLeader() || isSPOC();
+      allow delete: if isAdmin() || (isSPOC() && isUserInSameInstitute(resource.data.instituteId));
     }
 
-    // Problem statements are public.
+    // Team members subcollection - team leaders can delete members
+    match /teams/{teamId}/members/{memberId} {
+      allow read: if isAdmin() || 
+                   (isSPOC() && isUserInSameInstitute(resource.data.instituteId)) || 
+                   (isTeamMember() && isUserInTeam(teamId));
+      allow create: if isAdmin() || 
+                     (isSPOC() && isUserInSameInstitute(resource.data.instituteId)) || 
+                     (isTeamLeader() && isUserInTeam(teamId));
+      allow update: if isAdmin() || 
+                     (isSPOC() && isUserInSameInstitute(resource.data.instituteId)) || 
+                     (isTeamLeader() && isUserInTeam(teamId));
+      allow delete: if isAdmin() || 
+                     (isSPOC() && isUserInSameInstitute(resource.data.instituteId)) || 
+                     (isTeamLeader() && isUserInTeam(teamId));
+    }
+
+    // Problem statements are public, admins have full access
     match /problemStatements/{statementId} {
-        allow read: if true;
-        // Writes should be handled by admin-only flows
-        allow write: if true; // Placeholder for admin backend
+      allow read: if true;
+      allow write: if isAdmin();
+      allow create: if isAdmin();
+      allow delete: if isAdmin();
     }
     
-    // Team invites can be created by authenticated users.
-    // They should be readable by anyone with the invite ID (for joining teams)
+    // Team invites - team leaders can create/view invites, members can join via invites
     match /teamInvites/{inviteId} {
-      allow read: if true; // Allow public read for invite validation
-      allow write: if request.auth.uid != null; // Only authenticated users can create invites
+      allow read: if isAdmin() || 
+                   (isSPOC() && isUserInSameInstitute(resource.data.instituteId)) || 
+                   (isTeamLeader() && isUserInTeam(resource.data.teamId));
+      allow write: if isAdmin() || 
+                    (isSPOC() && isUserInSameInstitute(resource.data.instituteId)) || 
+                    (isTeamLeader() && isUserInTeam(resource.data.teamId));
+      allow create: if isAdmin() || 
+                     (isSPOC() && isUserInSameInstitute(resource.data.instituteId)) || 
+                     (isTeamLeader() && isUserInTeam(resource.data.teamId));
+      allow delete: if isAdmin() || 
+                     (isSPOC() && isUserInSameInstitute(resource.data.instituteId)) || 
+                     (isTeamLeader() && isUserInTeam(resource.data.teamId));
     }
 
-    // Announcements can be read by anyone.
-    // Writes are handled by admin-only flows.
+    // Announcements can be read by anyone, admins have full access
     match /announcements/{announcementId} {
       allow read: if true;
-      allow write: if true; // Placeholder for admin backend
+      allow write: if isAdmin();
+      allow create: if isAdmin();
+      allow delete: if isAdmin();
     }
     
-    // Notifications can be created by any authenticated user.
-    // They can only be read/updated by the recipient.
+    // Notifications can be created by any authenticated user, admins have full access
     match /notifications/{notificationId} {
-      allow create: if request.auth.uid != null;
-      allow read, update: if request.auth.uid == resource.data.recipientUid;
+      allow create: if isAuthenticated() || isAdmin();
+      allow read, update: if isOwner(resource.data.recipientUid) || isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // Institute data - SPOCs can read their institute data, admins have full access
+    match /institutes/{instituteId} {
+      allow read: if isAdmin() || (isSPOC() && isUserInSameInstitute(instituteId));
+      allow write: if isAdmin();
+      allow create: if isAdmin();
+      allow delete: if isAdmin();
     }
   }
 }
