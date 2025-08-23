@@ -396,6 +396,7 @@ export default function LandingPage() {
                 <p>&copy; {new Date().getFullYear()} Vadodara Hackathon. All rights reserved.</p>
                 <div className="flex gap-4 justify-center md:justify-end mt-1">
                     <Link href="/privacy" className="hover:text-primary transition-colors">Privacy Policy</Link>
+                    <Link href="/terms" className="hover:text-primary transition-colors">Terms of Service</Link>
                 </div>
             </div>
           </div>
