@@ -12,7 +12,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useAuth } from "@/hooks/use-auth";
 import { addMemberToTeam } from "@/ai/flows/add-member-to-team-flow";
 import { useToast } from "@/hooks/use-toast";
-import { doc, setDoc } from "firebase/firestore";
+import { doc, setDoc, collection, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
 interface TeamInfo {
@@ -82,10 +82,13 @@ function JoinPageContent() {
                     if (joinResult.success) {
                         // Create notification for the leader
                         const teamDocRef = doc(db, 'teams', currentTeamInfo.teamId);
-                        const leaderId = (await (await getDoc(teamDocRef)).data())?.leader.uid;
+                        const teamDoc = await getDoc(teamDocRef);
+                        const leaderId = teamDoc.data()?.leader.uid;
+
                         if(leaderId) {
-                            const notificationRef = doc(collection(db, 'notifications'));
-                            await setDoc(notificationRef, {
+                            const notificationsCollectionRef = collection(db, 'notifications');
+                            const newNotificationRef = doc(notificationsCollectionRef);
+                            await setDoc(newNotificationRef, {
                                 recipientUid: leaderId,
                                 title: "New Member Joined!",
                                 message: `${user.name} has joined your team, "${currentTeamInfo.teamName}".`,
