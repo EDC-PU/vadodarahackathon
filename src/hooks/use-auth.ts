@@ -37,7 +37,7 @@ export function useAuth() {
     console.log("handleSignOut: Attempting to sign out user.");
     try {
       await signOut(auth);
-      router.push('/login');
+      router.push('/');
       toast({ title: "Signed Out", description: "You have been successfully signed out." });
       console.log("handleSignOut: Sign-out successful.");
     } catch (error) {
@@ -90,6 +90,18 @@ export function useAuth() {
     }
   }, []);
 
+
+  const redirectToDashboard = useCallback((userToRedirect: UserProfile | null) => {
+    if (!userToRedirect) {
+      router.push('/login');
+      return;
+    }
+  
+    let path = `/${userToRedirect.role}`;
+    console.log(`Redirecting to dashboard: ${path}`);
+    router.push(path);
+  }, [router]);
+  
 
   useEffect(() => {
     if (loading || isNavigating) {
@@ -217,12 +229,12 @@ export function useAuth() {
             }
         }
     }
-
     if (userDoc.exists()) {
       let userProfile = { uid: userDoc.id, ...userDoc.data() } as UserProfile;
       console.log("handleLogin: User document exists.", userProfile);
       
-      if (loggedInUser.disabled) {
+      const authUser = await getAdminAuth()?.getUser(loggedInUser.uid);
+      if (authUser?.disabled) {
         console.warn(`handleLogin: Login attempt by disabled user: ${loggedInUser.email}`);
         toast({
             title: "Account Pending Approval",
@@ -271,5 +283,5 @@ export function useAuth() {
   }, [toast]);
   
 
-  return { user, firebaseUser, loading, handleSignOut, handleLogin, reloadUser };
+  return { user, firebaseUser, loading, handleSignOut, handleLogin, reloadUser, redirectToDashboard };
 }
