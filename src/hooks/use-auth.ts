@@ -6,7 +6,7 @@ import { onAuthStateChanged, signOut, User as FirebaseUser } from 'firebase/auth
 import { doc, getDoc, onSnapshot, collection, query, where, getDocs, writeBatch, updateDoc, setDoc, arrayUnion, deleteDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import { UserProfile, Team, TeamInvite } from '@/lib/types';
-import { useRouter, usePathname, useSearchParams } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { useToast } from './use-toast';
 
 export function useAuth() {
@@ -16,7 +16,6 @@ export function useAuth() {
   const [isNavigating, setIsNavigating] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
-  const searchParams = useSearchParams();
   const { toast } = useToast();
   
   const reloadUser = useCallback(async () => {
@@ -56,15 +55,6 @@ export function useAuth() {
     router.push(path);
   }, [router]);
 
-  useEffect(() => {
-    const inviteToken = searchParams.get('inviteToken');
-    if (inviteToken) {
-        console.log("useAuth: Found inviteToken in URL, storing in sessionStorage.", inviteToken);
-        sessionStorage.setItem('inviteToken', inviteToken);
-        // Clean the URL by removing the query parameter
-        router.replace(pathname, undefined);
-    }
-  }, [searchParams, pathname, router]);
 
   useEffect(() => {
     console.log("useAuth: Setting up onAuthStateChanged listener.");
@@ -117,7 +107,7 @@ export function useAuth() {
     }
     
     const performRedirect = (path: string) => {
-        if (pathname !== path) {
+        if (pathname !== path && !pathname.startsWith('/join/')) {
             setIsNavigating(true);
             router.push(path);
             // Reset navigating state after a short delay
@@ -129,7 +119,7 @@ export function useAuth() {
     if (!user) {
         // If there's no user and we're not on a public page, redirect to login
         const publicPaths = ['/login', '/register', '/forgot-password', '/'];
-        if (!publicPaths.includes(pathname) && !pathname.startsWith('/_next/')) {
+        if (!publicPaths.includes(pathname) && !pathname.startsWith('/_next/') && !pathname.startsWith('/join/')) {
             console.log(`Redirect Check: No user found, redirecting from protected path ${pathname} to /login.`);
             performRedirect('/login');
         }

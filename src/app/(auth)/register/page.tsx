@@ -2,6 +2,8 @@
 import { SignupForm } from "@/components/signup-form";
 import Image from "next/image";
 import Link from "next/link";
+import { Suspense } from "react";
+import { Loader2 } from "lucide-react";
 
 export default function RegisterPage() {
   return (
@@ -13,7 +15,9 @@ export default function RegisterPage() {
         <h1 className="text-3xl font-bold font-headline">Create an Account</h1>
         <p className="text-muted-foreground">Sign up to begin your hackathon journey.</p>
       </div>
-      <SignupForm />
+      <Suspense fallback={<Loader2 className="h-8 w-8 animate-spin mx-auto" />}>
+        <SignupForm />
+      </Suspense>
        <p className="mt-4 text-center text-sm text-muted-foreground">
         Already have an account?{" "}
         <Link href="/login" className="font-medium text-primary hover:underline">

@@ -35,6 +35,10 @@ import { Alert, AlertTitle, AlertDescription } from "./ui/alert";
 import { INSTITUTES } from "@/lib/constants";
 import { useSearchParams } from "next/navigation";
 
+interface SignupFormProps {
+    inviteToken?: string;
+}
+
 const formSchema = z.object({
   email: z.string().email({ message: "Invalid email address." }),
   password: z.string().min(6, { message: "Password must be at least 6 characters." }),
@@ -45,10 +49,7 @@ const formSchema = z.object({
     path: ["confirmPassword"],
 });
 
-export function SignupForm() {
-  const searchParams = useSearchParams();
-  const inviteToken = searchParams.get('inviteToken');
-
+export function SignupForm({ inviteToken }: SignupFormProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -95,6 +96,10 @@ export function SignupForm() {
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
     sessionStorage.setItem('sign-up-role', values.role);
+    if (inviteToken) {
+        sessionStorage.setItem('inviteToken', inviteToken);
+    }
+
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
       await handleLogin(userCredential.user);
@@ -126,6 +131,10 @@ export function SignupForm() {
     }
     
     sessionStorage.setItem('sign-up-role', selectedRole);
+    if (inviteToken) {
+        sessionStorage.setItem('inviteToken', inviteToken);
+    }
+    
     const provider = new GoogleAuthProvider();
     try {
       const result = await signInWithPopup(auth, provider);

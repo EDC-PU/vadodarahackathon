@@ -57,7 +57,7 @@ const getTeamInviteLinkFlow = ai.defineFlow(
             console.log(`New invite link created with ID: ${inviteId}`);
         }
         
-        const inviteLink = `${baseUrl}/register?inviteToken=${inviteId}`;
+        const inviteLink = `${baseUrl}/join/${inviteId}`;
         return {
             success: true,
             inviteLink: inviteLink,
@@ -70,3 +70,4 @@ const getTeamInviteLinkFlow = ai.defineFlow(
     }
   }
 );
+
