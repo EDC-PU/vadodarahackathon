@@ -141,7 +141,12 @@ export function CompleteProfileForm() {
 
         // Update the user's own profile document
         const userDocRef = doc(db, "users", user.uid);
-        await updateDoc(userDocRef, { ...updatedProfileData, teamId: finalTeamId });
+        const dataToUpdate: Partial<UserProfile> = { ...updatedProfileData };
+        if (finalTeamId) {
+            dataToUpdate.teamId = finalTeamId;
+        }
+
+        await updateDoc(userDocRef, dataToUpdate);
         console.log(`User document updated: ${user.uid}`);
         
         toast({
@@ -150,7 +155,7 @@ export function CompleteProfileForm() {
         });
 
         // Pass the updated user object to ensure redirection works correctly
-        redirectToDashboard({ ...user, ...updatedProfileData, teamId: finalTeamId });
+        redirectToDashboard({ ...user, ...dataToUpdate });
 
     } catch (error: any) {
       console.error("Profile Update Error:", error);
