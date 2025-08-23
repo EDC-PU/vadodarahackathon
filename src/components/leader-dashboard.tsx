@@ -41,6 +41,7 @@ export default function LeaderDashboard() {
   const { toast } = useToast();
   const [inviteLink, setInviteLink] = useState<string | null>(null);
   const [isGeneratingLink, setIsGeneratingLink] = useState(false);
+  const appBaseUrl = "https://vadodarahackathon.pierc.org";
 
   const fetchTeamAndMembers = useCallback(() => {
     if (!user?.teamId) {
@@ -114,7 +115,7 @@ export default function LeaderDashboard() {
             teamName: team.name,
             createdAt: serverTimestamp(),
         });
-        const newLink = `${window.location.origin}/register?inviteToken=${newInviteRef.id}`;
+        const newLink = `${appBaseUrl}/register?inviteToken=${newInviteRef.id}`;
         setInviteLink(newLink);
         toast({ title: "Success", description: "New invite link generated." });
     } catch (error) {
@@ -123,7 +124,7 @@ export default function LeaderDashboard() {
     } finally {
         setIsGeneratingLink(false);
     }
-  }, [team, toast]);
+  }, [team, toast, appBaseUrl]);
 
   useEffect(() => {
     if (!team) return;
@@ -140,7 +141,7 @@ export default function LeaderDashboard() {
             const snapshot = await getDocs(q);
             if (!snapshot.empty) {
                 const doc = snapshot.docs[0];
-                setInviteLink(`${window.location.origin}/register?inviteToken=${doc.id}`);
+                setInviteLink(`${appBaseUrl}/register?inviteToken=${doc.id}`);
             }
         } catch (error) {
             console.error("Error fetching invite link:", error);
@@ -150,7 +151,7 @@ export default function LeaderDashboard() {
     };
 
     fetchInviteLink();
-  }, [team]);
+  }, [team, appBaseUrl]);
 
 
   const handleRemoveMember = async (memberToRemove: UserProfile) => {
@@ -274,7 +275,7 @@ export default function LeaderDashboard() {
                 <CardTitle className="flex items-center gap-2">
                     <Users2 />
                     Team Members ({teamMembers.length} / 6)
-                    {team.teamNumber && <Badge variant="secondary">{`Team No: ${team.teamNumber}`}</Badge>}
+                    {team.teamNumber && <Badge variant="secondary" className="bg-secondary text-secondary-foreground">{`Team No: ${team.teamNumber}`}</Badge>}
                 </CardTitle>
                 <CardDescription>Your current team roster. Invite members using the link below.</CardDescription>
             </CardHeader>
@@ -472,5 +473,3 @@ export default function LeaderDashboard() {
     </div>
   );
 }
-
-    

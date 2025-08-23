@@ -8,7 +8,6 @@ import { auth, db } from '@/lib/firebase';
 import { UserProfile, Team, TeamInvite } from '@/lib/types';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { useToast } from './use-toast';
-import { notifyAdminsOfSpocRequest } from '@/ai/flows/notify-admins-flow';
 
 export function useAuth() {
   const [user, setUser] = useState<UserProfile | null>(null);
@@ -46,12 +45,24 @@ export function useAuth() {
     }
   }, [router, toast]);
 
+  const redirectToDashboard = useCallback((userToRedirect: UserProfile | null) => {
+    if (!userToRedirect) {
+      router.push('/login');
+      return;
+    }
+  
+    let path = `/${userToRedirect.role}`;
+    console.log(`Redirecting to dashboard: ${path}`);
+    router.push(path);
+  }, [router]);
+
   useEffect(() => {
     const inviteToken = searchParams.get('inviteToken');
     if (inviteToken) {
+        console.log("useAuth: Found inviteToken in URL, storing in sessionStorage.", inviteToken);
         sessionStorage.setItem('inviteToken', inviteToken);
-        // Clean the URL
-        router.replace(pathname);
+        // Clean the URL by removing the query parameter
+        router.replace(pathname, undefined);
     }
   }, [searchParams, pathname, router]);
 
@@ -98,18 +109,6 @@ export function useAuth() {
       unsubscribeAuth();
     }
   }, []);
-
-
-  const redirectToDashboard = useCallback((userToRedirect: UserProfile | null) => {
-    if (!userToRedirect) {
-      router.push('/login');
-      return;
-    }
-  
-    let path = `/${userToRedirect.role}`;
-    console.log(`Redirecting to dashboard: ${path}`);
-    router.push(path);
-  }, [router]);
   
 
   useEffect(() => {
