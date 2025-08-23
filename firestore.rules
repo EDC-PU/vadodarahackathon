@@ -3,115 +3,106 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
   
-    // Helper Functions //
+    // Helper function to check if a user is an admin.
+    // Admins have read/write access to everything.
+    function isAdmin() {
+      return isLoggedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
     
-    // Is the user authenticated?
-    function isAuthenticated() {
+    // Helper function to check if a user is authenticated.
+    function isLoggedIn() {
       return request.auth != null;
     }
     
-    // Is the user's role 'admin'?
-    // This function allows admins to bypass other rules.
-    function isAdmin() {
-      return isAuthenticated() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
-    }
-    
-    // Is the user the owner of the document?
-    function isUser(userId) {
-      return isAuthenticated() && request.auth.uid == userId;
+    // Helper function to check if the requesting user is the owner of a document.
+    function isOwner(userId) {
+      return request.auth.uid == userId;
     }
 
-    // Is the user a SPOC for a given institute?
-    function isSpoc(institute) {
-        return isAuthenticated() && 
-               get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'spoc' &&
-               get(/databases/$(database)/documents/users/$(request.auth.uid)).data.institute == institute;
-    }
-    
-    // Is the user a leader of a specific team?
-    function isLeader(teamId) {
-      return isAuthenticated() && get(/databases/$(database)/documents/teams/$(teamId)).data.leader.uid == request.auth.uid;
-    }
-
-    // Is the user a member of a specific team?
-    function isMember(teamId) {
-      let team = get(/databases/$(database)/documents/teams/$(teamId)).data;
-      return isAuthenticated() && 
-             (team.leader.uid == request.auth.uid || request.auth.uid in team.members.map(member => member.uid));
-    }
-
-
-    // Collection Rules //
-
-    // Users Collection
-    // - Admins can read/write any profile.
-    // - Authenticated users can read any profile (for team pages, etc.).
-    // - Users can only create and update their own profile.
+    // Rules for the 'users' collection
     match /users/{userId} {
-      allow read: if isAuthenticated() || isAdmin();
-      allow create: if isUser(userId);
-      allow update: if isUser(userId) || isAdmin();
+      // Anyone can create their own user document on signup.
+      allow create: if isLoggedIn() && isOwner(userId);
+      
+      // Only the user themselves or an admin can read the user's profile.
+      allow read: if isAdmin() || (isLoggedIn() && isOwner(userId));
+      
+      // Only the user themselves or an admin can update their profile.
+      allow update: if isAdmin() || (isLoggedIn() && isOwner(userId));
+      
+      // Only admins can delete users.
       allow delete: if isAdmin();
     }
-
-    // Teams Collection
-    // - Admins can read/write any team.
-    // - SPOCs can manage teams from their own institute.
-    // - Team members can read their own team data.
-    // - Only team leaders can update team data (like changing name).
+    
+    // Rules for the 'teams' collection
     match /teams/{teamId} {
-      allow read: if isMember(teamId) || isSpoc(resource.data.institute) || isAdmin();
-      allow create: if isLeader(teamId);
-      allow update: if isLeader(teamId) || isSpoc(resource.data.institute) || isAdmin();
-      allow delete: if isSpoc(resource.data.institute) || isAdmin();
+      // Any logged-in user can read team data (needed for member dashboards).
+      allow read: if isLoggedIn();
+      
+      // Create: Only a logged-in user can create a team. The 'leader' must be the one creating it.
+      allow create: if isLoggedIn() && request.resource.data.leader.uid == request.auth.uid;
+      
+      // Update: Only the team leader or an admin/spoc can update team info.
+      // A SPOC can only manage teams from their own institute.
+      function isSpocForTeam() {
+        let spocProfile = get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+        return spocProfile.role == 'spoc' && spocProfile.institute == resource.data.institute;
+      }
+      allow update: if isLoggedIn() && (isAdmin() || isSpocForTeam() || request.auth.uid == resource.data.leader.uid);
+      
+      // Delete: Only the team leader, an admin, or a SPOC for that institute can delete a team.
+      allow delete: if isLoggedIn() && (isAdmin() || isSpocForTeam() || request.auth.uid == resource.data.leader.uid);
     }
     
-    // Team Invites Collection (for permanent team invite links)
-    // - Admins and Leaders can create/read invites.
-    // - Anyone can read an invite (to get team info on join page).
+    // Rules for 'teamInvites' collection (for permanent join links)
     match /teamInvites/{inviteId} {
-        allow read; // Publicly readable to allow joining
-        allow create: if isAuthenticated(); // Leaders/Admins create these via backend
-        allow update, delete: if isAdmin();
+        // Anyone can read an invite to get team details.
+        allow read: if true;
+        // Only a logged-in user (specifically the leader via a flow) can create one.
+        allow create: if isLoggedIn();
+        // Invites are not meant to be updated or deleted by clients.
+        allow update, delete: if false;
     }
     
-    // Notifications Collection
-    // - A user can only read/update their own notifications.
-    // - Anyone authenticated can create notifications (since a user joining a team creates one for the leader).
+    // Rules for 'notifications' collection
     match /notifications/{notificationId} {
-      allow read, update: if isUser(resource.data.recipientUid) || isAdmin();
-      allow create: if isAuthenticated();
-      allow delete: if isUser(resource.data.recipientUid) || isAdmin();
+        // Create: Any authenticated user can create a notification (e.g., a member joining notifies a leader).
+        allow create: if isLoggedIn();
+        // Read, Update: Only the recipient can read or update (e.g., mark as read) their notification.
+        allow read, update: if isLoggedIn() && isOwner(resource.data.recipientUid);
+        // Delete: Only the recipient can delete their notification.
+        allow delete: if isLoggedIn() && isOwner(resource.data.recipientUid);
     }
 
-    // Problem Statements Collection
-    // - Publicly readable for all users to see.
-    // - Only admins can create, update, or delete statements.
+    // Rules for 'problemStatements' collection
     match /problemStatements/{psId} {
-      allow read: if isAuthenticated();
+      // Any logged-in user can read problem statements.
+      allow read: if isLoggedIn();
+      // Only admins can create, update, or delete problem statements.
       allow create, update, delete: if isAdmin();
     }
-
-    // Config Collection (for event settings like deadlines)
-    // - Publicly readable.
-    // - Only admins can change settings.
+    
+    // Rules for 'announcements' collection
+    match /announcements/{announcementId} {
+      // Anyone (even unauthenticated users) can read announcements for the landing page.
+      allow read: if true;
+      // Only admins can create, update, or delete announcements.
+      allow create, update, delete: if isAdmin();
+    }
+    
+    // Rules for 'config' collection (e.g., event deadlines)
     match /config/{configId} {
-      allow read;
+      // Everyone can read configuration.
+      allow read: if true;
+      // Only admins can write configuration.
       allow write: if isAdmin();
     }
 
-    // Announcements Collection
-    // - Publicly readable for all users to see.
-    // - Only admins can create, update, or delete them.
-    match /announcements/{announcementId} {
-        allow read;
-        allow create, update, delete: if isAdmin();
-    }
-    
-    // Healthchecks Collection (for system health dashboard)
-    // - Only accessible by the backend service (implicitly handled by admin access).
+    // Health check collection, for system health page
     match /healthchecks/{docId} {
-      allow read, write: if isAdmin();
+      // Allow write access for server-side admin SDK only.
+      // No client access is needed or permitted.
+      allow read, write: if false;
     }
   }
 }
