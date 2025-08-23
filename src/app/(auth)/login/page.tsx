@@ -1,3 +1,4 @@
+
 import { LoginForm } from "@/components/login-form";
 import Image from "next/image";
 import Link from "next/link";
@@ -15,7 +16,7 @@ export default function LoginPage() {
       <LoginForm />
       <p className="mt-4 text-center text-sm text-muted-foreground">
         Don&apos;t have an account yet?{" "}
-        <Link href="/register" className="font-medium text-primary hover:underline">
+        <Link href="/register-2" className="font-medium text-primary hover:underline">
           Register here
         </Link>
       </p>

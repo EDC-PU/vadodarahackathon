@@ -152,7 +152,7 @@ export default function LandingPage() {
                         <Link href="/login">Login</Link>
                       </Button>
                       <Button asChild className="rounded-full glass-button hover:scale-105 transition-transform !text-foreground">
-                        <Link href="/register">Register <MoveRight className="ml-2 h-4 w-4" /></Link>
+                        <Link href="/register-2">Register <MoveRight className="ml-2 h-4 w-4" /></Link>
                       </Button>
                   </>
               )}
@@ -176,7 +176,7 @@ export default function LandingPage() {
               </p>
               <div className="flex flex-col sm:flex-row justify-center md:justify-start gap-4">
                 <Button size="lg" asChild className="rounded-full glass-button hover:scale-105 transition-transform !text-foreground shadow-[0_0_25px_hsl(var(--primary)/0.2)]">
-                  <Link href="/register">
+                  <Link href="/register-2">
                     <Code className="mr-2 h-5 w-5" /> Register Now
                   </Link>
                 </Button>
@@ -388,9 +388,9 @@ export default function LandingPage() {
         <div className="container max-w-7xl py-8">
           <div className="flex flex-col md:flex-row items-center justify-between gap-6">
               <div className="flex items-center gap-4">
-                  <Image src="https://www.pierc.org/assets/logopu.svg" alt="Parul University Logo" width={250} height={70} />
+                  <Image src="https://www.paruluniversity.ac.in/logos/pu-logo-2.png" alt="Parul University Logo" width={250} height={70} />
                   <div className="w-px h-10 bg-border"></div>
-                  <img src="https://www.pierc.org/_next/static/media/PIERC%20WHITE.a9ef7cc8.svg" alt="PIERC Logo" className="h-15" />
+                  <img src="https://www.pierc.org/_next/static/media/PIERC%20WHITE.a9ef7cc8.svg" alt="PIERC Logo" className="h-10" />
               </div>
               <div className="text-center md:text-right text-sm text-foreground/60">
                 <p>&copy; {new Date().getFullYear()} Vadodara Hackathon. All rights reserved.</p>
