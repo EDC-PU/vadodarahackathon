@@ -1,106 +1,86 @@
+
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Helper Functions
-    function isSignedIn() {
-      return request.auth != null;
-    }
-
+    // Helper functions
     function isOwner(userId) {
-      return isSignedIn() && request.auth.uid == userId;
-    }
-
-    function getSelfData() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
-    }
-    
-    function getUserData(userId) {
-      return get(/databases/$(database)/documents/users/$(userId)).data;
+      return request.auth.uid == userId;
     }
 
     function isAdmin() {
-      return isSignedIn() && getSelfData().role == 'admin';
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+    
+    function isSpoc() {
+        return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'spoc';
     }
 
-    function isTeamMate(userId) {
-        let selfTeamId = getSelfData().teamId;
-        let targetTeamId = getUserData(userId).teamId;
-        return isSignedIn() && selfTeamId != null && selfTeamId == targetTeamId;
+    function isSpocApproved() {
+      return isSpoc() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.spocStatus == 'approved';
+    }
+    
+    function isLeader() {
+        return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'leader';
     }
 
-    function isApprovedSpocForInstitute(institute) {
-        let selfData = getSelfData();
-        return isSignedIn() && selfData.role == 'spoc' && selfData.spocStatus == 'approved' && selfData.institute == institute;
+    function isTeamMember(teamId) {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.teamId == teamId;
     }
 
-    // Collection Rules
+    // USERS collection
     match /users/{userId} {
-      // Allow read if:
-      // 1. User is the owner of the document.
-      // 2. User is an Admin.
-      // 3. User is on the same team as the target user.
-      // 4. User is an approved SPOC for the target user's institute.
-      allow read: if isOwner(userId) || isAdmin() || isTeamMate(userId) || isApprovedSpocForInstitute(getUserData(userId).institute);
-
-      // Allow write if:
-      // 1. User is the owner of the document (covers profile completion for all roles).
-      // 2. User is an Admin.
-      // 3. User is an approved SPOC for a user in their institute.
-      allow write: if isOwner(userId) || isAdmin() || isApprovedSpocForInstitute(getUserData(userId).institute);
-      
-      // Allow list queries if:
-      // 1. User is an Admin (can query anything).
-      // 2. User is an approved SPOC querying for users in their institute.
-      // 3. Any signed-in user is querying for a specific user by UID or enrollment number (e.g., for profile pages).
-      allow list: if isAdmin() ||
-                   (isSignedIn() && getSelfData().role == 'spoc' && getSelfData().spocStatus == 'approved' && request.query.filters[0].field == 'institute' && request.query.filters[0].value == getSelfData().institute) ||
-                   (isSignedIn() && request.query.limit <= 1 && request.query.filters[0].field == 'uid' && request.query.filters[0].value == request.auth.uid) ||
-                   (isSignedIn() && request.query.limit <= 1 && request.query.filters[0].field == 'enrollmentNumber');
+      allow read: if request.auth != null; // Any authenticated user can read user profiles
+      allow create: if request.auth.uid != null; // Any authenticated user can create their own user document
+      allow write: if isOwner(userId) || isAdmin(); // Only the user themselves or an admin can update a profile
     }
 
+    // TEAMS collection
     match /teams/{teamId} {
-      // Read access for team members, SPOCs of the same institute, and admins.
-      allow read: if isAdmin() || (isSignedIn() && getSelfData().teamId == teamId) || isApprovedSpocForInstitute(get(/databases/$(database)/documents/teams/$(teamId)).data.institute);
-      // Write access for team leader, SPOCs, and admins.
-      allow write: if isAdmin() || (isSignedIn() && getSelfData().uid == resource.data.leader.uid) || isApprovedSpocForInstitute(resource.data.institute);
-      // List access for admins and SPOCs (who filter by their institute).
-      allow list: if isAdmin() || (isSignedIn() && getSelfData().role == 'spoc');
+      allow read: if request.auth != null; // Any authenticated user can read team details
+      allow create: if isLeader(); // Only a team leader can create a team
+      allow update: if 
+          isTeamMember(teamId) ||
+          (isSpocApproved() && get(/databases/$(database)/documents/teams/$(teamId)).data.institute == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.institute) ||
+          isAdmin();
+      allow delete: if 
+          (isSpocApproved() && get(/databases/$(database)/documents/teams/$(teamId)).data.institute == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.institute) ||
+          isAdmin();
     }
-
+    
+    // TEAM INVITES (Permanent links)
     match /teamInvites/{inviteId} {
-        // Anyone with the link can read it to get team details.
-        allow read: if true;
-        // Only the team leader, SPOC, or admin can create invites.
-        allow create: if isSignedIn() && (getSelfData().role == 'leader' || getSelfData().role == 'spoc' || isAdmin());
-        // Only team members can update status (implicitly handled by functions). No direct updates.
-        allow update: if false;
-        // Only team leader, SPOC, or admin can delete.
-        allow delete: if isSignedIn() && (getSelfData().role == 'leader' || getSelfData().role == 'spoc' || isAdmin());
+      allow read: if request.auth != null; // Allow any authenticated user to read to check invite details
+      allow create: if isLeader() || isSpocApproved(); // Leaders and SPOCs can create invite links
+      allow write: if isAdmin(); // Only admins can modify them
+      allow delete: if isAdmin();
     }
 
+    // PROBLEM STATEMENTS collection
     match /problemStatements/{statementId} {
-      allow read: if isSignedIn();
-      allow write: if isAdmin();
-      allow list: if isSignedIn();
-    }
-    
-    match /config/{docId} {
-      allow read: if true;
-      allow write: if isAdmin();
-    }
-    
-     match /announcements/{announcementId} {
-      allow read: if true;
-      allow list: if true;
-      allow create, update, delete: if isAdmin();
+      allow read: if true; // Problem statements are public
+      allow write: if isAdmin(); // Only admins can create/update/delete
     }
 
+    // NOTIFICATIONS collection
     match /notifications/{notificationId} {
-        allow read, write: if isOwner(resource.data.recipientUid);
-        allow list: if isSignedIn() && request.query.filters[0].field == 'recipientUid' && request.query.filters[0].value == request.auth.uid;
-        allow create: if isSignedIn(); // Any authenticated user can create a notification (server-side logic validates target)
+        allow read, write: if isOwner(get(/databases/$(database)/documents/notifications/$(notificationId)).data.recipientUid); // Only recipient can manage their notification
+        allow create: if request.auth != null; // Any authenticated user can trigger a notification creation through a backend flow
+        allow delete: if isAdmin() || isOwner(get(/databases/$(database)/documents/notifications/$(notificationId)).data.recipientUid);
     }
+    
+    // ANNOUNCEMENTS collection
+    match /announcements/{announcementId} {
+      allow read: if true; // Announcements are public
+      allow write: if isAdmin() || isSpocApproved();
+    }
+    
+    // CONFIG collection
+    match /config/{configId} {
+        allow read: if true;
+        allow write: if isAdmin();
+    }
+
   }
 }

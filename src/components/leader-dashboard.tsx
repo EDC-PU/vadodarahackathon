@@ -319,9 +319,19 @@ export default function LeaderDashboard() {
 
   return (
     <div className="p-4 sm:p-6 lg:p-8">
-        <header className="mb-8">
-            <h1 className="text-3xl font-bold font-headline">Team Dashboard: {team.name}</h1>
-            <p className="text-muted-foreground">Manage your team and review your registration status.</p>
+        <header className="mb-8 flex justify-between items-start">
+            <div>
+              <h1 className="text-3xl font-bold font-headline">Team Dashboard: {team.name}</h1>
+              <p className="text-muted-foreground">Manage your team and review your registration status.</p>
+            </div>
+            <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">Status: </span>
+                {teamValidation.isRegistered ? (
+                    <Badge variant="default" className="bg-green-600 hover:bg-green-600">Registered</Badge>
+                ) : (
+                    <Badge variant="destructive">Registration Pending</Badge>
+                )}
+            </div>
         </header>
 
         <Card className="mb-8 w-full">

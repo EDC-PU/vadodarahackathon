@@ -8,16 +8,18 @@ import { db } from "@/lib/firebase";
 import { collection, query, orderBy, onSnapshot, limit, where } from "firebase/firestore";
 import { Announcement, AnnouncementAudience } from "@/lib/types";
 import Link from "next/link";
+import { useAuth } from "@/hooks/use-auth";
 
 interface AnnouncementsSectionProps {
     itemCount?: number;
-    audience: AnnouncementAudience | 'teams_and_all' | 'spocs_and_all';
+    audience: AnnouncementAudience | 'teams_and_all' | 'spocs_and_all' | 'spoc_teams';
     initialAnnouncements?: Announcement[]; // Optional prop for server-rendered data
 }
 
 export function AnnouncementsSection({ itemCount = 5, audience, initialAnnouncements }: AnnouncementsSectionProps) {
   const [announcements, setAnnouncements] = useState<Announcement[]>(initialAnnouncements || []);
   const [loading, setLoading] = useState(!initialAnnouncements);
+  const { user } = useAuth();
 
   useEffect(() => {
     // If initialAnnouncements are provided, we don't need to fetch on the client side initially.
@@ -28,25 +30,48 @@ export function AnnouncementsSection({ itemCount = 5, audience, initialAnnouncem
     
     setLoading(true);
     const announcementsCollection = collection(db, 'announcements');
-    let audiences: (AnnouncementAudience | "all")[] = [];
+    let q;
 
-    if (audience === 'teams_and_all') {
-        audiences = ['all', 'teams'];
+    if (audience === 'spoc_teams' && user?.institute) {
+        // For team members/leaders, show 'all', 'teams', and their institute-specific announcements
+        q = query(
+            announcementsCollection, 
+            where("audience", "in", ["all", "teams", "institute"]),
+            orderBy("createdAt", "desc"), 
+            limit(itemCount)
+        );
     } else if (audience === 'spocs_and_all') {
-        audiences = ['all', 'spocs'];
-    } else {
-        audiences = [audience];
+        q = query(
+            announcementsCollection, 
+            where("audience", "in", ['all', 'spocs']),
+            orderBy("createdAt", "desc"), 
+            limit(itemCount)
+        );
+    } else if (audience === 'teams_and_all') {
+        q = query(
+            announcementsCollection, 
+            where("audience", "in", ['all', 'teams']),
+            orderBy("createdAt", "desc"), 
+            limit(itemCount)
+        );
+    }
+    else {
+        q = query(
+            announcementsCollection, 
+            where("audience", "==", audience),
+            orderBy("createdAt", "desc"), 
+            limit(itemCount)
+        );
     }
     
-    const q = query(
-        announcementsCollection, 
-        where("audience", "in", audiences),
-        orderBy("createdAt", "desc"), 
-        limit(itemCount)
-    );
-    
     const unsubscribe = onSnapshot(q, (snapshot) => {
-        const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Announcement));
+        let data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Announcement));
+        
+        // Manual filter for institute-specific announcements for team members
+        if (audience === 'spoc_teams' && user?.institute) {
+            data = data.filter(ann => ann.audience !== 'institute' || ann.institute === user.institute);
+        }
+
         setAnnouncements(data);
         setLoading(false);
     }, (error) => {
@@ -55,7 +80,7 @@ export function AnnouncementsSection({ itemCount = 5, audience, initialAnnouncem
     });
     
     return () => unsubscribe();
-  }, [itemCount, audience, initialAnnouncements]);
+  }, [itemCount, audience, initialAnnouncements, user?.institute]);
 
   return (
     <Card>

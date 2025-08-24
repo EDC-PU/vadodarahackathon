@@ -117,7 +117,7 @@ export interface EventInfo {
   problemStatementsUrl: string;
 }
 
-export type AnnouncementAudience = "all" | "teams" | "spocs";
+export type AnnouncementAudience = "all" | "teams" | "spocs" | "institute";
 
 export interface Announcement {
   id: string;
@@ -129,6 +129,7 @@ export interface Announcement {
     nanoseconds: number;
   } | null;
   audience: AnnouncementAudience;
+  institute?: string; // Only for 'institute' audience
   url?: string;
   attachmentUrl?: string;
   attachmentName?: string;
