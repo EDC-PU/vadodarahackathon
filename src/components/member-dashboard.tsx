@@ -13,6 +13,7 @@ import { AnnouncementsSection } from "./announcements-section";
 import { InvitationsSection } from "./invitations-section";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";
 import { Button } from "./ui/button";
+import Link from "next/link";
 
 type SortKey = 'name' | 'role' | 'email' | 'contactNumber' | 'enrollmentNumber' | 'yearOfStudy' | 'semester';
 type SortDirection = 'asc' | 'desc';
@@ -273,7 +274,12 @@ export default function MemberDashboard() {
                         </div>
                         <div className="flex items-center gap-3">
                             <Trophy className="h-5 w-5 text-primary"/>
-                            <p><strong>Rewards:</strong> Check the homepage for details.</p>
+                            <p>
+                                <strong>Rewards:</strong>{" "}
+                                <a href="https://vadodarahackathon.pierc.org" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                                    Check the homepage for details.
+                                </a>
+                            </p>
                         </div>
                     </CardContent>
                 </Card>
