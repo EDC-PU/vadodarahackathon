@@ -367,23 +367,14 @@ export default function LandingPage({ spocDetails, announcements }: LandingPageP
               </div>
             </div>
              <div>
-              <Carousel className="w-full max-w-xl mx-auto" plugins={[autoplayPlugin.current]}>
-                <CarouselContent>
-                  {aboutImages.map((src, index) => (
-                    <CarouselItem key={index}>
-                      <Image
-                        src={src}
-                        alt={`Vadodara Hackathon - Image ${index + 1}`}
-                        width={600}
-                        height={400}
-                        className="rounded-lg shadow-xl object-cover aspect-[3/2] border border-primary/20"
-                      />
-                    </CarouselItem>
-                  ))}
-                </CarouselContent>
-                <CarouselPrevious className="left-[-1rem]" />
-                <CarouselNext className="right-[-1rem]"/>
-              </Carousel>
+                <Image
+                    src="https://placehold.co/600x400.png"
+                    alt="Problem Statement Section Image"
+                    width={600}
+                    height={400}
+                    className="rounded-lg shadow-xl object-cover aspect-[3/2] border border-primary/20"
+                    data-ai-hint="hackathon problem solving"
+                />
             </div>
           </div>
         </AnimatedSection>
