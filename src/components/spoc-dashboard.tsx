@@ -138,7 +138,7 @@ export default function SpocDashboard() {
                 email: leaderProfile?.email || team.leader.email,
                 enrollmentNumber: leaderProfile?.enrollmentNumber || 'N/A',
                 contactNumber: leaderProfile?.contactNumber || 'N/A',
-                gender: leaderProfile?.gender || 'Other',
+                gender: leaderProfile?.gender || 'O',
                 isLeader: true,
             },
             ...membersWithDetails.map(m => ({...m, isLeader: false})),
@@ -319,7 +319,7 @@ export default function SpocDashboard() {
     )
   }
 
-  const totalParticipants = teams.reduce((acc, team) => acc + 1 + team.members.length, 0);
+  const totalParticipants = teams ? teams.reduce((acc, team) => acc + 1 + team.members.length, 0) : 0;
 
   return (
     <div className="p-4 sm:p-6 lg:p-8">
@@ -501,3 +501,4 @@ export default function SpocDashboard() {
   );
 }
 
+    
