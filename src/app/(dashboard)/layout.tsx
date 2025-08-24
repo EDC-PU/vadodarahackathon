@@ -1,8 +1,10 @@
+
 import DashboardSidebar from "@/components/dashboard-sidebar";
 import {
   SidebarProvider,
   Sidebar,
   SidebarInset,
+  SidebarTrigger,
 } from "@/components/ui/sidebar";
 
 export default function DashboardLayout({
@@ -15,7 +17,12 @@ export default function DashboardLayout({
       <Sidebar>
         <DashboardSidebar />
       </Sidebar>
-      <SidebarInset>{children}</SidebarInset>
+      <SidebarInset>
+        <header className="p-4 border-b md:hidden">
+          <SidebarTrigger />
+        </header>
+        {children}
+      </SidebarInset>
     </SidebarProvider>
   );
 }

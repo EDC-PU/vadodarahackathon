@@ -36,6 +36,7 @@ import {
 import { manageTeamBySpoc } from "@/ai/flows/manage-team-by-spoc-flow";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 type CategoryFilter = ProblemStatementCategory | "All Categories";
 type SortKey = 'teamName' | 'problemStatementId' | 'name' | 'email' | 'enrollmentNumber' | 'contactNumber' | 'yearOfStudy' | 'semester';
@@ -357,7 +358,7 @@ function AllTeamsContent() {
         </div>
         <div className="flex flex-wrap gap-2">
             <Select value={instituteFilter} onValueChange={setInstituteFilter}>
-                <SelectTrigger className="w-48">
+                <SelectTrigger className="w-full sm:w-48">
                     <SelectValue placeholder="Filter by Institute" />
                 </SelectTrigger>
                 <SelectContent>
@@ -366,7 +367,7 @@ function AllTeamsContent() {
                 </SelectContent>
             </Select>
             <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                <SelectTrigger className="w-48">
+                <SelectTrigger className="w-full sm:w-48">
                     <SelectValue placeholder="Filter by Category" />
                 </SelectTrigger>
                 <SelectContent>
@@ -375,7 +376,7 @@ function AllTeamsContent() {
             </Select>
              <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                    <Button variant="outline" className="w-48 justify-between">
+                    <Button variant="outline" className="w-full sm:w-48 justify-between">
                          {selectedProblemStatements.length > 0 ? `${selectedProblemStatements.length} selected` : 'Filter by PS'}
                          <ChevronDown className="h-4 w-4 ml-2"/>
                     </Button>
@@ -414,134 +415,136 @@ function AllTeamsContent() {
               <Loader2 className="h-8 w-8 animate-spin" />
             </div>
           ) : teamsWithDetails.length > 0 ? (
-            <Table>
-                <TableHeader>
-                    <TableRow>
-                        <TableHead>
-                             <Button variant="ghost" onClick={() => requestSort('teamName')}>Team Name {getSortIndicator('teamName')}</Button>
-                        </TableHead>
-                        <TableHead>
-                            <Button variant="ghost" onClick={() => requestSort('problemStatementId')}>Problem Statement {getSortIndicator('problemStatementId')}</Button>
-                        </TableHead>
-                        <TableHead>
-                            <Button variant="ghost" onClick={() => requestSort('name')}>Member Name {getSortIndicator('name')}</Button>
-                        </TableHead>
-                        <TableHead>
-                             <Button variant="ghost" onClick={() => requestSort('email')}>Email {getSortIndicator('email')}</Button>
-                        </TableHead>
-                        <TableHead>
-                            <Button variant="ghost" onClick={() => requestSort('enrollmentNumber')}>Enrollment No. {getSortIndicator('enrollmentNumber')}</Button>
-                        </TableHead>
-                        <TableHead>
-                            <Button variant="ghost" onClick={() => requestSort('contactNumber')}>Contact No. {getSortIndicator('contactNumber')}</Button>
-                        </TableHead>
-                        <TableHead>
-                            <Button variant="ghost" onClick={() => requestSort('yearOfStudy')}>Year {getSortIndicator('yearOfStudy')}</Button>
-                        </TableHead>
-                        <TableHead>
-                            <Button variant="ghost" onClick={() => requestSort('semester')}>Sem {getSortIndicator('semester')}</Button>
-                        </TableHead>
-                        <TableHead className="text-right">Actions</TableHead>
-                    </TableRow>
-                </TableHeader>
-                <TableBody>
-                    {teamsWithDetails.map((row, index) => (
-                         <TableRow key={`${row.teamId}-${row.uid || index}`}>
-                            {row.isFirstRow && (
-                                <TableCell rowSpan={row.rowSpan} className="font-medium align-top">
-                                    {editingTeam?.id === row.teamId ? (
-                                        <div className="flex items-center gap-2">
-                                            <Input 
-                                                value={editingTeam.name}
-                                                onChange={(e) => setEditingTeam({ ...editingTeam, name: e.target.value })}
-                                                className="w-40 h-8"
-                                                disabled={isSaving === row.teamId}
-                                            />
-                                            <Button size="icon" className="h-8 w-8" onClick={() => handleSaveTeamName(row.teamId)} disabled={isSaving === row.teamId}>
-                                                {isSaving === row.teamId ? <Loader2 className="h-4 w-4 animate-spin"/> : <Save className="h-4 w-4"/>}
-                                            </Button>
-                                            <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setEditingTeam(null)} disabled={isSaving === row.teamId}>
-                                                <X className="h-4 w-4"/>
-                                            </Button>
-                                        </div>
-                                    ) : (
-                                        <div className="flex items-center gap-2 group">
-                                            <span>{row.teamName}</span>
-                                            <Button size="icon" variant="ghost" className="h-7 w-7 opacity-0 group-hover:opacity-100" onClick={() => handleEditTeamName(row.teamId)}>
-                                                <Pencil className="h-4 w-4 text-muted-foreground"/>
-                                            </Button>
-                                        </div>
-                                    )}
-                                </TableCell>
-                            )}
-                             {row.isFirstRow && <TableCell rowSpan={row.rowSpan} className="align-top">{row.problemStatementId}</TableCell>}
-                            <TableCell>
-                                {row.enrollmentNumber && row.enrollmentNumber !== 'N/A' ? (
-                                    <Link href={`/profile/${row.enrollmentNumber}`} className="hover:underline">
-                                        {row.name} {row.isLeader && '(Leader)'}
-                                    </Link>
-                                ) : (
-                                    `${row.name} ${row.isLeader ? '(Leader)' : ''}`
-                                )}
-                            </TableCell>
-                            <TableCell>{row.email}</TableCell>
-                            <TableCell>{row.enrollmentNumber}</TableCell>
-                            <TableCell>
-                                {row.contactNumber && row.contactNumber !== 'N/A' ? (
-                                    <a href={`https://wa.me/+91${row.contactNumber}`} target="_blank" rel="noopener noreferrer" className="hover:underline">
-                                        {row.contactNumber}
-                                    </a>
-                                ) : 'N/A'}
-                            </TableCell>
-                            <TableCell>{row.yearOfStudy}</TableCell>
-                            <TableCell>{row.semester}</TableCell>
-                            <TableCell className="text-right">
-                                {row.isFirstRow ? (
-                                     <AlertDialog>
-                                        <AlertDialogTrigger asChild>
-                                            <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" disabled={isProcessing === row.teamId}>
-                                                {isProcessing === row.teamId ? <Loader2 className="h-4 w-4 animate-spin"/> : <Trash2 className="h-4 w-4"/>}
-                                            </Button>
-                                        </AlertDialogTrigger>
-                                        <AlertDialogContent>
-                                            <AlertDialogHeader>
-                                            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                                            <AlertDialogDescription>
-                                                This will permanently delete the team "{row.teamName}" and all its members' accounts. This action cannot be undone.
-                                            </AlertDialogDescription>
-                                            </AlertDialogHeader>
-                                            <AlertDialogFooter>
-                                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                            <AlertDialogAction onClick={() => handleDeleteTeam(row.teamId)} className="bg-destructive hover:bg-destructive/90">Delete</AlertDialogAction>
-                                            </AlertDialogFooter>
-                                        </AlertDialogContent>
-                                    </AlertDialog>
-                                ) : (
-                                     <AlertDialog>
-                                        <AlertDialogTrigger asChild>
-                                            <Button variant="ghost" size="icon" className="h-8 w-8" disabled={isProcessing === `${row.teamId}-${row.uid}`}>
-                                                {isProcessing === `${row.teamId}-${row.uid}` ? <Loader2 className="h-4 w-4 animate-spin"/> : <MinusCircle className="h-4 w-4 text-destructive"/>}
-                                            </Button>
-                                        </AlertDialogTrigger>
-                                        <AlertDialogContent>
-                                            <AlertDialogHeader>
-                                            <AlertDialogTitle>Remove {row.name}?</AlertDialogTitle>
-                                            <AlertDialogDescription>
-                                                Are you sure you want to remove {row.name} from this team? Their account will not be deleted, but they will be removed from the team.
-                                            </AlertDialogDescription>
-                                            </AlertDialogHeader>
-                                            <AlertDialogFooter>
-                                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                            <AlertDialogAction onClick={() => handleRemoveMember(row.teamId, row)} className="bg-destructive hover:bg-destructive/90">Remove Member</AlertDialogAction>
-                                            </AlertDialogFooter>
-                                        </AlertDialogContent>
-                                    </AlertDialog>
-                                )}
-                            </TableCell>
-                         </TableRow>
-                    ))}
-                </TableBody>
-            </Table>
+            <ScrollArea className="w-full whitespace-nowrap">
+              <Table>
+                  <TableHeader>
+                      <TableRow>
+                          <TableHead>
+                              <Button variant="ghost" onClick={() => requestSort('teamName')}>Team Name {getSortIndicator('teamName')}</Button>
+                          </TableHead>
+                          <TableHead>
+                              <Button variant="ghost" onClick={() => requestSort('problemStatementId')}>Problem Statement {getSortIndicator('problemStatementId')}</Button>
+                          </TableHead>
+                          <TableHead>
+                              <Button variant="ghost" onClick={() => requestSort('name')}>Member Name {getSortIndicator('name')}</Button>
+                          </TableHead>
+                          <TableHead>
+                              <Button variant="ghost" onClick={() => requestSort('email')}>Email {getSortIndicator('email')}</Button>
+                          </TableHead>
+                          <TableHead>
+                              <Button variant="ghost" onClick={() => requestSort('enrollmentNumber')}>Enrollment No. {getSortIndicator('enrollmentNumber')}</Button>
+                          </TableHead>
+                          <TableHead>
+                              <Button variant="ghost" onClick={() => requestSort('contactNumber')}>Contact No. {getSortIndicator('contactNumber')}</Button>
+                          </TableHead>
+                          <TableHead>
+                              <Button variant="ghost" onClick={() => requestSort('yearOfStudy')}>Year {getSortIndicator('yearOfStudy')}</Button>
+                          </TableHead>
+                          <TableHead>
+                              <Button variant="ghost" onClick={() => requestSort('semester')}>Sem {getSortIndicator('semester')}</Button>
+                          </TableHead>
+                          <TableHead className="text-right">Actions</TableHead>
+                      </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                      {teamsWithDetails.map((row, index) => (
+                          <TableRow key={`${row.teamId}-${row.uid || index}`}>
+                              {row.isFirstRow && (
+                                  <TableCell rowSpan={row.rowSpan} className="font-medium align-top">
+                                      {editingTeam?.id === row.teamId ? (
+                                          <div className="flex items-center gap-2">
+                                              <Input 
+                                                  value={editingTeam.name}
+                                                  onChange={(e) => setEditingTeam({ ...editingTeam, name: e.target.value })}
+                                                  className="w-40 h-8"
+                                                  disabled={isSaving === row.teamId}
+                                              />
+                                              <Button size="icon" className="h-8 w-8" onClick={() => handleSaveTeamName(row.teamId)} disabled={isSaving === row.teamId}>
+                                                  {isSaving === row.teamId ? <Loader2 className="h-4 w-4 animate-spin"/> : <Save className="h-4 w-4"/>}
+                                              </Button>
+                                              <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setEditingTeam(null)} disabled={isSaving === row.teamId}>
+                                                  <X className="h-4 w-4"/>
+                                              </Button>
+                                          </div>
+                                      ) : (
+                                          <div className="flex items-center gap-2 group">
+                                              <span>{row.teamName}</span>
+                                              <Button size="icon" variant="ghost" className="h-7 w-7 opacity-0 group-hover:opacity-100" onClick={() => handleEditTeamName(row.teamId)}>
+                                                  <Pencil className="h-4 w-4 text-muted-foreground"/>
+                                              </Button>
+                                          </div>
+                                      )}
+                                  </TableCell>
+                              )}
+                              {row.isFirstRow && <TableCell rowSpan={row.rowSpan} className="align-top">{row.problemStatementId}</TableCell>}
+                              <TableCell>
+                                  {row.enrollmentNumber && row.enrollmentNumber !== 'N/A' ? (
+                                      <Link href={`/profile/${row.enrollmentNumber}`} className="hover:underline">
+                                          {row.name} {row.isLeader && '(Leader)'}
+                                      </Link>
+                                  ) : (
+                                      `${row.name} ${row.isLeader ? '(Leader)' : ''}`
+                                  )}
+                              </TableCell>
+                              <TableCell>{row.email}</TableCell>
+                              <TableCell>{row.enrollmentNumber}</TableCell>
+                              <TableCell>
+                                  {row.contactNumber && row.contactNumber !== 'N/A' ? (
+                                      <a href={`https://wa.me/+91${row.contactNumber}`} target="_blank" rel="noopener noreferrer" className="hover:underline">
+                                          {row.contactNumber}
+                                      </a>
+                                  ) : 'N/A'}
+                              </TableCell>
+                              <TableCell>{row.yearOfStudy}</TableCell>
+                              <TableCell>{row.semester}</TableCell>
+                              <TableCell className="text-right">
+                                  {row.isFirstRow ? (
+                                      <AlertDialog>
+                                          <AlertDialogTrigger asChild>
+                                              <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" disabled={isProcessing === row.teamId}>
+                                                  {isProcessing === row.teamId ? <Loader2 className="h-4 w-4 animate-spin"/> : <Trash2 className="h-4 w-4"/>}
+                                              </Button>
+                                          </AlertDialogTrigger>
+                                          <AlertDialogContent>
+                                              <AlertDialogHeader>
+                                              <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                              <AlertDialogDescription>
+                                                  This will permanently delete the team "{row.teamName}" and all its members' accounts. This action cannot be undone.
+                                              </AlertDialogDescription>
+                                              </AlertDialogHeader>
+                                              <AlertDialogFooter>
+                                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                              <AlertDialogAction onClick={() => handleDeleteTeam(row.teamId)} className="bg-destructive hover:bg-destructive/90">Delete</AlertDialogAction>
+                                              </AlertDialogFooter>
+                                          </AlertDialogContent>
+                                      </AlertDialog>
+                                  ) : (
+                                      <AlertDialog>
+                                          <AlertDialogTrigger asChild>
+                                              <Button variant="ghost" size="icon" className="h-8 w-8" disabled={isProcessing === `${row.teamId}-${row.uid}`}>
+                                                  {isProcessing === `${row.teamId}-${row.uid}` ? <Loader2 className="h-4 w-4 animate-spin"/> : <MinusCircle className="h-4 w-4 text-destructive"/>}
+                                              </Button>
+                                          </AlertDialogTrigger>
+                                          <AlertDialogContent>
+                                              <AlertDialogHeader>
+                                              <AlertDialogTitle>Remove {row.name}?</AlertDialogTitle>
+                                              <AlertDialogDescription>
+                                                  Are you sure you want to remove {row.name} from this team? Their account will not be deleted, but they will be removed from the team.
+                                              </AlertDialogDescription>
+                                              </AlertDialogHeader>
+                                              <AlertDialogFooter>
+                                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                              <AlertDialogAction onClick={() => handleRemoveMember(row.teamId, row)} className="bg-destructive hover:bg-destructive/90">Remove Member</AlertDialogAction>
+                                              </AlertDialogFooter>
+                                          </AlertDialogContent>
+                                      </AlertDialog>
+                                  )}
+                              </TableCell>
+                          </TableRow>
+                      ))}
+                  </TableBody>
+              </Table>
+            </ScrollArea>
           ) : (
             <p className="text-center text-muted-foreground py-4">No teams match the current filters.</p>
           )}
