@@ -181,130 +181,127 @@ export default function MemberDashboard() {
       )}
       
       {team ? (
-        <>
-        <div className="grid gap-8 lg:grid-cols-3">
-          <div className="lg:col-span-2 grid grid-cols-1 gap-8">
-             <Card className="w-full">
+        <div className="space-y-8">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Users/> Team Details: {team.name}
+                {team.teamNumber && <Badge variant="secondary" className="ml-auto">{`Team No: ${team.teamNumber}`}</Badge>}
+              </CardTitle>
+              <CardDescription>Your current team roster from {team.institute}.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>
+                      <Button variant="ghost" onClick={() => requestSort('name')}>Name {getSortIndicator('name')}</Button>
+                    </TableHead>
+                    <TableHead>
+                      <Button variant="ghost" onClick={() => requestSort('role')}>Role {getSortIndicator('role')}</Button>
+                    </TableHead>
+                    <TableHead>
+                      <Button variant="ghost" onClick={() => requestSort('email')}>Email {getSortIndicator('email')}</Button>
+                    </TableHead>
+                    <TableHead>
+                      <Button variant="ghost" onClick={() => requestSort('contactNumber')}>Contact No. {getSortIndicator('contactNumber')}</Button>
+                    </TableHead>
+                    <TableHead>
+                      <Button variant="ghost" onClick={() => requestSort('enrollmentNumber')}>Enrollment No. {getSortIndicator('enrollmentNumber')}</Button>
+                    </TableHead>
+                    <TableHead>
+                      <Button variant="ghost" onClick={() => requestSort('yearOfStudy')}>Year {getSortIndicator('yearOfStudy')}</Button>
+                    </TableHead>
+                    <TableHead>
+                      <Button variant="ghost" onClick={() => requestSort('semester')}>Sem {getSortIndicator('semester')}</Button>
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {sortedTeamMembers.length > 0 ? (
+                    sortedTeamMembers.map((member) => (
+                      <TableRow key={member.uid}>
+                        <TableCell className="font-medium">{member.name}</TableCell>
+                        <TableCell>
+                          <Badge variant={member.role === 'leader' ? 'default' : 'secondary'}>
+                            {member.role}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>{member.email}</TableCell>
+                        <TableCell>{member.contactNumber || 'N/A'}</TableCell>
+                        <TableCell>{member.enrollmentNumber || 'N/A'}</TableCell>
+                        <TableCell>{member.yearOfStudy || 'N/A'}</TableCell>
+                        <TableCell>{member.semester || 'N/A'}</TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center text-muted-foreground h-24">
+                        {loading ? <Loader2 className="h-6 w-6 animate-spin mx-auto"/> : 'No members found.'}
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+          
+          <div className="grid gap-8 lg:grid-cols-2">
+            <AnnouncementsSection audience="teams_and_all" />
+            <div className="space-y-8">
+              <Card>
                 <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                        <Users/> Team Details: {team.name}
-                        {team.teamNumber && <Badge variant="secondary" className="ml-auto">{`Team No: ${team.teamNumber}`}</Badge>}
-                    </CardTitle>
-                    <CardDescription>Your current team roster from {team.institute}.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                               <TableHead>
-                                    <Button variant="ghost" onClick={() => requestSort('name')}>Name {getSortIndicator('name')}</Button>
-                                </TableHead>
-                                <TableHead>
-                                    <Button variant="ghost" onClick={() => requestSort('role')}>Role {getSortIndicator('role')}</Button>
-                                </TableHead>
-                                <TableHead>
-                                    <Button variant="ghost" onClick={() => requestSort('email')}>Email {getSortIndicator('email')}</Button>
-                                </TableHead>
-                                <TableHead>
-                                    <Button variant="ghost" onClick={() => requestSort('contactNumber')}>Contact No. {getSortIndicator('contactNumber')}</Button>
-                                </TableHead>
-                                <TableHead>
-                                    <Button variant="ghost" onClick={() => requestSort('enrollmentNumber')}>Enrollment No. {getSortIndicator('enrollmentNumber')}</Button>
-                                </TableHead>
-                                <TableHead>
-                                    <Button variant="ghost" onClick={() => requestSort('yearOfStudy')}>Year {getSortIndicator('yearOfStudy')}</Button>
-                                </TableHead>
-                                <TableHead>
-                                    <Button variant="ghost" onClick={() => requestSort('semester')}>Sem {getSortIndicator('semester')}</Button>
-                                </TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {sortedTeamMembers.length > 0 ? (
-                                sortedTeamMembers.map((member) => (
-                                    <TableRow key={member.uid}>
-                                        <TableCell className="font-medium">{member.name}</TableCell>
-                                        <TableCell>
-                                            <Badge variant={member.role === 'leader' ? 'default' : 'secondary'}>
-                                                {member.role}
-                                            </Badge>
-                                        </TableCell>
-                                        <TableCell>{member.email}</TableCell>
-                                        <TableCell>{member.contactNumber || 'N/A'}</TableCell>
-                                        <TableCell>{member.enrollmentNumber || 'N/A'}</TableCell>
-                                        <TableCell>{member.yearOfStudy || 'N/A'}</TableCell>
-                                        <TableCell>{member.semester || 'N/A'}</TableCell>
-                                    </TableRow>
-                                ))
-                             ) : (
-                                <TableRow>
-                                    <TableCell colSpan={7} className="text-center text-muted-foreground h-24">
-                                        {loading ? <Loader2 className="h-6 w-6 animate-spin mx-auto"/> : 'No members found.'}
-                                    </TableCell>
-                                </TableRow>
-                             )
-                           }
-                        </TableBody>
-                    </Table>
-                </CardContent>
-             </Card>
-             <AnnouncementsSection audience="teams_and_all" />
-          </div>
-
-          <div className="lg:col-span-1 space-y-8">
-            <Card>
-                <CardHeader>
-                    <CardTitle className="flex items-center gap-2"><FileText/> Institute SPOC Details</CardTitle>
-                    <CardDescription>Your point of contact for any queries.</CardDescription>
+                  <CardTitle className="flex items-center gap-2"><FileText/> Institute SPOC Details</CardTitle>
+                  <CardDescription>Your point of contact for any queries.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-3">
-                    {spoc ? (
-                        <>
-                            <div className="flex items-center gap-3">
-                                <User className="h-5 w-5 text-primary"/>
-                                <span className="font-medium">{spoc.name}</span>
-                            </div>
-                            <div className="flex items-center gap-3">
-                                <Mail className="h-5 w-5 text-primary"/>
-                                <a href={`mailto:${spoc.email}`} className="text-muted-foreground hover:text-primary">{spoc.email}</a>
-                            </div>
-                            <div className="flex items-center gap-3">
-                                <Phone className="h-5 w-5 text-primary"/>
-                                <a href={`tel:${spoc.contactNumber}`} className="text-muted-foreground hover:text-primary">{spoc.contactNumber}</a>
-                            </div>
-                        </>
-                    ) : (
-                        <p className="text-muted-foreground">SPOC details are not available yet.</p>
-                    )}
+                  {spoc ? (
+                    <>
+                      <div className="flex items-center gap-3">
+                        <User className="h-5 w-5 text-primary"/>
+                        <span className="font-medium">{spoc.name}</span>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <Mail className="h-5 w-5 text-primary"/>
+                        <a href={`mailto:${spoc.email}`} className="text-muted-foreground hover:text-primary">{spoc.email}</a>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <Phone className="h-5 w-5 text-primary"/>
+                        <a href={`tel:${spoc.contactNumber}`} className="text-muted-foreground hover:text-primary">{spoc.contactNumber}</a>
+                      </div>
+                    </>
+                  ) : (
+                    <p className="text-muted-foreground">SPOC details are not available yet.</p>
+                  )}
                 </CardContent>
-            </Card>
+              </Card>
 
-             <Card>
+              <Card>
                 <CardHeader>
-                    <CardTitle>Hackathon Information</CardTitle>
+                  <CardTitle>Hackathon Information</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
-                    <div className="flex items-start gap-3">
-                        <Calendar className="h-5 w-5 text-primary mt-1" />
-                        <div>
-                          <p><strong>Intra-Institute Round:</strong> 3rd, 4th & 5th September, 2025</p>
-                          <p><strong>Grand Finale:</strong> 6th September, 2025</p>
-                        </div>
+                  <div className="flex items-start gap-3">
+                    <Calendar className="h-5 w-5 text-primary mt-1" />
+                    <div>
+                      <p><strong>Intra-Institute Round:</strong> 3rd, 4th & 5th September, 2025</p>
+                      <p><strong>Grand Finale:</strong> 6th September, 2025</p>
                     </div>
-                    <div className="flex items-center gap-3">
-                        <Trophy className="h-5 w-5 text-primary"/>
-                        <p>
-                            <strong>Rewards:</strong>{" "}
-                            <a href="https://vadodarahackathon.pierc.org" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
-                                Check the homepage for details.
-                            </a>
-                        </p>
-                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <Trophy className="h-5 w-5 text-primary"/>
+                    <p>
+                      <strong>Rewards:</strong>{" "}
+                      <a href="https://vadodarahackathon.pierc.org" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                          Check the homepage for details.
+                      </a>
+                    </p>
+                  </div>
                 </CardContent>
-            </Card>
+              </Card>
+            </div>
           </div>
         </div>
-        </>
       ) : !user.teamId ? (
          <Alert>
             <AlertCircle className="h-4 w-4" />
