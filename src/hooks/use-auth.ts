@@ -137,7 +137,7 @@ export function useAuth() {
      }
      
      // 2. SPOC status check
-     if (user.role === 'spoc' && user.spocStatus === 'pending') {
+     if (user.role === 'spoc' && user.spocStatus === 'pending' && pathname !== '/complete-spoc-profile') {
         console.log("Redirect Check: SPOC is pending approval. Signing out.");
         handleSignOut();
         toast({
