@@ -16,7 +16,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { useState, useEffect } from "react";
-import { Loader2 } from "lucide-react";
+import { Loader2, CheckCircle, LogOut } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { db } from "@/lib/firebase";
 import { doc, updateDoc, collection, query, where, getDocs } from "firebase/firestore";
@@ -31,6 +31,7 @@ import {
 } from "@/components/ui/select";
 import { INSTITUTES } from "@/lib/constants";
 import { notifyAdminsOfSpocRequest } from "@/ai/flows/notify-admins-flow";
+import { Alert, AlertDescription, AlertTitle } from "./ui/alert";
 
 const formSchema = z.object({
   name: z.string().min(2, { message: "Name must be at least 2 characters." }),
@@ -41,6 +42,7 @@ const formSchema = z.object({
 export function CompleteSpocProfileForm() {
   const { user, loading: authLoading, handleSignOut } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
+  const [isSubmitted, setIsSubmitted] = useState(false);
   const { toast } = useToast();
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -109,14 +111,7 @@ export function CompleteSpocProfileForm() {
             spocInstitute: values.institute,
         });
 
-        toast({
-            title: "Profile Submitted for Approval",
-            description: "Your details have been saved and sent for admin review. You will now be signed out.",
-            duration: 8000,
-        });
-        
-        // Sign out the user and let them log back in to see the pending status message
-        await handleSignOut();
+        setIsSubmitted(true);
 
     } catch (error: any) {
       console.error("SPOC Profile Update Error:", error);
@@ -141,64 +136,80 @@ export function CompleteSpocProfileForm() {
   return (
     <Card>
       <CardContent className="p-6">
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            <p className="text-sm text-muted-foreground">Your email: <span className="font-medium">{user?.email}</span></p>
-            <FormField
-              control={form.control}
-              name="name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Full Name</FormLabel>
-                  <FormControl>
-                      <Input placeholder="John Doe" {...field} disabled={isLoading}/>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-             <FormField
+        {isSubmitted ? (
+            <div className="flex flex-col items-center text-center gap-4 animate-in fade-in-50">
+                <Alert variant="default" className="border-green-500 text-left">
+                    <CheckCircle className="h-4 w-4 text-green-500" />
+                    <AlertTitle>Application Submitted for Approval</AlertTitle>
+                    <AlertDescription>
+                        Your profile details have been successfully submitted. An administrator will review your application. You will be notified via email once your account has been approved.
+                    </AlertDescription>
+                </Alert>
+                <Button variant="outline" onClick={handleSignOut}>
+                    <LogOut className="mr-2 h-4 w-4" />
+                    Sign Out
+                </Button>
+            </div>
+        ) : (
+            <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                <p className="text-sm text-muted-foreground">Your email: <span className="font-medium">{user?.email}</span></p>
+                <FormField
                 control={form.control}
-                name="institute"
+                name="name"
                 render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Institute</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value} disabled={isLoading}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select your institute" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {INSTITUTES.map((inst) => (
-                          <SelectItem key={inst} value={inst}>{inst}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <FormItem>
+                    <FormLabel>Full Name</FormLabel>
+                    <FormControl>
+                        <Input placeholder="John Doe" {...field} disabled={isLoading}/>
+                    </FormControl>
                     <FormMessage />
-                  </FormItem>
+                    </FormItem>
                 )}
-              />
-            <FormField
-              control={form.control}
-              name="contactNumber"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Contact Number</FormLabel>
-                  <FormControl>
-                    <Input placeholder="9876543210" {...field} disabled={isLoading}/>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            
-            <Button type="submit" className="w-full" disabled={isLoading || authLoading}>
-              {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Submit for Approval
-            </Button>
-          </form>
-        </Form>
+                />
+                <FormField
+                    control={form.control}
+                    name="institute"
+                    render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Institute</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value} disabled={isLoading}>
+                        <FormControl>
+                            <SelectTrigger>
+                            <SelectValue placeholder="Select your institute" />
+                            </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                            {INSTITUTES.map((inst) => (
+                            <SelectItem key={inst} value={inst}>{inst}</SelectItem>
+                            ))}
+                        </SelectContent>
+                        </Select>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
+                <FormField
+                control={form.control}
+                name="contactNumber"
+                render={({ field }) => (
+                    <FormItem>
+                    <FormLabel>Contact Number</FormLabel>
+                    <FormControl>
+                        <Input placeholder="9876543210" {...field} disabled={isLoading}/>
+                    </FormControl>
+                    <FormMessage />
+                    </FormItem>
+                )}
+                />
+                
+                <Button type="submit" className="w-full" disabled={isLoading || authLoading}>
+                {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Submit for Approval
+                </Button>
+            </form>
+            </Form>
+        )}
       </CardContent>
     </Card>
   );
