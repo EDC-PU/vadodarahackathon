@@ -226,18 +226,33 @@ export default function MemberDashboard() {
                 </TableHeader>
                 <TableBody>
                   {sortedTeamMembers.length > 0 ? (
-                    sortedTeamMembers.map((member, index) => {
-                       const role = member.role === 'leader' ? 'Leader' : `Member - ${index}`;
+                    sortedTeamMembers.map((member) => {
+                       const isLeader = member.role === 'leader';
+                       const role = isLeader ? 'Leader' : `Member - ${teamMembers.filter(m => m.role !== 'leader').findIndex(m => m.uid === member.uid) + 1}`;
                        return (
                       <TableRow key={member.uid}>
-                        <TableCell className="font-medium">{member.name}</TableCell>
+                        <TableCell className="font-medium">
+                           {member.enrollmentNumber ? (
+                                <Link href={`/profile/${member.enrollmentNumber}`} className="hover:underline">
+                                    {member.name}
+                                </Link>
+                            ) : (
+                                member.name
+                            )}
+                        </TableCell>
                         <TableCell>
-                          <Badge variant={member.role === 'leader' ? 'default' : 'secondary'}>
+                          <Badge variant={isLeader ? 'default' : 'secondary'}>
                             {role}
                           </Badge>
                         </TableCell>
                         <TableCell>{member.email}</TableCell>
-                        <TableCell>{member.contactNumber || 'N/A'}</TableCell>
+                        <TableCell>
+                            {member.contactNumber ? (
+                                <a href={`https://wa.me/+91${member.contactNumber}`} target="_blank" rel="noopener noreferrer" className="hover:underline">
+                                    {member.contactNumber}
+                                </a>
+                            ) : 'N/A'}
+                        </TableCell>
                         <TableCell>{member.enrollmentNumber || 'N/A'}</TableCell>
                         <TableCell>{member.yearOfStudy || 'N/A'}</TableCell>
                         <TableCell>{member.semester || 'N/A'}</TableCell>
@@ -277,7 +292,9 @@ export default function MemberDashboard() {
                       </div>
                       <div className="flex items-center gap-3">
                         <Phone className="h-5 w-5 text-primary"/>
-                        <a href={`tel:${spoc.contactNumber}`} className="text-muted-foreground hover:text-primary">{spoc.contactNumber}</a>
+                         <a href={`https://wa.me/+91${spoc.contactNumber}`} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary">
+                            {spoc.contactNumber}
+                        </a>
                       </div>
                     </>
                   ) : (

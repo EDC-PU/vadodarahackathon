@@ -35,6 +35,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { manageTeamBySpoc } from "@/ai/flows/manage-team-by-spoc-flow";
 import { useSearchParams } from "next/navigation";
+import Link from "next/link";
 
 type CategoryFilter = ProblemStatementCategory | "All Categories";
 type SortKey = 'teamName' | 'problemStatementId' | 'name' | 'email' | 'enrollmentNumber' | 'contactNumber' | 'yearOfStudy' | 'semester';
@@ -474,10 +475,24 @@ function AllTeamsContent() {
                                 </TableCell>
                             )}
                              {row.isFirstRow && <TableCell rowSpan={row.rowSpan} className="align-top">{row.problemStatementId}</TableCell>}
-                            <TableCell>{row.name} {row.isLeader && '(Leader)'}</TableCell>
+                            <TableCell>
+                                {row.enrollmentNumber && row.enrollmentNumber !== 'N/A' ? (
+                                    <Link href={`/profile/${row.enrollmentNumber}`} className="hover:underline">
+                                        {row.name} {row.isLeader && '(Leader)'}
+                                    </Link>
+                                ) : (
+                                    `${row.name} ${row.isLeader ? '(Leader)' : ''}`
+                                )}
+                            </TableCell>
                             <TableCell>{row.email}</TableCell>
                             <TableCell>{row.enrollmentNumber}</TableCell>
-                            <TableCell>{row.contactNumber}</TableCell>
+                            <TableCell>
+                                {row.contactNumber && row.contactNumber !== 'N/A' ? (
+                                    <a href={`https://wa.me/+91${row.contactNumber}`} target="_blank" rel="noopener noreferrer" className="hover:underline">
+                                        {row.contactNumber}
+                                    </a>
+                                ) : 'N/A'}
+                            </TableCell>
                             <TableCell>{row.yearOfStudy}</TableCell>
                             <TableCell>{row.semester}</TableCell>
                             <TableCell className="text-right">

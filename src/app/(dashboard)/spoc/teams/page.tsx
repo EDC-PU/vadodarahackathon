@@ -31,6 +31,7 @@ import { exportTeams } from "@/ai/flows/export-teams-flow";
 import { Download } from "lucide-react";
 import { Buffer } from 'buffer';
 import { getTeamInviteLink } from "@/ai/flows/get-team-invite-link-flow";
+import Link from "next/link";
 
 type SortKey = 'teamName' | 'teamNumber' | 'name' | 'email' | 'enrollmentNumber' | 'contactNumber';
 type SortDirection = 'asc' | 'desc';
@@ -439,10 +440,24 @@ export default function SpocTeamsPage() {
                                         )}
                                     </TableCell>
                                 )}
-                                <TableCell>{member.name} {member.isLeader && <Badge variant="secondary" className="ml-1">Leader</Badge>}</TableCell>
+                                <TableCell>
+                                    {member.enrollmentNumber ? (
+                                        <Link href={`/profile/${member.enrollmentNumber}`} className="hover:underline">
+                                            {member.name} {member.isLeader && <Badge variant="secondary" className="ml-1">Leader</Badge>}
+                                        </Link>
+                                    ) : (
+                                        `${member.name} ${member.isLeader ? '(Leader)' : ''}`
+                                    )}
+                                </TableCell>
                                 <TableCell>{member.email}</TableCell>
                                 <TableCell>{member.enrollmentNumber || 'N/A'}</TableCell>
-                                <TableCell>{member.contactNumber || 'N/A'}</TableCell>
+                                <TableCell>
+                                     {member.contactNumber ? (
+                                        <a href={`https://wa.me/+91${member.contactNumber}`} target="_blank" rel="noopener noreferrer" className="hover:underline">
+                                            {member.contactNumber}
+                                        </a>
+                                    ) : 'N/A'}
+                                </TableCell>
                                 <TableCell className="text-right">
                                     {!member.isLeader && (
                                         <AlertDialog>
