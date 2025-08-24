@@ -152,24 +152,26 @@ export default function MemberDashboard() {
   }
   
   const teamValidation = {
-    memberCount: {
-        current: teamMembers.length,
-        required: 6,
-        isMet: teamMembers.length === 6,
-    },
-    femaleCount: {
-        current: teamMembers.filter(m => m.gender === "F").length,
-        required: 1,
-        isMet: teamMembers.filter(m => m.gender === "F").length >= 1,
-    },
     isRegistered: teamMembers.length === 6 && teamMembers.filter(m => m.gender === "F").length >= 1,
   }
 
   return (
     <div className="p-4 sm:p-6 lg:p-8">
-      <header className="mb-8">
-        <h1 className="text-3xl font-bold font-headline">Welcome, {user.name}!</h1>
-        <p className="text-muted-foreground">Here is your team and hackathon information.</p>
+      <header className="mb-8 flex justify-between items-start">
+        <div>
+          <h1 className="text-3xl font-bold font-headline">Welcome, {user.name}!</h1>
+          <p className="text-muted-foreground">Here is your team and hackathon information.</p>
+        </div>
+         {team && (
+            <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">Status: </span>
+                {teamValidation.isRegistered ? (
+                    <Badge variant="default" className="bg-green-600 hover:bg-green-600">Registered</Badge>
+                ) : (
+                    <Badge variant="destructive">Registration Pending</Badge>
+                )}
+            </div>
+        )}
       </header>
       
       {!user.teamId && (
@@ -250,58 +252,6 @@ export default function MemberDashboard() {
           </div>
 
           <div className="lg:col-span-1 space-y-8">
-            <Card>
-                <CardHeader>
-                    <CardTitle>Team Status</CardTitle>
-                    <CardDescription>Check if your team meets the hackathon requirements.</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                    {teamValidation.isRegistered ? (
-                         <Alert variant="default" className="border-green-500">
-                            <CheckCircle className="h-4 w-4 text-green-500"/>
-                            <AlertTitle>Team is Officially Registered!</AlertTitle>
-                            <AlertDescription>Your team meets all the registration criteria. Good luck!</AlertDescription>
-                        </Alert>
-                    ) : (
-                        <Alert variant="destructive">
-                            <AlertCircle className="h-4 w-4" />
-                            <AlertTitle>Registration Incomplete</AlertTitle>
-                            <AlertDescription>Your team does not yet meet all the criteria for official registration. See details below.</AlertDescription>
-                        </Alert>
-                    )}
-                    
-                    <hr className="border-border/50" />
-
-                    {teamValidation.memberCount.isMet ? (
-                        <Alert variant="default" className="border-green-500/50 bg-transparent text-foreground">
-                            <CheckCircle className="h-4 w-4 text-green-500"/>
-                            <AlertTitle>Team Size Correct</AlertTitle>
-                            <AlertDescription>You have 6 members in your team. Great job!</AlertDescription>
-                        </Alert>
-                    ) : (
-                        <Alert variant="destructive" className="bg-transparent text-foreground">
-                            <AlertCircle className="h-4 w-4 text-destructive" />
-                            <AlertTitle>Incomplete Team</AlertTitle>
-                            <AlertDescription>Your team needs {teamValidation.memberCount.required - teamValidation.memberCount.current} more member(s) to reach the required 6.</AlertDescription>
-                        </Alert>
-                    )}
-
-                    {teamValidation.femaleCount.isMet ? (
-                        <Alert variant="default" className="border-green-500/50 bg-transparent text-foreground">
-                            <CheckCircle className="h-4 w-4 text-green-500"/>
-                            <AlertTitle>Female Representation Met</AlertTitle>
-                            <AlertDescription>Your team includes at least one female member. Thank you!</AlertDescription>
-                        </Alert>
-                    ) : (
-                         <Alert variant="destructive" className="bg-transparent text-foreground">
-                            <AlertCircle className="h-4 w-4 text-destructive"/>
-                            <AlertTitle>Female Representation Required</AlertTitle>
-                            <AlertDescription>Your team must include at least one female member.</AlertDescription>
-                        </Alert>
-                    )}
-                </CardContent>
-            </Card>
-
             <Card>
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2"><FileText/> Institute SPOC Details</CardTitle>
