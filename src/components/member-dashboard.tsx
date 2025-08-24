@@ -54,9 +54,8 @@ export default function MemberDashboard() {
           }
       });
 
-      const memberUIDs = teamData.members.map(m => m.uid).filter(Boolean) || [];
-      const leaderUID = teamData.leader.uid;
-      const allUIDs = [...new Set([leaderUID, ...memberUIDs])];
+      const memberUIDs = teamData.members.map(m => m.uid).filter(Boolean);
+      const allUIDs = [...new Set([teamData.leader.uid, ...memberUIDs])];
       
       const memberUnsubscribers: (() => void)[] = [];
 
@@ -169,7 +168,7 @@ export default function MemberDashboard() {
             <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                     <Users/> Team Details: {team.name}
-                    {team.teamNumber && <Badge variant="secondary">Team No: {team.teamNumber}</Badge>}
+                    {team.teamNumber && <Badge variant="secondary" className="ml-auto">{`Team No: ${team.teamNumber}`}</Badge>}
                 </CardTitle>
                 <CardDescription>Your current team roster from {team.institute}.</CardDescription>
             </CardHeader>
@@ -206,9 +205,9 @@ export default function MemberDashboard() {
                                 <TableRow key={member.uid}>
                                     <TableCell className="font-medium">{member.name}</TableCell>
                                     <TableCell>
-                                        <span className={`px-2 py-1 text-xs rounded-full ${member.role === 'leader' ? 'bg-primary/20 text-primary' : 'bg-secondary text-secondary-foreground'}`}>
+                                        <Badge variant={member.role === 'leader' ? 'default' : 'secondary'}>
                                             {member.role}
-                                        </span>
+                                        </Badge>
                                     </TableCell>
                                     <TableCell>{member.email}</TableCell>
                                     <TableCell>{member.contactNumber || 'N/A'}</TableCell>
