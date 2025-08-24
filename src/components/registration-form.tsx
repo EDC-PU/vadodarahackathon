@@ -22,8 +22,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
-import { useState, useEffect } from "react";
-import { Loader2 } from "lucide-react";
+import { useState, useEffect, useCallback }from "react";
+import { Loader2, RefreshCw } from "lucide-react";
 import { INSTITUTES } from "@/lib/constants";
 import { useToast } from "@/hooks/use-toast";
 import { SmartFieldTip } from "./smart-field-tip";
@@ -31,6 +31,7 @@ import { Separator } from "./ui/separator";
 import { RadioGroup, RadioGroupItem } from "./ui/radio-group";
 import { useAuth } from "@/hooks/use-auth";
 import { createTeam, CreateTeamInput } from "@/ai/flows/create-team-flow";
+import { suggestTeamName } from "@/ai/flows/suggest-team-name-flow";
 
 const formSchema = z.object({
   teamName: z.string().min(3, { message: "Team name must be at least 3 characters." }),
@@ -48,6 +49,9 @@ export function RegistrationForm() {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
   const { user, loading: authLoading, reloadUser } = useAuth();
+  const [nameSuggestions, setNameSuggestions] = useState<string[]>([]);
+  const [currentSuggestion, setCurrentSuggestion] = useState<string>("e.g., Tech Titans");
+  const [isSuggestionLoading, setIsSuggestionLoading] = useState(true);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -63,6 +67,36 @@ export function RegistrationForm() {
       yearOfStudy: "",
     },
   });
+
+  const fetchNameSuggestions = useCallback(async () => {
+    setIsSuggestionLoading(true);
+    try {
+        const result = await suggestTeamName();
+        if (result.success && result.suggestions) {
+            setNameSuggestions(result.suggestions);
+            setCurrentSuggestion(result.suggestions[0] || "e.g., Tech Titans");
+        }
+    } catch (error) {
+        console.error("Failed to fetch team name suggestions:", error);
+        setCurrentSuggestion("e.g., Tech Titans"); // Fallback
+    } finally {
+        setIsSuggestionLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchNameSuggestions();
+  }, [fetchNameSuggestions]);
+
+  const cycleSuggestion = () => {
+      if (nameSuggestions.length > 0) {
+        const currentIndex = nameSuggestions.indexOf(currentSuggestion);
+        const nextIndex = (currentIndex + 1) % nameSuggestions.length;
+        setCurrentSuggestion(nameSuggestions[nextIndex]);
+      } else {
+        fetchNameSuggestions();
+      }
+  };
 
   useEffect(() => {
     if (user) {
@@ -150,7 +184,21 @@ export function RegistrationForm() {
                   <FormLabel>Team Name</FormLabel>
                   <FormControl>
                      <div className="flex items-center gap-2">
-                        <Input placeholder="e.g., Tech Titans" {...field} disabled={isLoading}/>
+                        <Input placeholder={currentSuggestion} {...field} disabled={isLoading}/>
+                         <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            onClick={cycleSuggestion}
+                            disabled={isSuggestionLoading}
+                            className="shrink-0 h-9 w-9 text-muted-foreground"
+                         >
+                            {isSuggestionLoading ? (
+                                <Loader2 className="h-4 w-4 animate-spin"/>
+                            ) : (
+                                <RefreshCw className="h-4 w-4"/>
+                            )}
+                         </Button>
                         <SmartFieldTip fieldName="Team Name" formContext={formDescription} />
                       </div>
                   </FormControl>
@@ -323,5 +371,3 @@ export function RegistrationForm() {
     </Card>
   );
 }
-
-    

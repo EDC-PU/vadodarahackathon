@@ -137,6 +137,15 @@ export interface Announcement {
 
 // Schemas for Genkit Flows
 
+// suggest-team-name-flow
+export const SuggestTeamNameOutputSchema = z.object({
+    success: z.boolean(),
+    suggestions: z.array(z.string()).optional(),
+    message: z.string().optional(),
+});
+export type SuggestTeamNameOutput = z.infer<typeof SuggestTeamNameOutputSchema>;
+
+
 // create-team-flow
 export const CreateTeamInputSchema = z.object({
     teamName: z.string(),
@@ -382,7 +391,3 @@ export const SystemHealthStateSchema = z.object({
   timestamp: z.string(),
 });
 export type SystemHealthState = z.infer<typeof SystemHealthStateSchema>;
-
-    
-
-    

@@ -16,5 +16,4 @@ import '@/ai/flows/get-team-invite-link-flow.ts';
 import '@/ai/flows/get-invite-details-flow.ts';
 import '@/ai/flows/add-member-to-team-flow.ts';
 import '@/ai/flows/create-team-flow.ts';
-
-    
+import '@/ai/flows/suggest-team-name-flow.ts';
