@@ -54,19 +54,23 @@ export function LoginForm() {
     } catch (error: any) {
       console.error("Login Error:", error);
       const errorCode = error.code;
+      let errorTitle = "Login Failed";
       let errorMessage = "An unexpected error occurred.";
+
       if (errorCode === 'auth/user-not-found' || errorCode === 'auth/wrong-password' || errorCode === 'auth/invalid-credential') {
         errorMessage = "Invalid email or password. Please check your credentials and try again."
       } else if (errorCode === 'auth/user-disabled') {
-        errorMessage = "Your account is pending approval or has been disabled. Please contact an administrator."
+        errorTitle = "Account Pending Approval";
+        errorMessage = "Your SPOC account is awaiting admin approval. You will be notified via email once it's approved. Please contact an administrator if you have any questions."
       }
       else {
         errorMessage = error.message;
       }
       toast({
-        title: "Login Failed",
+        title: errorTitle,
         description: errorMessage,
         variant: "destructive",
+        duration: 8000,
       });
     } finally {
       setIsLoading(false);
@@ -82,16 +86,19 @@ export function LoginForm() {
     } catch (error: any)
        {
       console.error("Google Sign-In Error:", error);
+      let errorTitle = "Google Sign-In Failed";
       let errorMessage = "An unexpected error occurred.";
       if (error.code === 'auth/user-disabled') {
-        errorMessage = "Your account is pending approval or has been disabled. Please contact an administrator."
+        errorTitle = "Account Pending Approval";
+        errorMessage = "Your SPOC account is awaiting admin approval. You will be notified via email once it's approved. Please contact an administrator if you have any questions."
       } else {
         errorMessage = error.message;
       }
       toast({
-        title: "Google Sign-In Failed",
+        title: errorTitle,
         description: errorMessage,
         variant: "destructive",
+        duration: 8000,
       });
     } finally {
       setIsGoogleLoading(false);
