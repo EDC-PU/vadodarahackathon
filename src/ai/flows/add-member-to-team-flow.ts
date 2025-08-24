@@ -1,12 +1,55 @@
 
 'use server';
 /**
- * @fileOverview A secure flow to add a new user to a team.
+ * @fileOverview A secure flow to add a new user to a team and notify the leader.
  */
 
 import { ai } from '@/ai/genkit';
 import { getAdminDb } from '@/lib/firebase-admin';
-import { AddMemberToTeamInput, AddMemberToTeamInputSchema, AddMemberToTeamOutput, AddMemberToTeamOutputSchema, Team, UserProfile } from '@/lib/types';
+import { AddMemberToTeamInput, AddMemberToTeamInputSchema, AddMemberToTeamOutput, AddMemberToTeamOutputSchema, Team } from '@/lib/types';
+import nodemailer from 'nodemailer';
+import { getEmailTemplate } from '@/lib/email-templates';
+
+async function sendNewMemberNotificationEmail(leaderEmail: string, leaderName: string, teamName: string, newMember: { name: string, email: string, contactNumber?: string }) {
+  console.log(`Attempting to send new member notification to: ${leaderEmail}`);
+    if (!process.env.GMAIL_EMAIL || !process.env.GMAIL_PASSWORD) {
+        console.error("GMAIL_EMAIL or GMAIL_PASSWORD environment variables not set.");
+        throw new Error("Missing GMAIL_EMAIL or GMAIL_PASSWORD environment variables. Please set them in your .env file.");
+    }
+    const transporter = nodemailer.createTransport({
+        service: 'gmail',
+        auth: {
+            user: process.env.GMAIL_EMAIL,
+            pass: process.env.GMAIL_PASSWORD,
+        },
+    });
+
+    const emailHtml = getEmailTemplate({
+        title: "A New Member Has Joined Your Team!",
+        body: `
+            <p>Hi ${leaderName},</p>
+            <p>Great news! A new member has just joined your team, <strong>${teamName}</strong>. Here are their details:</p>
+            <div class="credentials">
+                <p><strong>Name:</strong> ${newMember.name}</p>
+                <p><strong>Email:</strong> ${newMember.email}</p>
+                <p><strong>Contact:</strong> ${newMember.contactNumber || 'N/A'}</p>
+            </div>
+            <p>You can view your full team roster on your dashboard.</p>
+        `,
+        buttonLink: "https://vadodarahackathon.pierc.org/leader",
+        buttonText: "Go to Your Dashboard"
+    });
+
+    const mailOptions = {
+        from: process.env.GMAIL_EMAIL,
+        to: leaderEmail,
+        subject: `New Member Alert: ${newMember.name} joined ${teamName}`,
+        html: emailHtml,
+    };
+
+    await transporter.sendMail(mailOptions);
+    console.log(`Successfully sent new member notification to ${leaderEmail}.`);
+}
 
 export async function addMemberToTeam(input: AddMemberToTeamInput): Promise<AddMemberToTeamOutput> {
   console.log("Executing addMemberToTeam function...");
@@ -70,19 +113,31 @@ const addMemberToTeamFlow = ai.defineFlow(
 
       const batch = adminDb.batch();
       
-      // 1. Get current members and add the new member
       const currentMembers = teamData.members || [];
       currentMembers.push(newMember);
       batch.update(teamDocRef, {
         members: currentMembers
       });
       
-      // 2. Update the user's profile with the teamId
       batch.update(userDocRef, {
         teamId: teamId
       });
 
       await batch.commit();
+      
+      // Send notification email to the team leader
+      try {
+        await sendNewMemberNotificationEmail(
+            teamData.leader.email, 
+            teamData.leader.name, 
+            teamData.name, 
+            { name: newMember.name, email: newMember.email, contactNumber: newMember.contactNumber }
+        );
+      } catch (emailError: any) {
+        console.warn(`User was added to the team, but failed to send notification email to leader ${teamData.leader.email}. Reason: ${emailError.message}`);
+        // Do not fail the whole flow if email fails, but log it.
+      }
+
 
       return {
         success: true,
