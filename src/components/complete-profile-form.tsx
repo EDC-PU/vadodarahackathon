@@ -27,7 +27,7 @@ import { addMemberToTeam } from "@/ai/flows/add-member-to-team-flow";
 
 const formSchema = z.object({
   name: z.string().min(2, { message: "Name must be at least 2 characters." }),
-  gender: z.enum(["Male", "Female", "Other"], { required_error: "Please select a gender." }),
+  gender: z.enum(["M", "F", "O"], { required_error: "Please select a gender." }),
   department: z.string().min(2, { message: "Department is required." }),
   enrollmentNumber: z.string().min(5, { message: "Enrollment number is required." }),
   semester: z.coerce.number({invalid_type_error: "Semester is required."}).min(1, { message: "Semester must be between 1 and 8." }).max(8, { message: "Semester must be between 1 and 8." }),
@@ -228,19 +228,19 @@ export function CompleteProfileForm() {
                       >
                         <FormItem className="flex items-center space-x-2 space-y-0">
                           <FormControl>
-                            <RadioGroupItem value="Male" />
+                            <RadioGroupItem value="M" />
                           </FormControl>
                           <FormLabel className="font-normal">Male</FormLabel>
                         </FormItem>
                         <FormItem className="flex items-center space-x-2 space-y-0">
                           <FormControl>
-                            <RadioGroupItem value="Female" />
+                            <RadioGroupItem value="F" />
                           </FormControl>
                           <FormLabel className="font-normal">Female</FormLabel>
                         </FormItem>
                          <FormItem className="flex items-center space-x-2 space-y-0">
                           <FormControl>
-                            <RadioGroupItem value="Other" />
+                            <RadioGroupItem value="O" />
                           </FormControl>
                           <FormLabel className="font-normal">Other</FormLabel>
                         </FormItem>

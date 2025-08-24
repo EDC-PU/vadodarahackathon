@@ -38,7 +38,7 @@ const spocSchema = z.object({
   ),
   institute: z.string().min(1, "Please select an institute."),
   contactNumber: z.string().regex(/^\d{10}$/, "Please enter a valid 10-digit phone number."),
-  gender: z.enum(["Male", "Female", "Other"], { required_error: "Please select a gender." }),
+  gender: z.enum(["M", "F", "O"], { required_error: "Please select a gender." }),
 });
 
 export function AddSpocDialog({ isOpen, onOpenChange, onSpocAdded }: AddSpocDialogProps) {
@@ -174,19 +174,19 @@ export function AddSpocDialog({ isOpen, onOpenChange, onSpocAdded }: AddSpocDial
                     >
                       <FormItem className="flex items-center space-x-2 space-y-0">
                         <FormControl>
-                          <RadioGroupItem value="Male" />
+                          <RadioGroupItem value="M" />
                         </FormControl>
                         <FormLabel className="font-normal">Male</FormLabel>
                       </FormItem>
                       <FormItem className="flex items-center space-x-2 space-y-0">
                         <FormControl>
-                          <RadioGroupItem value="Female" />
+                          <RadioGroupItem value="F" />
                         </FormControl>
                         <FormLabel className="font-normal">Female</FormLabel>
                       </FormItem>
                       <FormItem className="flex items-center space-x-2 space-y-0">
                         <FormControl>
-                          <RadioGroupItem value="Other" />
+                          <RadioGroupItem value="O" />
                         </FormControl>
                         <FormLabel className="font-normal">Other</FormLabel>
                       </FormItem>

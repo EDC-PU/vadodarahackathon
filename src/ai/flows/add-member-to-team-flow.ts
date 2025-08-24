@@ -63,7 +63,7 @@ const addMemberToTeamFlow = ai.defineFlow(
           email: email,
           enrollmentNumber: enrollmentNumber || 'N/A',
           contactNumber: contactNumber || 'N/A',
-          gender: gender || 'Other',
+          gender: gender || 'O',
           semester: semester,
           yearOfStudy: yearOfStudy,
       };

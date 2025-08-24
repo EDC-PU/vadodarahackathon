@@ -37,7 +37,7 @@ import { RadioGroup, RadioGroupItem } from "./ui/radio-group";
 const formSchema = z.object({
   name: z.string().min(2, { message: "Name must be at least 2 characters." }),
   misId: z.string().min(1, { message: "MIS ID is required." }),
-  gender: z.enum(["Male", "Female", "Other"], { required_error: "Please select a gender." }),
+  gender: z.enum(["M", "F", "O"], { required_error: "Please select a gender." }),
   institute: z.string({ required_error: "Please select an institute." }).min(1, "Please select an institute."),
   department: z.string().min(2, { message: "Department is required." }),
   contactNumber: z.string().regex(/^\d{10}$/, { message: "Please enter a valid 10-digit phone number." }),
@@ -207,19 +207,19 @@ export function CompleteSpocProfileForm() {
                             >
                                 <FormItem className="flex items-center space-x-2 space-y-0">
                                 <FormControl>
-                                    <RadioGroupItem value="Male" />
+                                    <RadioGroupItem value="M" />
                                 </FormControl>
                                 <FormLabel className="font-normal">Male</FormLabel>
                                 </FormItem>
                                 <FormItem className="flex items-center space-x-2 space-y-0">
                                 <FormControl>
-                                    <RadioGroupItem value="Female" />
+                                    <RadioGroupItem value="F" />
                                 </FormControl>
                                 <FormLabel className="font-normal">Female</FormLabel>
                                 </FormItem>
                                 <FormItem className="flex items-center space-x-2 space-y-0">
                                 <FormControl>
-                                    <RadioGroupItem value="Other" />
+                                    <RadioGroupItem value="O" />
                                 </FormControl>
                                 <FormLabel className="font-normal">Other</FormLabel>
                                 </FormItem>
