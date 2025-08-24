@@ -55,8 +55,8 @@ export default function MemberDashboard() {
       });
 
       const memberUIDs = teamData.members.map(m => m.uid).filter(Boolean) || [];
-      const allUIDs = [...new Set(memberUIDs)];
       const leaderUID = teamData.leader.uid;
+      const allUIDs = [...new Set([leaderUID, ...memberUIDs])];
       
       const memberUnsubscribers: (() => void)[] = [];
 
