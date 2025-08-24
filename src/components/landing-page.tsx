@@ -259,12 +259,6 @@ export default function LandingPage({ spocDetails, announcements }: LandingPageP
       <main className="flex-1">
         <HeroSection />
 
-        <AnimatedSection id="announcements">
-          <div className="container max-w-4xl">
-            <AnnouncementsSection audience="all" initialAnnouncements={announcements} />
-          </div>
-        </AnimatedSection>
-        
         <AnimatedSection id="rewards" className="relative overflow-hidden">
             <div className="absolute inset-0 bg-gradient-to-br from-background via-accent/5 to-background -z-10"></div>
             <div className="container max-w-7xl text-center">
@@ -403,6 +397,12 @@ export default function LandingPage({ spocDetails, announcements }: LandingPageP
             </div>
         </AnimatedSection>
 
+        <AnimatedSection id="announcements">
+          <div className="container max-w-4xl">
+            <AnnouncementsSection audience="all" initialAnnouncements={announcements} />
+          </div>
+        </AnimatedSection>
+
         <AnimatedSection id="gallery">
             <div className="container max-w-7xl">
                 <div className="text-center">
@@ -539,3 +539,4 @@ export default function LandingPage({ spocDetails, announcements }: LandingPageP
     </div>
   );
 }
+
