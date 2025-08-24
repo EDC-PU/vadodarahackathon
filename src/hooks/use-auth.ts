@@ -216,7 +216,7 @@ export function useAuth() {
                 department: 'Administration',
                 enrollmentNumber: 'N/A',
                 contactNumber: 'N/A',
-                gender: 'Other',
+                gender: 'O',
                 passwordChanged: true,
                 createdAt: serverTimestamp() as any,
             };
@@ -263,6 +263,10 @@ export function useAuth() {
             createdAt: serverTimestamp() as any,
         };
         
+        if (userProfile.role === 'spoc') {
+            userProfile.spocStatus = 'pending';
+        }
+
         await setDoc(userDocRef, userProfile);
         toast({ title: "Account Created!", description: "Let's complete your profile." });
         console.log("handleLogin: Creating new user document with profile:", userProfile);
