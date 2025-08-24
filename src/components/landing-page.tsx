@@ -23,6 +23,7 @@ import { cn } from '@/lib/utils';
 import { useScrollAnimation } from '@/hooks/use-scroll-animation';
 import Autoplay from "embla-carousel-autoplay"
 import { Announcement } from '@/lib/types';
+import { motion, useAnimation } from "framer-motion";
 
 
 interface SpocDetails {
@@ -50,6 +51,127 @@ const AnimatedSection = ({ children, className }: { children: React.ReactNode, c
       {children}
     </section>
   );
+};
+
+const HeroSVGLogo = () => {
+    return (
+        <motion.svg 
+            width="100%" 
+            viewBox="0 0 600 120" 
+            initial="hidden"
+            animate="visible"
+            className="max-w-xl"
+        >
+            <defs>
+                <linearGradient id="shimmer" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" stopColor="#FFD700" />
+                    <stop offset="50%" stopColor="#FF7A00" />
+                    <stop offset="100%" stopColor="#FF1E1E" />
+                </linearGradient>
+            </defs>
+            <motion.text
+                x="50%"
+                y="50%"
+                dy=".35em"
+                textAnchor="middle"
+                fontSize="40"
+                fontWeight="bold"
+                fill="url(#shimmer)"
+                stroke="url(#shimmer)"
+                strokeWidth="0.5"
+                initial={{ pathLength: 0, opacity: 0 }}
+                animate={{ pathLength: 1, opacity: 1 }}
+                transition={{ duration: 2, ease: "easeInOut" }}
+            >
+                Vadodara Hackathon 6.0
+            </motion.text>
+        </motion.svg>
+    )
+}
+
+const HeroSection = () => {
+    const headline = "Your Gateway to Smart India Hackathon 2025";
+    const controls = useAnimation();
+
+    useEffect(() => {
+        const sequence = async () => {
+            await controls.start("visible");
+        };
+        sequence();
+    }, [controls]);
+
+    const containerVariants = {
+        hidden: { opacity: 0 },
+        visible: {
+            opacity: 1,
+            transition: { staggerChildren: 0.3, delayChildren: 0.2 },
+        },
+    };
+
+    const itemVariants = {
+        hidden: { y: 20, opacity: 0 },
+        visible: { y: 0, opacity: 1, transition: { duration: 0.5 } },
+    };
+
+    return (
+        <section id="home" className="relative min-h-[90vh] py-20 md:py-32 flex items-center justify-center overflow-hidden bg-brand-black">
+            <div className="absolute inset-0 z-0">
+                 {/* Animated Streaks */}
+                <div className="absolute top-0 left-1/4 w-1 h-full bg-brand-red/20 animate-light-streaks" style={{ animationDelay: '0s' }}></div>
+                <div className="absolute top-0 left-2/4 w-1 h-full bg-brand-orange/20 animate-light-streaks" style={{ animationDelay: '2s' }}></div>
+                <div className="absolute top-0 left-3/4 w-1 h-full bg-brand-yellow/20 animate-light-streaks" style={{ animationDelay: '4s' }}></div>
+                 {/* Gradient Overlay */}
+                <div className="absolute inset-0 bg-gradient-to-br from-brand-red/20 via-transparent to-brand-orange/20 animate-gradient-pan bg-[length:200%_200%]" />
+            </div>
+
+            <motion.div 
+                className="container max-w-7xl text-center z-10"
+                variants={containerVariants}
+                initial="hidden"
+                animate={controls}
+            >
+                <motion.h1 
+                    className="text-4xl md:text-6xl font-bold tracking-tighter text-white"
+                    variants={itemVariants}
+                >
+                    {headline.split(" ").map((word, index) => {
+                        if (word === "Hackathon" || word === "2025") {
+                            return (
+                                <motion.span 
+                                    key={index} 
+                                    className="text-brand-red animate-pulse"
+                                    style={{textShadow: '0 0 5px #FF7A00'}}
+                                >
+                                    {word}{' '}
+                                </motion.span>
+                            );
+                        }
+                        return <span key={index}>{word} </span>;
+                    })}
+                </motion.h1>
+                <motion.div variants={itemVariants} className="mt-8 flex justify-center">
+                    <HeroSVGLogo />
+                </motion.div>
+                <motion.div 
+                    className="flex flex-col sm:flex-row justify-center items-center gap-6 mt-12"
+                    variants={itemVariants}
+                >
+                    <Button
+                        size="lg"
+                        className="bg-transparent border-2 border-brand-yellow text-brand-yellow rounded-full animate-neon-pulse transition-transform hover:scale-105"
+                    >
+                        <Link href="/register">Register Now</Link>
+                    </Button>
+                     <Button variant="link" size="lg" className="text-white group text-lg rounded-full">
+                        <Link href="#about">
+                            Learn More
+                            <span className="block max-w-0 group-hover:max-w-full transition-all duration-300 h-0.5 bg-brand-red"></span>
+                        </Link>
+                    </Button>
+                </motion.div>
+            </motion.div>
+        </section>
+    );
 };
 
 
@@ -94,7 +216,6 @@ export default function LandingPage({ spocDetails, announcements }: LandingPageP
 
   return (
     <div className="flex min-h-screen flex-col bg-background text-foreground selection:bg-primary/40">
-      <div className="fixed top-0 left-0 w-full h-full bg-grid-slate-900/10 [mask-image:radial-gradient(ellipse_at_center,transparent_20%,black)] -z-10"></div>
       <header className="sticky top-0 z-50 w-full border-b border-border/20 bg-background/50 backdrop-blur-lg">
         <div className="container flex h-28 max-w-7xl items-center justify-between">
           <Link href="/" className="flex items-center gap-2 font-bold text-xl" prefetch={false}>
@@ -133,37 +254,7 @@ export default function LandingPage({ spocDetails, announcements }: LandingPageP
       </header>
 
       <main className="flex-1">
-        <section id="home" className="relative min-h-[90vh] py-20 md:py-32 flex items-center overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-b from-primary/10 via-transparent to-transparent -z-10"></div>
-          <div className="absolute -top-1/4 -right-1/4 w-1/2 h-1/2 bg-accent/10 rounded-full blur-3xl animate-pulse -z-10"></div>
-          <div className="absolute -bottom-1/4 -left-1/4 w-1/2 h-1/2 bg-primary/10 rounded-full blur-3xl animate-pulse delay-500 -z-10"></div>
-
-          <div className="container max-w-7xl grid md:grid-cols-2 items-center gap-8 text-center md:text-left">
-            <div className="space-y-6 scroll-animate in-view">
-              <h1 className="text-4xl md:text-6xl font-bold tracking-tighter bg-clip-text text-transparent bg-gradient-to-r from-amber-400 via-primary to-accent">
-                Your Gateway to Smart India Hackathon 2025
-              </h1>
-              <p className="max-w-xl mx-auto md:mx-0 text-lg md:text-xl text-foreground/80">
-                Join us for an electrifying competition of innovation, collaboration, and groundbreaking solutions. Build the future, one line of code at a time.
-              </p>
-              <div className="flex flex-col sm:flex-row justify-center md:justify-start gap-4">
-                <Button size="lg" asChild className="rounded-full glass-button hover:scale-105 transition-transform !text-foreground shadow-[0_0_25px_hsl(var(--primary)/0.2)]">
-                  <Link href="/register">
-                    <Code className="mr-2 h-5 w-5" /> Register Now
-                  </Link>
-                </Button>
-                <Button size="lg" variant="outline" asChild className="rounded-full hover:scale-105 transition-transform hover:bg-secondary/40">
-                  <Link href="#about">
-                    Learn More
-                  </Link>
-                </Button>
-              </div>
-            </div>
-            <div className="relative h-96 w-full flex items-center justify-center">
-                 <Image src="https://www.pierc.org/vhlogo.png" alt="3D Character" layout="fill" objectFit="contain" data-ai-hint="futuristic coder orange glow" className="animate-float" />
-            </div>
-          </div>
-        </section>
+        <HeroSection />
 
         <AnimatedSection id="announcements">
           <div className="container max-w-4xl">
