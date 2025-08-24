@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import Link from 'next/link';
@@ -20,7 +21,6 @@ import { useAuth } from '@/hooks/use-auth';
 import { Skeleton } from './ui/skeleton';
 import { AnnouncementsSection } from './announcements-section';
 import { cn } from '@/lib/utils';
-import { useScrollAnimation } from '@/hooks/use-scroll-animation';
 import Autoplay from "embla-carousel-autoplay"
 import { Announcement } from '@/lib/types';
 import { motion, useAnimation, useInView } from "framer-motion";
@@ -54,15 +54,14 @@ const AnimatedSection = ({ children, className, id }: { children: React.ReactNod
   );
 };
 
+
 const GlitchTitle = ({ children, className }: { children: React.ReactNode, className?: string }) => {
   return (
     <h2
-      className={cn("text-3xl font-bold mb-4 font-headline relative inline-block", className)}
+      className={cn("text-3xl font-bold mb-4 font-headline relative inline-block glitch", className)}
       data-text={children}
     >
-      <span className="glitch-base">{children}</span>
-      <span className="glitch-line glitch-line-1" aria-hidden="true">{children}</span>
-      <span className="glitch-line glitch-line-2" aria-hidden="true">{children}</span>
+      {children}
        <motion.div
         className="absolute bottom-0 left-0 h-0.5 bg-gradient-to-r from-brand-yellow via-brand-orange to-brand-red"
         initial={{ width: 0 }}
