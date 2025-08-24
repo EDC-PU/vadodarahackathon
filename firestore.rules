@@ -2,8 +2,106 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /{document=**} {
-      allow read, write: if request.auth != null;
+
+    // Helper Functions
+    function isAuth() {
+      return request.auth != null;
+    }
+
+    function uid() {
+      return request.auth.uid;
+    }
+
+    function getUserData(userId) {
+      return get(/databases/$(database)/documents/users/$(userId)).data;
+    }
+
+    function getTeamData(teamId) {
+        return get(/databases/$(database)/documents/teams/$(teamId)).data;
+    }
+    
+    function isAdmin() {
+      return isAuth() && getUserData(uid()).role == 'admin';
+    }
+
+    function isOwner(userId) {
+      return isAuth() && uid() == userId;
+    }
+    
+    function isSpocForInstitute(institute) {
+        let userData = getUserData(uid());
+        return isAuth() && 
+               userData.role == 'spoc' && 
+               userData.spocStatus == 'approved' &&
+               userData.institute == institute;
+    }
+    
+    function isTeamMember(teamId) {
+      return isAuth() && getUserData(uid()).teamId == teamId;
+    }
+
+    function isTeamLeader(teamId) {
+      return isAuth() && getTeamData(teamId).leader.uid == uid();
+    }
+    
+    function isSpocForTeam(teamId) {
+        let teamData = getTeamData(teamId);
+        return isSpocForInstitute(teamData.institute);
+    }
+    
+    match /users/{userId} {
+      allow get: if isAdmin() || isOwner(userId);
+
+      allow list: if isAdmin() || 
+                     // Allow any authenticated user to check for existing spocs during signup
+                     (isAuth() && request.query.keys().hasAll(['institute', 'role', 'spocStatus']) && request.query.role == 'spoc');
+      
+      allow create: if isAuth();
+
+      allow update: if isAdmin() || isOwner(userId) ||
+                     // Allow a SPOC to update a user's teamId when removing them
+                     (isSpocForInstitute(getUserData(userId).institute));
+      
+      allow delete: if isAdmin();
+    }
+
+    match /teams/{teamId} {
+      allow get, list: if isAdmin() || isTeamMember(teamId) || isSpocForTeam(teamId);
+      
+      allow create: if isAuth(); // Further validation is in the Genkit flow
+      
+      allow update: if isAdmin() || isTeamLeader(teamId) || isSpocForTeam(teamId);
+
+      allow delete: if isAdmin() || isSpocForTeam(teamId);
+    }
+    
+    match /teamInvites/{inviteId} {
+        allow read: if isAuth();
+        allow write: if isAdmin() || isTeamLeader(request.resource.data.teamId);
+    }
+
+    match /problemStatements/{psId} {
+      allow read: if isAuth();
+      allow write: if isAdmin();
+    }
+
+    match /config/{configId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    
+    match /announcements/{announcementId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    
+    match /notifications/{notificationId} {
+      allow read, write: if isOwner(request.resource.data.recipientUid);
+      allow create: if isAuth();
+    }
+
+    match /healthchecks/{docId} {
+      allow read, write: if isAdmin();
     }
   }
 }
