@@ -1,6 +1,4 @@
 
-'use server';
-
 interface EmailTemplateProps {
   title: string;
   body: string; // This will be the main HTML content of the email
