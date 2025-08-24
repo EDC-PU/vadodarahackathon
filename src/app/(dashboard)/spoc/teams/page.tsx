@@ -26,7 +26,6 @@ import {
 } from "@/components/ui/alert-dialog";
 import { manageTeamBySpoc } from "@/ai/flows/manage-team-by-spoc-flow";
 import { useAuth } from "@/hooks/use-auth";
-import { getInstituteTeams } from "@/ai/flows/get-institute-teams-flow";
 import { exportTeams } from "@/ai/flows/export-teams-flow";
 import { Download } from "lucide-react";
 import { Buffer } from 'buffer';
@@ -50,6 +49,50 @@ export default function SpocTeamsPage() {
   const [inviteLinks, setInviteLinks] = useState<Map<string, string>>(new Map());
   const [loadingLink, setLoadingLink] = useState<string | null>(null);
   const appBaseUrl = "https://vadodarahackathon.pierc.org";
+
+  const fetchInstituteData = useCallback((institute: string) => {
+    setLoading(true);
+    const teamsQuery = query(collection(db, "teams"), where("institute", "==", institute));
+    
+    const unsubscribeTeams = onSnapshot(teamsQuery, (snapshot) => {
+        const teamsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Team));
+        setTeams(teamsData);
+
+        const allUserIds = new Set<string>();
+        teamsData.forEach(team => {
+            allUserIds.add(team.leader.uid);
+            team.members.forEach(member => {
+                if (member.uid) allUserIds.add(member.uid);
+            });
+        });
+
+        const userUnsubscribers: (()=>void)[] = [];
+        if (allUserIds.size > 0) {
+            Array.from(allUserIds).forEach(uid => {
+                const userDocRef = doc(db, 'users', uid);
+                const unsub = onSnapshot(userDocRef, (userDoc) => {
+                    if (userDoc.exists()) {
+                        const userData = { uid: userDoc.id, ...userDoc.data() } as UserProfile;
+                        setUsers(prevUsers => new Map(prevUsers).set(uid, userData));
+                    }
+                }, (error) => {
+                    console.error(`Failed to listen to user ${uid}`, error);
+                });
+                userUnsubscribers.push(unsub);
+            });
+        }
+        
+        setLoading(false);
+
+        return () => userUnsubscribers.forEach(unsub => unsub());
+    }, (error) => {
+        console.error("Error listening to team updates:", error);
+        toast({ title: "Error", description: "Could not load real-time team data.", variant: "destructive" });
+        setLoading(false);
+    });
+
+    return unsubscribeTeams;
+  }, [toast]);
 
   const handleExport = async () => {
     setIsExporting(true);
@@ -80,43 +123,19 @@ export default function SpocTeamsPage() {
         setIsExporting(false);
     }
   };
-  
-  const fetchInstituteData = useCallback(async (institute: string) => {
-    setLoading(true);
-    try {
-      const result = await getInstituteTeams({ institute });
-      if (result.success && result.teams && result.users) {
-        setTeams(result.teams as Team[]);
-        setUsers(new Map(Object.entries(result.users)));
-      } else {
-        throw new Error(result.message || "Failed to fetch institute data.");
-      }
-    } catch (error) {
-      console.error("Error in fetchInstituteData:", error);
-      toast({ title: "Error", description: error instanceof Error ? error.message : "An unexpected error occurred.", variant: "destructive" });
-    } finally {
-      setLoading(false);
-    }
-  }, [toast]);
 
   useEffect(() => {
+    let unsubscribe: (() => void) | undefined;
     if (user && user.institute) {
-        // Initial fetch
-        fetchInstituteData(user.institute);
-
-        // Real-time listener for just the teams to get updates on teamNumber etc.
-        const teamsQuery = query(collection(db, "teams"), where("institute", "==", user.institute));
-        const unsubscribe = onSnapshot(teamsQuery, (snapshot) => {
-             const teamsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Team));
-             setTeams(teamsData);
-        }, (error) => {
-            console.error("Error listening to team updates:", error);
-        });
-
-        return () => unsubscribe();
+      unsubscribe = fetchInstituteData(user.institute);
     } else if (!authLoading) {
-        setLoading(false);
+      setLoading(false);
     }
+    return () => {
+      if (unsubscribe) {
+        unsubscribe();
+      }
+    };
   }, [user, authLoading, fetchInstituteData]);
   
   const getTeamWithFullDetails = (teamsToProcess: Team[]) => {
@@ -251,7 +270,6 @@ export default function SpocTeamsPage() {
         const result = await manageTeamBySpoc({ teamId, action: 'remove-member', memberEmail: memberToRemove.email });
         if (result.success) {
             toast({ title: "Success", description: result.message });
-             if(user?.institute) fetchInstituteData(user.institute); // Refresh data
         } else {
             toast({ title: "Error", description: result.message, variant: "destructive" });
         }
@@ -268,7 +286,6 @@ export default function SpocTeamsPage() {
         const result = await manageTeamBySpoc({ teamId, action: 'delete-team' });
         if (result.success) {
             toast({ title: "Success", description: result.message });
-            if(user?.institute) fetchInstituteData(user.institute); // Refresh data
         } else {
             toast({ title: "Error", description: result.message, variant: "destructive" });
         }
