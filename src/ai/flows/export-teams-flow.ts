@@ -87,7 +87,7 @@ const exportTeamsFlow = ai.defineFlow(
         
         // 2. Load ExcelJS Template
         console.log("Step 2: Loading Excel template...");
-        const templatePath = path.join(process.cwd(), 'public', 'template.xlsx');
+        const templatePath = path.join(process.cwd(), 'src', 'templates', 'template.xlsx');
         const templateWorkbook = new ExcelJS.Workbook();
         try {
             await templateWorkbook.xlsx.readFile(templatePath);

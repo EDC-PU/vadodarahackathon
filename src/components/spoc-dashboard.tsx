@@ -4,7 +4,7 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Loader2, AlertCircle, Save, Pencil, X, Trash2, Users, User, MinusCircle, ArrowUpDown, Link as LinkIcon, Copy } from "lucide-react";
+import { Loader2, AlertCircle, Save, Pencil, X, Trash2, Users, User, MinusCircle, ArrowUpDown, Link as LinkIcon, Copy, RefreshCw } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useEffect, useState, useMemo, useCallback, useRef } from "react";
 import { auth, db } from "@/lib/firebase";
@@ -29,7 +29,8 @@ import { manageTeamBySpoc } from "@/ai/flows/manage-team-by-spoc-flow";
 import { useAuth } from "@/hooks/use-auth";
 import { getInstituteTeams } from "@/ai/flows/get-institute-teams-flow";
 import { exportTeams } from "@/ai/flows/export-teams-flow";
-import { Download } from "lucide-react";
+import { exportEvaluation } from "@/ai/flows/export-evaluation-flow.ts";
+import { Download, FileSpreadsheet } from "lucide-react";
 import { Buffer } from 'buffer';
 import { getTeamInviteLink } from "@/ai/flows/get-team-invite-link-flow";
 import { useScrollAnimation } from "@/hooks/use-scroll-animation";
@@ -47,6 +48,7 @@ export default function SpocDashboard() {
   const [isSaving, setIsSaving] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState<string | null>(null);
   const [isExporting, setIsExporting] = useState(false);
+  const [isExportingEval, setIsExportingEval] = useState(false);
   const [sortConfig, setSortConfig] = useState<{ key: SortKey, direction: SortDirection } | null>(null);
   const { toast } = useToast();
   const [inviteLinks, setInviteLinks] = useState<Map<string, string>>(new Map());
@@ -83,6 +85,43 @@ export default function SpocDashboard() {
         toast({ title: "Error", description: "An unexpected error occurred during export.", variant: "destructive" });
     } finally {
         setIsExporting(false);
+    }
+  };
+
+  const handleExportEvaluation = async () => {
+    setIsExportingEval(true);
+    try {
+        if (!user?.institute) {
+            throw new Error("Institute information not available");
+        }
+        const teamsToExport = teamsWithDetails.map(t => ({
+          team_id: t.id,
+          team_name: t.name,
+          leader_name: t.allMembers.find(m => m.isLeader)?.name || 'N/A',
+          problemstatement_number: t.problemStatementId || 'N/A',
+          problem_title: t.problemStatementTitle || 'N/A',
+        }));
+        
+        const result = await exportEvaluation({ instituteName: user.institute, teams: teamsToExport });
+        if (result.success && result.fileContent) {
+            const blob = new Blob([Buffer.from(result.fileContent, 'base64')], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = result.fileName || `${user.institute}-evaluation.xlsx`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            a.remove();
+            toast({ title: "Success", description: "Evaluation sheet has been exported." });
+        } else {
+            toast({ title: "Export Failed", description: result.message || "Could not generate the export file.", variant: "destructive" });
+        }
+    } catch (error) {
+        console.error("Error exporting evaluation data:", error);
+        toast({ title: "Error", description: "An unexpected error occurred during evaluation export.", variant: "destructive" });
+    } finally {
+        setIsExportingEval(false);
     }
   };
   
@@ -328,9 +367,21 @@ export default function SpocDashboard() {
 
   return (
     <div ref={mainRef} className={cn("p-4 sm:p-6 lg:p-8")}>
-      <header className="mb-8">
-        <h1 className="text-3xl font-bold font-headline">SPOC Dashboard</h1>
-        <p className="text-muted-foreground">Manage teams from your institute: <strong>{user?.institute}</strong></p>
+      <header className="mb-8 flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+        <div>
+            <h1 className="text-3xl font-bold font-headline">SPOC Dashboard</h1>
+            <p className="text-muted-foreground">Manage teams from your institute: <strong>{user?.institute}</strong></p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+            <Button onClick={handleExport} disabled={isExporting}>
+              {isExporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
+              Export Teams
+            </Button>
+            <Button onClick={handleExportEvaluation} disabled={isExportingEval}>
+              {isExportingEval ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileSpreadsheet className="mr-2 h-4 w-4" />}
+              Export for Evaluation
+            </Button>
+        </div>
       </header>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-8">

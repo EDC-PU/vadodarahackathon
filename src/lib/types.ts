@@ -252,6 +252,28 @@ export const ExportTeamsOutputSchema = z.object({
 });
 export type ExportTeamsOutput = z.infer<typeof ExportTeamsOutputSchema>;
 
+// export-evaluation-flow
+const TeamForEvaluationSchema = z.object({
+    team_id: z.string(),
+    team_name: z.string(),
+    leader_name: z.string(),
+    problemstatement_number: z.string(),
+    problem_title: z.string(),
+});
+export const ExportEvaluationInputSchema = z.object({
+    instituteName: z.string(),
+    teams: z.array(TeamForEvaluationSchema),
+});
+export type ExportEvaluationInput = z.infer<typeof ExportEvaluationInputSchema>;
+
+export const ExportEvaluationOutputSchema = z.object({
+    success: z.boolean(),
+    message: z.string().optional(),
+    fileContent: z.string().optional().describe("Base64 encoded content of the Excel file."),
+    fileName: z.string().optional(),
+});
+export type ExportEvaluationOutput = z.infer<typeof ExportEvaluationOutputSchema>;
+
 // get-institute-teams-flow
 export const GetInstituteTeamsInputSchema = z.object({
   institute: z.string().describe("The name of the institute to fetch teams for."),
