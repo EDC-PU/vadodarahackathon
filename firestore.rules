@@ -14,7 +14,6 @@ service cloud.firestore {
     }
 
     function getUserData() {
-      // Use the requesting user's UID to get their profile data.
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
     }
 
@@ -32,37 +31,42 @@ service cloud.firestore {
     }
 
     function isApprovedSpocForInstitute(institute) {
-        let user = getUserData(); // The user making the request
+        let user = getUserData();
         return isSignedIn() && user.role == 'spoc' && user.spocStatus == 'approved' && user.institute == institute;
     }
 
-    // Is the user making the request a SPOC for the team being accessed?
     function isSpocForTeam(teamId) {
       let team = get(/databases/$(database)/documents/teams/$(teamId)).data;
       return isApprovedSpocForInstitute(team.institute);
     }
     
-    // Is the user making the request a SPOC for the user being written to?
-    function isSpocForUser(userId) {
-        // Get the document of the user being written to, not the requester
-        let targetUser = get(/databases/$(database)/documents/users/$(userId)).data;
-        return isApprovedSpocForInstitute(targetUser.institute);
+    function isUserInSpocsInstitute(userId) {
+      let user = get(/databases/$(database)/documents/users/$(userId)).data;
+      return isApprovedSpocForInstitute(user.institute);
     }
+    
 
     // ===== COLLECTION RULES =====
 
     // Users Collection
     match /users/{userId} {
-      // Admins can read any profile. Users can read their own profile.
-      // SPOCs can read any user profile from their institute.
-      allow read: if isAdmin() || isOwner(userId) || isSpocForUser(userId);
+      // Admins can read any profile. SPOCs can read profiles of users in their institute. Users can read their own.
+      allow read: if isAdmin() || isOwner(userId) || isUserInSpocsInstitute(userId);
       
-      // Admins can write to any profile. Users can write to their own profile.
-      // A SPOC can write to a user's profile if they are from the same institute.
-      allow write: if isAdmin() || isOwner(userId) || isSpocForUser(userId);
+      // Admins can update any profile. Users can update their own. SPOCs can update users in their institute.
+      allow update: if isAdmin() || isOwner(userId) || isUserInSpocsInstitute(userId);
       
-      // Allow specific queries used by the application.
-      allow list: if isAdmin() || isSignedIn();
+      // Admins and SPOCs can delete users (SPOCs only within their institute)
+      allow delete: if isAdmin() || isUserInSpocsInstitute(userId);
+
+      // LIST allows for queries on the collection
+      allow list: if isAdmin(); // Admins can list all users
+      
+      // Allow users to query for their own profile document, needed for profile page
+      allow list: if isSignedIn() && request.query.limit == 1 && request.query.wheres[0].fieldPath == 'uid' && request.query.wheres[0].op == '==' && request.query.wheres[0].value == request.auth.uid;
+      
+      // Allow user creation by anyone signed in (logic is handled in app)
+      allow create: if isSignedIn();
     }
     
     // Teams Collection
@@ -78,17 +82,14 @@ service cloud.firestore {
       
       // Admins and the institute's SPOC can delete a team.
       allow delete: if isAdmin() || isSpocForTeam(teamId);
-      
-      // Allow SPOCs to query teams by their institute.
-      allow list: if isApprovedSpocForInstitute(request.query.filters[0].value);
     }
 
     // Team Invites Collection (for permanent join links)
     match /teamInvites/{inviteId} {
         // Any signed-in user can read an invite to get team details.
-        allow read: if true;
-        // Team leaders and SPOCs can create their own team's invite. Admins can manage any.
-        allow write: if isAdmin() || isTeamLeader(request.resource.data.teamId) || isSpocForTeam(request.resource.data.teamId);
+        allow read: if isSignedIn();
+        // Team leaders can create/write their own team's invite. Admins can manage any.
+        allow write: if isAdmin() || (isTeamLeader(request.resource.data.teamId) && isOwner(get(/databases/$(database)/documents/teams/$(request.resource.data.teamId)).data.leader.uid));
     }
     
     // Problem Statements Collection
@@ -117,12 +118,12 @@ service cloud.firestore {
 
     // Notifications Collection (for team join/invite notifications)
     match /notifications/{notificationId} {
-      // Users can only read/write notifications intended for them.
-      allow get, update, delete: if isOwner(resource.data.recipientUid);
-      // Creating a notification is handled by backend flows, but rule requires user to be signed in.
-      allow create: if isSignedIn();
-      // Allow querying for notifications by recipientUid
-      allow list: if request.query.filters[0].value == request.auth.uid;
+        // Users can only read/write notifications intended for them.
+        allow read, update, delete: if isOwner(get(/databases/$(database)/documents/notifications/$(notificationId)).data.recipientUid);
+        // Creating a notification is handled by backend flows, but rule requires user to be signed in.
+        allow create: if isSignedIn();
+        // Allow user to query for their own notifications
+        allow list: if isSignedIn() && request.query.wheres[0].fieldPath == 'recipientUid' && request.query.wheres[0].op == '==' && request.query.wheres[0].value == request.auth.uid;
     }
     
     // Healthchecks Collection (for system health check tool)
