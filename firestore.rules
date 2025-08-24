@@ -5,7 +5,6 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     // ===== HELPER FUNCTIONS =====
-
     function isSignedIn() {
       return request.auth != null;
     }
@@ -41,9 +40,9 @@ service cloud.firestore {
       return isApprovedSpocForInstitute(team.institute);
     }
     
-    function isUserBeingRemovedFromTeamBySpoc(userId) {
+    // Checks if the user being modified belongs to the SPOC's institute.
+    function isSpocOfUser(userId) {
       let user = get(/databases/$(database)/documents/users/$(userId)).data;
-      // Allow if the requesting user is the SPOC for the user's institute
       return isApprovedSpocForInstitute(user.institute);
     }
 
@@ -51,15 +50,20 @@ service cloud.firestore {
 
     // Users Collection
     match /users/{userId} {
-      // Admins can read any profile. Users can read their own profile.
-      allow read: if isAdmin() || isOwner(userId);
+      // Admins and SPOCs of the user's institute can read any profile in that institute. Users can read their own.
+      allow read: if isAdmin() || isOwner(userId) || isSpocOfUser(userId);
       
-      // Admins can write to any profile. Users can write to their own profile.
-      // SPOCs can update a user's `teamId` when removing them from a team.
-      allow write: if isAdmin() || isOwner(userId) || isUserBeingRemovedFromTeamBySpoc(userId);
+      // Admins can write to any profile. Users can write to their own profile. SPOCs can write to users in their institute.
+      allow write: if isAdmin() || isOwner(userId) || isSpocOfUser(userId);
       
-      // Allow specific queries for registration checks
-      allow list: if isSignedIn();
+      // Allow specific queries
+      allow list: if 
+        // Admins can list all users, or query by role, institute, etc.
+        isAdmin() ||
+        // SPOCs can query for users from their own institute
+        (isSignedIn() && getUserData().role == 'spoc' && request.query.resource.data.institute == getUserData().institute) ||
+        // Any authenticated user can query for a user by their enrollment number (for profile pages) or email (for checking invites)
+        (isSignedIn() && (request.query.keys.hasAny(['enrollmentNumber', 'email', 'institute', 'role'])));
     }
     
     // Teams Collection
@@ -75,21 +79,25 @@ service cloud.firestore {
       
       // Admins and the institute's SPOC can delete a team.
       allow delete: if isAdmin() || isSpocForTeam(teamId);
+      
+      // Allow listing teams by institute (for SPOCs/Admins) or category (Admins).
+      allow list: if isAdmin() || (isSignedIn() && getUserData().role == 'spoc' && request.query.resource.data.institute == getUserData().institute);
     }
 
     // Team Invites Collection (for permanent join links)
     match /teamInvites/{inviteId} {
         // Any signed-in user can read an invite to get team details.
-        allow read: if true;
+        allow read: if isSignedIn();
         // Team leaders can create/write their own team's invite. Admins can manage any.
-        // SPOCs can also create links for teams in their institute.
-        allow write: if isAdmin() || isTeamLeader(request.resource.data.teamId) || isSpocForTeam(request.resource.data.teamId);
+        allow write: if isAdmin() || isTeamLeader(request.resource.data.teamId);
+        // Allow querying by teamId
+        allow list: if isSignedIn();
     }
     
     // Problem Statements Collection
     match /problemStatements/{psId} {
       // Any signed-in user can read problem statements.
-      allow read: if isSignedIn();
+      allow read, list: if isSignedIn();
       // Only admins can create, update, or delete problem statements.
       allow write: if isAdmin();
     }
@@ -105,7 +113,7 @@ service cloud.firestore {
     // Announcements Collection
     match /announcements/{announcementId} {
       // Publicly readable for landing page and dashboards.
-      allow read: if true;
+      allow read, list: if true;
       // Only admins can post or delete announcements.
       allow write: if isAdmin();
     }
@@ -113,9 +121,11 @@ service cloud.firestore {
     // Notifications Collection (for team join/invite notifications)
     match /notifications/{notificationId} {
       // Users can only read/write notifications intended for them.
-      allow read, write: if isOwner(resource.data.recipientUid);
+      allow read, write: if isOwner(request.resource.data.recipientUid);
       // Creating a notification is handled by backend flows, but rule requires user to be signed in.
       allow create: if isSignedIn();
+      // Allow user to list their own notifications
+      allow list: if isSignedIn() && request.query.resource.data.recipientUid == request.auth.uid;
     }
     
     // Healthchecks Collection (for system health check tool)
