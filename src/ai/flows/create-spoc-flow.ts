@@ -127,6 +127,7 @@ const createSpocFlow = ai.defineFlow(
         email: input.email,
         institute: input.institute,
         contactNumber: input.contactNumber,
+        gender: input.gender,
         department: 'N/A', // Department not needed for SPOC
         role: 'spoc',
         passwordChanged: false, // User must change this password

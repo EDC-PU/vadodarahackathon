@@ -216,6 +216,7 @@ export const CreateSpocInputSchema = z.object({
   email: z.string().email().describe('Email address for the SPOC account.'),
   institute: z.string().describe('The institute the SPOC belongs to.'),
   contactNumber: z.string().describe('The contact number of the SPOC.'),
+  gender: z.enum(["Male", "Female", "Other"]).describe('The gender of the SPOC.'),
 });
 export type CreateSpocInput = z.infer<typeof CreateSpocInputSchema>;
 

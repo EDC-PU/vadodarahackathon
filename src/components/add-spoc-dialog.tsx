@@ -22,6 +22,7 @@ import { useState } from "react";
 import { Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { createSpoc, CreateSpocInput } from "@/ai/flows/create-spoc-flow";
+import { RadioGroup, RadioGroupItem } from "./ui/radio-group";
 
 interface AddSpocDialogProps {
   isOpen: boolean;
@@ -37,6 +38,7 @@ const spocSchema = z.object({
   ),
   institute: z.string().min(1, "Please select an institute."),
   contactNumber: z.string().regex(/^\d{10}$/, "Please enter a valid 10-digit phone number."),
+  gender: z.enum(["Male", "Female", "Other"], { required_error: "Please select a gender." }),
 });
 
 export function AddSpocDialog({ isOpen, onOpenChange, onSpocAdded }: AddSpocDialogProps) {
@@ -50,6 +52,7 @@ export function AddSpocDialog({ isOpen, onOpenChange, onSpocAdded }: AddSpocDial
       email: "",
       institute: "",
       contactNumber: "",
+      gender: undefined,
     },
   });
 
@@ -152,6 +155,42 @@ export function AddSpocDialog({ isOpen, onOpenChange, onSpocAdded }: AddSpocDial
                   <FormLabel>Contact Number</FormLabel>
                   <FormControl>
                     <Input placeholder="9876543210" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="gender"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Gender</FormLabel>
+                  <FormControl>
+                    <RadioGroup
+                      onValueChange={field.onChange}
+                      value={field.value}
+                      className="flex items-center space-x-4 pt-2"
+                    >
+                      <FormItem className="flex items-center space-x-2 space-y-0">
+                        <FormControl>
+                          <RadioGroupItem value="Male" />
+                        </FormControl>
+                        <FormLabel className="font-normal">Male</FormLabel>
+                      </FormItem>
+                      <FormItem className="flex items-center space-x-2 space-y-0">
+                        <FormControl>
+                          <RadioGroupItem value="Female" />
+                        </FormControl>
+                        <FormLabel className="font-normal">Female</FormLabel>
+                      </FormItem>
+                      <FormItem className="flex items-center space-x-2 space-y-0">
+                        <FormControl>
+                          <RadioGroupItem value="Other" />
+                        </FormControl>
+                        <FormLabel className="font-normal">Other</FormLabel>
+                      </FormItem>
+                    </RadioGroup>
                   </FormControl>
                   <FormMessage />
                 </FormItem>
