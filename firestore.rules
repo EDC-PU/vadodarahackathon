@@ -3,123 +3,109 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // ===== HELPER FUNCTIONS =====
-
+    // Helper functions to check user roles and ownership
     function isSignedIn() {
       return request.auth != null;
     }
 
-    function isOwner(userId) {
-      return request.auth.uid == userId;
+    function isUser(uid) {
+      return isSignedIn() && request.auth.uid == uid;
     }
-
-    function getUserData() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    
+    function getRole(uid) {
+        return get(/databases/$(database)/documents/users/$(uid)).data.role;
     }
 
     function isAdmin() {
-      return isSignedIn() && getUserData().role == 'admin';
+      return isSignedIn() && getRole(request.auth.uid) == 'admin';
     }
 
-    function isTeamMember(teamId) {
-      return isSignedIn() && getUserData().teamId == teamId;
+    function isSpoc() {
+        return isSignedIn() && getRole(request.auth.uid) == 'spoc';
     }
     
-    function isTeamLeader(teamId) {
-      let team = get(/databases/$(database)/documents/teams/$(teamId)).data;
-      return isSignedIn() && request.auth.uid == team.leader.uid;
-    }
-
-    function isApprovedSpocForInstitute(institute) {
-        let user = getUserData();
-        return isSignedIn() && user.role == 'spoc' && user.spocStatus == 'approved' && user.institute == institute;
-    }
-
-    function isSpocForTeam(teamId) {
-      let team = get(/databases/$(database)/documents/teams/$(teamId)).data;
-      return isApprovedSpocForInstitute(team.institute);
+    function isLeader() {
+        return isSignedIn() && getRole(request.auth.uid) == 'leader';
     }
     
-    function isUserBeingRemovedFromTeamBySpoc(userId) {
-      let user = get(/databases/$(database)/documents/users/$(userId)).data;
-      // Allow if the requesting user is the SPOC for the user's institute
-      return isApprovedSpocForInstitute(user.institute);
+    function getUserData(uid) {
+        return get(/databases/$(database)/documents/users/$(uid)).data;
     }
 
-    // ===== COLLECTION RULES =====
-
-    // Users Collection
+    // Users can be created by anyone (during signup)
+    // Users can read their own data. Admins can read/write any user.
+    // SPOCs can read users from their own institute.
+    // Users can update their own data.
     match /users/{userId} {
-      // Admins can read any profile. Users can read their own profile.
-      allow read: if isAdmin() || isOwner(userId);
-      
-      // Admins can write to any profile. Users can write to their own profile.
-      // SPOCs can update a user's `teamId` when removing them from a team.
-      allow write: if isAdmin() || isOwner(userId) || isUserBeingRemovedFromTeamBySpoc(userId);
-      
-      // Allow specific queries for registration checks
-      allow list: if isSignedIn();
+      allow read: if isSignedIn() && 
+                    (isUser(userId) || 
+                     isAdmin() || 
+                     (isSpoc() && getUserData(request.auth.uid).institute == resource.data.institute));
+      allow create: if true;
+      allow update: if isSignedIn() && (isUser(userId) || isAdmin() || (isSpoc() && getUserData(request.auth.uid).institute == resource.data.institute));
+      allow delete: if isAdmin();
     }
     
-    // Teams Collection
+    // Teams can be created by leaders (via flow).
+    // Read access is granted to team members, the SPOC of the institute, and admins.
+    // Write access is granted to the team leader, SPOC of the institute, and admins.
     match /teams/{teamId} {
-      // Admins, team members, and the institute's SPOC can read team data.
-      allow read: if isAdmin() || isTeamMember(teamId) || isSpocForTeam(teamId);
-      
-      // Any signed-in user can create a team. The flow ensures only leaders do this.
-      allow create: if isSignedIn();
-      
-      // Admins, team leaders, and the institute's SPOC can update team data.
-      allow update: if isAdmin() || isTeamLeader(teamId) || isSpocForTeam(teamId);
-      
-      // Admins and the institute's SPOC can delete a team.
-      allow delete: if isAdmin() || isSpocForTeam(teamId);
+        function isTeamMember() {
+            return isSignedIn() && (
+                resource.data.leader.uid == request.auth.uid ||
+                request.auth.uid in resource.data.members.map(m => m.uid)
+            );
+        }
+        
+        function isTeamSpoc() {
+            return isSpoc() && getUserData(request.auth.uid).institute == resource.data.institute;
+        }
+
+        allow read: if isSignedIn() && (isTeamMember() || isTeamSpoc() || isAdmin());
+        allow create, update: if isSignedIn() && (isLeader() && resource.data.leader.uid == request.auth.uid || isTeamSpoc() || isAdmin());
+        allow delete: if isSignedIn() && (isTeamSpoc() || isAdmin());
     }
 
-    // Team Invites Collection (for permanent join links)
+    // Public team invites can be read by anyone to get team details.
+    // They can only be created by leaders (via flow).
     match /teamInvites/{inviteId} {
-        // Any signed-in user can read an invite to get team details.
-        allow read: if isSignedIn();
-        // Team leaders can create/write their own team's invite. Admins can manage any.
-        allow write: if isAdmin() || isTeamLeader(request.resource.data.teamId);
-    }
-    
-    // Problem Statements Collection
-    match /problemStatements/{psId} {
-      // Any signed-in user can read problem statements.
-      allow read: if isSignedIn();
-      // Only admins can create, update, or delete problem statements.
-      allow write: if isAdmin();
-    }
-    
-    // Config Collection (for event settings like deadlines)
-    match /config/{configId} {
-        // Publicly readable for all users (e.g., to check registration deadline).
         allow read: if true;
-        // Only admins can change settings.
-        allow write: if isAdmin();
+        allow create: if isLeader();
+        allow delete: if isAdmin();
     }
     
-    // Announcements Collection
-    match /announcements/{announcementId} {
-      // Publicly readable for landing page and dashboards.
-      allow read: if true;
-      // Only admins can post or delete announcements.
-      allow write: if isAdmin();
+    // Notifications are private to the recipient.
+    match /notifications/{notificationId} {
+        allow read, update, delete: if isSignedIn() && request.auth.uid == resource.data.recipientUid;
+        allow create: if isSignedIn(); // Can be created by server-side flows for any user
+    }
+    
+    // Problem statements can be read by any signed-in user.
+    // They can only be created/edited/deleted by an admin.
+    match /problemStatements/{psId} {
+        allow read: if isSignedIn();
+        allow create, update, delete: if isAdmin();
     }
 
-    // Notifications Collection (for team join/invite notifications)
-    match /notifications/{notificationId} {
-      // Users can only read/write notifications intended for them.
-      allow read, write: if isOwner(request.resource.data.recipientUid);
-      // Creating a notification is handled by backend flows, but rule requires user to be signed in.
-      allow create: if isSignedIn();
+    // Public announcements can be read by anyone.
+    // Announcements for teams/spocs can be read by signed-in users.
+    // Only admins can create/delete announcements.
+    match /announcements/{announcementId} {
+        allow read: if resource.data.audience == 'all' || isSignedIn();
+        allow create, delete: if isAdmin();
     }
     
-    // Healthchecks Collection (for system health check tool)
-    match /healthchecks/{docId} {
-        // Only allow admins to read/write health check documents.
-        allow read, write: if isAdmin();
+    // Config can be read by anyone (for registration deadline).
+    // Can only be written by admins.
+    match /config/{configId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    
+    // Health check collection for system status checks.
+    // Should only be accessible by the admin backend.
+    match /healthchecks/{checkId} {
+        allow read, write, delete: if isAdmin();
     }
   }
 }
