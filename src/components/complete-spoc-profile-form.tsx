@@ -72,7 +72,6 @@ export function CompleteSpocProfileForm() {
     
     setIsLoading(true);
     try {
-        // Check if a SPOC for this institute already exists
         console.log(`Checking for existing SPOC for institute: ${values.institute}`);
         const spocQuery = query(
             collection(db, 'users'),
@@ -83,7 +82,6 @@ export function CompleteSpocProfileForm() {
         
         const existingSpocSnapshot = await getDocs(spocQuery);
         if (!existingSpocSnapshot.empty) {
-            // Check if the existing SPOC is not the current user
             const isDifferentUser = existingSpocSnapshot.docs.some(doc => doc.id !== user.uid);
             if (isDifferentUser) {
               const errorMessage = `An approved SPOC for ${values.institute} already exists.`;
@@ -100,11 +98,10 @@ export function CompleteSpocProfileForm() {
             name: values.name,
             institute: values.institute,
             contactNumber: values.contactNumber,
-            spocStatus: 'pending', // Set status to pending on profile completion
+            spocStatus: 'pending', 
         };
         await updateDoc(userDocRef, updatedProfileData);
 
-        // Notify admins that a SPOC is ready for approval
         await notifyAdminsOfSpocRequest({
             spocName: values.name,
             spocEmail: user.email,
