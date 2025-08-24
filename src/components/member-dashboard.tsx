@@ -2,7 +2,7 @@
 "use client";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { User, Users, Phone, Mail, FileText, Trophy, Calendar, Loader2, AlertCircle, Badge, ArrowUpDown } from "lucide-react";
+import { User, Users, Phone, Mail, FileText, Trophy, Calendar, Loader2, AlertCircle, ArrowUpDown, CheckCircle } from "lucide-react";
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { db } from "@/lib/firebase";
 import { doc, getDoc, onSnapshot, collection, query, where } from "firebase/firestore";
@@ -14,6 +14,7 @@ import { InvitationsSection } from "./invitations-section";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";
 import { Button } from "./ui/button";
 import Link from "next/link";
+import { Badge } from "./ui/badge";
 
 type SortKey = 'name' | 'role' | 'email' | 'contactNumber' | 'enrollmentNumber' | 'yearOfStudy' | 'semester';
 type SortDirection = 'asc' | 'desc';
@@ -149,6 +150,20 @@ export default function MemberDashboard() {
         </div>
     );
   }
+  
+  const teamValidation = {
+    memberCount: {
+        current: teamMembers.length,
+        required: 6,
+        isMet: teamMembers.length === 6,
+    },
+    femaleCount: {
+        current: teamMembers.filter(m => m.gender === "F").length,
+        required: 1,
+        isMet: teamMembers.filter(m => m.gender === "F").length >= 1,
+    },
+    isRegistered: teamMembers.length === 6 && teamMembers.filter(m => m.gender === "F").length >= 1,
+  }
 
   return (
     <div className="p-4 sm:p-6 lg:p-8">
@@ -165,125 +180,179 @@ export default function MemberDashboard() {
       
       {team ? (
         <>
-        <Card className="mb-8 w-full">
-            <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                    <Users/> Team Details: {team.name}
-                    {team.teamNumber && <Badge variant="secondary" className="ml-auto">{`Team No: ${team.teamNumber}`}</Badge>}
-                </CardTitle>
-                <CardDescription>Your current team roster from {team.institute}.</CardDescription>
-            </CardHeader>
-            <CardContent>
-                <Table>
-                    <TableHeader>
-                        <TableRow>
-                           <TableHead>
-                                <Button variant="ghost" onClick={() => requestSort('name')}>Name {getSortIndicator('name')}</Button>
-                            </TableHead>
-                            <TableHead>
-                                <Button variant="ghost" onClick={() => requestSort('role')}>Role {getSortIndicator('role')}</Button>
-                            </TableHead>
-                            <TableHead>
-                                <Button variant="ghost" onClick={() => requestSort('email')}>Email {getSortIndicator('email')}</Button>
-                            </TableHead>
-                            <TableHead>
-                                <Button variant="ghost" onClick={() => requestSort('contactNumber')}>Contact No. {getSortIndicator('contactNumber')}</Button>
-                            </TableHead>
-                            <TableHead>
-                                <Button variant="ghost" onClick={() => requestSort('enrollmentNumber')}>Enrollment No. {getSortIndicator('enrollmentNumber')}</Button>
-                            </TableHead>
-                            <TableHead>
-                                <Button variant="ghost" onClick={() => requestSort('yearOfStudy')}>Year {getSortIndicator('yearOfStudy')}</Button>
-                            </TableHead>
-                            <TableHead>
-                                <Button variant="ghost" onClick={() => requestSort('semester')}>Sem {getSortIndicator('semester')}</Button>
-                            </TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {sortedTeamMembers.length > 0 ? (
-                            sortedTeamMembers.map((member) => (
-                                <TableRow key={member.uid}>
-                                    <TableCell className="font-medium">{member.name}</TableCell>
-                                    <TableCell>
-                                        <Badge variant={member.role === 'leader' ? 'default' : 'secondary'}>
-                                            {member.role}
-                                        </Badge>
-                                    </TableCell>
-                                    <TableCell>{member.email}</TableCell>
-                                    <TableCell>{member.contactNumber || 'N/A'}</TableCell>
-                                    <TableCell>{member.enrollmentNumber || 'N/A'}</TableCell>
-                                    <TableCell>{member.yearOfStudy || 'N/A'}</TableCell>
-                                    <TableCell>{member.semester || 'N/A'}</TableCell>
-                                </TableRow>
-                            ))
-                         ) : (
+        <div className="grid gap-8 lg:grid-cols-3">
+          <div className="lg:col-span-2 grid grid-cols-1 gap-8">
+             <Card className="w-full">
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                        <Users/> Team Details: {team.name}
+                        {team.teamNumber && <Badge variant="secondary" className="ml-auto">{`Team No: ${team.teamNumber}`}</Badge>}
+                    </CardTitle>
+                    <CardDescription>Your current team roster from {team.institute}.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <Table>
+                        <TableHeader>
                             <TableRow>
-                                <TableCell colSpan={7} className="text-center text-muted-foreground h-24">
-                                    {loading ? <Loader2 className="h-6 w-6 animate-spin mx-auto"/> : 'No members found.'}
-                                </TableCell>
+                               <TableHead>
+                                    <Button variant="ghost" onClick={() => requestSort('name')}>Name {getSortIndicator('name')}</Button>
+                                </TableHead>
+                                <TableHead>
+                                    <Button variant="ghost" onClick={() => requestSort('role')}>Role {getSortIndicator('role')}</Button>
+                                </TableHead>
+                                <TableHead>
+                                    <Button variant="ghost" onClick={() => requestSort('email')}>Email {getSortIndicator('email')}</Button>
+                                </TableHead>
+                                <TableHead>
+                                    <Button variant="ghost" onClick={() => requestSort('contactNumber')}>Contact No. {getSortIndicator('contactNumber')}</Button>
+                                </TableHead>
+                                <TableHead>
+                                    <Button variant="ghost" onClick={() => requestSort('enrollmentNumber')}>Enrollment No. {getSortIndicator('enrollmentNumber')}</Button>
+                                </TableHead>
+                                <TableHead>
+                                    <Button variant="ghost" onClick={() => requestSort('yearOfStudy')}>Year {getSortIndicator('yearOfStudy')}</Button>
+                                </TableHead>
+                                <TableHead>
+                                    <Button variant="ghost" onClick={() => requestSort('semester')}>Sem {getSortIndicator('semester')}</Button>
+                                </TableHead>
                             </TableRow>
-                         )
-                       }
-                    </TableBody>
-                </Table>
-            </CardContent>
-         </Card>
+                        </TableHeader>
+                        <TableBody>
+                            {sortedTeamMembers.length > 0 ? (
+                                sortedTeamMembers.map((member) => (
+                                    <TableRow key={member.uid}>
+                                        <TableCell className="font-medium">{member.name}</TableCell>
+                                        <TableCell>
+                                            <Badge variant={member.role === 'leader' ? 'default' : 'secondary'}>
+                                                {member.role}
+                                            </Badge>
+                                        </TableCell>
+                                        <TableCell>{member.email}</TableCell>
+                                        <TableCell>{member.contactNumber || 'N/A'}</TableCell>
+                                        <TableCell>{member.enrollmentNumber || 'N/A'}</TableCell>
+                                        <TableCell>{member.yearOfStudy || 'N/A'}</TableCell>
+                                        <TableCell>{member.semester || 'N/A'}</TableCell>
+                                    </TableRow>
+                                ))
+                             ) : (
+                                <TableRow>
+                                    <TableCell colSpan={7} className="text-center text-muted-foreground h-24">
+                                        {loading ? <Loader2 className="h-6 w-6 animate-spin mx-auto"/> : 'No members found.'}
+                                    </TableCell>
+                                </TableRow>
+                             )
+                           }
+                        </TableBody>
+                    </Table>
+                </CardContent>
+             </Card>
+             <AnnouncementsSection audience="teams_and_all" />
+          </div>
 
-        <div className="grid gap-8 lg:grid-cols-2">
-            <AnnouncementsSection audience="teams_and_all" />
-            <div className="space-y-8">
-                <Card>
-                    <CardHeader>
-                        <CardTitle className="flex items-center gap-2"><FileText/> Institute SPOC Details</CardTitle>
-                        <CardDescription>Your point of contact for any queries.</CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-3">
-                        {spoc ? (
-                            <>
-                                <div className="flex items-center gap-3">
-                                    <User className="h-5 w-5 text-primary"/>
-                                    <span className="font-medium">{spoc.name}</span>
-                                </div>
-                                <div className="flex items-center gap-3">
-                                    <Mail className="h-5 w-5 text-primary"/>
-                                    <a href={`mailto:${spoc.email}`} className="text-muted-foreground hover:text-primary">{spoc.email}</a>
-                                </div>
-                                <div className="flex items-center gap-3">
-                                    <Phone className="h-5 w-5 text-primary"/>
-                                    <a href={`tel:${spoc.contactNumber}`} className="text-muted-foreground hover:text-primary">{spoc.contactNumber}</a>
-                                </div>
-                            </>
-                        ) : (
-                            <p className="text-muted-foreground">SPOC details are not available yet.</p>
-                        )}
-                    </CardContent>
-                </Card>
+          <div className="lg:col-span-1 space-y-8">
+            <Card>
+                <CardHeader>
+                    <CardTitle>Team Status</CardTitle>
+                    <CardDescription>Check if your team meets the hackathon requirements.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                    {teamValidation.isRegistered ? (
+                         <Alert variant="default" className="border-green-500">
+                            <CheckCircle className="h-4 w-4 text-green-500"/>
+                            <AlertTitle>Team is Officially Registered!</AlertTitle>
+                            <AlertDescription>Your team meets all the registration criteria. Good luck!</AlertDescription>
+                        </Alert>
+                    ) : (
+                        <Alert variant="destructive">
+                            <AlertCircle className="h-4 w-4" />
+                            <AlertTitle>Registration Incomplete</AlertTitle>
+                            <AlertDescription>Your team does not yet meet all the criteria for official registration. See details below.</AlertDescription>
+                        </Alert>
+                    )}
+                    
+                    <hr className="border-border/50" />
 
-                 <Card>
-                    <CardHeader>
-                        <CardTitle>Hackathon Information</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-3">
-                        <div className="flex items-start gap-3">
-                            <Calendar className="h-5 w-5 text-primary mt-1" />
-                            <div>
-                              <p><strong>Intra-Institute Round:</strong> 3rd, 4th & 5th September 2025</p>
-                              <p><strong>Grand Finale:</strong> 6th September 2025</p>
+                    {teamValidation.memberCount.isMet ? (
+                        <Alert variant="default" className="border-green-500/50 bg-transparent text-foreground">
+                            <CheckCircle className="h-4 w-4 text-green-500"/>
+                            <AlertTitle>Team Size Correct</AlertTitle>
+                            <AlertDescription>You have 6 members in your team. Great job!</AlertDescription>
+                        </Alert>
+                    ) : (
+                        <Alert variant="destructive" className="bg-transparent text-foreground">
+                            <AlertCircle className="h-4 w-4 text-destructive" />
+                            <AlertTitle>Incomplete Team</AlertTitle>
+                            <AlertDescription>Your team needs {teamValidation.memberCount.required - teamValidation.memberCount.current} more member(s) to reach the required 6.</AlertDescription>
+                        </Alert>
+                    )}
+
+                    {teamValidation.femaleCount.isMet ? (
+                        <Alert variant="default" className="border-green-500/50 bg-transparent text-foreground">
+                            <CheckCircle className="h-4 w-4 text-green-500"/>
+                            <AlertTitle>Female Representation Met</AlertTitle>
+                            <AlertDescription>Your team includes at least one female member. Thank you!</AlertDescription>
+                        </Alert>
+                    ) : (
+                         <Alert variant="destructive" className="bg-transparent text-foreground">
+                            <AlertCircle className="h-4 w-4 text-destructive"/>
+                            <AlertTitle>Female Representation Required</AlertTitle>
+                            <AlertDescription>Your team must include at least one female member.</AlertDescription>
+                        </Alert>
+                    )}
+                </CardContent>
+            </Card>
+
+            <Card>
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2"><FileText/> Institute SPOC Details</CardTitle>
+                    <CardDescription>Your point of contact for any queries.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                    {spoc ? (
+                        <>
+                            <div className="flex items-center gap-3">
+                                <User className="h-5 w-5 text-primary"/>
+                                <span className="font-medium">{spoc.name}</span>
                             </div>
+                            <div className="flex items-center gap-3">
+                                <Mail className="h-5 w-5 text-primary"/>
+                                <a href={`mailto:${spoc.email}`} className="text-muted-foreground hover:text-primary">{spoc.email}</a>
+                            </div>
+                            <div className="flex items-center gap-3">
+                                <Phone className="h-5 w-5 text-primary"/>
+                                <a href={`tel:${spoc.contactNumber}`} className="text-muted-foreground hover:text-primary">{spoc.contactNumber}</a>
+                            </div>
+                        </>
+                    ) : (
+                        <p className="text-muted-foreground">SPOC details are not available yet.</p>
+                    )}
+                </CardContent>
+            </Card>
+
+             <Card>
+                <CardHeader>
+                    <CardTitle>Hackathon Information</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                    <div className="flex items-start gap-3">
+                        <Calendar className="h-5 w-5 text-primary mt-1" />
+                        <div>
+                          <p><strong>Intra-Institute Round:</strong> 3rd, 4th & 5th September, 2025</p>
+                          <p><strong>Grand Finale:</strong> 6th September, 2025</p>
                         </div>
-                        <div className="flex items-center gap-3">
-                            <Trophy className="h-5 w-5 text-primary"/>
-                            <p>
-                                <strong>Rewards:</strong>{" "}
-                                <a href="https://vadodarahackathon.pierc.org" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
-                                    Check the homepage for details.
-                                </a>
-                            </p>
-                        </div>
-                    </CardContent>
-                </Card>
-            </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                        <Trophy className="h-5 w-5 text-primary"/>
+                        <p>
+                            <strong>Rewards:</strong>{" "}
+                            <a href="https://vadodarahackathon.pierc.org" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                                Check the homepage for details.
+                            </a>
+                        </p>
+                    </div>
+                </CardContent>
+            </Card>
+          </div>
         </div>
         </>
       ) : !user.teamId ? (
