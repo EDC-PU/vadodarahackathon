@@ -39,7 +39,7 @@ const formSchema = z.object({
 });
 
 export function CompleteSpocProfileForm() {
-  const { user, loading: authLoading, redirectToDashboard, handleSignOut } = useAuth();
+  const { user, loading: authLoading, handleSignOut } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
