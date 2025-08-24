@@ -137,15 +137,14 @@ export function useAuth() {
      }
      
      // 2. SPOC status check
-     if (user.role === 'spoc' && user.spocStatus === 'pending' && pathname !== '/complete-spoc-profile') {
-        console.log("Redirect Check: SPOC is pending approval. Signing out.");
-        handleSignOut();
-        toast({
-            title: "Pending Approval",
-            description: "Your SPOC account is awaiting admin approval. You will be notified via email once it's approved.",
-            variant: "default",
-            duration: 10000,
-        });
+     if (user.role === 'spoc' && user.spocStatus === 'pending') {
+        // A pending SPOC needs to complete their profile.
+        // If they have completed it, they will see a "pending" message on the form page.
+        // If not, they need to fill it out. Don't sign them out.
+        if (pathname !== '/complete-spoc-profile') {
+             console.log("Redirect Check: SPOC is pending approval, redirecting to complete profile page.");
+             performRedirect('/complete-spoc-profile');
+        }
         return;
      }
      
