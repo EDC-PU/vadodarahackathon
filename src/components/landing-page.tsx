@@ -434,7 +434,7 @@ export default function LandingPage({ spocDetails, announcements }: LandingPageP
                 <div className="text-center">
                     <SectionTitle>Gallery</SectionTitle>
                 </div>
-                 <Carousel className="w-full mt-12" opts={{ loop: true }} plugins={[autoplayPlugin.current]}>
+                 <Carousel className="w-[80vw] mx-auto mt-12" opts={{ loop: true }} plugins={[autoplayPlugin.current]}>
                     <CarouselContent>
                     {galleryImages.map((src, index) => (
                         <CarouselItem key={index} className="md:basis-1/2 lg:basis-1/3">
