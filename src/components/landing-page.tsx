@@ -44,7 +44,7 @@ const AnimatedSection = ({ children, className }: { children: React.ReactNode, c
       ref={ref}
       className={cn(
         'py-20 md:py-28',
-        'opacity-0 translate-y-[30px] transition-opacity duration-1000 ease-out transform motion-reduce:opacity-100 motion-reduce:translate-y-0',
+        'opacity-0 translate-y-[30px] transition-all duration-1000 ease-out transform motion-reduce:opacity-100 motion-reduce:translate-y-0',
         isInView ? 'opacity-100 translate-y-0' : '',
         className
       )}
@@ -114,7 +114,7 @@ const HeroSection = () => {
                         return <span key={index}>{word} </span>;
                     })}
                 </motion.h2>
-
+                
                 <motion.div 
                     variants={itemVariants} 
                     className="my-8"
@@ -123,7 +123,7 @@ const HeroSection = () => {
                     transition={{ delay: 0.5, duration: 0.8, type: "spring" }}
                 >
                     <Image
-                        src="https://mnaignsupdlayf72.public.blob.vercel-storage.com/vhlogosvg.svg"
+                        src="/vhlogosvg.svg"
                         alt="Vadodara Hackathon 6.0 Logo"
                         width={600}
                         height={120}
@@ -468,3 +468,5 @@ export default function LandingPage({ spocDetails, announcements }: LandingPageP
     </div>
   );
 }
+
+    
