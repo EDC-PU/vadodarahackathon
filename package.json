@@ -43,6 +43,7 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "date-fns": "^3.6.0",
+    "docxtemplater": "^3.47.2",
     "dotenv": "^16.5.0",
     "embla-carousel-autoplay": "^8.6.0",
     "embla-carousel-react": "^8.6.0",
@@ -55,6 +56,7 @@
     "next": "15.3.3",
     "nodemailer": "^6.9.14",
     "patch-package": "^8.0.0",
+    "pizzip": "^3.1.7",
     "react": "^18.3.1",
     "react-day-picker": "^8.10.1",
     "react-dom": "^18.3.1",
@@ -68,6 +70,7 @@
   "devDependencies": {
     "@types/node": "^20",
     "@types/nodemailer": "^6.4.15",
+    "@types/pizzip": "^3.0.5",
     "@types/react": "^18",
     "@types/react-dom": "^18",
     "genkit-cli": "^1.17.0",
