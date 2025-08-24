@@ -29,6 +29,7 @@ import {
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";
 import { getTeamInviteLink } from "@/ai/flows/get-team-invite-link-flow";
 import { Badge } from "./ui/badge";
+import { ScrollArea } from "./ui/scroll-area";
 
 type SortKey = 'name' | 'role' | 'email' | 'contactNumber' | 'enrollmentNumber' | 'yearOfStudy' | 'semester';
 type SortDirection = 'asc' | 'desc';
@@ -333,6 +334,7 @@ export default function LeaderDashboard() {
                 <CardDescription>Your current team roster. Invite members using the link below.</CardDescription>
             </CardHeader>
             <CardContent>
+              <ScrollArea className="w-full whitespace-nowrap">
                 <Table>
                     <TableHeader>
                         <TableRow>
@@ -427,6 +429,7 @@ export default function LeaderDashboard() {
                        }
                     </TableBody>
                 </Table>
+                </ScrollArea>
             </CardContent>
          </Card>
 
