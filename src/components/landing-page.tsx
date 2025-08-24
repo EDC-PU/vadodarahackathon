@@ -145,22 +145,14 @@ const HeroSection = () => {
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ delay: 0.5, duration: 0.8, type: "spring" }}
                 >
-                     <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={isInView ? { opacity: 1 } : {}}
-                        transition={{ delay: 0.8, duration: 1 }}
-                        className={isInView ? 'glitch' : ''}
-                        data-text="Vadodara Hackathon 6.0"
-                    >
-                        <Image
-                            src="/vhlogosvg.svg"
-                            alt="Vadodara Hackathon 6.0 Logo"
-                            width={600}
-                            height={120}
-                            className="max-w-xl w-full h-auto drop-shadow-[0_0_10px_hsl(var(--brand-orange)/0.6)]"
-                            priority
-                        />
-                    </motion.div>
+                    <Image
+                        src="/vhlogosvg.svg"
+                        alt="Vadodara Hackathon 6.0 Logo"
+                        width={600}
+                        height={120}
+                        className="max-w-xl w-full h-auto drop-shadow-[0_0_10px_hsl(var(--brand-orange)/0.6)]"
+                        priority
+                    />
                 </motion.div>
                 
                 <motion.div 
