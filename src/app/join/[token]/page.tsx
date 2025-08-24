@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
 import { addMemberToTeam } from "@/ai/flows/add-member-to-team-flow";
 import { useToast } from "@/hooks/use-toast";
-import { doc, setDoc, collection, getDocs, getDoc } from "firebase/firestore";
+import { doc, setDoc, collection, getDocs, getDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
 interface TeamInfo {
@@ -105,14 +105,13 @@ function JoinPageContent() {
                         const leaderId = teamDoc.data()?.leader.uid;
 
                         if(leaderId) {
-                            const notificationsCollectionRef = collection(db, 'notifications');
-                            const newNotificationRef = doc(notificationsCollectionRef);
+                            const newNotificationRef = doc(collection(db, 'notifications'));
                             await setDoc(newNotificationRef, {
                                 recipientUid: leaderId,
                                 title: "New Member Joined!",
                                 message: `${user.name} has joined your team, "${currentTeamInfo.teamName}".`,
                                 read: false,
-                                createdAt: new Date(),
+                                createdAt: serverTimestamp(),
                                 link: '/leader'
                             });
                         }
@@ -206,3 +205,5 @@ export default function JoinPage() {
     </div>
   );
 }
+
+    

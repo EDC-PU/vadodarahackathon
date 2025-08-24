@@ -39,7 +39,10 @@ function NotificationsSection() {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        if (!user) return;
+        if (!user) {
+            setLoading(false);
+            return;
+        }
 
         const q = query(
             collection(db, "notifications"),
@@ -51,6 +54,9 @@ function NotificationsSection() {
         const unsubscribe = onSnapshot(q, (snapshot) => {
             const notifs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Notification));
             setNotifications(notifs);
+            setLoading(false);
+        }, (error) => {
+            console.error("Error fetching notifications:", error);
             setLoading(false);
         });
 
@@ -515,5 +521,7 @@ export default function LeaderDashboard() {
     </div>
   );
 }
+
+    
 
     
