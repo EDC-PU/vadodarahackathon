@@ -53,6 +53,7 @@ const navItems = {
   ],
   spoc: [
     { href: "/spoc", icon: <LayoutDashboard />, label: "Dashboard" },
+    { href: "/spoc/teams", icon: <Users />, label: "All Teams" },
   ],
   leader: [
     { href: "/leader", icon: <LayoutDashboard />, label: "Team Dashboard" },
