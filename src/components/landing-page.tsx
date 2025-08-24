@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import Link from 'next/link';
@@ -76,6 +77,33 @@ const HeroSection = () => {
         hidden: { y: 20, opacity: 0 },
         visible: { y: 0, opacity: 1, transition: { duration: 0.5 } },
     };
+    
+    const svgVariants = {
+        hidden: {},
+        visible: {
+            transition: {
+                staggerChildren: 0.05,
+            },
+        },
+    };
+
+    const pathVariants = {
+        hidden: {
+            pathLength: 0,
+            fill: "rgba(255, 255, 255, 0)",
+        },
+        visible: {
+            pathLength: 1,
+            fill: "rgba(255, 255, 255, 1)",
+            transition: {
+                pathLength: { type: "spring", duration: 1.5, bounce: 0 },
+                fill: {
+                    delay: 1.2,
+                    duration: 0.8,
+                },
+            },
+        },
+    };
 
     return (
         <section id="home" className="relative min-h-[90vh] py-20 md:py-32 flex items-center justify-center overflow-hidden bg-brand-black">
@@ -115,14 +143,107 @@ const HeroSection = () => {
                 </motion.h2>
 
                 <motion.div variants={itemVariants} className="my-8">
-                     <Image
-                        src="https://mnaignsupdlayf72.public.blob.vercel-storage.com/vhlogosvg.svg"
-                        alt="Vadodara Hackathon 6.0 Logo"
-                        width={600}
-                        height={120}
-                        priority
-                        className="max-w-xl w-full h-auto drop-shadow-[0_0_15px_hsl(var(--brand-orange)/0.5)]"
-                     />
+                     <motion.svg 
+                        width="100%" 
+                        height="auto" 
+                        viewBox="0 0 655 121" 
+                        className="max-w-xl w-full h-auto drop-shadow-[0_0_10px_hsl(var(--brand-orange)/0.6)]"
+                        variants={svgVariants}
+                        initial="hidden"
+                        animate="visible"
+                    >
+                         <defs>
+                            <linearGradient id="shimmer" x1="0%" y1="0%" x2="100%" y2="0%">
+                                <stop offset="0%" style={{stopColor: 'hsl(var(--brand-yellow))'}} />
+                                <stop offset="50%" style={{stopColor: 'hsl(var(--brand-orange))'}} />
+                                <stop offset="100%" style={{stopColor: 'hsl(var(--brand-red))'}} />
+                            </linearGradient>
+                        </defs>
+                        <motion.path 
+                            d="M87.14 84.34V37.24H92.24V58.44L105.74 37.24H111.44L96.84 59.84L111.84 84.34H106.14L94.74 64.94L92.24 67.54V84.34H87.14Z" 
+                            stroke="url(#shimmer)" strokeWidth="0.5" variants={pathVariants}
+                        />
+                        <motion.path 
+                            d="M117.84 84.34V37.24H141.54V42.34H122.94V57.64H139.54V62.74H122.94V84.34H117.84Z" 
+                            stroke="url(#shimmer)" strokeWidth="0.5" variants={pathVariants}
+                        />
+                        <motion.path 
+                            d="M148.14 84.34V37.24H153.24V84.34H148.14Z" 
+                            stroke="url(#shimmer)" strokeWidth="0.5" variants={pathVariants}
+                        />
+                        <motion.path 
+                            d="M160.04 84.34V37.24H165.14V84.34H160.04Z" 
+                            stroke="url(#shimmer)" strokeWidth="0.5" variants={pathVariants}
+                        />
+                        <motion.path 
+                            d="M201.24 73.34L204.14 84.34H198.84L190.14 59.84L181.84 84.34H176.54L179.44 73.34H168.04V37.24H212.84V73.34H201.24ZM188.04 55.44L183.94 42.34H173.14V73.34H174.54L184.24 42.64L190.14 55.44H188.04Z" 
+                            stroke="url(#shimmer)" strokeWidth="0.5" variants={pathVariants}
+                        />
+                        <motion.path 
+                            d="M219.44 84.34V37.24H224.54V84.34H219.44Z" 
+                            stroke="url(#shimmer)" strokeWidth="0.5" variants={pathVariants}
+                        />
+                        <motion.path 
+                            d="M246.34 85.34C240.34 85.34 235.34 83.84 231.34 80.84L233.84 76.44C237.04 78.84 241.14 80.04 245.14 80.04C248.14 80.04 250.34 79.24 251.74 77.64C253.14 76.04 253.84 74.04 253.84 71.64V70.04C250.64 73.24 246.24 74.84 240.64 74.84C234.04 74.84 228.84 72.54 225.04 68.04C221.24 63.44 219.34 57.64 219.34 50.54C219.34 43.44 221.24 37.64 225.04 33.14C228.84 28.64 234.04 26.34 240.64 26.34C246.24 26.34 250.64 27.94 253.84 31.14V26.84H258.94V71.64C258.94 76.04 257.94 79.44 255.94 81.84C253.94 84.24 250.64 85.34 246.34 85.34ZM244.74 69.74C248.54 69.74 251.64 68.24 254.04 65.24C256.54 62.24 257.74 58.14 257.74 52.84C257.74 47.54 256.54 43.44 254.04 40.54C251.64 37.64 248.54 36.14 244.74 36.14C240.94 36.14 237.84 37.64 235.44 40.54C233.04 43.44 231.84 47.54 231.84 52.84C231.84 58.14 233.04 62.24 235.44 65.24C237.84 68.24 240.94 69.74 244.74 69.74Z" 
+                            stroke="url(#shimmer)" strokeWidth="0.5" variants={pathVariants}
+                        />
+                        <motion.path 
+                            d="M283.65 84.34L266.05 37.24H272.25L285.35 74.24L298.45 37.24H304.65L287.05 84.34H283.65Z" 
+                            stroke="url(#shimmer)" strokeWidth="0.5" variants={pathVariants}
+                        />
+                        <motion.path 
+                            d="M336.56 85.34C329.86 85.34 324.46 83.44 320.36 79.64L323.46 75.54C326.66 78.44 330.96 79.94 336.26 79.94C342.36 79.94 345.36 77.84 345.36 73.64C345.36 71.94 344.86 70.54 343.86 69.44C342.86 68.34 341.26 67.24 339.06 66.14L332.36 62.74C327.96 60.54 324.56 58.34 322.16 56.14C319.76 53.94 318.56 50.94 318.56 47.14C318.56 42.14 320.56 38.24 324.56 35.44C328.56 32.64 333.66 31.24 339.86 31.24C344.86 31.24 349.36 32.44 353.36 34.84L350.86 39.14C347.86 37.44 344.46 36.54 340.66 36.54C335.56 36.54 333.06 38.24 333.06 41.64C333.06 43.14 333.56 44.34 334.56 45.24C335.56 46.14 337.26 46.94 339.66 47.64L346.56 50.94C352.36 53.54 355.96 56.24 357.36 59.04C358.76 61.84 359.46 65.44 359.46 69.84C359.46 75.34 357.26 79.64 352.86 82.74C348.56 85.74 343.06 85.34 336.56 85.34Z" 
+                            stroke="url(#shimmer)" strokeWidth="0.5" variants={pathVariants}
+                        />
+                        <motion.path 
+                            d="M366.52 84.34V37.24H371.62V84.34H366.52Z" 
+                            stroke="url(#shimmer)" strokeWidth="0.5" variants={pathVariants}
+                        />
+                        <motion.path 
+                            d="M400.91 84.34V37.24H418.51C425.81 37.24 431.11 38.84 434.41 42.04C437.81 45.24 439.51 49.64 439.51 55.24C439.51 60.84 437.81 65.24 434.41 68.44C431.11 71.64 425.81 73.24 418.51 73.24H406.01V84.34H400.91ZM418.11 68.14C422.01 68.14 424.91 66.84 426.81 64.24C428.81 61.64 429.81 58.44 429.81 54.64C429.81 50.84 428.81 47.64 426.81 45.04C424.91 42.44 422.01 41.14 418.11 41.14H406.01V68.14H418.11Z" 
+                            stroke="url(#shimmer)" strokeWidth="0.5" variants={pathVariants}
+                        />
+                        <motion.path 
+                            d="M472.01 84.34V37.24H477.11V73.44L490.41 37.24H496.21L480.91 63.64L496.81 84.34H490.81L479.21 66.84L477.11 69.14V84.34H472.01Z" 
+                            stroke="url(#shimmer)" strokeWidth="0.5" variants={pathVariants}
+                        />
+                        <motion.path 
+                            d="M523.51 84.34V37.24H528.61V84.34H523.51Z" 
+                            stroke="url(#shimmer)" strokeWidth="0.5" variants={pathVariants}
+                        />
+                        <motion.path 
+                            d="M536.01 84.34V37.24H541.11V84.34H536.01Z" 
+                            stroke="url(#shimmer)" strokeWidth="0.5" variants={pathVariants}
+                        />
+                        <motion.path 
+                            d="M584.21 84.34L577.81 73.14C579.51 71.94 580.91 70.34 582.01 68.34C583.11 66.34 583.61 64.14 583.61 61.74C583.61 56.64 581.81 52.64 578.21 49.74C574.61 46.84 569.81 45.34 563.81 45.34C558.81 45.34 554.51 46.54 550.91 49.04L553.71 53.04C556.51 51.14 559.81 50.24 563.61 50.24C567.81 50.24 570.81 51.54 572.61 54.14C574.41 56.74 575.31 59.44 575.31 62.24C575.31 64.34 574.81 66.14 573.81 67.64C572.81 69.14 571.41 70.64 569.61 72.14L562.91 76.94L558.61 84.34H544.11V37.24H590.21V42.34H549.21V79.24H560.81L573.51 61.64L578.81 68.04L582.01 64.04L584.21 84.34Z" 
+                            stroke="url(#shimmer)" strokeWidth="0.5" variants={pathVariants}
+                        />
+                        <motion.path 
+                            d="M624.96 85.34C618.36 85.34 613.16 83.04 609.36 78.54C605.56 73.94 603.66 68.14 603.66 61.04C603.66 53.94 605.56 48.14 609.36 43.64C613.16 39.14 618.36 36.84 624.96 36.84C631.56 36.84 636.76 39.14 640.56 43.64C644.36 48.14 646.26 53.94 646.26 61.04C646.26 68.14 644.36 73.94 640.56 78.54C636.76 83.04 631.56 85.34 624.96 85.34ZM624.96 80.24C629.76 80.24 633.46 78.14 636.06 73.94C638.66 69.74 639.96 65.14 639.96 60.14C639.96 55.14 638.66 50.54 636.06 46.34C633.46 42.14 629.76 40.04 624.96 40.04C620.16 40.04 616.46 42.14 613.86 46.34C611.26 50.54 609.96 55.14 609.96 60.14C609.96 65.14 611.26 69.74 613.86 73.94C616.46 78.14 620.16 80.24 624.96 80.24Z" 
+                            stroke="url(#shimmer)" strokeWidth="0.5" variants={pathVariants}
+                        />
+                        <motion.path 
+                            d="M60.42 84.34V37.24H65.52V58.44L79.02 37.24H84.72L70.12 59.84L85.12 84.34H79.42L68.02 64.94L65.52 67.54V84.34H60.42Z" 
+                            stroke="url(#shimmer)" strokeWidth="0.5" variants={pathVariants}
+                        />
+                        <motion.path 
+                            d="M26.42 84.34L9.82 37.24H16.02L29.12 74.24L42.22 37.24H48.42L30.82 84.34H26.42Z" 
+                            stroke="url(#shimmer)" strokeWidth="0.5" variants={pathVariants}
+                        />
+                        <motion.path 
+                            d="M48.06 10.96C48.06 17.56 46.16 22.86 42.36 26.86C38.56 30.86 33.66 32.86 27.66 32.86C21.66 32.86 16.76 30.86 12.96 26.86C9.16 22.86 7.26 17.56 7.26 10.96C7.26 4.36 9.16 -0.94 12.96 -4.94C16.76 -8.94 21.66 -10.94 27.66 -10.94C33.66 -10.94 38.56 -8.94 42.36 -4.94C46.16 -0.94 48.06 4.36 48.06 10.96ZM27.66 -5.84C23.86 -5.84 20.76 -4.34 18.36 -1.34C15.96 1.66 14.76 5.76 14.76 11.06C14.76 16.36 15.96 20.46 18.36 23.36C20.76 26.26 23.86 27.76 27.66 27.76C31.46 27.76 34.56 26.26 36.96 23.36C39.36 20.46 40.56 16.36 40.56 11.06C40.56 5.76 39.36 1.66 36.96 -1.34C34.56 -4.34 31.46 -5.84 27.66 -5.84Z" transform="translate(620.1 60.3) scale(1.2)" 
+                            stroke="url(#shimmer)" strokeWidth="0.5" variants={pathVariants}
+                        />
+                        <motion.path 
+                            d="M33.64 26.89L25.84 12.49L33.84 -1.71H26.34L20.94 7.69L15.54 -1.71H8.04L16.04 12.49L8.24 26.89H15.74L20.94 17.29L26.14 26.89H33.64Z" transform="translate(620.1 60.3) scale(1.2)" 
+                            stroke="url(#shimmer)" strokeWidth="0.5" variants={pathVariants}
+                        />
+                        <motion.path 
+                            d="M-28.75 26.89V-1.71H-23.65V26.89H-28.75Z" transform="translate(620.1 60.3) scale(1.2)" 
+                            stroke="url(#shimmer)" strokeWidth="0.5" variants={pathVariants}
+                        />
+                    </motion.svg>
                 </motion.div>
                 
                 <motion.div 
