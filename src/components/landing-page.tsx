@@ -340,6 +340,54 @@ export default function LandingPage({ spocDetails, announcements }: LandingPageP
           </div>
         </AnimatedSection>
         
+        <AnimatedSection id="problem-statements">
+          <div className="container max-w-7xl grid md:grid-cols-2 gap-12 items-center">
+            <div className="space-y-4">
+               <SectionTitle>About the Problem Statement</SectionTitle>
+              <p className="text-foreground/80">
+                The problem statements for Vadodara Hackathon 5.0 were taken from Smart India Hackathon 2024. In total, 239 problem statements were provided, with 68 in the hardware category and 186 in the software category.
+              </p>
+              <div className="grid grid-cols-2 gap-4 pt-4">
+                  <motion.div
+                    className="glass-card p-4 rounded-lg text-center"
+                    whileHover={{ scale: 1.05, boxShadow: "0px 0px 15px hsl(var(--brand-orange))" }}
+                  >
+                      <Cpu className="h-8 w-8 text-primary mx-auto mb-2" />
+                      <p className="text-2xl font-bold"><CountUp end={68} />+</p>
+                      <p className="text-sm text-muted-foreground">Problem Statements in Hardware Category</p>
+                  </motion.div>
+                  <motion.div
+                     className="glass-card p-4 rounded-lg text-center"
+                     whileHover={{ scale: 1.05, boxShadow: "0px 0px 15px hsl(var(--brand-red))" }}
+                  >
+                      <Code className="h-8 w-8 text-primary mx-auto mb-2" />
+                      <p className="text-2xl font-bold"><CountUp end={186} />+</p>
+                      <p className="text-sm text-muted-foreground">Problem Statements in Software Category</p>
+                  </motion.div>
+              </div>
+            </div>
+             <div>
+              <Carousel className="w-full max-w-xl mx-auto" plugins={[autoplayPlugin.current]}>
+                <CarouselContent>
+                  {aboutImages.map((src, index) => (
+                    <CarouselItem key={index}>
+                      <Image
+                        src={src}
+                        alt={`Vadodara Hackathon - Image ${index + 1}`}
+                        width={600}
+                        height={400}
+                        className="rounded-lg shadow-xl object-cover aspect-[3/2] border border-primary/20"
+                      />
+                    </CarouselItem>
+                  ))}
+                </CarouselContent>
+                <CarouselPrevious className="left-[-1rem]" />
+                <CarouselNext className="right-[-1rem]"/>
+              </Carousel>
+            </div>
+          </div>
+        </AnimatedSection>
+        
         <AnimatedSection id="last-year-stats" className="bg-secondary/10">
           <div className="container max-w-5xl text-center">
             <SectionTitle>Last Year's Highlights: Vadodara Hackathon 5.0</SectionTitle>
@@ -539,4 +587,3 @@ export default function LandingPage({ spocDetails, announcements }: LandingPageP
     </div>
   );
 }
-
