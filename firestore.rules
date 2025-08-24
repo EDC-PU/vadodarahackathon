@@ -3,124 +3,95 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Helper function to check if the user is an admin.
-    // An admin can do anything.
+    // Helper functions
     function isAdmin() {
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
 
-    // Helper function to check if the user is the owner of a document.
     function isOwner(userId) {
       return request.auth.uid == userId;
     }
-    
-    // Helper function to check if a user is a member of a specific team
+
     function isTeamMember(teamId) {
-      // It's possible the user doc doesn't exist yet, so we check.
-      return exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.teamId == teamId;
+      let user = get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+      return user.teamId == teamId;
     }
     
-    // Helper function to check if a user is a leader of a specific team
     function isTeamLeader(teamId) {
-        // It's possible the team doc doesn't exist yet, so we check.
-        return exists(/databases/$(database)/documents/teams/$(teamId)) &&
-               request.auth.uid == get(/databases/$(database)/documents/teams/$(teamId)).data.leader.uid;
+        let team = get(/databases/$(database)/documents/teams/$(teamId)).data;
+        return request.auth.uid == team.leader.uid;
     }
 
-    // Helper function to check if a user is the SPOC for a team's institute
     function isInstituteSpocForTeam(teamId) {
+        let team = get(/databases/$(database)/documents/teams/$(teamId)).data;
         let user = get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
-        // It's possible the team doc doesn't exist yet, so we check.
-        return exists(/databases/$(database)/documents/teams/$(teamId)) &&
-               user.role == 'spoc' && 
-               user.institute == get(/databases/$(database)/documents/teams/$(teamId)).data.institute && 
-               user.spocStatus == 'approved';
+        return user.role == 'spoc' && user.institute == team.institute && user.spocStatus == 'approved';
     }
     
-    // Helper function to check if user is an approved SPOC for another user's institute
     function isSpocForUser(userId) {
-        let user = get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
-        let targetUser = get(/databases/$(database)/documents/users/$(userId)).data;
-        return user.role == 'spoc' &&
-               user.institute == targetUser.institute &&
-               user.spocStatus == 'approved';
+      let user = get(/databases/$(database)/documents/users/$(userId)).data;
+      let spoc = get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+      return spoc.role == 'spoc' && spoc.institute == user.institute && spoc.spocStatus == 'approved';
     }
 
-
-    // Users Collection
+    // USERS COLLECTION
     match /users/{userId} {
-      // Read: Admins, or the user themselves.
+      // Admins can read any user profile. Users can read their own profile.
       allow read: if isAdmin() || isOwner(userId);
       
-      // Write: Admins, the user themselves, or the SPOC from that user's institute.
+      // Admins can write to any profile. Users can write to their own.
+      // SPOCs can write to a user's profile if that user belongs to a team in their institute.
       allow write: if isAdmin() || isOwner(userId) || isSpocForUser(userId);
-      
-      // List: Allow authenticated users to perform the EXACT query needed for SPOC registration check.
-      // This is the key fix. It checks that the query is filtering for the 'spoc' role and 'approved' status.
-      allow list: if request.auth != null &&
-                     request.query.get('role') == 'spoc' &&
-                     request.query.get('spocStatus') == 'approved';
+
+      // This is the critical rule:
+      // Allow any authenticated user to perform the specific query needed
+      // by the "Complete SPOC Profile" form to check for existing SPOCs.
+      allow list: if request.auth != null && 
+                     request.query.resource.data.role == 'spoc' &&
+                     request.query.resource.data.spocStatus == 'approved';
     }
-    
-    // Teams Collection
+
+    // TEAMS COLLECTION
     match /teams/{teamId} {
-      // Read: Admins, team members, or the SPOC from the team's institute.
       allow read: if isAdmin() || isTeamMember(teamId) || isInstituteSpocForTeam(teamId);
-      
-      // Create: Any authenticated user can create a team (further checks are in cloud functions).
-      allow create: if request.auth != null;
-      
-      // Update: Admins, team leaders, or the SPOC from the team's institute.
+      allow create: if request.auth != null; // Team creation logic is handled in the backend flow
       allow update: if isAdmin() || isTeamLeader(teamId) || isInstituteSpocForTeam(teamId);
-      
-      // Delete: Admins or the SPOC from the team's institute.
       allow delete: if isAdmin() || isInstituteSpocForTeam(teamId);
     }
 
-    // Team Invites Collection (for joining via link)
+    // TEAM INVITES COLLECTION (for joining via link)
     match /teamInvites/{inviteId} {
-        // Read: Any authenticated user (to get team details from link).
         allow read: if request.auth != null;
-        // Write: Admins or the leader of the team that the invite belongs to.
-        allow write: if isAdmin() || isTeamLeader(request.resource.data.teamId);
+        allow create: if request.auth != null;
+        allow update, delete: if isAdmin() || isTeamLeader(get(/databases/$(database)/documents/teamInvites/$(inviteId)).data.teamId);
     }
     
-    // Problem Statements Collection
+    // PROBLEM STATEMENTS COLLECTION
     match /problemStatements/{psId} {
-      // Read: Any authenticated user.
       allow read: if request.auth != null;
-      // Write: Only Admins.
       allow write: if isAdmin();
     }
     
-    // Config Collection (for event settings)
+    // CONFIG COLLECTION (for event settings like registration deadline)
     match /config/{configId} {
-        // Read: Publicly readable for registration deadline.
-        allow read: if true; 
-        // Write: Only Admins.
+        allow read: if true; // Publicly readable
         allow write: if isAdmin();
     }
     
-    // Announcements Collection
+    // ANNOUNCEMENTS COLLECTION
     match /announcements/{announcementId} {
-      // Read: Publicly readable.
-      allow read: if true;
-      // Write: Only Admins.
+      allow read: if true; // Publicly readable
       allow write: if isAdmin();
     }
 
-    // Notifications Collection
+    // NOTIFICATIONS COLLECTION
     match /notifications/{notificationId} {
-      // Allow user to read/write their own notifications.
-      allow read, write: if isOwner(request.resource.data.recipientUid);
-      // Allow creation for any authenticated user (logic is checked in flows).
-      allow create: if request.auth != null;
+      allow read, write: if isOwner(get(/databases/$(database)/documents/notifications/$(notificationId)).data.recipientUid);
+      allow create: if request.auth != null; // Further validation in backend flow
     }
     
-    // Healthchecks collection (for system health check)
+    // HEALTHCHECKS COLLECTION (for system health check)
     match /healthchecks/{docId} {
-        // Allow read/write only for admins.
         allow read, write: if isAdmin();
     }
   }
