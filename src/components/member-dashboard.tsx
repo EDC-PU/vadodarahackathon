@@ -99,9 +99,11 @@ export default function MemberDashboard() {
   }, [fetchTeamAndMembers]);
   
   const sortedTeamMembers = useMemo(() => {
-    let sortableItems = [...teamMembers];
+    const leader = teamMembers.find(m => m.role === 'leader');
+    const members = teamMembers.filter(m => m.role !== 'leader');
+    
     if (sortConfig !== null) {
-      sortableItems.sort((a, b) => {
+      members.sort((a, b) => {
         const aValue = a[sortConfig.key] ?? '';
         const bValue = b[sortConfig.key] ?? '';
         if (aValue < bValue) {
@@ -113,7 +115,7 @@ export default function MemberDashboard() {
         return 0;
       });
     }
-    return sortableItems;
+    return leader ? [leader, ...members] : members;
   }, [teamMembers, sortConfig]);
 
   const requestSort = (key: SortKey) => {
