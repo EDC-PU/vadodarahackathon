@@ -307,7 +307,8 @@ export default function LeaderDashboard() {
         current: teamMembers.filter(m => m.gender === "F").length,
         required: 1,
         isMet: teamMembers.filter(m => m.gender === "F").length >= 1,
-    }
+    },
+    isRegistered: teamMembers.length === 6 && teamMembers.filter(m => m.gender === "F").length >= 1,
   }
 
   const canAddMoreMembers = teamMembers.length < 6;
@@ -422,29 +423,45 @@ export default function LeaderDashboard() {
                         <CardDescription>Check if your team meets the hackathon requirements.</CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-4">
+                        {teamValidation.isRegistered ? (
+                             <Alert variant="default" className="border-green-500">
+                                <CheckCircle className="h-4 w-4 text-green-500"/>
+                                <AlertTitle>Team is Officially Registered!</AlertTitle>
+                                <AlertDescription>Your team meets all the registration criteria. Good luck!</AlertDescription>
+                            </Alert>
+                        ) : (
+                            <Alert variant="destructive">
+                                <AlertCircle className="h-4 w-4" />
+                                <AlertTitle>Registration Incomplete</AlertTitle>
+                                <AlertDescription>Your team does not yet meet all the criteria for official registration. See details below.</AlertDescription>
+                            </Alert>
+                        )}
+                        
+                        <hr className="border-border/50" />
+
                         {teamValidation.memberCount.isMet ? (
-                            <Alert variant="default" className="border-green-500">
+                            <Alert variant="default" className="border-green-500/50 bg-transparent text-foreground">
                                 <CheckCircle className="h-4 w-4 text-green-500"/>
                                 <AlertTitle>Team Size Correct</AlertTitle>
                                 <AlertDescription>You have 6 members in your team. Great job!</AlertDescription>
                             </Alert>
                         ) : (
-                            <Alert variant="destructive">
-                                <AlertCircle className="h-4 w-4" />
+                            <Alert variant="destructive" className="bg-transparent text-foreground">
+                                <AlertCircle className="h-4 w-4 text-destructive" />
                                 <AlertTitle>Incomplete Team</AlertTitle>
                                 <AlertDescription>Your team needs {teamValidation.memberCount.required - teamValidation.memberCount.current} more member(s) to reach the required 6.</AlertDescription>
                             </Alert>
                         )}
 
                         {teamValidation.femaleCount.isMet ? (
-                            <Alert variant="default" className="border-green-500">
+                            <Alert variant="default" className="border-green-500/50 bg-transparent text-foreground">
                                 <CheckCircle className="h-4 w-4 text-green-500"/>
                                 <AlertTitle>Female Representation Met</AlertTitle>
                                 <AlertDescription>Your team includes at least one female member. Thank you!</AlertDescription>
                             </Alert>
                         ) : (
-                             <Alert variant="destructive">
-                                <AlertCircle className="h-4 w-4"/>
+                             <Alert variant="destructive" className="bg-transparent text-foreground">
+                                <AlertCircle className="h-4 w-4 text-destructive"/>
                                 <AlertTitle>Female Representation Required</AlertTitle>
                                 <AlertDescription>Your team must include at least one female member.</AlertDescription>
                             </Alert>
