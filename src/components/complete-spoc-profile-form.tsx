@@ -75,7 +75,8 @@ export function CompleteSpocProfileForm() {
         const spocQuery = query(
             collection(db, 'users'),
             where('institute', '==', values.institute),
-            where('role', '==', 'spoc')
+            where('role', '==', 'spoc'),
+            where('spocStatus', '==', 'approved')
         );
         
         const existingSpocSnapshot = await getDocs(spocQuery);
@@ -83,14 +84,14 @@ export function CompleteSpocProfileForm() {
             // Check if the existing SPOC is not the current user
             const isDifferentUser = existingSpocSnapshot.docs.some(doc => doc.id !== user.uid);
             if (isDifferentUser) {
-              const errorMessage = `A SPOC for ${values.institute} already exists or has a pending registration.`;
+              const errorMessage = `An approved SPOC for ${values.institute} already exists.`;
               console.error(errorMessage);
               toast({ title: "Registration Blocked", description: errorMessage, variant: "destructive" });
               setIsLoading(false);
               return;
             }
         }
-        console.log(`No existing SPOC found for ${values.institute}. Proceeding...`);
+        console.log(`No existing approved SPOC found for ${values.institute}. Proceeding...`);
 
         const userDocRef = doc(db, "users", user.uid);
         const updatedProfileData: Partial<UserProfile> = {
@@ -110,7 +111,7 @@ export function CompleteSpocProfileForm() {
 
         toast({
             title: "Profile Submitted for Approval",
-            description: "Your details have been saved and sent for admin review. You will be signed out.",
+            description: "Your details have been saved and sent for admin review. You will now be signed out.",
             duration: 8000,
         });
         
