@@ -77,7 +77,6 @@ const HeroSection = () => {
     const tagline = "Your Gateway to Smart India Hackathon 2025";
     const controls = useAnimation();
     const ref = useRef<HTMLDivElement>(null);
-    const isInView = useInView(ref, { once: true });
 
 
     useEffect(() => {
@@ -343,6 +342,38 @@ export default function LandingPage({ spocDetails, announcements }: LandingPageP
                 <CarouselPrevious className="left-[-1rem]" />
                 <CarouselNext className="right-[-1rem]"/>
               </Carousel>
+            </div>
+          </div>
+        </AnimatedSection>
+        
+        <AnimatedSection id="last-year-stats" className="bg-secondary/10">
+          <div className="container max-w-5xl text-center">
+            <SectionTitle>Last Year's Highlights: Vadodara Hackathon 5.0</SectionTitle>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-12">
+              <motion.div
+                className="glass-card p-6 rounded-lg text-center"
+                whileHover={{ scale: 1.05, boxShadow: "0px 0px 15px hsl(var(--brand-yellow))" }}
+              >
+                <Users className="h-10 w-10 text-brand-yellow mx-auto mb-4" />
+                <p className="text-4xl font-bold"><CountUp end={436} /></p>
+                <p className="text-muted-foreground mt-2">Teams Registered</p>
+              </motion.div>
+              <motion.div
+                className="glass-card p-6 rounded-lg text-center"
+                whileHover={{ scale: 1.05, boxShadow: "0px 0px 15px hsl(var(--brand-orange))" }}
+              >
+                <Trophy className="h-10 w-10 text-brand-orange mx-auto mb-4" />
+                <p className="text-4xl font-bold"><CountUp end={89} /></p>
+                <p className="text-muted-foreground mt-2">Teams for Finale</p>
+              </motion.div>
+              <motion.div
+                className="glass-card p-6 rounded-lg text-center"
+                whileHover={{ scale: 1.05, boxShadow: "0px 0px 15px hsl(var(--brand-red))" }}
+              >
+                <Award className="h-10 w-10 text-brand-red mx-auto mb-4" />
+                <p className="text-4xl font-bold"><CountUp end={45} /></p>
+                <p className="text-muted-foreground mt-2">Teams nominated for SIH</p>
+              </motion.div>
             </div>
           </div>
         </AnimatedSection>
