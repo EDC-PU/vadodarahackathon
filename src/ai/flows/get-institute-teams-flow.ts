@@ -64,7 +64,17 @@ const getInstituteTeamsFlow = ai.defineFlow(
           const usersQuery = adminDb.collection('users').where('uid', 'in', chunk);
           const usersSnapshot = await usersQuery.get();
           usersSnapshot.forEach(doc => {
-              usersData[doc.id] = { uid: doc.id, ...doc.data() } as UserProfile;
+              const data = doc.data();
+              const createdAt = data.createdAt;
+              usersData[doc.id] = { 
+                uid: doc.id, 
+                ...data,
+                // Convert Firestore Timestamp to a serializable format
+                createdAt: createdAt ? {
+                    seconds: createdAt.seconds,
+                    nanoseconds: createdAt.nanoseconds,
+                } : null,
+              } as UserProfile;
           });
       }
       console.log(`Fetched details for ${Object.keys(usersData).length} users.`);

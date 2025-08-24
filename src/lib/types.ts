@@ -26,7 +26,7 @@ export interface UserProfile {
   createdAt?: {
       seconds: number,
       nanoseconds: number,
-  }
+  } | null;
 }
 
 export interface Invitation {
@@ -127,7 +127,7 @@ export interface Announcement {
   createdAt: {
     seconds: number;
     nanoseconds: number;
-  };
+  } | null;
   audience: AnnouncementAudience;
   url?: string;
   attachmentUrl?: string;
