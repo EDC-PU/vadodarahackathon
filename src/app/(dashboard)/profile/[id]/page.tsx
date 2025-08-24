@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { db } from "@/lib/firebase";
@@ -26,6 +26,8 @@ import { Team, UserProfile } from "@/lib/types";
 import { useParams } from "next/navigation";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
+import { useScrollAnimation } from "@/hooks/use-scroll-animation";
+import { cn } from "@/lib/utils";
 
 
 const formSchema = z.object({
@@ -46,6 +48,9 @@ export default function ProfilePage() {
   const { toast } = useToast();
   const params = useParams();
   const profileEnrollmentNumber = params.id as string;
+
+  const mainRef = useRef<HTMLDivElement>(null);
+  const isInView = useScrollAnimation(mainRef);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -198,7 +203,7 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 max-w-4xl mx-auto">
+    <div ref={mainRef} className={cn("p-4 sm:p-6 lg:p-8 max-w-4xl mx-auto scroll-animate", isInView && "in-view")}>
         <header className="mb-8">
             <h1 className="text-3xl font-bold font-headline">Edit Profile</h1>
             <p className="text-muted-foreground">Editing the profile for {profileData?.name || 'user'}.</p>

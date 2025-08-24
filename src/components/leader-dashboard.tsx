@@ -8,7 +8,7 @@ import { AlertCircle, CheckCircle, PlusCircle, Trash2, User, Loader2, FileText, 
 import { Alert, AlertDescription, AlertTitle } from "./ui/alert";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
-import { useEffect, useState, useCallback, useMemo } from "react";
+import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { db } from "@/lib/firebase";
 import { doc, onSnapshot, updateDoc, arrayRemove, collection, query, where, getDocs, writeBatch, addDoc, serverTimestamp, limit, deleteDoc, setDoc, orderBy } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
@@ -29,6 +29,8 @@ import {
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";
 import { getTeamInviteLink } from "@/ai/flows/get-team-invite-link-flow";
 import { Badge } from "./ui/badge";
+import { useScrollAnimation } from "@/hooks/use-scroll-animation";
+import { cn } from "@/lib/utils";
 
 type SortKey = 'name' | 'role' | 'email' | 'contactNumber' | 'enrollmentNumber' | 'yearOfStudy' | 'semester';
 type SortDirection = 'asc' | 'desc';
@@ -111,6 +113,9 @@ export default function LeaderDashboard() {
   const [inviteLink, setInviteLink] = useState<string | null>(null);
   const [isLoadingLink, setIsLoadingLink] = useState(true);
   const appBaseUrl = "https://vadodarahackathon.pierc.org";
+
+  const mainRef = useRef<HTMLDivElement>(null);
+  const isInView = useScrollAnimation(mainRef);
 
   const fetchTeamAndMembers = useCallback(() => {
     if (!user?.teamId) {
@@ -317,7 +322,7 @@ export default function LeaderDashboard() {
   const canAddMoreMembers = teamMembers.length < 6;
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8">
+    <div ref={mainRef} className={cn("p-4 sm:p-6 lg:p-8 scroll-animate", isInView && "in-view")}>
         <header className="mb-8">
             <h1 className="text-3xl font-bold font-headline">Team Dashboard: {team.name}</h1>
             <p className="text-muted-foreground">Manage your team and review your registration status.</p>

@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis, ResponsiveContainer, Tooltip, Legend } from "recharts";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
@@ -10,6 +10,8 @@ import { collection, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
+import { useScrollAnimation } from "@/hooks/use-scroll-animation";
+import { cn } from "@/lib/utils";
 
 interface InstituteChartData {
   institute: string;
@@ -25,6 +27,9 @@ export default function AnalyticsPage() {
   const [teams, setTeams] = useState<Team[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
+
+  const mainRef = useRef<HTMLDivElement>(null);
+  const isInView = useScrollAnimation(mainRef);
 
   useEffect(() => {
     setLoading(true);
@@ -84,7 +89,7 @@ export default function AnalyticsPage() {
   }
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8">
+    <div ref={mainRef} className={cn("p-4 sm:p-6 lg:p-8 scroll-animate", isInView && "in-view")}>
       <header className="mb-8">
         <h1 className="text-3xl font-bold font-headline">Analytics</h1>
         <p className="text-muted-foreground">A visual overview of hackathon registration data.</p>

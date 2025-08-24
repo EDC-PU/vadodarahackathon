@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Loader2, AlertCircle, Save, Pencil, X, Trash2, Users, User, MinusCircle, ArrowUpDown, Link as LinkIcon, Copy } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { useEffect, useState, useMemo, useCallback } from "react";
+import { useEffect, useState, useMemo, useCallback, useRef } from "react";
 import { auth, db } from "@/lib/firebase";
 import { doc, getDoc, collection, query, where, onSnapshot, updateDoc } from "firebase/firestore";
 import { Team, UserProfile, TeamMember } from "@/lib/types";
@@ -32,6 +32,8 @@ import { exportTeams } from "@/ai/flows/export-teams-flow";
 import { Download } from "lucide-react";
 import { Buffer } from 'buffer';
 import { getTeamInviteLink } from "@/ai/flows/get-team-invite-link-flow";
+import { useScrollAnimation } from "@/hooks/use-scroll-animation";
+import { cn } from "@/lib/utils";
 
 type SortKey = 'teamName' | 'teamNumber' | 'name' | 'email' | 'enrollmentNumber' | 'contactNumber';
 type SortDirection = 'asc' | 'desc';
@@ -50,6 +52,9 @@ export default function SpocDashboard() {
   const [inviteLinks, setInviteLinks] = useState<Map<string, string>>(new Map());
   const [loadingLink, setLoadingLink] = useState<string | null>(null);
   const appBaseUrl = "https://vadodarahackathon.pierc.org";
+
+  const mainRef = useRef<HTMLDivElement>(null);
+  const isInView = useScrollAnimation(mainRef);
 
   const handleExport = async () => {
     setIsExporting(true);
@@ -322,7 +327,7 @@ export default function SpocDashboard() {
   const totalParticipants = teams ? teams.reduce((acc, team) => acc + 1 + team.members.length, 0) : 0;
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8">
+    <div ref={mainRef} className={cn("p-4 sm:p-6 lg:p-8 scroll-animate", isInView && "in-view")}>
       <header className="mb-8">
         <h1 className="text-3xl font-bold font-headline">SPOC Dashboard</h1>
         <p className="text-muted-foreground">Manage teams from your institute: <strong>{user?.institute}</strong></p>

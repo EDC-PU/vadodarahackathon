@@ -3,7 +3,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Users, User, Shield, UserPlus, FileText, Download, Loader2 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { db } from "@/lib/firebase";
 import { collection, getDocs, query, where } from "firebase/firestore";
 import { Team, UserProfile } from "@/lib/types";
@@ -11,6 +11,8 @@ import { useToast } from "@/hooks/use-toast";
 import { Button } from "./ui/button";
 import { exportTeams } from "@/ai/flows/export-teams-flow";
 import { Buffer } from 'buffer';
+import { useScrollAnimation } from "@/hooks/use-scroll-animation";
+import { cn } from "@/lib/utils";
 
 
 export default function AdminDashboard() {
@@ -18,6 +20,9 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [isExporting, setIsExporting] = useState(false);
   const { toast } = useToast();
+
+  const mainRef = useRef<HTMLDivElement>(null);
+  const isInView = useScrollAnimation(mainRef);
 
   const handleExport = async () => {
     setIsExporting(true);
@@ -97,7 +102,7 @@ export default function AdminDashboard() {
   }
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8">
+    <div ref={mainRef} className={cn("p-4 sm:p-6 lg:p-8 scroll-animate", isInView && "in-view")}>
       <header className="mb-8 flex justify-between items-center">
         <div>
             <h1 className="text-3xl font-bold font-headline">Admin Dashboard</h1>

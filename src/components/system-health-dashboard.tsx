@@ -1,12 +1,14 @@
 
 "use client";
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { CheckCircle2, AlertCircle, Loader2, RefreshCw } from 'lucide-react';
 import { runHealthCheck, SystemHealthState } from '@/ai/flows/system-health-flow';
+import { useScrollAnimation } from '@/hooks/use-scroll-animation';
+import { cn } from '@/lib/utils';
 
 const StatusIndicator = ({ success }: { success: boolean }) => (
   success ? <CheckCircle2 className="h-5 w-5 text-green-500" /> : <AlertCircle className="h-5 w-5 text-destructive" />
@@ -22,6 +24,9 @@ export default function SystemHealthDashboard() {
   const [healthState, setHealthState] = useState<SystemHealthState | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const mainRef = useRef<HTMLDivElement>(null);
+  const isInView = useScrollAnimation(mainRef);
 
   const handleRunCheck = async () => {
     setLoading(true);
@@ -42,7 +47,7 @@ export default function SystemHealthDashboard() {
   const allServicesSuccess = healthState ? Object.values(healthState).every(service => typeof service === 'object' && service !== null && 'success' in service ? service.success : true) : false;
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 bg-gray-900 text-white min-h-screen">
+    <div ref={mainRef} className={cn("p-4 sm:p-6 lg:p-8 bg-gray-900 text-white min-h-screen scroll-animate", isInView && "in-view")}>
       <header className="mb-8 flex justify-between items-center">
         <div>
             <h1 className="text-3xl font-bold font-headline">System Health</h1>
