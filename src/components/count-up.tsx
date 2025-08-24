@@ -3,7 +3,7 @@
 
 import { useEffect } from 'react';
 import { useInView } from 'react-intersection-observer';
-import { motion, useAnimation, useMotionValue, useTransform } from 'framer-motion';
+import { motion, useAnimation, useMotionValue, useTransform, animate } from 'framer-motion';
 
 interface CountUpProps {
   end: number;
@@ -29,7 +29,7 @@ export function CountUp({ end, duration = 2, className }: CountUpProps) {
           ease: 'circOut',
         },
       });
-      const animation = motion.animate(count, end, {
+      const animation = animate(count, end, {
         duration: duration,
         ease: 'circOut',
       });
