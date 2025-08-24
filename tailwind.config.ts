@@ -77,10 +77,10 @@ export default {
           ring: 'hsl(var(--sidebar-ring))',
         },
         brand: {
-          yellow: '#FFD700',
-          orange: '#FF7A00',
-          red: '#FF1E1E',
-          black: '#000000',
+          yellow: 'hsl(var(--brand-yellow))',
+          orange: 'hsl(var(--brand-orange))',
+          red: 'hsl(var(--brand-red))',
+          black: 'hsl(var(--brand-black))',
         }
       },
       borderRadius: {
@@ -117,8 +117,25 @@ export default {
             '100%': { 'background-position': '0% 50%' },
         },
         'neon-pulse': {
-            '0%, 100%': { 'box-shadow': '0 0 5px #FFD700, 0 0 10px #FFD700, 0 0 20px #FF7A00', color: '#FFD700' },
-            '50%': { 'box-shadow': '0 0 10px #FF7A00, 0 0 20px #FF1E1E, 0 0 30px #FF1E1E', color: '#FF7A00' },
+            '0%, 100%': { 'box-shadow': '0 0 5px hsl(var(--brand-yellow)), 0 0 10px hsl(var(--brand-yellow)), 0 0 20px hsl(var(--brand-orange))', color: 'hsl(var(--brand-yellow))' },
+            '50%': { 'box-shadow': '0 0 10px hsl(var(--brand-orange)), 0 0 20px hsl(var(--brand-red)), 0 0 30px hsl(var(--brand-red))', color: 'hsl(var(--brand-orange))' },
+        },
+         'neon-pulse-arrows': {
+            '0%, 100%': { 'box-shadow': '0 0 3px hsl(var(--brand-yellow)), 0 0 5px hsl(var(--brand-yellow))', 'border-color': 'hsl(var(--brand-yellow))' },
+            '50%': { 'box-shadow': '0 0 5px hsl(var(--brand-orange)), 0 0 10px hsl(var(--brand-orange))', 'border-color': 'hsl(var(--brand-orange))' },
+        },
+        'glitch-1': {
+          '0%, 100%': { transform: 'translate(0)', opacity: '1'},
+          '20%': { transform: 'translate(-3px, 3px)' },
+          '40%': { transform: 'translate(3px, -3px)' },
+          '60%': { transform: 'translate(-3px, -3px)' },
+          '80%': { transform: 'translate(3px, 3px)' },
+        },
+        'glitch-2': {
+          '0%, 100%': { transform: 'translate(0)', opacity: '1'},
+          '25%': { transform: 'translate(3px, 3px)' },
+          '50%': { transform: 'translate(-3px, -3px)' },
+          '75%': { transform: 'translate(3px, -3px)' },
         },
       },
       animation: {
@@ -127,6 +144,9 @@ export default {
         'light-streaks': 'light-streaks 8s linear infinite',
         'gradient-pan': 'gradient-pan 15s ease infinite',
         'neon-pulse': 'neon-pulse 4s infinite',
+        'neon-pulse-arrows': 'neon-pulse-arrows 2s infinite',
+        'glitch-1': 'glitch-1 1s cubic-bezier(0.25, 0.46, 0.45, 0.94) both infinite',
+        'glitch-2': 'glitch-2 1s cubic-bezier(0.25, 0.46, 0.45, 0.94) reverse both infinite'
       },
     },
   },

@@ -23,7 +23,8 @@ import { cn } from '@/lib/utils';
 import { useScrollAnimation } from '@/hooks/use-scroll-animation';
 import Autoplay from "embla-carousel-autoplay"
 import { Announcement } from '@/lib/types';
-import { motion, useAnimation } from "framer-motion";
+import { motion, useAnimation, useInView } from "framer-motion";
+import { CountUp } from './count-up';
 
 
 interface SpocDetails {
@@ -35,24 +36,44 @@ interface LandingPageProps {
   announcements: Announcement[];
 }
 
-const AnimatedSection = ({ children, className }: { children: React.ReactNode, className?: string }) => {
+const AnimatedSection = ({ children, className, id }: { children: React.ReactNode, className?: string, id: string }) => {
   const ref = useRef<HTMLDivElement>(null);
-  const isInView = useScrollAnimation(ref);
+  const isInView = useInView(ref, { once: true, amount: 0.2 });
 
   return (
-    <section
+    <motion.section
+      id={id}
       ref={ref}
-      className={cn(
-        'py-20 md:py-28',
-        'opacity-0 translate-y-[30px] transition-all duration-1000 ease-out transform motion-reduce:opacity-100 motion-reduce:translate-y-0',
-        isInView ? 'opacity-100 translate-y-0' : '',
-        className
-      )}
+      initial={{ opacity: 0, y: 50 }}
+      animate={isInView ? { opacity: 1, y: 0 } : {}}
+      transition={{ duration: 0.8, ease: "easeOut" }}
+      className={cn('py-20 md:py-28', className)}
     >
       {children}
-    </section>
+    </motion.section>
   );
 };
+
+const GlitchTitle = ({ children, className }: { children: React.ReactNode, className?: string }) => {
+  return (
+    <h2
+      className={cn("text-3xl font-bold mb-4 font-headline relative inline-block", className)}
+      data-text={children}
+    >
+      <span className="glitch-base">{children}</span>
+      <span className="glitch-line glitch-line-1" aria-hidden="true">{children}</span>
+      <span className="glitch-line glitch-line-2" aria-hidden="true">{children}</span>
+       <motion.div
+        className="absolute bottom-0 left-0 h-0.5 bg-gradient-to-r from-brand-yellow via-brand-orange to-brand-red"
+        initial={{ width: 0 }}
+        whileInView={{ width: "100%" }}
+        transition={{ duration: 1, delay: 0.5 }}
+        viewport={{ once: true }}
+      />
+    </h2>
+  );
+};
+
 
 const HeroSection = () => {
     const tagline = "Your Gateway to Smart India Hackathon 2025";
@@ -115,7 +136,7 @@ const HeroSection = () => {
                     })}
                 </motion.h2>
                 
-                <motion.div 
+                 <motion.div 
                     variants={itemVariants} 
                     className="my-8"
                     initial={{ opacity: 0, scale: 0.8 }}
@@ -246,7 +267,7 @@ export default function LandingPage({ spocDetails, announcements }: LandingPageP
         <AnimatedSection id="rewards" className="relative overflow-hidden">
             <div className="absolute inset-0 bg-gradient-to-br from-background via-accent/5 to-background -z-10"></div>
             <div className="container max-w-7xl text-center">
-                <h2 className="text-3xl font-bold mb-4 font-headline">Rewards &amp; Recognition</h2>
+                <GlitchTitle>Rewards &amp; Recognition</GlitchTitle>
                 <p className="max-w-3xl mx-auto text-foreground/80 mb-12">
                 Winners get felicitated and recommended to SIH 2025, plus incubation support, funding opportunities, IP filing assistance, and continuous expert mentoring.
                 </p>
@@ -279,21 +300,27 @@ export default function LandingPage({ spocDetails, announcements }: LandingPageP
         <AnimatedSection id="about">
           <div className="container max-w-7xl grid md:grid-cols-2 gap-12 items-center">
             <div className="space-y-4">
-              <h2 className="text-3xl font-bold mb-4 font-headline">About The Hackathon</h2>
+               <GlitchTitle>About The Hackathon</GlitchTitle>
               <p className="text-foreground/80">
                Vadodara Hackathon 6.0 is an internal hackathon organized with the primary purpose of fostering innovation and problem-solving within our community. The event aims to bring together creative minds and tech enthusiasts to collaborate, brainstorm, and develop innovative solutions to real-world problems.
               </p>
               <div className="grid grid-cols-2 gap-4 pt-4">
-                  <div className="glass-card p-4 rounded-lg text-center">
+                  <motion.div
+                    className="glass-card p-4 rounded-lg text-center"
+                    whileHover={{ scale: 1.05, boxShadow: "0px 0px 15px hsl(var(--brand-orange))" }}
+                  >
                       <BarChart className="h-8 w-8 text-primary mx-auto mb-2" />
-                      <p className="text-2xl font-bold">400+</p>
+                      <p className="text-2xl font-bold"><CountUp end={400} />+</p>
                       <p className="text-sm text-muted-foreground">Teams Expected</p>
-                  </div>
-                  <div className="glass-card p-4 rounded-lg text-center">
+                  </motion.div>
+                  <motion.div
+                     className="glass-card p-4 rounded-lg text-center"
+                     whileHover={{ scale: 1.05, boxShadow: "0px 0px 15px hsl(var(--brand-red))" }}
+                  >
                       <FileQuestion className="h-8 w-8 text-primary mx-auto mb-2" />
-                      <p className="text-2xl font-bold">250+</p>
+                      <p className="text-2xl font-bold"><CountUp end={250} />+</p>
                       <p className="text-sm text-muted-foreground">Problem Statements</p>
-                  </div>
+                  </motion.div>
               </div>
             </div>
             <div>
@@ -320,7 +347,7 @@ export default function LandingPage({ spocDetails, announcements }: LandingPageP
 
         <AnimatedSection id="timeline">
             <div className="container max-w-4xl text-center">
-                <h2 className="text-3xl font-bold mb-4 font-headline">Timeline</h2>
+                 <GlitchTitle>Timeline</GlitchTitle>
                 <p className="max-w-2xl mx-auto text-foreground/80 mb-8">
                   Mark your calendars for these important dates.
                 </p>
@@ -345,36 +372,39 @@ export default function LandingPage({ spocDetails, announcements }: LandingPageP
 
         <AnimatedSection id="gallery">
             <div className="container max-w-7xl">
-                <h2 className="text-3xl font-bold text-center mb-12 font-headline">Gallery</h2>
-                 <Carousel className="w-full" opts={{ loop: true }} plugins={[autoplayPlugin.current]}>
+                <div className="text-center">
+                    <GlitchTitle>Gallery</GlitchTitle>
+                </div>
+                 <Carousel className="w-full mt-12" opts={{ loop: true }} plugins={[autoplayPlugin.current]}>
                     <CarouselContent>
                     {galleryImages.map((src, index) => (
                         <CarouselItem key={index} className="md:basis-1/2 lg:basis-1/3">
                             <div className="p-1">
-                                <Card className="overflow-hidden glass-card">
-                                    <CardContent className="p-0">
-                                        <Image
-                                            src={src}
-                                            alt={`Gallery Image ${index + 1}`}
-                                            width={600}
-                                            height={400}
-                                            className="w-full h-full object-cover aspect-video transition-transform hover:scale-105"
-                                        />
-                                    </CardContent>
-                                </Card>
+                                <motion.div
+                                    className="overflow-hidden glass-card rounded-lg"
+                                    whileHover={{ scale: 1.03, boxShadow: "0 0 20px hsl(var(--brand-red))" }}
+                                >
+                                    <Image
+                                        src={src}
+                                        alt={`Gallery Image ${index + 1}`}
+                                        width={600}
+                                        height={400}
+                                        className="w-full h-full object-cover aspect-video transition-transform"
+                                    />
+                                </motion.div>
                             </div>
                         </CarouselItem>
                     ))}
                     </CarouselContent>
-                    <CarouselPrevious />
-                    <CarouselNext />
+                    <CarouselPrevious className="animate-neon-pulse-arrows"/>
+                    <CarouselNext className="animate-neon-pulse-arrows"/>
                 </Carousel>
             </div>
         </AnimatedSection>
         
         <AnimatedSection id="spocs">
             <div className="container max-w-4xl text-center">
-                <h2 className="text-3xl font-bold mb-4 font-headline">Institute SPOCs</h2>
+                <GlitchTitle>Institute SPOCs</GlitchTitle>
                 <p className="max-w-2xl mx-auto text-foreground/80 mb-8">
                   Find the Single Point of Contact (SPOC) for your institute.
                 </p>
@@ -392,31 +422,37 @@ export default function LandingPage({ spocDetails, announcements }: LandingPageP
                         </SelectContent>
                     </Select>
                     {selectedInstitute && (
-                        <Card className="w-full max-w-md mt-4 glass-card text-left animate-in fade-in-50">
-                            <CardHeader>
-                                <CardTitle>{selectedInstitute}</CardTitle>
-                            </CardHeader>
-                             <CardContent>
-                                {spocDetails[selectedInstitute] ? (
-                                <div className="space-y-3">
-                                    <div className="flex items-center gap-3">
-                                        <Users className="h-5 w-5 text-primary" />
-                                        <span>{spocDetails[selectedInstitute].name}</span>
+                        <motion.div
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.5 }}
+                        >
+                            <Card className="w-full max-w-md mt-4 glass-card text-left animate-in fade-in-50">
+                                <CardHeader>
+                                    <CardTitle>{selectedInstitute}</CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                    {spocDetails[selectedInstitute] ? (
+                                    <div className="space-y-3">
+                                        <div className="flex items-center gap-3">
+                                            <Users className="h-5 w-5 text-primary" />
+                                            <span>{spocDetails[selectedInstitute].name}</span>
+                                        </div>
+                                        <div className="flex items-center gap-3">
+                                            <Mail className="h-5 w-5 text-primary" />
+                                            <a href={`mailto:${spocDetails[selectedInstitute].email}`} className="hover:underline">{spocDetails[selectedInstitute].email}</a>
+                                        </div>
+                                        <div className="flex items-center gap-3">
+                                            <Phone className="h-5 w-5 text-primary" />
+                                            <a href={`tel:${spocDetails[selectedInstitute].contact}`} className="hover:underline">{spocDetails[selectedInstitute].contact}</a>
+                                        </div>
                                     </div>
-                                    <div className="flex items-center gap-3">
-                                        <Mail className="h-5 w-5 text-primary" />
-                                        <a href={`mailto:${spocDetails[selectedInstitute].email}`} className="hover:underline">{spocDetails[selectedInstitute].email}</a>
-                                    </div>
-                                    <div className="flex items-center gap-3">
-                                        <Phone className="h-5 w-5 text-primary" />
-                                         <a href={`tel:${spocDetails[selectedInstitute].contact}`} className="hover:underline">{spocDetails[selectedInstitute].contact}</a>
-                                    </div>
-                                </div>
-                                ) : (
-                                <p className="text-foreground/80">No SPOC assigned for this institute yet. Please check back later.</p>
-                                )}
-                            </CardContent>
-                        </Card>
+                                    ) : (
+                                    <p className="text-foreground/80">No SPOC assigned for this institute yet. Please check back later.</p>
+                                    )}
+                                </CardContent>
+                            </Card>
+                        </motion.div>
                     )}
                 </div>
             </div>
@@ -425,23 +461,25 @@ export default function LandingPage({ spocDetails, announcements }: LandingPageP
 
         <AnimatedSection id="contact">
             <div className="container max-w-7xl">
-                <h2 className="text-3xl font-bold text-center mb-12 font-headline">Get In Touch</h2>
-                <div className="grid md:grid-cols-3 gap-8 text-center">
-                <div className="glass-card p-6 flex flex-col items-center">
+                 <div className="text-center">
+                    <GlitchTitle>Get In Touch</GlitchTitle>
+                </div>
+                <div className="grid md:grid-cols-3 gap-8 text-center mt-12">
+                 <motion.div whileHover={{ y: -5, boxShadow: "0 0 20px hsl(var(--brand-yellow))" }} className="glass-card p-6 flex flex-col items-center">
                     <Mail className="h-10 w-10 text-primary mb-4" />
                     <h3 className="text-xl font-semibold">Email Us</h3>
                     <a href="mailto:pierc@paruluniversity.ac.in" className="text-foreground/80 hover:text-primary">pierc@paruluniversity.ac.in</a>
-                </div>
-                <div className="glass-card p-6 flex flex-col items-center">
+                </motion.div>
+                <motion.div whileHover={{ y: -5, boxShadow: "0 0 20px hsl(var(--brand-orange))" }} className="glass-card p-6 flex flex-col items-center">
                     <Phone className="h-10 w-10 text-primary mb-4" />
                     <h3 className="text-xl font-semibold">Phone</h3>
                     <p className="text-foreground/80">0266-8260350</p>
-                </div>
-                <div className="glass-card p-6 flex flex-col items-center">
+                </motion.div>
+                <motion.div whileHover={{ y: -5, boxShadow: "0 0 20px hsl(var(--brand-red))" }} className="glass-card p-6 flex flex-col items-center">
                     <MapPin className="h-10 w-10 text-primary mb-4" />
                     <h3 className="text-xl font-semibold">Our Address</h3>
                     <p className="text-foreground/80 max-w-xs">PARUL INNOVATION &amp; ENTREPRENEURSHIP RESEARCH CENTRE (PIERC), Parul University</p>
-                </div>
+                </motion.div>
                 </div>
             </div>
         </AnimatedSection>
@@ -468,5 +506,3 @@ export default function LandingPage({ spocDetails, announcements }: LandingPageP
     </div>
   );
 }
-
-    

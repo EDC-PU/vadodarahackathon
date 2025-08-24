@@ -11,7 +11,7 @@
     --card-foreground: 20 14% 96%;
     --popover: 12 6% 6%;
     --popover-foreground: 20 14% 96%;
-    --primary: 28 98% 58%; /* Vibrant Orange */
+    --primary: 198 93% 49%;
     --primary-foreground: 24 10% 10%;
     --secondary: 260 20% 14%; /* Deep Purple/Navy */
     --secondary-foreground: 20 14% 96%;
@@ -23,7 +23,7 @@
     --destructive-foreground: 210 20% 98%;
     --border: 28 98% 58% / 0.2; /* Orange-tinted border */
     --input: 260 20% 14%;
-    --ring: 28 98% 58%;
+    --ring: 198 93% 49%;
     --radius: 0.5rem;
 
     /* Charts */
@@ -44,7 +44,7 @@
     --sidebar-ring: 28 98% 58%;
     
     /* Brand Colors */
-    --brand-yellow: 28 98% 58%;
+    --brand-yellow: 48 100% 50%;
     --brand-orange: 28 98% 58%;
     --brand-red: 0 84% 60%;
     --brand-black: 0 0% 0%;
@@ -58,7 +58,7 @@
     --card-foreground: 20 14% 96%;
     --popover: 12 6% 6%;
     --popover-foreground: 20 14% 96%;
-    --primary: 28 98% 58%;
+    --primary: 198 93% 49%;
     --primary-foreground: 24 10% 10%;
     --secondary: 260 20% 14%;
     --secondary-foreground: 20 14% 96%;
@@ -70,7 +70,7 @@
     --destructive-foreground: 210 20% 98%;
     --border: 28 98% 58% / 0.2;
     --input: 260 20% 14%;
-    --ring: 28 98% 58%;
+    --ring: 198 93% 49%;
 
     --chart-1: 28 98% 58%;
     --chart-2: 320 85% 65%;
@@ -110,4 +110,15 @@
   .glass-button {
     @apply bg-primary/20 backdrop-blur-sm border border-primary/50 text-foreground hover:bg-primary/40 hover:border-primary/70;
   }
+}
+
+.scroll-animate {
+    opacity: 0;
+    transform: translateY(30px);
+    transition: opacity 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94), transform 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+.scroll-animate.in-view {
+    opacity: 1;
+    transform: translateY(0);
 }
