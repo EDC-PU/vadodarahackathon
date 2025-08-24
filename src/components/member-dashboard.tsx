@@ -2,7 +2,7 @@
 "use client";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { User, Users, Phone, Mail, FileText, Trophy, Calendar, Loader2, AlertCircle, ArrowUpDown, CheckCircle } from "lucide-react";
+import { User, Users, Phone, Mail, FileText, Trophy, Calendar, Loader2, AlertCircle, ArrowUpDown, CheckCircle, Pencil } from "lucide-react";
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { db } from "@/lib/firebase";
 import { doc, getDoc, onSnapshot, collection, query, where } from "firebase/firestore";
@@ -196,76 +196,78 @@ export default function MemberDashboard() {
             <CardContent>
               {/* Desktop Table View */}
               <div className="hidden md:block">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>
-                        <Button variant="ghost" onClick={() => requestSort('name')}>Name {getSortIndicator('name')}</Button>
-                      </TableHead>
-                      <TableHead>
-                        <Button variant="ghost" onClick={() => requestSort('role')}>Role {getSortIndicator('role')}</Button>
-                      </TableHead>
-                      <TableHead>
-                        <Button variant="ghost" onClick={() => requestSort('email')}>Email {getSortIndicator('email')}</Button>
-                      </TableHead>
-                      <TableHead>
-                        <Button variant="ghost" onClick={() => requestSort('contactNumber')}>Contact No. {getSortIndicator('contactNumber')}</Button>
-                      </TableHead>
-                      <TableHead>
-                        <Button variant="ghost" onClick={() => requestSort('enrollmentNumber')}>Enrollment No. {getSortIndicator('enrollmentNumber')}</Button>
-                      </TableHead>
-                      <TableHead>
-                        <Button variant="ghost" onClick={() => requestSort('yearOfStudy')}>Year {getSortIndicator('yearOfStudy')}</Button>
-                      </TableHead>
-                      <TableHead>
-                        <Button variant="ghost" onClick={() => requestSort('semester')}>Sem {getSortIndicator('semester')}</Button>
-                      </TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {sortedTeamMembers.length > 0 ? (
-                      sortedTeamMembers.map((member) => {
-                         const isLeader = member.role === 'leader';
-                         const role = isLeader ? 'Leader' : `Member - ${teamMembers.filter(m => m.role !== 'leader').findIndex(m => m.uid === member.uid) + 1}`;
-                         return (
-                        <TableRow key={member.uid}>
-                          <TableCell className="font-medium">
-                             {member.enrollmentNumber ? (
-                                  <Link href={`/profile/${member.enrollmentNumber}`} className="hover:underline">
-                                      {member.name}
-                                  </Link>
-                              ) : (
-                                  member.name
-                              )}
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant={isLeader ? 'default' : 'secondary'}>
-                              {role}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>{member.email}</TableCell>
-                          <TableCell>
-                              {member.contactNumber ? (
-                                  <a href={`https://wa.me/+91${member.contactNumber}`} target="_blank" rel="noopener noreferrer" className="hover:underline">
-                                      {member.contactNumber}
-                                  </a>
-                              ) : 'N/A'}
-                          </TableCell>
-                          <TableCell>{member.enrollmentNumber || 'N/A'}</TableCell>
-                          <TableCell>{member.yearOfStudy || 'N/A'}</TableCell>
-                          <TableCell>{member.semester || 'N/A'}</TableCell>
-                        </TableRow>
-                         )
-                      })
-                    ) : (
+                <ScrollArea className="w-full whitespace-nowrap">
+                  <Table>
+                    <TableHeader>
                       <TableRow>
-                        <TableCell colSpan={7} className="text-center text-muted-foreground h-24">
-                          {loading ? <Loader2 className="h-6 w-6 animate-spin mx-auto"/> : 'No members found.'}
-                        </TableCell>
+                        <TableHead>
+                          <Button variant="ghost" onClick={() => requestSort('name')}>Name {getSortIndicator('name')}</Button>
+                        </TableHead>
+                        <TableHead>
+                          <Button variant="ghost" onClick={() => requestSort('role')}>Role {getSortIndicator('role')}</Button>
+                        </TableHead>
+                        <TableHead>
+                          <Button variant="ghost" onClick={() => requestSort('email')}>Email {getSortIndicator('email')}</Button>
+                        </TableHead>
+                        <TableHead>
+                          <Button variant="ghost" onClick={() => requestSort('contactNumber')}>Contact No. {getSortIndicator('contactNumber')}</Button>
+                        </TableHead>
+                        <TableHead>
+                          <Button variant="ghost" onClick={() => requestSort('enrollmentNumber')}>Enrollment No. {getSortIndicator('enrollmentNumber')}</Button>
+                        </TableHead>
+                        <TableHead>
+                          <Button variant="ghost" onClick={() => requestSort('yearOfStudy')}>Year {getSortIndicator('yearOfStudy')}</Button>
+                        </TableHead>
+                        <TableHead>
+                          <Button variant="ghost" onClick={() => requestSort('semester')}>Sem {getSortIndicator('semester')}</Button>
+                        </TableHead>
                       </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
+                    </TableHeader>
+                    <TableBody>
+                      {sortedTeamMembers.length > 0 ? (
+                        sortedTeamMembers.map((member) => {
+                           const isLeader = member.role === 'leader';
+                           const role = isLeader ? 'Leader' : `Member - ${teamMembers.filter(m => m.role !== 'leader').findIndex(m => m.uid === member.uid) + 1}`;
+                           return (
+                          <TableRow key={member.uid}>
+                            <TableCell className="font-medium">
+                               {member.enrollmentNumber ? (
+                                    <Link href={`/profile/${member.enrollmentNumber}`} className="hover:underline">
+                                        {member.name}
+                                    </Link>
+                                ) : (
+                                    member.name
+                                )}
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant={isLeader ? 'default' : 'secondary'}>
+                                {role}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>{member.email}</TableCell>
+                            <TableCell>
+                                {member.contactNumber ? (
+                                    <a href={`https://wa.me/+91${member.contactNumber}`} target="_blank" rel="noopener noreferrer" className="hover:underline">
+                                        {member.contactNumber}
+                                    </a>
+                                ) : 'N/A'}
+                            </TableCell>
+                            <TableCell>{member.enrollmentNumber || 'N/A'}</TableCell>
+                            <TableCell>{member.yearOfStudy || 'N/A'}</TableCell>
+                            <TableCell>{member.semester || 'N/A'}</TableCell>
+                          </TableRow>
+                           )
+                        })
+                      ) : (
+                        <TableRow>
+                          <TableCell colSpan={7} className="text-center text-muted-foreground h-24">
+                            {loading ? <Loader2 className="h-6 w-6 animate-spin mx-auto"/> : 'No members found.'}
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </ScrollArea>
               </div>
 
                {/* Mobile Card View */}
@@ -303,6 +305,31 @@ export default function MemberDashboard() {
           <div className="grid gap-8 lg:grid-cols-2">
             <AnnouncementsSection audience="teams_and_all" />
             <div className="space-y-8">
+               <Card>
+                    <CardHeader>
+                        <CardTitle>Problem Statement & Category</CardTitle>
+                        <CardDescription>This is the problem statement your team has selected.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        {team.problemStatementId ? (
+                            <div className="space-y-3">
+                                <p className="text-muted-foreground">Your team has selected:</p>
+                                <h3 className="text-lg font-semibold">{team.problemStatementTitle}</h3>
+                                <p className="text-sm">Team Category: <span className="font-semibold">{team.category}</span></p>
+                            </div>
+                        ) : (
+                            <div className="flex flex-col items-start gap-4">
+                                <Alert variant="default" className="border-primary/30">
+                                    <AlertCircle className="h-4 w-4" />
+                                    <AlertTitle>Not Selected Yet</AlertTitle>
+                                    <AlertDescription>
+                                        Your team leader has not selected a problem statement yet.
+                                    </AlertDescription>
+                                </Alert>
+                            </div>
+                        )}
+                    </CardContent>
+                </Card>
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2"><FileText/> Institute SPOC Details</CardTitle>
@@ -370,3 +397,5 @@ export default function MemberDashboard() {
     </div>
   );
 }
+
+    
