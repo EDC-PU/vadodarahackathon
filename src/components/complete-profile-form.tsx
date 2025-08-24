@@ -48,7 +48,7 @@ export function CompleteProfileForm() {
       enrollmentNumber: "",
       contactNumber: "",
       gender: undefined,
-      semester: undefined,
+      semester: 1, // Default to 1 instead of undefined
       yearOfStudy: "",
     },
   });

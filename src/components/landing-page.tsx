@@ -89,8 +89,6 @@ export default function LandingPage({ spocDetails, announcements }: LandingPageP
     '/VadodaraHackathon/13.jpg',
     '/VadodaraHackathon/14.jpg',
     '/VadodaraHackathon/15.jpg',
-    '/VadodaraHackathon/16.jpg',
-    '/VadodaraHackathon/17.jpg',
   ];
   
 

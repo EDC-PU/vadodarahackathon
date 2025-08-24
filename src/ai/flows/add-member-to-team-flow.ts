@@ -49,6 +49,10 @@ const addMemberToTeamFlow = ai.defineFlow(
       }
       const teamData = teamDoc.data() as Team;
       
+      if (!teamData.members) {
+        teamData.members = [];
+      }
+      
       if (teamData.members.length >= 5) {
           throw new Error("This team is already full.");
       }
