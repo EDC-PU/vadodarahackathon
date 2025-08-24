@@ -1,3 +1,4 @@
+
 import type {Config} from 'tailwindcss';
 
 const { fontFamily } = require("tailwindcss/defaultTheme")
@@ -104,10 +105,6 @@ export default {
             height: '0',
           },
         },
-        'float': {
-          '0%, 100%': { transform: 'translateY(-2%)' },
-          '50%': { transform: 'translateY(2%)' },
-        },
         'light-streaks': {
           '0%': { transform: 'translateY(-100%)', opacity: '0' },
           '10%': { opacity: '1' },
@@ -120,17 +117,16 @@ export default {
             '100%': { 'background-position': '0% 50%' },
         },
         'neon-pulse': {
-            '0%, 100%': { 'box-shadow': '0 0 5px #FFD700, 0 0 10px #FFD700, 0 0 20px #FF7A00, 0 0 30px #FF7A00', color: '#FFD700' },
-            '50%': { 'box-shadow': '0 0 10px #FF7A00, 0 0 20px #FF7A00, 0 0 30px #FF1E1E, 0 0 40px #FF1E1E', color: '#FF7A00' },
+            '0%, 100%': { 'box-shadow': '0 0 5px #FFD700, 0 0 10px #FFD700, 0 0 20px #FF7A00', color: '#FFD700' },
+            '50%': { 'box-shadow': '0 0 10px #FF7A00, 0 0 20px #FF1E1E, 0 0 30px #FF1E1E', color: '#FF7A00' },
         },
       },
       animation: {
         'accordion-down': 'accordion-down 0.2s ease-out',
         'accordion-up': 'accordion-up 0.2s ease-out',
-        'float': 'float 6s ease-in-out infinite',
         'light-streaks': 'light-streaks 8s linear infinite',
         'gradient-pan': 'gradient-pan 15s ease infinite',
-        'neon-pulse': 'neon-pulse 2s infinite',
+        'neon-pulse': 'neon-pulse 4s infinite',
       },
     },
   },

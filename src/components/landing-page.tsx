@@ -53,44 +53,8 @@ const AnimatedSection = ({ children, className }: { children: React.ReactNode, c
   );
 };
 
-const HeroSVGLogo = () => {
-    return (
-        <motion.svg 
-            width="100%" 
-            viewBox="0 0 600 120" 
-            initial="hidden"
-            animate="visible"
-            className="max-w-xl"
-        >
-            <defs>
-                <linearGradient id="shimmer" x1="0%" y1="0%" x2="100%" y2="0%">
-                    <stop offset="0%" stopColor="#FFD700" />
-                    <stop offset="50%" stopColor="#FF7A00" />
-                    <stop offset="100%" stopColor="#FF1E1E" />
-                </linearGradient>
-            </defs>
-            <motion.text
-                x="50%"
-                y="50%"
-                dy=".35em"
-                textAnchor="middle"
-                fontSize="40"
-                fontWeight="bold"
-                fill="url(#shimmer)"
-                stroke="url(#shimmer)"
-                strokeWidth="0.5"
-                initial={{ pathLength: 0, opacity: 0 }}
-                animate={{ pathLength: 1, opacity: 1 }}
-                transition={{ duration: 2, ease: "easeInOut" }}
-            >
-                Vadodara Hackathon 6.0
-            </motion.text>
-        </motion.svg>
-    )
-}
-
 const HeroSection = () => {
-    const headline = "Your Gateway to Smart India Hackathon 2025";
+    const tagline = "Your Gateway to Smart India Hackathon 2025";
     const controls = useAnimation();
 
     useEffect(() => {
@@ -125,22 +89,22 @@ const HeroSection = () => {
             </div>
 
             <motion.div 
-                className="container max-w-7xl text-center z-10"
+                className="container max-w-7xl text-center z-10 flex flex-col items-center"
                 variants={containerVariants}
                 initial="hidden"
                 animate={controls}
             >
-                <motion.h1 
-                    className="text-4xl md:text-6xl font-bold tracking-tighter text-white"
+                <motion.h2
+                    className="text-xl md:text-2xl font-medium tracking-wider text-white/80"
                     variants={itemVariants}
                 >
-                    {headline.split(" ").map((word, index) => {
+                     {tagline.split(" ").map((word, index) => {
                         if (word === "Hackathon" || word === "2025") {
                             return (
                                 <motion.span 
                                     key={index} 
-                                    className="text-brand-red animate-pulse"
-                                    style={{textShadow: '0 0 5px #FF7A00'}}
+                                    className="text-brand-orange animate-pulse"
+                                    style={{textShadow: '0 0 5px #FF1E1E'}}
                                 >
                                     {word}{' '}
                                 </motion.span>
@@ -148,21 +112,31 @@ const HeroSection = () => {
                         }
                         return <span key={index}>{word} </span>;
                     })}
-                </motion.h1>
-                <motion.div variants={itemVariants} className="mt-8 flex justify-center">
-                    <HeroSVGLogo />
+                </motion.h2>
+
+                <motion.div variants={itemVariants} className="my-8">
+                     <Image
+                        src="https://mnaignsupdlayf72.public.blob.vercel-storage.com/vhlogosvg.svg"
+                        alt="Vadodara Hackathon 6.0 Logo"
+                        width={600}
+                        height={120}
+                        priority
+                        className="max-w-xl w-full h-auto drop-shadow-[0_0_15px_hsl(var(--brand-orange)/0.5)]"
+                     />
                 </motion.div>
+                
                 <motion.div 
-                    className="flex flex-col sm:flex-row justify-center items-center gap-6 mt-12"
+                    className="flex flex-col sm:flex-row justify-center items-center gap-6"
                     variants={itemVariants}
                 >
                     <Button
                         size="lg"
                         className="bg-transparent border-2 border-brand-yellow text-brand-yellow rounded-full animate-neon-pulse transition-transform hover:scale-105"
+                        asChild
                     >
                         <Link href="/register">Register Now</Link>
                     </Button>
-                     <Button variant="link" size="lg" className="text-white group text-lg rounded-full">
+                     <Button variant="link" size="lg" className="text-white group text-lg rounded-full" asChild>
                         <Link href="#about">
                             Learn More
                             <span className="block max-w-0 group-hover:max-w-full transition-all duration-300 h-0.5 bg-brand-red"></span>

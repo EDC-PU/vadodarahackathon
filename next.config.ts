@@ -43,6 +43,12 @@ const nextConfig: NextConfig = {
         hostname: 'placehold.co',
         port: '',
         pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'mnaignsupdlayf72.public.blob.vercel-storage.com',
+        port: '',
+        pathname: '/**',
       }
     ],
   },
