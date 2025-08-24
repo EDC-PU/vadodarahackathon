@@ -221,12 +221,14 @@ export default function MemberDashboard() {
                 </TableHeader>
                 <TableBody>
                   {sortedTeamMembers.length > 0 ? (
-                    sortedTeamMembers.map((member) => (
+                    sortedTeamMembers.map((member, index) => {
+                       const role = member.role === 'leader' ? 'Leader' : `Member - ${index}`;
+                       return (
                       <TableRow key={member.uid}>
                         <TableCell className="font-medium">{member.name}</TableCell>
                         <TableCell>
                           <Badge variant={member.role === 'leader' ? 'default' : 'secondary'}>
-                            {member.role}
+                            {role}
                           </Badge>
                         </TableCell>
                         <TableCell>{member.email}</TableCell>
@@ -235,7 +237,8 @@ export default function MemberDashboard() {
                         <TableCell>{member.yearOfStudy || 'N/A'}</TableCell>
                         <TableCell>{member.semester || 'N/A'}</TableCell>
                       </TableRow>
-                    ))
+                       )
+                    })
                   ) : (
                     <TableRow>
                       <TableCell colSpan={7} className="text-center text-muted-foreground h-24">
