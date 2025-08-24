@@ -3,7 +3,7 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { User, Users, Phone, Mail, FileText, Trophy, Calendar, Loader2, AlertCircle, ArrowUpDown, CheckCircle } from "lucide-react";
-import { useEffect, useState, useCallback, useMemo, useRef } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { db } from "@/lib/firebase";
 import { doc, getDoc, onSnapshot, collection, query, where } from "firebase/firestore";
 import { Team, UserProfile } from "@/lib/types";
@@ -15,8 +15,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from ".
 import { Button } from "./ui/button";
 import Link from "next/link";
 import { Badge } from "./ui/badge";
-import { useScrollAnimation } from "@/hooks/use-scroll-animation";
-import { cn } from "@/lib/utils";
 
 type SortKey = 'name' | 'role' | 'email' | 'contactNumber' | 'enrollmentNumber' | 'yearOfStudy' | 'semester';
 type SortDirection = 'asc' | 'desc';
@@ -28,9 +26,6 @@ export default function MemberDashboard() {
   const [spoc, setSpoc] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [sortConfig, setSortConfig] = useState<{ key: SortKey, direction: SortDirection } | null>(null);
-
-  const mainRef = useRef<HTMLDivElement>(null);
-  const isInView = useScrollAnimation(mainRef);
 
   const fetchTeamAndMembers = useCallback(() => {
     if (!user?.teamId) {
@@ -163,7 +158,7 @@ export default function MemberDashboard() {
   }
 
   return (
-    <div ref={mainRef} className={cn("p-4 sm:p-6 lg:p-8 scroll-animate", isInView && "in-view")}>
+    <div className="p-4 sm:p-6 lg:p-8">
       <header className="mb-8 flex justify-between items-start">
         <div>
           <h1 className="text-3xl font-bold font-headline">Welcome, {user.name}!</h1>
@@ -189,7 +184,7 @@ export default function MemberDashboard() {
       
       {team ? (
         <div className="space-y-8">
-          <Card>
+           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Users/> Team Details: {team.name}
@@ -341,3 +336,5 @@ export default function MemberDashboard() {
     </div>
   );
 }
+
+    
