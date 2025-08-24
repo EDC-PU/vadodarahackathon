@@ -40,7 +40,6 @@ async function getPublicAnnouncements() {
     return [];
   }
   try {
-    // Corrected to use Admin SDK query syntax
     const announcementsCollection = db.collection('announcements');
     const q = announcementsCollection
         .where("audience", "==", "all")
@@ -54,14 +53,15 @@ async function getPublicAnnouncements() {
 
     const announcements = snapshot.docs.map(doc => {
         const data = doc.data();
+        const createdAt = data.createdAt;
         return {
             id: doc.id,
             ...data,
-            // Convert Firestore Timestamp to a serializable format
-            createdAt: {
-                seconds: data.createdAt.seconds,
-                nanoseconds: data.createdAt.nanoseconds,
-            },
+            // Convert Firestore Timestamp to a serializable format (plain object)
+            createdAt: createdAt ? {
+                seconds: createdAt.seconds,
+                nanoseconds: createdAt.nanoseconds,
+            } : null,
         } as Announcement;
     });
     return announcements;
