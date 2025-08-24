@@ -327,7 +327,7 @@ export default function SpocDashboard() {
   const totalParticipants = teams ? teams.reduce((acc, team) => acc + 1 + team.members.length, 0) : 0;
 
   return (
-    <div ref={mainRef} className={cn("p-4 sm:p-6 lg:p-8 scroll-animate", isInView && "in-view")}>
+    <div ref={mainRef} className={cn("p-4 sm:p-6 lg:p-8")}>
       <header className="mb-8">
         <h1 className="text-3xl font-bold font-headline">SPOC Dashboard</h1>
         <p className="text-muted-foreground">Manage teams from your institute: <strong>{user?.institute}</strong></p>

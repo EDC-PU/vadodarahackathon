@@ -47,7 +47,7 @@ export default function SystemHealthDashboard() {
   const allServicesSuccess = healthState ? Object.values(healthState).every(service => typeof service === 'object' && service !== null && 'success' in service ? service.success : true) : false;
 
   return (
-    <div ref={mainRef} className={cn("p-4 sm:p-6 lg:p-8 bg-gray-900 text-white min-h-screen scroll-animate", isInView && "in-view")}>
+    <div ref={mainRef} className={cn("p-4 sm:p-6 lg:p-8 bg-gray-900 text-white min-h-screen")}>
       <header className="mb-8 flex justify-between items-center">
         <div>
             <h1 className="text-3xl font-bold font-headline">System Health</h1>
