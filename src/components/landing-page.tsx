@@ -214,12 +214,12 @@ export default function LandingPage({ spocDetails, announcements }: LandingPageP
               <div className="grid grid-cols-2 gap-4 pt-4">
                   <div className="glass-card p-4 rounded-lg text-center">
                       <BarChart className="h-8 w-8 text-primary mx-auto mb-2" />
-                      <p className="text-2xl font-bold">200+</p>
+                      <p className="text-2xl font-bold">400+</p>
                       <p className="text-sm text-muted-foreground">Teams Expected</p>
                   </div>
                   <div className="glass-card p-4 rounded-lg text-center">
                       <FileQuestion className="h-8 w-8 text-primary mx-auto mb-2" />
-                      <p className="text-2xl font-bold">100+</p>
+                      <p className="text-2xl font-bold">250+</p>
                       <p className="text-sm text-muted-foreground">Problem Statements</p>
                   </div>
               </div>
