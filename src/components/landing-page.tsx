@@ -341,8 +341,8 @@ export default function LandingPage({ spocDetails, announcements }: LandingPageP
         </AnimatedSection>
         
         <AnimatedSection id="problem-statements">
-          <div className="container max-w-7xl grid md:grid-cols-2 gap-12 items-center">
-            <div className="space-y-4">
+          <div className="container max-w-7xl">
+            <div className="space-y-4 text-center max-w-3xl mx-auto">
                <SectionTitle>About the Problem Statement</SectionTitle>
               <p className="text-foreground/80">
                 The problem statements for Vadodara Hackathon 5.0 were taken from Smart India Hackathon 2024. In total, 239 problem statements were provided, with 68 in the hardware category and 186 in the software category.
@@ -365,16 +365,6 @@ export default function LandingPage({ spocDetails, announcements }: LandingPageP
                       <p className="text-sm text-muted-foreground">Problem Statements in Software Category</p>
                   </motion.div>
               </div>
-            </div>
-             <div>
-                <Image
-                    src="https://placehold.co/600x400.png"
-                    alt="Problem Statement Section Image"
-                    width={600}
-                    height={400}
-                    className="rounded-lg shadow-xl object-cover aspect-[3/2] border border-primary/20"
-                    data-ai-hint="hackathon problem solving"
-                />
             </div>
           </div>
         </AnimatedSection>
