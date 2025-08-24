@@ -7,7 +7,7 @@
 import { ai } from '@/ai/genkit';
 import { getAdminDb, getAdminAuth } from '@/lib/firebase-admin';
 import { Team, ManageTeamBySpocInput, ManageTeamBySpocInputSchema, ManageTeamBySpocOutput, ManageTeamBySpocOutputSchema } from '@/lib/types';
-import { arrayRemove } from 'firebase/firestore';
+import { FieldValue } from 'firebase-admin/firestore';
 
 
 export async function manageTeamBySpoc(input: ManageTeamBySpocInput): Promise<ManageTeamBySpocOutput> {
@@ -62,7 +62,7 @@ const manageTeamBySpocFlow = ai.defineFlow(
             const batch = adminDb.batch();
             
             // 1. Remove member from team's array
-            batch.update(teamDocRef, { members: arrayRemove(memberToRemove) });
+            batch.update(teamDocRef, { members: FieldValue.arrayRemove(memberToRemove) });
             console.log("Batch update: Remove member from team array.");
             
             // 2. Clear teamId from the user's profile
