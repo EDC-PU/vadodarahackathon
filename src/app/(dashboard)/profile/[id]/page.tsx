@@ -94,8 +94,14 @@ export default function ProfilePage() {
 
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    if (!user || !profileData || user.uid !== profileData.uid) {
-        toast({ title: "Error", description: "You can only edit your own profile.", variant: "destructive" });
+    if (!user || !profileData) return;
+
+    // Authorization check: Allow if user is editing their own profile OR if user is a SPOC for the same institute
+    const isOwner = user.uid === profileData.uid;
+    const isSpocOfInstitute = user.role === 'spoc' && user.institute === profileData.institute;
+
+    if (!isOwner && !isSpocOfInstitute) {
+        toast({ title: "Unauthorized", description: "You do not have permission to edit this profile.", variant: "destructive" });
         return;
     }
     
@@ -104,7 +110,7 @@ export default function ProfilePage() {
         const batch = writeBatch(db);
 
         // 1. Update the user's own profile document
-        const userDocRef = doc(db, "users", user.uid);
+        const userDocRef = doc(db, "users", profileData.uid);
         const updatedProfileData: Partial<UserProfile> = {
             name: values.name,
             gender: values.gender,
@@ -117,15 +123,15 @@ export default function ProfilePage() {
         batch.update(userDocRef, updatedProfileData);
 
         // 2. If user is a member or leader of a team, update their details in the team document
-        if (user.teamId) {
-            const teamDocRef = doc(db, "teams", user.teamId);
+        if (profileData.teamId) {
+            const teamDocRef = doc(db, "teams", profileData.teamId);
             const teamDoc = await getDoc(teamDocRef);
             if (teamDoc.exists()) {
                 const teamData = teamDoc.data() as Team;
-                if (user.role === 'leader') {
+                if (profileData.role === 'leader') {
                      batch.update(teamDocRef, { 'leader.name': values.name });
                 } else {
-                    const memberIndex = teamData.members.findIndex(m => m.email === user.email);
+                    const memberIndex = teamData.members.findIndex(m => m.email === profileData.email);
                     if (memberIndex !== -1) {
                         const updatedMembers = [...teamData.members];
                         updatedMembers[memberIndex] = {
@@ -147,10 +153,9 @@ export default function ProfilePage() {
 
         toast({
             title: "Profile Updated!",
-            description: "Your details have been successfully saved.",
+            description: `${values.name}'s details have been successfully saved.`,
         });
         
-        // If enrollment number was changed, we might need to redirect
         if (profileEnrollmentNumber !== values.enrollmentNumber) {
             window.location.href = `/profile/${values.enrollmentNumber}`;
         }
@@ -175,13 +180,18 @@ export default function ProfilePage() {
       )
   }
   
-  if (!user || user.enrollmentNumber !== profileEnrollmentNumber) {
+  // Authorization check
+  const isOwner = user?.enrollmentNumber === profileEnrollmentNumber;
+  const isSpocOfInstitute = user?.role === 'spoc' && user?.institute === profileData?.institute;
+  const canEdit = isOwner || isSpocOfInstitute;
+
+  if (!canEdit) {
     return (
         <div className="p-4 sm:p-6 lg:p-8">
             <Alert variant="destructive">
                 <AlertCircle className="h-4 w-4" />
                 <AlertTitle>Access Denied</AlertTitle>
-                <AlertDescription>You can only view and edit your own profile.</AlertDescription>
+                <AlertDescription>You do not have permission to view or edit this profile.</AlertDescription>
             </Alert>
         </div>
     )
@@ -190,14 +200,14 @@ export default function ProfilePage() {
   return (
     <div className="p-4 sm:p-6 lg:p-8 max-w-4xl mx-auto">
         <header className="mb-8">
-            <h1 className="text-3xl font-bold font-headline">My Profile</h1>
-            <p className="text-muted-foreground">View and edit your personal information.</p>
+            <h1 className="text-3xl font-bold font-headline">Edit Profile</h1>
+            <p className="text-muted-foreground">Editing the profile for {profileData?.name || 'user'}.</p>
         </header>
         <Card>
             <CardHeader>
-                <CardTitle>Edit Your Details</CardTitle>
+                <CardTitle>User's Details</CardTitle>
                 <CardDescription>
-                    Your email address is <span className="font-medium">{user.email}</span>. Your institute is <span className="font-medium">{user.institute}</span>.
+                    User's email address is <span className="font-medium">{profileData?.email}</span>. Institute is <span className="font-medium">{profileData?.institute}</span>.
                 </CardDescription>
             </CardHeader>
             <CardContent className="p-6">
