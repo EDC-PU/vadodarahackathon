@@ -15,6 +15,7 @@ export interface UserProfile {
   institute?: string;
   department?: string;
   enrollmentNumber?: string;
+  misId?: string; // For SPOCs
   contactNumber?: string;
   gender?: "Male" | "Female" | "Other";
   teamId?: string;

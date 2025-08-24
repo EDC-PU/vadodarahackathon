@@ -32,10 +32,14 @@ import {
 import { INSTITUTES } from "@/lib/constants";
 import { notifyAdminsOfSpocRequest } from "@/ai/flows/notify-admins-flow";
 import { Alert, AlertDescription, AlertTitle } from "./ui/alert";
+import { RadioGroup, RadioGroupItem } from "./ui/radio-group";
 
 const formSchema = z.object({
   name: z.string().min(2, { message: "Name must be at least 2 characters." }),
+  misId: z.string().min(1, { message: "MIS ID is required." }),
+  gender: z.enum(["Male", "Female", "Other"], { required_error: "Please select a gender." }),
   institute: z.string({ required_error: "Please select an institute." }).min(1, "Please select an institute."),
+  department: z.string().min(2, { message: "Department is required." }),
   contactNumber: z.string().regex(/^\d{10}$/, { message: "Please enter a valid 10-digit phone number." }),
 });
 
@@ -51,6 +55,9 @@ export function CompleteSpocProfileForm() {
       name: "",
       institute: "",
       contactNumber: "",
+      misId: "",
+      department: "",
+      gender: undefined,
     },
   });
 
@@ -60,6 +67,9 @@ export function CompleteSpocProfileForm() {
               name: user.name || "",
               institute: user.institute || "",
               contactNumber: user.contactNumber || "",
+              misId: user.misId || "",
+              department: user.department || "",
+              gender: user.gender || undefined,
           })
       }
   }, [user, form]);
@@ -96,7 +106,10 @@ export function CompleteSpocProfileForm() {
         const userDocRef = doc(db, "users", user.uid);
         const updatedProfileData: Partial<UserProfile> = {
             name: values.name,
+            misId: values.misId,
+            gender: values.gender,
             institute: values.institute,
+            department: values.department,
             contactNumber: values.contactNumber,
             spocStatus: 'pending', 
         };
@@ -151,41 +164,109 @@ export function CompleteSpocProfileForm() {
             <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                 <p className="text-sm text-muted-foreground">Your email: <span className="font-medium">{user?.email}</span></p>
-                <FormField
-                control={form.control}
-                name="name"
-                render={({ field }) => (
-                    <FormItem>
-                    <FormLabel>Full Name</FormLabel>
-                    <FormControl>
-                        <Input placeholder="John Doe" {...field} disabled={isLoading}/>
-                    </FormControl>
-                    <FormMessage />
-                    </FormItem>
-                )}
-                />
-                <FormField
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                        control={form.control}
+                        name="name"
+                        render={({ field }) => (
+                            <FormItem>
+                            <FormLabel>Full Name</FormLabel>
+                            <FormControl>
+                                <Input placeholder="John Doe" {...field} disabled={isLoading}/>
+                            </FormControl>
+                            <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                     <FormField
+                        control={form.control}
+                        name="misId"
+                        render={({ field }) => (
+                            <FormItem>
+                            <FormLabel>MIS ID</FormLabel>
+                            <FormControl>
+                                <Input placeholder="Enter your MIS ID" {...field} disabled={isLoading}/>
+                            </FormControl>
+                            <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                </div>
+                 <FormField
                     control={form.control}
-                    name="institute"
+                    name="gender"
                     render={({ field }) => (
-                    <FormItem>
-                        <FormLabel>Institute</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value} disabled={isLoading}>
+                        <FormItem>
+                        <FormLabel>Gender</FormLabel>
                         <FormControl>
-                            <SelectTrigger>
-                            <SelectValue placeholder="Select your institute" />
-                            </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                            {INSTITUTES.map((inst) => (
-                            <SelectItem key={inst} value={inst}>{inst}</SelectItem>
-                            ))}
-                        </SelectContent>
-                        </Select>
+                            <RadioGroup
+                                onValueChange={field.onChange}
+                                value={field.value}
+                                className="flex items-center space-x-4 pt-2"
+                                disabled={isLoading}
+                            >
+                                <FormItem className="flex items-center space-x-2 space-y-0">
+                                <FormControl>
+                                    <RadioGroupItem value="Male" />
+                                </FormControl>
+                                <FormLabel className="font-normal">Male</FormLabel>
+                                </FormItem>
+                                <FormItem className="flex items-center space-x-2 space-y-0">
+                                <FormControl>
+                                    <RadioGroupItem value="Female" />
+                                </FormControl>
+                                <FormLabel className="font-normal">Female</FormLabel>
+                                </FormItem>
+                                <FormItem className="flex items-center space-x-2 space-y-0">
+                                <FormControl>
+                                    <RadioGroupItem value="Other" />
+                                </FormControl>
+                                <FormLabel className="font-normal">Other</FormLabel>
+                                </FormItem>
+                            </RadioGroup>
+                            </FormControl>
                         <FormMessage />
-                    </FormItem>
+                        </FormItem>
                     )}
-                />
+                    />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                     <FormField
+                        control={form.control}
+                        name="institute"
+                        render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Institute</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value} disabled={isLoading}>
+                            <FormControl>
+                                <SelectTrigger>
+                                <SelectValue placeholder="Select your institute" />
+                                </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                                {INSTITUTES.map((inst) => (
+                                <SelectItem key={inst} value={inst}>{inst}</SelectItem>
+                                ))}
+                            </SelectContent>
+                            </Select>
+                            <FormMessage />
+                        </FormItem>
+                        )}
+                    />
+                    <FormField
+                        control={form.control}
+                        name="department"
+                        render={({ field }) => (
+                            <FormItem>
+                            <FormLabel>Department</FormLabel>
+                            <FormControl>
+                                <Input placeholder="e.g., Computer Engineering" {...field} disabled={isLoading}/>
+                            </FormControl>
+                            <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                </div>
+               
                 <FormField
                 control={form.control}
                 name="contactNumber"
