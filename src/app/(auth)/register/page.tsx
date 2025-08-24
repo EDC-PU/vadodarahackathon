@@ -2,8 +2,6 @@
 import { SignupForm } from "@/components/signup-form";
 import Image from "next/image";
 import Link from "next/link";
-import { getDoc, doc } from "firebase/firestore";
-import { db } from "@/lib/firebase";
 import { getAdminDb } from "@/lib/firebase-admin";
 
 async function getRegistrationDeadline() {
@@ -15,7 +13,7 @@ async function getRegistrationDeadline() {
     try {
         const configDocRef = adminDb.collection("config").doc("event");
         const configDoc = await configDocRef.get();
-        if (configDoc.exists() && configDoc.data()?.registrationDeadline) {
+        if (configDoc.exists && configDoc.data()?.registrationDeadline) {
             // Convert timestamp to serializable format (milliseconds)
             return configDoc.data()?.registrationDeadline.toMillis();
         }
