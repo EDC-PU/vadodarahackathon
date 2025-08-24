@@ -264,9 +264,12 @@ export default function MemberDashboard() {
                         <CardTitle>Hackathon Information</CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-3">
-                        <div className="flex items-center gap-3">
-                            <Calendar className="h-5 w-5 text-primary"/>
-                            <p><strong>Dates:</strong> To be Announced</p>
+                        <div className="flex items-start gap-3">
+                            <Calendar className="h-5 w-5 text-primary mt-1" />
+                            <div>
+                              <p><strong>Intra-Institute Round:</strong> 3rd, 4th & 5th September 2025</p>
+                              <p><strong>Grand Finale:</strong> 6th September 2025</p>
+                            </div>
                         </div>
                         <div className="flex items-center gap-3">
                             <Trophy className="h-5 w-5 text-primary"/>
