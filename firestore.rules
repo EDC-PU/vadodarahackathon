@@ -2,16 +2,16 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-  
+
     // Helper Functions
     function isSignedIn() {
       return request.auth != null;
     }
-    
+
     function isOwner(userId) {
       return isSignedIn() && request.auth.uid == userId;
     }
-    
+
     function getSelfData() {
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
     }
@@ -19,23 +19,25 @@ service cloud.firestore {
     function getUserData(userId) {
       return get(/databases/$(database)/documents/users/$(userId)).data;
     }
-    
+
     function isAdmin() {
       return isSignedIn() && getSelfData().role == 'admin';
     }
-    
+
     function isTeamMate(targetUserId) {
-        let selfData = getSelfData();
-        let targetUserData = getUserData(targetUserId);
-        return isSignedIn() && selfData.teamId != null && selfData.teamId == targetUserData.teamId;
+      let selfData = getSelfData();
+      let targetData = getUserData(targetUserId);
+      return selfData.teamId != null && selfData.teamId == targetData.teamId;
     }
     
     function isApprovedSpocForInstitute(institute) {
         let selfData = getSelfData();
-        return isSignedIn() && selfData.role == 'spoc' && selfData.spocStatus == 'approved' && selfData.institute == institute;
+        return selfData.role == 'spoc' 
+            && selfData.spocStatus == 'approved' 
+            && selfData.institute == institute;
     }
 
-    // Collection: users
+    // Collection Rules
     match /users/{userId} {
       // Allow read if:
       // 1. User is the owner of the document.
@@ -45,9 +47,9 @@ service cloud.firestore {
       allow read: if isOwner(userId) || isAdmin() || isTeamMate(userId) || isApprovedSpocForInstitute(getUserData(userId).institute);
 
       // Allow write if:
-      // 1. User is the owner of the document (covers all profile updates).
+      // 1. User is the owner of the document (covers profile completion for all roles).
       // 2. User is an Admin.
-      // 3. User is an approved SPOC for a user in their institute.
+      // 3. User is an approved SPOC for the target user's institute.
       allow write: if isOwner(userId) || isAdmin() || isApprovedSpocForInstitute(getUserData(userId).institute);
       
       // Allow list queries if:
@@ -57,66 +59,63 @@ service cloud.firestore {
       // 4. User is an approved SPOC querying for users in their institute.
       allow list: if isAdmin() ||
                    (isSignedIn() && request.query.limit <= 1 && request.query.filters[0].field == 'uid' && request.query.filters[0].value == request.auth.uid) ||
-                   (isSignedIn() && request.query.limit <= 1 && request.query.filters[0].field == 'enrollmentNumber' && request.query.filters[0].value == getSelfData().enrollmentNumber) ||
+                   (isSignedIn() && getSelfData().enrollmentNumber != null && request.query.limit <= 1 && request.query.filters[0].field == 'enrollmentNumber' && request.query.filters[0].value == getSelfData().enrollmentNumber) ||
                    (isSignedIn() && getSelfData().role == 'spoc' && getSelfData().spocStatus == 'approved' && request.query.filters[0].field == 'institute' && request.query.filters[0].value == getSelfData().institute);
     }
-
-    // Collection: teams
+    
     match /teams/{teamId} {
-      // Allow read for any signed-in user.
-      allow read: if isSignedIn();
-      
-      // Allow create for any signed-in user (flow performs validation).
-      allow create: if isSignedIn();
-
-      // Allow update if:
-      // 1. User is an Admin.
-      // 2. User is the leader of the team.
-      // 3. User is an approved SPOC for the team's institute.
-      allow update: if isAdmin() ||
-                     (isSignedIn() && getSelfData().uid == resource.data.leader.uid) ||
-                     isApprovedSpocForInstitute(resource.data.institute);
-                     
-      // Allow delete if:
-      // 1. User is an Admin.
-      // 2. User is an approved SPOC for the team's institute.
-      allow delete: if isAdmin() || isApprovedSpocForInstitute(resource.data.institute);
-    }
-    
-    // Collection: teamInvites
-    match /teamInvites/{inviteId} {
-        // Anyone can read an invite to get team details.
-        allow read: if true;
-        // Only admins, team leaders, or SPOCs can create invites.
-        allow create: if isSignedIn() && (getSelfData().role == 'admin' || getSelfData().role == 'leader' || getSelfData().role == 'spoc');
-        // Nobody can update or delete invites. They are permanent.
-        allow update, delete: if false;
-    }
-
-    // Collection: problemStatements
-    match /problemStatements/{psId} {
-        // Allow read for any signed-in user.
+        // Anyone can read team data, as it's not sensitive.
         allow read: if isSignedIn();
-        // Only admins can create, update, or delete problem statements.
-        allow create, update, delete: if isAdmin();
+        
+        // Allow write if:
+        // 1. User is an Admin.
+        // 2. User is the leader of the team.
+        // 3. User is an approved SPOC for the team's institute.
+        allow write: if isAdmin() || 
+                      (isSignedIn() && get(/databases/$(database)/documents/teams/$(teamId)).data.leader.uid == request.auth.uid) ||
+                      (isSignedIn() && getSelfData().role == 'spoc' && getSelfData().spocStatus == 'approved' && getSelfData().institute == get(/databases/$(database)/documents/teams/$(teamId)).data.institute);
+                      
+        allow create: if isSignedIn();
     }
     
-    // Collection: config
+    match /problemStatements/{psId} {
+        // Anyone can read problem statements.
+        allow read: if true;
+        
+        // Only Admins can create, update, or delete them.
+        allow write: if isAdmin();
+    }
+    
+    match /announcements/{announcementId} {
+        // Anyone can read announcements.
+        allow read: if true;
+        
+        // Only Admins can create or delete them.
+        allow write: if isAdmin();
+    }
+    
+     match /teamInvites/{inviteId} {
+        // Anyone with the link can read the invite details.
+        allow read: if true;
+        
+        // Team leaders and SPOCs can create invites. Admins can manage them.
+        allow write: if isAdmin() || isSignedIn();
+    }
+    
     match /config/{docId} {
-      // Anyone can read config like registration deadlines.
-      allow read: if true;
-      // Only admins can write to config.
-      allow write: if isAdmin();
+        // Anyone can read config like deadlines.
+        allow read: if true;
+        
+        // Only Admins can write to config.
+        allow write: if isAdmin();
     }
 
-    // Collection: notifications
     match /notifications/{notificationId} {
-      // Allow read only for the recipient of the notification.
-      allow read: if isSignedIn() && getSelfData().uid == resource.data.recipientUid;
-      // Writing notifications is handled by backend flows.
-      allow write: if isSignedIn();
-      // Allow the recipient to delete their own notifications.
-      allow delete: if isSignedIn() && getSelfData().uid == resource.data.recipientUid;
+        // User can only read their own notifications.
+        allow read, delete: if isOwner(get(/databases/$(database)/documents/notifications/$(notificationId)).data.recipientUid);
+        
+        // Allow write for server-side operations (e.g. cloud functions)
+        allow create: if isSignedIn(); 
     }
   }
 }
