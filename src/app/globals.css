@@ -11,7 +11,7 @@
     --card-foreground: 20 14% 96%;
     --popover: 12 6% 6%;
     --popover-foreground: 20 14% 96%;
-    --primary: 198 93% 49%;
+    --primary: 28 98% 58%; /* Orange */
     --primary-foreground: 24 10% 10%;
     --secondary: 260 20% 14%; /* Deep Purple/Navy */
     --secondary-foreground: 20 14% 96%;
@@ -23,7 +23,7 @@
     --destructive-foreground: 210 20% 98%;
     --border: 28 98% 58% / 0.2; /* Orange-tinted border */
     --input: 260 20% 14%;
-    --ring: 198 93% 49%;
+    --ring: 28 98% 58%; /* Orange */
     --radius: 0.5rem;
 
     /* Charts */
@@ -58,7 +58,7 @@
     --card-foreground: 20 14% 96%;
     --popover: 12 6% 6%;
     --popover-foreground: 20 14% 96%;
-    --primary: 198 93% 49%;
+    --primary: 28 98% 58%; /* Orange */
     --primary-foreground: 24 10% 10%;
     --secondary: 260 20% 14%;
     --secondary-foreground: 20 14% 96%;
@@ -70,7 +70,7 @@
     --destructive-foreground: 210 20% 98%;
     --border: 28 98% 58% / 0.2;
     --input: 260 20% 14%;
-    --ring: 198 93% 49%;
+    --ring: 28 98% 58%; /* Orange */
 
     --chart-1: 28 98% 58%;
     --chart-2: 320 85% 65%;

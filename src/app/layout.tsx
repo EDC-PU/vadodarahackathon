@@ -11,7 +11,7 @@ const fontInter = Inter({
 })
 
 export const metadata: Metadata = {
-  title: 'Vadodara Hackathon Portal',
+  title: 'Vadodara Hackathon 6.0 | PIERC X PU',
   description: 'Welcome to the Vadodara Hackathon 6.0 , hosted by Parul University, PIERC.',
   icons: {
     icon: '/favicon.ico',

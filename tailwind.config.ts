@@ -133,6 +133,9 @@ export default {
         'neon-pulse': 'neon-pulse 4s infinite',
         'neon-pulse-arrows': 'neon-pulse-arrows 2s infinite',
       },
+       backgroundImage: {
+        'gradient-brand': 'linear-gradient(to right, hsl(var(--brand-yellow)), hsl(var(--brand-orange)), hsl(var(--brand-red)))',
+      },
     },
   },
   plugins: [require('tailwindcss-animate')],

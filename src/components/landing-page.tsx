@@ -100,7 +100,7 @@ const HeroSection = () => {
     };
 
     return (
-        <section id="home" className="relative min-h-[90vh] py-20 md:py-32 flex items-center justify-center overflow-hidden bg-brand-black">
+        <section id="home" className="relative min-h-[90vh] py-15 md:py-32 flex items-center justify-center overflow-hidden bg-brand-black">
             <div className="absolute inset-0 z-0">
                  {/* Animated Streaks */}
                 <div className="absolute top-0 left-1/4 w-1 h-full bg-brand-red/20 animate-light-streaks" style={{ animationDelay: '0s' }}></div>
@@ -193,16 +193,13 @@ export default function LandingPage({ spocDetails, announcements }: LandingPageP
   ];
   
   const aboutImages = [
-    "https://i.ibb.co/ZYrrS9h/Screenshot-2024-08-19-111659.png",
-    "https://i.ibb.co/MgFsf84/Screenshot-2024-08-19-111647.png",
-    "https://i.ibb.co/3dTYdbL/Screenshot-2024-08-19-111637.png",
-  ];
-
-  const galleryImages = [
     '/VadodaraHackathon/1.jpg',
     '/VadodaraHackathon/2.jpg',
     '/VadodaraHackathon/3.jpg',
     '/VadodaraHackathon/4.jpg',
+  ];
+
+  const galleryImages = [
     '/VadodaraHackathon/5.jpg',
     '/VadodaraHackathon/6.jpg',
     '/VadodaraHackathon/7.jpg',
