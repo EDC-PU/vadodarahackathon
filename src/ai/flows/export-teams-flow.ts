@@ -87,13 +87,13 @@ const exportTeamsFlow = ai.defineFlow(
         
         // 2. Load ExcelJS Template
         console.log("Step 2: Loading Excel template...");
-        const templatePath = path.join(process.cwd(), 'src', 'templates', 'template.xlsx');
+        const templatePath = path.join(process.cwd(), 'templates', 'template.xlsx');
         const templateWorkbook = new ExcelJS.Workbook();
         try {
             await templateWorkbook.xlsx.readFile(templatePath);
         } catch (error: any) {
              console.error(`Error reading template file at ${templatePath}:`, error);
-             return { success: false, message: `Could not load the Excel template file. Make sure 'template.xlsx' exists in the 'public' directory. Error: ${error.message}` };
+             return { success: false, message: `Could not load the Excel template file. Make sure 'template.xlsx' exists in the ${templatePath} directory. Error: ${error.message}` };
         }
         
         const templateSheet = templateWorkbook.getWorksheet(1);
