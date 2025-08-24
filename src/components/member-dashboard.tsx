@@ -194,7 +194,8 @@ export default function MemberDashboard() {
               <CardDescription>Your current team roster from {team.institute}.</CardDescription>
             </CardHeader>
             <CardContent>
-              <ScrollArea className="w-full whitespace-nowrap">
+              {/* Desktop Table View */}
+              <div className="hidden md:block">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -265,7 +266,37 @@ export default function MemberDashboard() {
                     )}
                   </TableBody>
                 </Table>
-              </ScrollArea>
+              </div>
+
+               {/* Mobile Card View */}
+               <div className="md:hidden space-y-4">
+                  {sortedTeamMembers.length > 0 ? (
+                    sortedTeamMembers.map((member) => {
+                      const isLeader = member.role === 'leader';
+                      return (
+                        <Card key={member.uid} className="p-4">
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <h3 className="font-bold">{member.name}</h3>
+                              <p className="text-sm text-muted-foreground">{member.email}</p>
+                            </div>
+                            <Badge variant={isLeader ? 'default' : 'secondary'} className="capitalize">{isLeader ? 'Leader' : 'Member'}</Badge>
+                          </div>
+                          <div className="text-sm text-muted-foreground mt-4 grid grid-cols-2 gap-x-4 gap-y-2">
+                              <div className="flex flex-col"><span>Enrollment:</span> <span className="font-medium text-foreground">{member.enrollmentNumber || 'N/A'}</span></div>
+                              <div className="flex flex-col"><span>Contact:</span> <span className="font-medium text-foreground">{member.contactNumber || 'N/A'}</span></div>
+                              <div className="flex flex-col"><span>Year:</span> <span className="font-medium text-foreground">{member.yearOfStudy || 'N/A'}</span></div>
+                              <div className="flex flex-col"><span>Semester:</span> <span className="font-medium text-foreground">{member.semester || 'N/A'}</span></div>
+                          </div>
+                        </Card>
+                      )
+                    })
+                  ) : (
+                    <div className="text-center text-muted-foreground py-8">
+                       {loading ? <Loader2 className="h-6 w-6 animate-spin mx-auto"/> : 'No members found in your team yet.'}
+                    </div>
+                  )}
+                </div>
             </CardContent>
           </Card>
           

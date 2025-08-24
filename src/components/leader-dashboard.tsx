@@ -334,102 +334,157 @@ export default function LeaderDashboard() {
                 <CardDescription>Your current team roster. Invite members using the link below.</CardDescription>
             </CardHeader>
             <CardContent>
-              <ScrollArea className="w-full whitespace-nowrap">
-                <Table>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHead>
-                                <Button variant="ghost" onClick={() => requestSort('name')}>Name {getSortIndicator('name')}</Button>
-                            </TableHead>
-                            <TableHead>
-                                <Button variant="ghost" onClick={() => requestSort('role')}>Role {getSortIndicator('role')}</Button>
-                            </TableHead>
-                            <TableHead>
-                                <Button variant="ghost" onClick={() => requestSort('email')}>Email {getSortIndicator('email')}</Button>
-                            </TableHead>
-                            <TableHead>
-                                <Button variant="ghost" onClick={() => requestSort('contactNumber')}>Contact No. {getSortIndicator('contactNumber')}</Button>
-                            </TableHead>
-                            <TableHead>
-                                <Button variant="ghost" onClick={() => requestSort('enrollmentNumber')}>Enrollment No. {getSortIndicator('enrollmentNumber')}</Button>
-                            </TableHead>
-                            <TableHead>
-                                <Button variant="ghost" onClick={() => requestSort('yearOfStudy')}>Year {getSortIndicator('yearOfStudy')}</Button>
-                            </TableHead>
-                            <TableHead>
-                                <Button variant="ghost" onClick={() => requestSort('semester')}>Sem {getSortIndicator('semester')}</Button>
-                            </TableHead>
-                            <TableHead className="text-right">Actions</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {sortedTeamMembers.length > 0 ? (
-                            sortedTeamMembers.map((member, index) => {
-                                const isLeader = member.role === 'leader';
-                                const role = isLeader ? 'Leader' : `Member - ${teamMembers.filter(m => m.role !== 'leader').findIndex(m => m.uid === member.uid) + 1}`;
-                                return (
-                                <TableRow key={member.uid}>
-                                    <TableCell className="font-medium">
-                                       {member.enrollmentNumber ? (
-                                            <Link href={`/profile/${member.enrollmentNumber}`} className="hover:underline">
-                                                {member.name}
-                                            </Link>
-                                        ) : (
-                                            member.name
-                                        )}
-                                    </TableCell>
-                                    <TableCell>
-                                        <Badge variant={isLeader ? 'default' : 'secondary'} className="capitalize">
-                                            {role}
-                                        </Badge>
-                                    </TableCell>
-                                    <TableCell>{member.email}</TableCell>
-                                    <TableCell>
-                                        {member.contactNumber ? (
-                                            <a href={`https://wa.me/+91${member.contactNumber}`} target="_blank" rel="noopener noreferrer" className="hover:underline">
-                                                {member.contactNumber}
-                                            </a>
-                                        ) : 'N/A'}
-                                    </TableCell>
-                                    <TableCell>{member.enrollmentNumber || 'N/A'}</TableCell>
-                                    <TableCell>{member.yearOfStudy || 'N/A'}</TableCell>
-                                    <TableCell>{member.semester || 'N/A'}</TableCell>
-                                    <TableCell className="text-right">
-                                        {!isLeader && (
-                                            <AlertDialog>
-                                                <AlertDialogTrigger asChild>
-                                                    <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-destructive" disabled={isRemoving === member.email}>
-                                                    {isRemoving === member.email ? <Loader2 className="h-4 w-4 animate-spin"/> : <Trash2 className="h-4 w-4"/>}
-                                                    </Button>
-                                                </AlertDialogTrigger>
-                                                <AlertDialogContent>
-                                                    <AlertDialogHeader>
-                                                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                                                    <AlertDialogDescription>
-                                                        This action will remove {member.name} from the team. They will need to be invited again to rejoin.
-                                                    </AlertDialogDescription>
-                                                    </AlertDialogHeader>
-                                                    <AlertDialogFooter>
-                                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                                    <AlertDialogAction onClick={() => handleRemoveMember(member)} className="bg-destructive hover:bg-destructive/90">Remove</AlertDialogAction>
-                                                    </AlertDialogFooter>
-                                                </AlertDialogContent>
-                                            </AlertDialog>
-                                        )}
-                                    </TableCell>
-                                </TableRow>
-                            )})
-                         ) : (
-                            <TableRow>
-                                <TableCell colSpan={8} className="text-center text-muted-foreground h-24">
-                                    {loading ? <Loader2 className="h-6 w-6 animate-spin mx-auto"/> : 'Your details are shown. Invite members to add them to the team.'}
-                                </TableCell>
-                            </TableRow>
-                         )
-                       }
-                    </TableBody>
-                </Table>
-                </ScrollArea>
+              {/* Desktop Table View */}
+              <div className="hidden md:block">
+                <ScrollArea className="w-full whitespace-nowrap">
+                  <Table>
+                      <TableHeader>
+                          <TableRow>
+                              <TableHead>
+                                  <Button variant="ghost" onClick={() => requestSort('name')}>Name {getSortIndicator('name')}</Button>
+                              </TableHead>
+                              <TableHead>
+                                  <Button variant="ghost" onClick={() => requestSort('role')}>Role {getSortIndicator('role')}</Button>
+                              </TableHead>
+                              <TableHead>
+                                  <Button variant="ghost" onClick={() => requestSort('email')}>Email {getSortIndicator('email')}</Button>
+                              </TableHead>
+                              <TableHead>
+                                  <Button variant="ghost" onClick={() => requestSort('contactNumber')}>Contact No. {getSortIndicator('contactNumber')}</Button>
+                              </TableHead>
+                              <TableHead>
+                                  <Button variant="ghost" onClick={() => requestSort('enrollmentNumber')}>Enrollment No. {getSortIndicator('enrollmentNumber')}</Button>
+                              </TableHead>
+                              <TableHead>
+                                  <Button variant="ghost" onClick={() => requestSort('yearOfStudy')}>Year {getSortIndicator('yearOfStudy')}</Button>
+                              </TableHead>
+                              <TableHead>
+                                  <Button variant="ghost" onClick={() => requestSort('semester')}>Sem {getSortIndicator('semester')}</Button>
+                              </TableHead>
+                              <TableHead className="text-right">Actions</TableHead>
+                          </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                          {sortedTeamMembers.length > 0 ? (
+                              sortedTeamMembers.map((member, index) => {
+                                  const isLeader = member.role === 'leader';
+                                  const role = isLeader ? 'Leader' : `Member - ${teamMembers.filter(m => m.role !== 'leader').findIndex(m => m.uid === member.uid) + 1}`;
+                                  return (
+                                  <TableRow key={member.uid}>
+                                      <TableCell className="font-medium">
+                                        {member.enrollmentNumber ? (
+                                              <Link href={`/profile/${member.enrollmentNumber}`} className="hover:underline">
+                                                  {member.name}
+                                              </Link>
+                                          ) : (
+                                              member.name
+                                          )}
+                                      </TableCell>
+                                      <TableCell>
+                                          <Badge variant={isLeader ? 'default' : 'secondary'} className="capitalize">
+                                              {role}
+                                          </Badge>
+                                      </TableCell>
+                                      <TableCell>{member.email}</TableCell>
+                                      <TableCell>
+                                          {member.contactNumber ? (
+                                              <a href={`https://wa.me/+91${member.contactNumber}`} target="_blank" rel="noopener noreferrer" className="hover:underline">
+                                                  {member.contactNumber}
+                                              </a>
+                                          ) : 'N/A'}
+                                      </TableCell>
+                                      <TableCell>{member.enrollmentNumber || 'N/A'}</TableCell>
+                                      <TableCell>{member.yearOfStudy || 'N/A'}</TableCell>
+                                      <TableCell>{member.semester || 'N/A'}</TableCell>
+                                      <TableCell className="text-right">
+                                          {!isLeader && (
+                                              <AlertDialog>
+                                                  <AlertDialogTrigger asChild>
+                                                      <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-destructive" disabled={isRemoving === member.email}>
+                                                      {isRemoving === member.email ? <Loader2 className="h-4 w-4 animate-spin"/> : <Trash2 className="h-4 w-4"/>}
+                                                      </Button>
+                                                  </AlertDialogTrigger>
+                                                  <AlertDialogContent>
+                                                      <AlertDialogHeader>
+                                                      <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                                      <AlertDialogDescription>
+                                                          This action will remove {member.name} from the team. They will need to be invited again to rejoin.
+                                                      </AlertDialogDescription>
+                                                      </AlertDialogHeader>
+                                                      <AlertDialogFooter>
+                                                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                      <AlertDialogAction onClick={() => handleRemoveMember(member)} className="bg-destructive hover:bg-destructive/90">Remove</AlertDialogAction>
+                                                      </AlertDialogFooter>
+                                                  </AlertDialogContent>
+                                              </AlertDialog>
+                                          )}
+                                      </TableCell>
+                                  </TableRow>
+                              )})
+                          ) : (
+                              <TableRow>
+                                  <TableCell colSpan={8} className="text-center text-muted-foreground h-24">
+                                      {loading ? <Loader2 className="h-6 w-6 animate-spin mx-auto"/> : 'Your details are shown. Invite members to add them to the team.'}
+                                  </TableCell>
+                              </TableRow>
+                          )
+                        }
+                      </TableBody>
+                  </Table>
+                  </ScrollArea>
+                </div>
+
+                {/* Mobile Card View */}
+                <div className="md:hidden space-y-4">
+                  {sortedTeamMembers.length > 0 ? (
+                    sortedTeamMembers.map((member) => {
+                      const isLeader = member.role === 'leader';
+                      return (
+                        <Card key={member.uid} className="p-4">
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <h3 className="font-bold">{member.name}</h3>
+                              <p className="text-sm text-muted-foreground">{member.email}</p>
+                            </div>
+                            <Badge variant={isLeader ? 'default' : 'secondary'} className="capitalize">{isLeader ? 'Leader' : 'Member'}</Badge>
+                          </div>
+                          <div className="text-sm text-muted-foreground mt-4 grid grid-cols-2 gap-x-4 gap-y-2">
+                              <div className="flex flex-col"><span>Enrollment:</span> <span className="font-medium text-foreground">{member.enrollmentNumber || 'N/A'}</span></div>
+                              <div className="flex flex-col"><span>Contact:</span> <span className="font-medium text-foreground">{member.contactNumber || 'N/A'}</span></div>
+                              <div className="flex flex-col"><span>Year:</span> <span className="font-medium text-foreground">{member.yearOfStudy || 'N/A'}</span></div>
+                              <div className="flex flex-col"><span>Semester:</span> <span className="font-medium text-foreground">{member.semester || 'N/A'}</span></div>
+                          </div>
+                           {!isLeader && (
+                              <div className="mt-4 pt-4 border-t flex justify-end">
+                                  <AlertDialog>
+                                      <AlertDialogTrigger asChild>
+                                          <Button variant="destructive" size="sm" disabled={isRemoving === member.email}>
+                                          {isRemoving === member.email ? <Loader2 className="h-4 w-4 animate-spin"/> : <Trash2 className="h-4 w-4"/>}
+                                          <span className="ml-2">Remove</span>
+                                          </Button>
+                                      </AlertDialogTrigger>
+                                      <AlertDialogContent>
+                                          <AlertDialogHeader>
+                                              <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                              <AlertDialogDescription>This action will remove {member.name} from the team.</AlertDialogDescription>
+                                          </AlertDialogHeader>
+                                          <AlertDialogFooter>
+                                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                              <AlertDialogAction onClick={() => handleRemoveMember(member)} className="bg-destructive hover:bg-destructive/90">Remove</AlertDialogAction>
+                                          </AlertDialogFooter>
+                                      </AlertDialogContent>
+                                  </AlertDialog>
+                              </div>
+                           )}
+                        </Card>
+                      )
+                    })
+                  ) : (
+                    <div className="text-center text-muted-foreground py-8">
+                       {loading ? <Loader2 className="h-6 w-6 animate-spin mx-auto"/> : 'Your details are shown. Invite members to add them to the team.'}
+                    </div>
+                  )}
+                </div>
             </CardContent>
          </Card>
 
