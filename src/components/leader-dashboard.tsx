@@ -297,9 +297,9 @@ export default function LeaderDashboard() {
         isMet: teamMembers.length === 6,
     },
     femaleCount: {
-        current: teamMembers.filter(m => m.gender === "Female").length,
+        current: teamMembers.filter(m => m.gender === "F").length,
         required: 1,
-        isMet: teamMembers.filter(m => m.gender === "Female").length >= 1,
+        isMet: teamMembers.filter(m => m.gender === "F").length >= 1,
     }
   }
 
