@@ -89,7 +89,7 @@ const exportTeamsFlow = ai.defineFlow(
             console.log("Step 2: Loading Excel template...");
             const templateWorkbook = new ExcelJS.Workbook();
             try {
-                const baseUrl = "https://vadodarahackathon.pierc.org/public";
+                const baseUrl = "https://vadodarahackathon.pierc.org";
 
                 const templateUrl = `${baseUrl}/templates/template.xlsx`;
                 console.log(`Fetching template from: ${templateUrl}`);
