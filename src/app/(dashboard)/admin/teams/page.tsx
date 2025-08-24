@@ -271,7 +271,7 @@ function AllTeamsContent() {
                 contactNumber: leaderProfile?.contactNumber || 'N/A',
                 yearOfStudy: leaderProfile?.yearOfStudy || 'N/A',
                 semester: leaderProfile?.semester,
-                gender: leaderProfile?.gender || 'Other',
+                gender: leaderProfile?.gender || 'O',
                 isLeader: true,
             },
             ...membersWithDetails.map(m => ({...m, isLeader: false})),
@@ -481,7 +481,7 @@ function AllTeamsContent() {
                             <TableCell>{row.yearOfStudy}</TableCell>
                             <TableCell>{row.semester}</TableCell>
                             <TableCell className="text-right">
-                                {row.isLeader ? (
+                                {row.isFirstRow ? (
                                      <AlertDialog>
                                         <AlertDialogTrigger asChild>
                                             <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" disabled={isProcessing === row.teamId}>
@@ -492,7 +492,7 @@ function AllTeamsContent() {
                                             <AlertDialogHeader>
                                             <AlertDialogTitle>Are you sure?</AlertDialogTitle>
                                             <AlertDialogDescription>
-                                                This will permanently delete the team "{row.teamName}" and remove all its members. This action cannot be undone.
+                                                This will permanently delete the team "{row.teamName}" and all its members' accounts. This action cannot be undone.
                                             </AlertDialogDescription>
                                             </AlertDialogHeader>
                                             <AlertDialogFooter>
