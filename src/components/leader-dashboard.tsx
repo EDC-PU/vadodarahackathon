@@ -4,7 +4,7 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Team, UserProfile, TeamMember, TeamInvite, Notification } from "@/lib/types";
-import { AlertCircle, CheckCircle, PlusCircle, Trash2, User, Loader2, FileText, Pencil, Users2, Badge, ArrowUpDown, Link as LinkIcon, Copy, RefreshCw, Bell, X as CloseIcon } from "lucide-react";
+import { AlertCircle, CheckCircle, PlusCircle, Trash2, User, Loader2, FileText, Pencil, Users2, Badge as BadgeIcon, ArrowUpDown, Link as LinkIcon, Copy, RefreshCw, Bell, X as CloseIcon } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "./ui/alert";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
@@ -28,6 +28,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";
 import { getTeamInviteLink } from "@/ai/flows/get-team-invite-link-flow";
+import { Badge } from "./ui/badge";
 
 type SortKey = 'name' | 'role' | 'email' | 'contactNumber' | 'enrollmentNumber' | 'yearOfStudy' | 'semester';
 type SortDirection = 'asc' | 'desc';
@@ -355,7 +356,7 @@ export default function LeaderDashboard() {
                                 <TableRow key={member.uid}>
                                     <TableCell className="font-medium">{member.name}</TableCell>
                                     <TableCell>
-                                        <Badge variant={member.role === 'leader' ? 'default' : 'secondary'}>
+                                        <Badge variant={member.role === 'leader' ? 'default' : 'secondary'} className="capitalize">
                                             {member.role}
                                         </Badge>
                                     </TableCell>
@@ -423,7 +424,7 @@ export default function LeaderDashboard() {
                             </Alert>
                         ) : (
                             <Alert variant="destructive">
-                                <AlertCircle className="h-4 w-4"/>
+                                <AlertCircle className="h-4 w-4" />
                                 <AlertTitle>Incomplete Team</AlertTitle>
                                 <AlertDescription>Your team needs {teamValidation.memberCount.required - teamValidation.memberCount.current} more member(s) to reach the required 6.</AlertDescription>
                             </Alert>
@@ -514,3 +515,5 @@ export default function LeaderDashboard() {
     </div>
   );
 }
+
+    
