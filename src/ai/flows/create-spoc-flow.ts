@@ -8,6 +8,7 @@ import { ai } from '@/ai/genkit';
 import { CreateSpocInput, CreateSpocInputSchema, CreateSpocOutput, CreateSpocOutputSchema } from '@/lib/types';
 import nodemailer from 'nodemailer';
 import { getAdminAuth, getAdminDb } from '@/lib/firebase-admin';
+import { getEmailTemplate } from '@/lib/email-templates';
 
 // Helper to generate a random password
 const generatePassword = (length = 10) => {
@@ -35,26 +36,28 @@ async function sendSpocCredentialsEmail(name: string, email: string, password: s
     });
     console.log("Nodemailer transporter created for Gmail.");
 
+    const emailHtml = getEmailTemplate({
+        title: "Your SPOC Account has been Created!",
+        body: `
+            <p>Hi ${name},</p>
+            <p>An account has been created for you as the Single Point of Contact (SPOC) for <strong>${institute}</strong> on the Vadodara Hackathon 6.0 Portal.</p>
+            <p>Please use the following credentials to log in:</p>
+            <div class="credentials">
+                <p><strong>Email:</strong> ${email}</p>
+                <p><strong>Password:</strong> ${password}</p>
+            </div>
+            <p>As a SPOC, you can view and manage the teams registered from your institute.</p>
+            <p><strong>Important:</strong> You will be required to change this temporary password upon your first login.</p>
+        `,
+        buttonLink: "http://localhost:9002/login",
+        buttonText: "Login to Your Dashboard"
+    });
+
     const mailOptions = {
         from: process.env.GMAIL_EMAIL,
         to: email,
         subject: `Your SPOC Account for the Vadodara Hackathon Portal`,
-        html: `
-            <h1>Welcome, SPOC!</h1>
-            <p>Hi ${name},</p>
-            <p>An account has been created for you as the Single Point of Contact (SPOC) for <strong>${institute}</strong> on the Vadodara Hackathon 6.0 Portal.</p>
-            <p>Please use the following credentials to log in:</p>
-            <ul>
-                <li><strong>Email:</strong> ${email}</li>
-                <li><strong>Password:</strong> ${password}</li>
-            </ul>
-            <p><a href="http://localhost:9002/login">Click here to log in</a></p>
-            <p>As a SPOC, you can view and manage the teams registered from your institute.</p>
-            <p><strong>Important:</strong> You will be required to change this temporary password upon your first login.</p>
-            <br/>
-            <p>Best Regards,</p>
-            <p>The Vadodara Hackathon Team</p>
-        `,
+        html: emailHtml,
     };
 
     console.log(`Sending SPOC creation email to: ${email}`);

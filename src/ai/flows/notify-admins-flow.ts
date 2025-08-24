@@ -8,6 +8,7 @@ import { ai } from '@/ai/genkit';
 import { getAdminDb } from '@/lib/firebase-admin';
 import nodemailer from 'nodemailer';
 import { UserProfile, NotifyAdminsInput, NotifyAdminsInputSchema, NotifyAdminsOutput, NotifyAdminsOutputSchema } from '@/lib/types';
+import { getEmailTemplate } from '@/lib/email-templates';
 
 
 async function sendSpocRequestEmail(adminEmails: string[], spocName: string, spocInstitute: string) {
@@ -25,23 +26,27 @@ async function sendSpocRequestEmail(adminEmails: string[], spocName: string, spo
         },
     });
     console.log("Nodemailer transporter created for Gmail.");
+    
+    const emailHtml = getEmailTemplate({
+        title: "New SPOC Registration Request",
+        body: `
+            <p>A new SPOC has registered and is awaiting your approval.</p>
+            <div class="credentials">
+                <p><strong>Name:</strong> ${spocName}</p>
+                <p><strong>Institute:</strong> ${spocInstitute}</p>
+            </div>
+            <p>Please visit the admin dashboard to approve or reject this request.</p>
+        `,
+        buttonLink: "http://localhost:9002/admin/spoc-requests",
+        buttonText: "Manage Requests"
+    });
+
 
     const mailOptions = {
         from: process.env.GMAIL_EMAIL,
         to: adminEmails.join(','), // Send to all admins
         subject: `New SPOC Registration Request`,
-        html: `
-            <h1>New SPOC Request</h1>
-            <p>A new SPOC has registered and is awaiting approval.</p>
-            <ul>
-                <li><strong>Name:</strong> ${spocName}</li>
-                <li><strong>Institute:</strong> ${spocInstitute}</li>
-            </ul>
-            <p>Please visit the admin dashboard to approve or reject this request.</p>
-            <p><a href="http://localhost:9002/admin/spoc-requests">Click here to manage requests</a></p>
-            <br/>
-            <p>This is an automated notification from the Vadodara Hackathon Portal.</p>
-        `,
+        html: emailHtml,
     };
 
     console.log(`Sending SPOC request notification email to admins: ${adminEmails.join(', ')}`);
