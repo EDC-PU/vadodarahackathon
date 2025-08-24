@@ -55,11 +55,10 @@ const AnimatedSection = ({ children, className, id }: { children: React.ReactNod
 };
 
 
-const GlitchTitle = ({ children, className }: { children: React.ReactNode, className?: string }) => {
+const SectionTitle = ({ children, className }: { children: React.ReactNode, className?: string }) => {
   return (
     <h2
-      className={cn("text-3xl font-bold mb-4 font-headline relative inline-block glitch", className)}
-      data-text={children}
+      className={cn("text-3xl font-bold mb-4 font-headline relative inline-block", className)}
     >
       {children}
        <motion.div
@@ -77,6 +76,9 @@ const GlitchTitle = ({ children, className }: { children: React.ReactNode, class
 const HeroSection = () => {
     const tagline = "Your Gateway to Smart India Hackathon 2025";
     const controls = useAnimation();
+    const ref = useRef<HTMLDivElement>(null);
+    const isInView = useInView(ref, { once: true });
+
 
     useEffect(() => {
         const sequence = async () => {
@@ -110,6 +112,7 @@ const HeroSection = () => {
             </div>
 
             <motion.div 
+                ref={ref}
                 className="container max-w-7xl text-center z-10 flex flex-col items-center"
                 variants={containerVariants}
                 initial="hidden"
@@ -142,14 +145,22 @@ const HeroSection = () => {
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ delay: 0.5, duration: 0.8, type: "spring" }}
                 >
-                    <Image
-                        src="/vhlogosvg.svg"
-                        alt="Vadodara Hackathon 6.0 Logo"
-                        width={600}
-                        height={120}
-                        className="max-w-xl w-full h-auto drop-shadow-[0_0_10px_hsl(var(--brand-orange)/0.6)]"
-                        priority
-                    />
+                     <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={isInView ? { opacity: 1 } : {}}
+                        transition={{ delay: 0.8, duration: 1 }}
+                        className={isInView ? 'glitch' : ''}
+                        data-text="Vadodara Hackathon 6.0"
+                    >
+                        <Image
+                            src="/vhlogosvg.svg"
+                            alt="Vadodara Hackathon 6.0 Logo"
+                            width={600}
+                            height={120}
+                            className="max-w-xl w-full h-auto drop-shadow-[0_0_10px_hsl(var(--brand-orange)/0.6)]"
+                            priority
+                        />
+                    </motion.div>
                 </motion.div>
                 
                 <motion.div 
@@ -266,7 +277,7 @@ export default function LandingPage({ spocDetails, announcements }: LandingPageP
         <AnimatedSection id="rewards" className="relative overflow-hidden">
             <div className="absolute inset-0 bg-gradient-to-br from-background via-accent/5 to-background -z-10"></div>
             <div className="container max-w-7xl text-center">
-                <GlitchTitle>Rewards &amp; Recognition</GlitchTitle>
+                <SectionTitle>Rewards &amp; Recognition</SectionTitle>
                 <p className="max-w-3xl mx-auto text-foreground/80 mb-12">
                 Winners get felicitated and recommended to SIH 2025, plus incubation support, funding opportunities, IP filing assistance, and continuous expert mentoring.
                 </p>
@@ -299,7 +310,7 @@ export default function LandingPage({ spocDetails, announcements }: LandingPageP
         <AnimatedSection id="about">
           <div className="container max-w-7xl grid md:grid-cols-2 gap-12 items-center">
             <div className="space-y-4">
-               <GlitchTitle>About The Hackathon</GlitchTitle>
+               <SectionTitle>About The Hackathon</SectionTitle>
               <p className="text-foreground/80">
                Vadodara Hackathon 6.0 is an internal hackathon organized with the primary purpose of fostering innovation and problem-solving within our community. The event aims to bring together creative minds and tech enthusiasts to collaborate, brainstorm, and develop innovative solutions to real-world problems.
               </p>
@@ -346,7 +357,7 @@ export default function LandingPage({ spocDetails, announcements }: LandingPageP
 
         <AnimatedSection id="timeline">
             <div className="container max-w-4xl text-center">
-                 <GlitchTitle>Timeline</GlitchTitle>
+                 <SectionTitle>Timeline</SectionTitle>
                 <p className="max-w-2xl mx-auto text-foreground/80 mb-8">
                   Mark your calendars for these important dates.
                 </p>
@@ -372,7 +383,7 @@ export default function LandingPage({ spocDetails, announcements }: LandingPageP
         <AnimatedSection id="gallery">
             <div className="container max-w-7xl">
                 <div className="text-center">
-                    <GlitchTitle>Gallery</GlitchTitle>
+                    <SectionTitle>Gallery</SectionTitle>
                 </div>
                  <Carousel className="w-full mt-12" opts={{ loop: true }} plugins={[autoplayPlugin.current]}>
                     <CarouselContent>
@@ -403,7 +414,7 @@ export default function LandingPage({ spocDetails, announcements }: LandingPageP
         
         <AnimatedSection id="spocs">
             <div className="container max-w-4xl text-center">
-                <GlitchTitle>Institute SPOCs</GlitchTitle>
+                <SectionTitle>Institute SPOCs</SectionTitle>
                 <p className="max-w-2xl mx-auto text-foreground/80 mb-8">
                   Find the Single Point of Contact (SPOC) for your institute.
                 </p>
@@ -461,7 +472,7 @@ export default function LandingPage({ spocDetails, announcements }: LandingPageP
         <AnimatedSection id="contact">
             <div className="container max-w-7xl">
                  <div className="text-center">
-                    <GlitchTitle>Get In Touch</GlitchTitle>
+                    <SectionTitle>Get In Touch</SectionTitle>
                 </div>
                 <div className="grid md:grid-cols-3 gap-8 text-center mt-12">
                  <motion.div whileHover={{ y: -5, boxShadow: "0 0 20px hsl(var(--brand-yellow))" }} className="glass-card p-6 flex flex-col items-center">
