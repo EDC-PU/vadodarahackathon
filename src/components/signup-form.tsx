@@ -189,7 +189,7 @@ export function SignupForm({ inviteToken, deadlineMillis }: SignupFormProps) {
                     </FormControl>
                     <SelectContent>
                       <SelectItem value="leader">Team Leader</SelectItem>
-                      <SelectItem value="member">Team Member (Invited)</SelectItem>
+                      {inviteToken && <SelectItem value="member">Team Member (Invited)</SelectItem>}
                       <SelectItem value="spoc">Institute SPOC</SelectItem>
                     </SelectContent>
                   </Select>
