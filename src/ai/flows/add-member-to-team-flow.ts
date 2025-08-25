@@ -6,7 +6,7 @@
 
 import { ai } from '@/ai/genkit';
 import { getAdminDb } from '@/lib/firebase-admin';
-import { AddMemberToTeamInput, AddMemberToTeamInputSchema, AddMemberToTeamOutput, AddMemberToTeamOutputSchema, Team } from '@/lib/types';
+import { AddMemberToTeamInput, AddMemberToTeamInputSchema, AddMemberToTeamOutput, AddMemberToTeamOutputSchema, Team, UserProfile } from '@/lib/types';
 import nodemailer from 'nodemailer';
 import { getEmailTemplate } from '@/lib/email-templates';
 
@@ -86,6 +86,15 @@ const addMemberToTeamFlow = ai.defineFlow(
     const teamDocRef = adminDb.collection('teams').doc(teamId);
 
     try {
+      // Check if user is already on a team
+      const userDoc = await userDocRef.get();
+      if (userDoc.exists()) {
+          const userData = userDoc.data() as UserProfile;
+          if (userData.teamId) {
+              return { success: false, message: "This user is already a member of another team." };
+          }
+      }
+
       const teamDoc = await teamDocRef.get();
       if (!teamDoc.exists) {
         throw new Error(`Team with ID ${teamId} not found.`);
@@ -151,3 +160,5 @@ const addMemberToTeamFlow = ai.defineFlow(
     }
   }
 );
+
+    
