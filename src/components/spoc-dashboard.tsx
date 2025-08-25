@@ -55,49 +55,26 @@ export default function SpocDashboard() {
   const [loadingLink, setLoadingLink] = useState<string | null>(null);
   const appBaseUrl = "https://vadodarahackathon.pierc.org";
   
-  const fetchInstituteData = useCallback(async (institute: string) => {
+  const fetchInstituteData = useCallback(async () => {
+    if (!user?.institute) {
+        setLoading(false);
+        return;
+    }
     setLoading(true);
-    const teamsQuery = query(collection(db, "teams"), where("institute", "==", institute));
-    
-    const unsubscribeTeams = onSnapshot(teamsQuery, (snapshot) => {
-        const teamsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Team));
-        setTeams(teamsData);
-
-        const allUserIds = new Set<string>();
-        teamsData.forEach(team => {
-            allUserIds.add(team.leader.uid);
-            team.members.forEach(member => {
-                if (member.uid) allUserIds.add(member.uid);
-            });
-        });
-
-        const userUnsubscribers: (()=>void)[] = [];
-        if (allUserIds.size > 0) {
-            Array.from(allUserIds).forEach(uid => {
-                const userDocRef = doc(db, 'users', uid);
-                const unsub = onSnapshot(userDocRef, (userDoc) => {
-                    if (userDoc.exists()) {
-                        const userData = { uid: userDoc.id, ...userDoc.data() } as UserProfile;
-                        setUsers(prevUsers => new Map(prevUsers).set(uid, userData));
-                    }
-                }, (error) => {
-                    console.error(`Failed to listen to user ${uid}`, error);
-                });
-                userUnsubscribers.push(unsub);
-            });
+    try {
+        const result = await getInstituteTeams({ institute: user.institute });
+        if (result.success && result.teams && result.users) {
+            setTeams(result.teams);
+            setUsers(new Map(Object.entries(result.users)));
+        } else {
+            throw new Error(result.message || "Failed to fetch institute data.");
         }
-        
+    } catch (error: any) {
+        toast({ title: "Error", description: `Could not load institute data: ${error.message}`, variant: "destructive" });
+    } finally {
         setLoading(false);
-
-        return () => userUnsubscribers.forEach(unsub => unsub());
-    }, (error) => {
-        console.error("Error listening to team updates:", error);
-        toast({ title: "Error", description: "Could not load real-time team data.", variant: "destructive" });
-        setLoading(false);
-    });
-
-    return unsubscribeTeams;
-  }, [toast]);
+    }
+  }, [user?.institute, toast]);
 
 
   const handleExport = async () => {
@@ -146,11 +123,11 @@ export default function SpocDashboard() {
         
         const result = await exportEvaluation({ instituteName: user.institute, teams: teamsToExport });
         if (result.success && result.fileContent) {
-            const blob = new Blob([Buffer.from(result.fileContent, 'base64')], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+            const blob = new Blob([Buffer.from(result.fileContent, 'base64')], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = result.fileName || `${user.institute}-evaluation.xlsx`;
+            a.download = result.fileName || `${user.institute}-evaluation.docx`;
             document.body.appendChild(a);
             a.click();
             window.URL.revokeObjectURL(url);
@@ -168,21 +145,11 @@ export default function SpocDashboard() {
   };
 
   useEffect(() => {
-    let unsubscribe: (() => void) | undefined;
     if (user && user.institute) {
-      fetchInstituteData(user.institute).then(unsub => {
-        if (unsub) {
-            unsubscribe = unsub;
-        }
-      });
+      fetchInstituteData();
     } else if (!authLoading) {
       setLoading(false);
     }
-    return () => {
-      if (unsubscribe) {
-        unsubscribe();
-      }
-    };
   }, [user, authLoading, fetchInstituteData]);
   
   const getTeamWithFullDetails = (teamsToProcess: Team[]) => {
@@ -324,6 +291,7 @@ export default function SpocDashboard() {
          toast({ title: "Error", description: "An unexpected error occurred.", variant: "destructive" });
     } finally {
         setIsProcessing(null);
+        fetchInstituteData();
     }
   }
 
@@ -340,6 +308,7 @@ export default function SpocDashboard() {
          toast({ title: "Error", description: "An unexpected error occurred.", variant: "destructive" });
     } finally {
         setIsProcessing(null);
+        fetchInstituteData();
     }
   }
 
@@ -363,7 +332,7 @@ export default function SpocDashboard() {
     }
   };
 
-  if (loading || authLoading) {
+  if (authLoading) {
     return (
       <div className="flex justify-center items-center h-screen">
         <Loader2 className="h-8 w-8 animate-spin" />
@@ -393,6 +362,10 @@ export default function SpocDashboard() {
             <p className="text-muted-foreground">Manage teams from your institute: <strong>{user?.institute}</strong></p>
         </div>
         <div className="flex flex-wrap gap-2">
+            <Button onClick={fetchInstituteData} disabled={loading}>
+              {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
+              Refresh Data
+            </Button>
             <Button onClick={handleExport} disabled={isExporting}>
               {isExporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
               Export Teams
@@ -436,7 +409,11 @@ export default function SpocDashboard() {
           <CardDescription>{teams.length} team(s) registered from your institute.</CardDescription>
         </CardHeader>
         <CardContent>
-            {teams.length === 0 ? (
+            {loading ? (
+                <div className="flex justify-center items-center h-48">
+                    <Loader2 className="h-8 w-8 animate-spin" />
+                </div>
+            ) : teams.length === 0 ? (
                 <p className="text-muted-foreground text-center py-8">No teams have registered from your institute yet.</p>
             ) : (
                 <ScrollArea className="w-full whitespace-nowrap">

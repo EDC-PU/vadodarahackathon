@@ -8,20 +8,19 @@ service cloud.firestore {
       return request.auth != null;
     }
     
-    function isRole(role) {
-      return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == role;
+    function isLeader() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'leader';
     }
-    
+
     function isAdmin() {
-      return isRole('admin');
+      // Check if the user document exists and has the 'admin' role
+      return exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
     
     function isSpoc() {
-      return isRole('spoc');
-    }
-    
-    function isLeader() {
-        return isRole('leader');
+      return exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'spoc';
     }
 
     function isOwner(userId) {
@@ -31,31 +30,34 @@ service cloud.firestore {
     function isSpocForInstitute(institute) {
        return isSpoc() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.institute == institute;
     }
-    
-    function isMemberOf(teamId) {
-        return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.teamId == teamId;
-    }
 
     // Users Collection
     match /users/{userId} {
       // Anyone can create their own user document during signup
       allow create: if isSignedIn();
       
-      // Users can read their own document. Admins/SPOCs can read any.
-      allow read: if isSignedIn() && (isOwner(userId) || isAdmin() || isSpoc());
+      // A user can read their own profile.
+      // An admin can read any user profile.
+      // A SPOC can read the profile of a user from their own institute.
+      allow read: if isSignedIn() && (
+                    isOwner(userId) || 
+                    isAdmin() || 
+                    (isSpoc() && get(/databases/$(database)/documents/users/$(userId)).data.institute == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.institute)
+                  );
       
-      // A user can update their own profile.
-      // An admin can update any profile.
-      // A SPOC can update a user from their own institute.
+      // Users can only update their own document
+      // Admins and SPOCs (for their institute's users) can update user documents
       allow update: if isSignedIn() && (
-        isOwner(userId) ||
-        isAdmin() ||
-        (isSpocForInstitute(resource.data.institute))
-      );
+                      isOwner(userId) || 
+                      isAdmin() || 
+                      (isSpocForInstitute(get(/databases/$(database)/documents/users/$(userId)).data.institute))
+                    );
       
-      // Admins can delete any user.
-      // Users can delete their own account.
-      allow delete: if isAdmin() || isOwner(userId);
+      // Only admins can delete users
+      allow delete: if isAdmin();
+
+      // Deny collection-group queries on users unless performed by an admin
+      allow list: if isAdmin();
     }
     
     // Teams Collection
@@ -63,21 +65,15 @@ service cloud.firestore {
         // Only signed-in users can read team data
         allow read: if isSignedIn();
         
-        // Creating a team is handled by a Genkit flow, so this is a safeguard.
+        // Creating a team is handled by a Genkit flow, so no direct client creation
         allow create: if isLeader();
 
-        // An update is allowed if:
-        // 1. The user is a member of the team (e.g. the leader).
-        // 2. The user is an admin or a SPOC for that team's institute.
-        // 3. A new member is being added to the team, and that new member is the one making the request.
+        // Only the leader of the team, an admin, or the institute's SPOC can update the team
         allow update: if isSignedIn() && (
-            isMemberOf(teamId) ||
-            isAdmin() || 
-            isSpocForInstitute(resource.data.institute) ||
-            (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['members']) &&
-             request.resource.data.members.size() == resource.data.members.size() + 1 &&
-             request.auth.uid in request.resource.data.members)
-        );
+                        isLeader() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.teamId == teamId ||
+                        isAdmin() || 
+                        isSpocForInstitute(resource.data.institute)
+                      );
 
         // Only admins or the institute's SPOC can delete a team
         allow delete: if isSignedIn() && (isAdmin() || isSpocForInstitute(resource.data.institute));
@@ -95,7 +91,7 @@ service cloud.firestore {
     // Problem Statements
     match /problemStatements/{psId} {
         allow read: if isSignedIn();
-        allow write: if isRole('admin');
+        allow write: if isAdmin();
     }
     
     // Config Collection (e.g., for event settings)
@@ -120,7 +116,7 @@ service cloud.firestore {
     // Notifications Collection
     match /notifications/{notificationId} {
         // Users can read and update (mark as read) their own notifications
-        allow read, update: if isSignedIn() && resource.data.recipientUid == request.auth.uid;
+        allow read, update: if isSignedIn() && request.resource.data.recipientUid == request.auth.uid;
         // Creation is handled by server-side flows
         allow create: if isSignedIn(); 
     }

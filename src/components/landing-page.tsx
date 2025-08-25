@@ -532,19 +532,15 @@ export default function LandingPage({ spocDetails, announcements }: LandingPageP
         <AnimatedSection id="contact">
             <div className="container max-w-7xl">
                  <div className="text-center">
-                    <SectionTitle>Get In Touch</SectionTitle>
+                    <SectionTitle>For Any Queries</SectionTitle>
                 </div>
                 <div className="grid md:grid-cols-3 gap-8 text-center mt-12">
                  <motion.div whileHover={{ y: -5, boxShadow: "0 0 20px hsl(var(--brand-yellow))" }} className="glass-card p-6 flex flex-col items-center">
                     <Mail className="h-10 w-10 text-primary mb-4" />
                     <h3 className="text-xl font-semibold">Email Us</h3>
-                    <a href="mailto:pierc@paruluniversity.ac.in" className="text-foreground/80 hover:text-primary">pierc@paruluniversity.ac.in</a>
+                    <a href="mailto:programs.pierc@paruluniversity.ac.in" className="text-foreground/80 hover:text-primary">pierc@paruluniversity.ac.in</a>
                 </motion.div>
-                <motion.div whileHover={{ y: -5, boxShadow: "0 0 20px hsl(var(--brand-orange))" }} className="glass-card p-6 flex flex-col items-center">
-                    <Phone className="h-10 w-10 text-primary mb-4" />
-                    <h3 className="text-xl font-semibold">Phone</h3>
-                    <p className="text-foreground/80">0266-8260350</p>
-                </motion.div>
+             
                 <motion.div whileHover={{ y: -5, boxShadow: "0 0 20px hsl(var(--brand-red))" }} className="glass-card p-6 flex flex-col items-center">
                     <MapPin className="h-10 w-10 text-primary mb-4" />
                     <h3 className="text-xl font-semibold">Our Address</h3>
