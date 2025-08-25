@@ -592,7 +592,7 @@ function AllTeamsContent() {
                                   </TableCell>
                               )}
                               {row.isFirstRow && <TableCell rowSpan={row.rowSpan} className="align-top">{row.problemStatementId}</TableCell>}
-                              <TableCell>
+                               <TableCell className="whitespace-normal">
                                   {row.enrollmentNumber && row.enrollmentNumber !== 'N/A' ? (
                                       <Link href={`/profile/${row.enrollmentNumber}`} className="hover:underline">
                                           {row.name} {row.isLeader && '(Leader)'}
@@ -601,7 +601,7 @@ function AllTeamsContent() {
                                       `${row.name} ${row.isLeader ? '(Leader)' : ''}`
                                   )}
                               </TableCell>
-                              <TableCell>{row.email}</TableCell>
+                              <TableCell className="whitespace-normal">{row.email}</TableCell>
                               <TableCell>{row.enrollmentNumber}</TableCell>
                               <TableCell>
                                   {row.contactNumber && row.contactNumber !== 'N/A' ? (
