@@ -2,7 +2,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import * as z from "zod";
 import { Button } from "@/components/ui/button";
 import {
@@ -46,12 +46,21 @@ const formSchema = z.object({
   password: z.string().min(6, { message: "Password must be at least 6 characters." }),
   confirmPassword: z.string().min(6, { message: "Password must be at least 6 characters." }),
   role: z.enum(["leader", "member", "spoc"], { required_error: "Please select a role." }),
+  leaderConfirmation: z.boolean().optional(),
   terms: z.boolean().refine((val) => val === true, {
     message: "You must accept the terms and policy.",
   }),
 }).refine((data) => data.password === data.confirmPassword, {
     message: "Passwords don't match",
     path: ["confirmPassword"],
+}).refine((data) => {
+    if (data.role === 'leader' && !data.leaderConfirmation) {
+        return false;
+    }
+    return true;
+}, {
+    message: "You must confirm you are the team leader.",
+    path: ["leaderConfirmation"],
 });
 
 export function SignupForm({ inviteToken, deadlineMillis }: SignupFormProps) {
@@ -74,10 +83,13 @@ export function SignupForm({ inviteToken, deadlineMillis }: SignupFormProps) {
       email: "",
       password: "",
       confirmPassword: "",
-      role: inviteToken ? 'member' : undefined,
+      role: inviteToken ? 'member' : 'leader',
+      leaderConfirmation: false,
       terms: false,
     },
   });
+  
+  const roleValue = useWatch({ control: form.control, name: 'role' });
 
   useEffect(() => {
     if (inviteToken) {
@@ -116,9 +128,16 @@ export function SignupForm({ inviteToken, deadlineMillis }: SignupFormProps) {
     setIsGoogleLoading(true);
     const selectedRole = form.getValues("role");
     const termsAccepted = form.getValues("terms");
+    const leaderConfirmed = form.getValues("leaderConfirmation");
 
     if (!selectedRole) {
         toast({ title: "Role Required", description: "Please select your role before signing in with Google.", variant: "destructive" });
+        setIsGoogleLoading(false);
+        return;
+    }
+     if (selectedRole === 'leader' && !leaderConfirmed) {
+        toast({ title: "Confirmation Required", description: "Please confirm you are the team leader before signing in.", variant: "destructive" });
+        form.setError("leaderConfirmation", { type: "manual", message: "You must confirm you are the team leader." });
         setIsGoogleLoading(false);
         return;
     }
@@ -147,6 +166,7 @@ export function SignupForm({ inviteToken, deadlineMillis }: SignupFormProps) {
         title: "Google Sign-In Failed",
         description: errorMessage,
         variant: "destructive",
+        duration: 8000,
       });
     } finally {
       setIsGoogleLoading(false);
@@ -197,6 +217,33 @@ export function SignupForm({ inviteToken, deadlineMillis }: SignupFormProps) {
                 </FormItem>
               )}
             />
+
+            {roleValue === 'leader' && (
+                 <FormField
+                    control={form.control}
+                    name="leaderConfirmation"
+                    render={({ field }) => (
+                        <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4 shadow-sm bg-secondary/30">
+                        <FormControl>
+                            <Checkbox
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                            disabled={isLoading || isGoogleLoading}
+                            />
+                        </FormControl>
+                        <div className="space-y-1 leading-none">
+                            <FormLabel>
+                                I confirm that I am the Team Leader.
+                            </FormLabel>
+                             <AlertDescription className="text-xs">
+                                If you are a team member, do not register here. Ask your team leader to share the Team Invite Link from their dashboard.
+                            </AlertDescription>
+                            <FormMessage />
+                        </div>
+                        </FormItem>
+                    )}
+                />
+            )}
             
             <FormField
               control={form.control}
