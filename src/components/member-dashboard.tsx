@@ -2,7 +2,7 @@
 "use client";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { User, Users, Phone, Mail, FileText, Trophy, Calendar, Loader2, AlertCircle, ArrowUpDown, CheckCircle, Pencil, Trash2 } from "lucide-react";
+import { User, Users, Phone, Mail, FileText, Trophy, Calendar, Loader2, AlertCircle, ArrowUpDown, CheckCircle, Pencil, Trash2, Link as LinkIcon } from "lucide-react";
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { db } from "@/lib/firebase";
 import { doc, getDoc, onSnapshot, collection, query, where } from "firebase/firestore";
@@ -29,6 +29,8 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { leaveTeam } from "@/ai/flows/leave-team-flow";
+import { Input } from "./ui/input";
+import { useRouter } from "next/navigation";
 
 
 type SortKey = 'name' | 'role' | 'email' | 'contactNumber' | 'enrollmentNumber' | 'yearOfStudy' | 'semester';
@@ -43,6 +45,9 @@ export default function MemberDashboard() {
   const [sortConfig, setSortConfig] = useState<{ key: SortKey, direction: SortDirection } | null>(null);
   const [isLeaving, setIsLeaving] = useState(false);
   const { toast } = useToast();
+  const [inviteLink, setInviteLink] = useState("");
+  const router = useRouter();
+
 
   const fetchTeamAndMembers = useCallback(() => {
     if (!user?.teamId) {
@@ -167,6 +172,26 @@ export default function MemberDashboard() {
         setIsLeaving(false);
     }
   }
+  
+  const handleJoinWithLink = () => {
+    if (!inviteLink) {
+        toast({ title: "Invalid Link", description: "Please paste a valid invitation link.", variant: "destructive" });
+        return;
+    }
+    try {
+        const url = new URL(inviteLink);
+        const pathSegments = url.pathname.split('/');
+        const token = pathSegments.pop() || pathSegments.pop(); // Handle optional trailing slash
+        
+        if (!token || pathSegments[pathSegments.length -1] !== 'join') {
+            throw new Error("Link does not appear to be a valid invite link.");
+        }
+
+        router.push(`/join/${token}`);
+    } catch (error) {
+        toast({ title: "Invalid Link", description: "The provided URL is not valid. Please check and try again.", variant: "destructive"});
+    }
+  };
 
 
   if (authLoading || loading) {
@@ -213,8 +238,31 @@ export default function MemberDashboard() {
       </header>
       
       {!user.teamId && (
-        <div className="mb-8">
+        <div className="mb-8 space-y-8">
             <InvitationsSection />
+             <Alert>
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>You are not on a team yet.</AlertTitle>
+                <AlertDescription>
+                  Once your team leader invites you, you will see the invitation above. If you already have an invite link, you can paste it below to join.
+                </AlertDescription>
+              </Alert>
+              <Card>
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2"><LinkIcon/> Join with Invite Link</CardTitle>
+                    <CardDescription>Paste the invitation link you received from your team leader here.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <div className="flex items-center gap-2">
+                        <Input 
+                            placeholder="https://vadodarahackathon.pierc.org/join/..."
+                            value={inviteLink}
+                            onChange={(e) => setInviteLink(e.target.value)}
+                        />
+                        <Button onClick={handleJoinWithLink}>Join Team</Button>
+                    </div>
+                </CardContent>
+              </Card>
         </div>
       )}
       
@@ -338,7 +386,7 @@ export default function MemberDashboard() {
           </Card>
           
           <div className="grid gap-8 lg:grid-cols-2">
-            <AnnouncementsSection audience="teams_and_all" />
+            <AnnouncementsSection audience="spoc_teams" />
             <div className="space-y-8">
                <Card>
                     <CardHeader>
@@ -453,14 +501,6 @@ export default function MemberDashboard() {
             </div>
           </div>
         </div>
-      ) : !user.teamId ? (
-         <Alert>
-            <AlertCircle className="h-4 w-4" />
-            <AlertTitle>You are not on a team yet.</AlertTitle>
-            <AlertDescription>
-              Once your team leader invites you, you will see the invitation above. If you believe this is an error, please contact your team leader.
-            </AlertDescription>
-          </Alert>
       ) : null}
     </div>
   );
