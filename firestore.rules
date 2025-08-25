@@ -3,57 +3,79 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-  
+
     function isSignedIn() {
       return request.auth != null;
     }
 
+    function isRole(role) {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == role;
+    }
+    
+    function isSpocForTeam(teamId) {
+      let team = get(/databases/$(database)/documents/teams/$(teamId)).data;
+      let spocProfile = get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+      return spocProfile.role == 'spoc' && spocProfile.institute == team.institute;
+    }
+
+    // Users can read/write their own profile
     match /users/{userId} {
-      allow read: if isSignedIn();
-      allow write: if request.auth.uid == userId;
+      allow list: if isRole('admin') || isRole('spoc');
+      allow read, update: if request.auth.uid == userId || isRole('admin') || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.institute == resource.data.institute && isRole('spoc');
+      allow create: if request.auth.uid == userId;
+      allow delete: if isRole('admin');
     }
 
+    // Teams can be read by anyone on the team, or a spoc from the same institute, or an admin
     match /teams/{teamId} {
-      allow read: if isSignedIn();
-      allow write: if isSignedIn() && (
-                     resource.data.leader.uid == request.auth.uid || 
-                     get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'
-                   );
-    }
-    
-    match /teamInvites/{inviteId} {
-      allow read, write: if isSignedIn();
-    }
-    
-    match /institutes/{docId} {
-      allow read: if true;
-      allow write: if isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
-    }
-    
-    match /departments/{docId} {
-      allow read: if true;
-      allow write: if isSignedIn() && 
-      (
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
-        (
-          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'spoc' &&
-          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.institute == resource.data.name
-        )
-      );
+      allow read: if isRole('admin') || isSpocForTeam(teamId) || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.teamId == teamId;
+      allow create: if isRole('leader');
+      allow update: if isRole('admin') || isSpocForTeam(teamId) || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.teamId == teamId;
+      allow delete: if isRole('admin') || isSpocForTeam(teamId);
     }
 
+    // Announcements
+    match /announcements/{announcementId} {
+      allow read: if isSignedIn(); // All signed-in users can read announcements
+      allow create: if isRole('admin') || isRole('spoc');
+      allow delete: if isRole('admin') || isRole('spoc');
+    }
+    
+    // Notifications for specific users
+    match /notifications/{notificationId} {
+        allow read, update, delete: if request.auth.uid == resource.data.recipientUid;
+        allow create: if isSignedIn(); // Allow any signed in user to create (e.g. for team join notifications)
+    }
+
+    // Public config can be read by anyone
     match /config/{docId} {
       allow read: if true;
-      allow write: if isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+      allow write: if isRole('admin');
+    }
+
+    // Team invites
+    match /teamInvites/{inviteId} {
+        allow read: if true; // Anyone with the link can read it
+        allow write: if isRole('leader') || isRole('spoc') || isRole('admin'); // Only leaders/spocs/admins can create/update invites
     }
     
-    match /problemStatements/{statementId} {
-      allow read: if isSignedIn();
-      allow write: if isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    // Institutes list can be read by anyone, but only modified by admins
+    match /institutes/{docId} {
+      allow read: if true;
+      allow write: if isRole('admin');
+    }
+
+    // Departments list can be read by anyone
+    // Write access for admins, and SPOCs for their own institute
+    match /departments/{instituteName} {
+      allow read: if true;
+      allow write: if isRole('admin') || (isRole('spoc') && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.institute == instituteName);
     }
     
-    match /notifications/{notificationId} {
-      allow read, write: if isSignedIn() && request.auth.uid == resource.data.recipientUid;
+    // Problem Statements
+    match /problemStatements/{psId} {
+        allow read: if isSignedIn();
+        allow write: if isRole('admin');
     }
   }
 }
