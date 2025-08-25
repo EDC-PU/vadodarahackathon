@@ -32,7 +32,6 @@ import { Separator } from "./ui/separator";
 import { useAuth } from "@/hooks/use-auth";
 import { doc, getDoc } from "firebase/firestore";
 import { Alert, AlertTitle, AlertDescription } from "./ui/alert";
-import { INSTITUTES } from "@/lib/constants";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Checkbox } from "./ui/checkbox";
@@ -60,7 +59,6 @@ export function SignupForm({ inviteToken, deadlineMillis }: SignupFormProps) {
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [deadline, setDeadline] = useState<Date | null>(null);
-  const [isDeadlineLoading, setIsDeadlineLoading] = useState(false);
   const { toast } = useToast();
   const { handleLogin } = useAuth();
   
@@ -153,10 +151,6 @@ export function SignupForm({ inviteToken, deadlineMillis }: SignupFormProps) {
     } finally {
       setIsGoogleLoading(false);
     }
-  }
-  
-  if (isDeadlineLoading) {
-    return <div className="flex items-center justify-center p-8"><Loader2 className="h-8 w-8 animate-spin" /></div>
   }
 
   if (isRegistrationClosed) {
