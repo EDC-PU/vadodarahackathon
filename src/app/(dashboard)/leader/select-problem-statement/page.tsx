@@ -146,7 +146,7 @@ export default function SelectProblemStatementPage() {
                                 <Badge variant={ps.category === 'Software' ? 'default' : 'secondary'}>{ps.category}</Badge>
                                 <h3 className="font-semibold">{ps.title} ({ps.problemStatementId})</h3>
                             </div>
-                            <p className="text-sm text-muted-foreground line-clamp-2 whitespace-pre-wrap">{ps.description}</p>
+                            <p className="text-sm text-muted-foreground whitespace-pre-wrap">{ps.description}</p>
                         </div>
                         <Button 
                             onClick={() => handleProblemStatementSelect(ps)}
