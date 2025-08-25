@@ -16,7 +16,7 @@ service cloud.firestore {
       allow create: if isSignedIn();
       allow read: if isSignedIn();
       allow update: if isSignedIn();
-      allow delete: if isRole('admin');
+      allow delete: if isRole('admin') || request.auth.uid == userId;
       allow list: if isRole('admin') || isRole('spoc');
     }
 

@@ -16,7 +16,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useState, useEffect, useRef } from "react";
-import { Loader2 } from "lucide-react";
+import { Loader2, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { db } from "@/lib/firebase";
 import { doc, updateDoc, getDoc, writeBatch, collection, query, where, getDocs } from "firebase/firestore";
@@ -33,6 +33,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { deleteUser } from "@/ai/flows/delete-user-flow";
 
 const formSchema = z.object({
   name: z.string().min(2, { message: "Name must be at least 2 characters." }),
@@ -45,10 +57,11 @@ const formSchema = z.object({
 });
 
 export default function ProfilePage() {
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, handleSignOut } = useAuth();
   const [profileData, setProfileData] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isFetching, setIsFetching] = useState(true);
+  const [isDeleting, setIsDeleting] = useState(false);
   const { toast } = useToast();
   const params = useParams();
   const profileEnrollmentNumber = params.id as string;
@@ -206,6 +219,31 @@ export default function ProfilePage() {
       });
     } finally {
       setIsLoading(false);
+    }
+  }
+
+  const handleDeleteAccount = async () => {
+    if (!profileData) return;
+    setIsDeleting(true);
+    try {
+      const result = await deleteUser({ uid: profileData.uid });
+      if (result.success) {
+        toast({
+          title: "Account Deleted",
+          description: "Your account has been permanently deleted. You will be signed out.",
+        });
+        await handleSignOut();
+      } else {
+        throw new Error(result.message);
+      }
+    } catch (error: any) {
+       toast({
+        title: "Deletion Failed",
+        description: error.message || "Could not delete account. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDeleting(false);
     }
   }
 
@@ -407,6 +445,42 @@ export default function ProfilePage() {
                 </Form>
             </CardContent>
         </Card>
+
+        {isOwner && (
+            <Card className="mt-8 border-destructive">
+                <CardHeader>
+                    <CardTitle className="text-destructive">Danger Zone</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <CardDescription className="mb-4">
+                        Deleting your account is a permanent action. All your personal data and team associations will be removed. This cannot be undone.
+                    </CardDescription>
+                    <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                            <Button variant="destructive" disabled={isDeleting}>
+                                {isDeleting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
+                                Delete My Account
+                            </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                            <AlertDialogHeader>
+                            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                                This action cannot be undone. This will permanently delete your
+                                account and remove your data from our servers.
+                            </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction onClick={handleDeleteAccount} className="bg-destructive hover:bg-destructive/90">
+                                Yes, delete my account
+                            </AlertDialogAction>
+                            </AlertDialogFooter>
+                        </AlertDialogContent>
+                    </AlertDialog>
+                </CardContent>
+            </Card>
+        )}
     </div>
   );
 }
