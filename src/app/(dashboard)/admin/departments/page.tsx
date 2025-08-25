@@ -8,7 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/hooks/use-auth";
 import { Loader2, PlusCircle, Trash2 } from "lucide-react";
-import { doc, getDoc, setDoc, updateDoc, arrayUnion, arrayRemove, collection, onSnapshot, orderBy } from "firebase/firestore";
+import { doc, getDoc, setDoc, updateDoc, arrayUnion, arrayRemove, collection, onSnapshot, query, orderBy } from "firebase/firestore";
 import { useState, useEffect, useCallback } from "react";
 import {
   AlertDialog,
