@@ -122,7 +122,7 @@ export function useAuth() {
     if (!user) {
         // If there's no user and we're not on a public page, redirect to login
         const publicPaths = ['/login', '/register', '/forgot-password', '/', '/privacy', '/terms'];
-        if (!publicPaths.includes(pathname) && !pathname.startsWith('/_next/') && !pathname.startsWith('/join/')) {
+        if (!publicPaths.includes(pathname) && !pathname.startsWith('/_next/') && !pathname.startsWith('/join/') && !pathname.startsWith('/profile/')) {
             console.log(`Redirect Check: No user found, redirecting from protected path ${pathname} to /login.`);
             performRedirect('/login');
         }
@@ -174,20 +174,12 @@ export function useAuth() {
     // 4. Role-based route protection
     const currentRole = user.role;
     if (!currentRole) return; // Exit if role is not yet defined
-    const isProtectedPath = pathname.startsWith('/admin') || pathname.startsWith('/leader') || pathname.startsWith('/spoc') || pathname.startsWith('/member') || pathname.startsWith('/profile');
+    
+    const isDashboardPath = pathname.startsWith('/admin') || pathname.startsWith('/leader') || pathname.startsWith('/spoc') || pathname.startsWith('/member');
               
-    if (isProtectedPath) {
-        // Allow access to own profile regardless of role
-        if (pathname.startsWith('/profile/')) {
-            if (user.enrollmentNumber && pathname.endsWith(user.enrollmentNumber)) {
-                return;
-            }
-        }
-        
-        if (!pathname.startsWith(`/${currentRole}`)) {
-             console.warn(`SECURITY: Role '${currentRole}' attempted to access '${pathname}'. Redirecting.`);
-             performRedirect(`/${currentRole}`);
-        }
+    if (isDashboardPath && !pathname.startsWith(`/${currentRole}`)) {
+        console.warn(`SECURITY: Role '${currentRole}' attempted to access '${pathname}'. Redirecting.`);
+        performRedirect(`/${currentRole}`);
     } else if (['/login', '/register', '/create-team', '/complete-profile', '/complete-spoc-profile', '/change-password'].includes(pathname)) {
         // If user is on an auth/setup page but should be on their dashboard
         console.log(`Redirect Check: User is on setup page '${pathname}', redirecting to their dashboard.`);

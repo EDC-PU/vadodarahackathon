@@ -89,14 +89,15 @@ export default function ProfilePage() {
   
   useEffect(() => {
     const fetchProfileData = async () => {
-        if (!user) return;
+        if (!profileEnrollmentNumber) return;
         setIsFetching(true);
         try {
-            // Fetch the currently authenticated user's profile directly
-            const userDocRef = doc(db, "users", user.uid);
-            const userDoc = await getDoc(userDocRef);
+            const usersRef = collection(db, "users");
+            const q = query(usersRef, where("enrollmentNumber", "==", profileEnrollmentNumber), limit(1));
+            const querySnapshot = await getDocs(q);
 
-            if (userDoc.exists()) {
+            if (!querySnapshot.empty) {
+                const userDoc = querySnapshot.docs[0];
                 const data = { uid: userDoc.id, ...userDoc.data() } as UserProfile;
                 setProfileData(data);
                 form.reset({
@@ -110,7 +111,7 @@ export default function ProfilePage() {
                 });
             } else {
                 setProfileData(null);
-                 toast({ title: "Error", description: "Your profile data could not be found.", variant: "destructive" });
+                 toast({ title: "Error", description: "This profile could not be found.", variant: "destructive" });
             }
         } catch (err) {
              toast({ title: "Error", description: "Failed to fetch profile data.", variant: "destructive" });
@@ -118,12 +119,8 @@ export default function ProfilePage() {
             setIsFetching(false);
         }
     };
-    if (user) {
-        fetchProfileData();
-    } else if (!authLoading) {
-        setIsFetching(false);
-    }
-  }, [user, authLoading, form, toast]);
+    fetchProfileData();
+  }, [profileEnrollmentNumber, form, toast]);
 
   useEffect(() => {
     const fetchDepartments = async () => {
@@ -156,8 +153,9 @@ export default function ProfilePage() {
     // Authorization check: Allow if user is editing their own profile OR if user is a SPOC for the same institute
     const isOwner = user.uid === profileData.uid;
     const isSpocOfInstitute = user.role === 'spoc' && user.institute === profileData.institute;
+    const isAdmin = user.role === 'admin';
 
-    if (!isOwner && !isSpocOfInstitute) {
+    if (!isOwner && !isSpocOfInstitute && !isAdmin) {
         toast({ title: "Unauthorized", description: "You do not have permission to edit this profile.", variant: "destructive" });
         return;
     }
@@ -275,7 +273,7 @@ export default function ProfilePage() {
   }
 
   // Authorization check
-  const isOwner = user?.enrollmentNumber === profileEnrollmentNumber;
+  const isOwner = user?.uid === profileData.uid;
   const isSpocOfInstitute = user?.role === 'spoc' && user?.institute === profileData?.institute;
   const isAdmin = user?.role === 'admin';
   const canView = isOwner || isSpocOfInstitute || isAdmin;
