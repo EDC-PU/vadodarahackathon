@@ -12,8 +12,10 @@ import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { exportTeams } from "@/ai/flows/export-teams-flow";
 import { generateNominationForm } from "@/ai/flows/generate-nomination-form-flow";
+import { generateBulkNomination } from "@/ai/flows/generate-bulk-nomination-flow";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -51,11 +53,13 @@ function AllTeamsContent() {
   const [loading, setLoading] = useState(true);
   const [isExporting, setIsExporting] = useState(false);
   const [isNominating, setIsNominating] = useState<string | null>(null);
+  const [isBulkNominating, setIsBulkNominating] = useState(false);
   
   const [editingTeam, setEditingTeam] = useState<{ id: string, name: string } | null>(null);
   const [isSaving, setIsSaving] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState<string | null>(null);
 
+  const [selectedTeamIds, setSelectedTeamIds] = useState<string[]>([]);
   const [instituteFilter, setInstituteFilter] = useState<string>("All Institutes");
   const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>("All Categories");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("All Statuses");
@@ -79,13 +83,11 @@ function AllTeamsContent() {
 
   useEffect(() => {
     setLoading(true);
-    // Listen to all teams
     const teamsQuery = query(collection(db, 'teams'));
     const unsubscribeTeams = onSnapshot(teamsQuery, (snapshot) => {
         const teamsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Team));
         setAllTeams(teamsData);
 
-        // From all teams, get all unique user UIDs
         const allUserIds = new Set<string>();
         teamsData.forEach(team => {
             allUserIds.add(team.leader.uid);
@@ -96,7 +98,6 @@ function AllTeamsContent() {
         
         const userUnsubscribers: (()=>void)[] = [];
         if (allUserIds.size > 0) {
-            // Listen to each user document for real-time profile updates
              Array.from(allUserIds).forEach(uid => {
                 const userDocRef = doc(db, 'users', uid);
                 const unsub = onSnapshot(userDocRef, (userDoc) => {
@@ -123,7 +124,7 @@ function AllTeamsContent() {
     const unsubscribeProblemStatements = onSnapshot(problemStatementsCollection, (snapshot) => {
       const psData = snapshot.docs.map(doc => ({id: doc.id, ...doc.data()} as ProblemStatement));
       setProblemStatements(psData);
-      setFilteredProblemStatements(psData); // Initially show all
+      setFilteredProblemStatements(psData); 
     }, (error) => {
       console.error("Error fetching problem statements:", error);
       toast({ title: "Error", description: "Failed to fetch problem statements.", variant: "destructive" });
@@ -150,7 +151,6 @@ function AllTeamsContent() {
         const filtered = problemStatements.filter(ps => ps.category === categoryFilter);
         setFilteredProblemStatements(filtered);
     }
-    // Reset selected problem statements when category changes
     setSelectedProblemStatements([]);
   }, [categoryFilter, problemStatements]);
 
@@ -236,6 +236,34 @@ function AllTeamsContent() {
         toast({ title: "Error", description: "An unexpected error occurred during nomination form generation.", variant: "destructive" });
     } finally {
         setIsNominating(null);
+    }
+  };
+
+  const handleBulkGenerateNomination = async () => {
+    if (selectedTeamIds.length === 0) return;
+    setIsBulkNominating(true);
+    try {
+        const result = await generateBulkNomination({ teamIds: selectedTeamIds });
+        if (result.success && result.fileContent) {
+            const blob = new Blob([Buffer.from(result.fileContent, 'base64')], { type: 'application/zip' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = result.fileName || 'nomination-forms.zip';
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            a.remove();
+            toast({ title: "Success", description: result.message });
+            setSelectedTeamIds([]);
+        } else {
+            toast({ title: "Generation Failed", description: result.message || "Could not generate the zip file.", variant: "destructive" });
+        }
+    } catch (error) {
+        console.error("Error generating bulk nomination forms:", error);
+        toast({ title: "Error", description: "An unexpected error occurred during bulk generation.", variant: "destructive" });
+    } finally {
+        setIsBulkNominating(false);
     }
   };
   
@@ -407,6 +435,22 @@ function AllTeamsContent() {
     return sortConfig.direction === 'asc' ? '▲' : '▼';
   };
 
+  const toggleSelectAll = (checked: boolean) => {
+    if (checked) {
+        setSelectedTeamIds(filteredTeams.map(t => t.id));
+    } else {
+        setSelectedTeamIds([]);
+    }
+  };
+
+  const handleRowSelect = (teamId: string, checked: boolean) => {
+    if (checked) {
+        setSelectedTeamIds(prev => [...prev, teamId]);
+    } else {
+        setSelectedTeamIds(prev => prev.filter(id => id !== teamId));
+    }
+  };
+
   return (
     <div className="p-4 sm:p-6 lg:p-8">
       <header className="mb-8 flex flex-col sm:flex-row justify-between sm:items-center gap-4">
@@ -415,6 +459,12 @@ function AllTeamsContent() {
             <p className="text-muted-foreground">View and manage all registered teams.</p>
         </div>
         <div className="flex flex-wrap gap-2">
+            {selectedTeamIds.length > 0 && (
+                <Button variant="outline" onClick={handleBulkGenerateNomination} disabled={isBulkNominating}>
+                    {isBulkNominating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
+                    Download Nominations ({selectedTeamIds.length})
+                </Button>
+            )}
             <Select value={instituteFilter} onValueChange={setInstituteFilter}>
                 <SelectTrigger className="w-full sm:w-48">
                     <SelectValue placeholder="Filter by Institute" />
@@ -486,6 +536,13 @@ function AllTeamsContent() {
                   <TableHeader>
                       <TableRow>
                           <TableHead>
+                             <Checkbox 
+                                onCheckedChange={toggleSelectAll}
+                                checked={selectedTeamIds.length === filteredTeams.length && filteredTeams.length > 0}
+                                aria-label="Select all"
+                             />
+                          </TableHead>
+                          <TableHead>
                               <Button variant="ghost" onClick={() => requestSort('teamName')}>Team Name {getSortIndicator('teamName')}</Button>
                           </TableHead>
                           <TableHead>
@@ -515,6 +572,15 @@ function AllTeamsContent() {
                   <TableBody>
                       {teamsWithDetails.map((row, index) => (
                           <TableRow key={`${row.teamId}-${row.uid || index}`}>
+                              {row.isFirstRow && (
+                                  <TableCell rowSpan={row.rowSpan} className="align-top">
+                                      <Checkbox 
+                                          checked={selectedTeamIds.includes(row.teamId)}
+                                          onCheckedChange={(checked) => handleRowSelect(row.teamId, !!checked)}
+                                          aria-label={`Select team ${row.teamName}`}
+                                      />
+                                  </TableCell>
+                              )}
                               {row.isFirstRow && (
                                   <TableCell rowSpan={row.rowSpan} className="font-medium align-top">
                                       <div className="flex items-center gap-2 group">

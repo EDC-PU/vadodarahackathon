@@ -52,6 +52,7 @@
     "firebase-admin": "^12.2.0",
     "framer-motion": "^11.2.10",
     "genkit": "^1.17.0",
+    "jszip": "^3.10.1",
     "lucide-react": "^0.475.0",
     "next": "15.3.3",
     "nodemailer": "^6.9.14",
@@ -68,6 +69,7 @@
     "zod": "^3.24.2"
   },
   "devDependencies": {
+    "@types/jszip": "^3.4.1",
     "@types/node": "^20",
     "@types/nodemailer": "^6.4.15",
     "@types/pizzip": "^3.0.5",
