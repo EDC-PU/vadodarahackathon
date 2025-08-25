@@ -22,7 +22,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
-import { useState, useEffect, useCallback }from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Loader2, RefreshCw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { SmartFieldTip } from "./smart-field-tip";
@@ -41,8 +41,8 @@ const formSchema = z.object({
   institute: z.string({ required_error: "Please select an institute." }),
   department: z.string({ required_error: "Please select or enter a department." }).min(1, "Please select or enter a department."),
   enrollmentNumber: z.string().min(5, { message: "Enrollment number is required." }),
-  semester: z.coerce.number({invalid_type_error: "Semester is required."}).min(1, { message: "Semester must be between 1 and 8." }).max(8, { message: "Semester must be between 1 and 8." }),
-  yearOfStudy: z.string().min(1, { message: "Year of study is required." }),
+  semester: z.coerce.number({invalid_type_error: "Semester is required."}).min(1, { message: "Semester must be between 1 and 10." }).max(10, { message: "Semester must be between 1 and 10." }),
+  yearOfStudy: z.coerce.number({invalid_type_error: "Year of study is required."}).min(1, "Year must be between 1 and 5.").max(5, "Year must be between 1 and 5.").transform(val => val.toString()),
   contactNumber: z.string().regex(/^\d{10}$/, { message: "Please enter a valid 10-digit phone number." }),
 });
 
@@ -414,7 +414,7 @@ export function RegistrationForm() {
                   <FormItem>
                     <FormLabel>Year of Study</FormLabel>
                     <FormControl>
-                      <Input type="number" placeholder="e.g., 3" {...field} disabled={isLoading}/>
+                      <Input type="number" placeholder="e.g., 3" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -438,7 +438,7 @@ export function RegistrationForm() {
             
             <Button type="submit" className="w-full" disabled={isLoading || authLoading}>
               {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Create Team & Finish Registration
+              Create Team &amp; Finish Registration
             </Button>
           </form>
         </Form>
@@ -446,3 +446,5 @@ export function RegistrationForm() {
     </Card>
   );
 }
+
+    

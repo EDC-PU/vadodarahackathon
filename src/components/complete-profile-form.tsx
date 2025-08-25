@@ -39,8 +39,8 @@ const formSchema = z.object({
   gender: z.enum(["M", "F", "O"], { required_error: "Please select a gender." }),
   department: z.string({ required_error: "Please select or enter a department." }).min(1, "Please select or enter a department."),
   enrollmentNumber: z.string().min(5, { message: "Enrollment number is required." }),
-  semester: z.coerce.number({invalid_type_error: "Semester is required."}).min(1, { message: "Semester must be between 1 and 8." }).max(8, { message: "Semester must be between 1 and 8." }),
-  yearOfStudy: z.string().min(1, { message: "Year of study is required." }),
+  semester: z.coerce.number({invalid_type_error: "Semester is required."}).min(1, { message: "Semester must be between 1 and 10." }).max(10, { message: "Semester must be between 1 and 10." }),
+  yearOfStudy: z.coerce.number({invalid_type_error: "Year of study is required."}).min(1, "Year must be between 1 and 5.").max(5, "Year must be between 1 and 5.").transform(val => val.toString()),
   contactNumber: z.string().regex(/^\d{10}$/, { message: "Please enter a valid 10-digit phone number." }),
 });
 
@@ -360,7 +360,7 @@ export function CompleteProfileForm() {
                   <FormItem>
                     <FormLabel>Year of Study</FormLabel>
                     <FormControl>
-                      <Input type="number" placeholder="e.g., 3" {...field} disabled={isLoading}/>
+                      <Input type="number" placeholder="e.g., 3" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -392,3 +392,5 @@ export function CompleteProfileForm() {
     </Card>
   );
 }
+
+    
