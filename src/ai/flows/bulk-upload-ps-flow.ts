@@ -9,7 +9,7 @@ import { z } from 'genkit';
 import { getAdminDb } from '@/lib/firebase-admin';
 import ExcelJS from 'exceljs';
 import { ProblemStatement, ProblemStatementCategory, BulkUploadPsInput, BulkUploadPsInputSchema, BulkUploadPsOutput, BulkUploadPsOutputSchema } from '@/lib/types';
-import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
+import { FieldValue } from 'firebase-admin/firestore';
 
 
 export async function bulkUploadProblemStatements(input: BulkUploadPsInput): Promise<BulkUploadPsOutput> {
@@ -43,7 +43,7 @@ const bulkUploadPsFlow = ai.defineFlow(
       }
 
       const problemStatementsRef = db.collection("problemStatements");
-      const batch = db.batch();
+      let batch = db.batch();
       let batchSize = 0;
 
       const headerRow = worksheet.getRow(1).values as string[];
@@ -89,7 +89,7 @@ const bulkUploadPsFlow = ai.defineFlow(
             description: description || '',
             department: department || '',
             organization: organization || '',
-            createdAt: serverTimestamp(),
+            createdAt: FieldValue.serverTimestamp(),
         });
         addedCount++;
         batchSize++;
@@ -98,7 +98,7 @@ const bulkUploadPsFlow = ai.defineFlow(
             await batch.commit();
             batchSize = 0;
             // Re-initialize batch after commit
-            // batch = db.batch();
+            batch = db.batch();
         }
       }
 
