@@ -110,10 +110,10 @@ export default function SpocDashboard() {
   const handleExportEvaluation = async () => {
     setIsExportingEval(true);
     try {
-        if (!user?.institute) {
-            throw new Error("Institute information not available");
+        if (!user?.institute || teams.length === 0) {
+            throw new Error("Institute information or teams not available for export.");
         }
-        const teamsToExport = teamsWithDetails.map(t => ({
+        const teamsToExport = getTeamWithFullDetails(teams).map(t => ({
           team_id: t.id,
           team_name: t.name,
           leader_name: t.allMembers.find(m => m.isLeader)?.name || 'N/A',
@@ -136,9 +136,9 @@ export default function SpocDashboard() {
         } else {
             toast({ title: "Export Failed", description: result.message || "Could not generate the export file.", variant: "destructive" });
         }
-    } catch (error) {
+    } catch (error: any) {
         console.error("Error exporting evaluation data:", error);
-        toast({ title: "Error", description: "An unexpected error occurred during evaluation export.", variant: "destructive" });
+        toast({ title: "Error", description: `An unexpected error occurred during evaluation export: ${error.message}`, variant: "destructive" });
     } finally {
         setIsExportingEval(false);
     }
@@ -270,6 +270,7 @@ export default function SpocDashboard() {
           await updateDoc(teamDocRef, { name: editingTeam.name });
           toast({ title: "Success", description: "Team name updated." });
           setEditingTeam(null);
+          await fetchInstituteData(); // Refresh data
       } catch (error) {
           console.error("Error updating team name:", error);
           toast({ title: "Error", description: "Could not update team name.", variant: "destructive" });
