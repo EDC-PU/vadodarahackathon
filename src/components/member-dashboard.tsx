@@ -297,7 +297,7 @@ export default function MemberDashboard() {
                       {sortedTeamMembers.length > 0 ? (
                         sortedTeamMembers.map((member) => {
                            const isLeader = member.role === 'leader';
-                           const role = isLeader ? 'Leader' : `Member - ${teamMembers.filter(m => m.role !== 'leader').findIndex(m => m.uid === member.uid) + 1}`;
+                           const role = isLeader ? 'Leader' : `Member`;
                            return (
                           <TableRow key={member.uid}>
                             <TableCell className="font-medium">
@@ -492,3 +492,5 @@ export default function MemberDashboard() {
     </div>
   );
 }
+
+  
