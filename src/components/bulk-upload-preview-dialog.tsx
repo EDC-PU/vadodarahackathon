@@ -41,7 +41,7 @@ export function BulkUploadPreviewDialog({ isOpen, onOpenChange, data, onConfirm 
         
         {data.length > 0 ? (
           <ScrollArea className="h-[60vh] border rounded-md">
-            <Table className="whitespace-nowrap">
+            <Table>
               <TableHeader className="sticky top-0 bg-background">
                 <TableRow>
                   {headers.map((header) => (
