@@ -62,8 +62,8 @@ export function RegistrationForm() {
     defaultValues: {
       teamName: "",
       name: "",
-      institute: undefined,
-      department: undefined,
+      institute: "",
+      department: "",
       enrollmentNumber: "",
       contactNumber: "",
       gender: undefined,
@@ -154,8 +154,8 @@ export function RegistrationForm() {
         form.reset({
             teamName: "",
             name: user.name || "",
-            institute: user.institute || undefined,
-            department: user.department || undefined,
+            institute: user.institute || "",
+            department: user.department || "",
             enrollmentNumber: user.enrollmentNumber || "",
             contactNumber: user.contactNumber || "",
             gender: user.gender || undefined,
