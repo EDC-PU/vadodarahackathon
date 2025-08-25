@@ -132,3 +132,15 @@ interface EmailTemplateProps {
     `;
   }
   
+  export function sendMemberLeftEmail(leaderName: string, memberName: string, teamName: string): string {
+    return getEmailTemplate({
+        title: 'A Member Has Left Your Team',
+        body: `
+            <p>Hi ${leaderName},</p>
+            <p>This is an automated notification to inform you that <strong>${memberName}</strong> is no longer a member of your team, <strong>${teamName}</strong>.</p>
+            <p>Their account has been deleted from the portal. Your team now has an open spot for a new member.</p>
+        `,
+        buttonLink: 'https://vadodarahackathon.pierc.org/leader',
+        buttonText: 'Go to Your Dashboard'
+    });
+}
