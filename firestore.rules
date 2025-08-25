@@ -1,4 +1,3 @@
-
 rules_version = '2';
 
 service cloud.firestore {
@@ -12,11 +11,23 @@ service cloud.firestore {
       return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == role;
     }
 
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+
+    // A SPOC can edit a user if the user's institute matches the SPOC's institute
+    function isSpocForUser(userId) {
+      let userInstitute = get(/databases/$(database)/documents/users/$(userId)).data.institute;
+      let spocInstitute = get(/databases/$(database)/documents/users/$(request.auth.uid)).data.institute;
+      return isRole('spoc') && userInstitute == spocInstitute;
+    }
+
     match /users/{userId} {
       allow create: if isSignedIn();
       allow read: if isSignedIn();
-      allow update: if isSignedIn();
-      allow delete: if isRole('admin') || request.auth.uid == userId;
+      // Only owner, admin, or the user's SPOC can update
+      allow update: if isOwner(userId) || isRole('admin') || isSpocForUser(userId);
+      allow delete: if isRole('admin') || isOwner(userId);
       allow list: if isRole('admin') || isRole('spoc');
     }
 
