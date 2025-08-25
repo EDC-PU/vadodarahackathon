@@ -270,7 +270,7 @@ export default function ProblemStatementsPage() {
                              </div>
                            </div>
                            
-                           {ps.description && <p className="text-sm text-muted-foreground mb-3">{ps.description}</p>}
+                           {ps.description && <p className="text-sm text-muted-foreground mb-3 whitespace-pre-wrap">{ps.description}</p>}
                            <div className="grid grid-cols-2 md:grid-cols-3 gap-2 text-sm">
                               {ps.organization && <div><strong>Organization:</strong> {ps.organization}</div>}
                               {ps.department && <div><strong>Department:</strong> {ps.department}</div>}
