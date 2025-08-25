@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -88,15 +89,14 @@ export default function ProfilePage() {
   
   useEffect(() => {
     const fetchProfileData = async () => {
-        if (!profileEnrollmentNumber) return;
+        if (!user) return;
         setIsFetching(true);
         try {
-            const usersRef = collection(db, "users");
-            const q = query(usersRef, where("enrollmentNumber", "==", profileEnrollmentNumber));
-            const querySnapshot = await getDocs(q);
+            // Fetch the currently authenticated user's profile directly
+            const userDocRef = doc(db, "users", user.uid);
+            const userDoc = await getDoc(userDocRef);
 
-            if (!querySnapshot.empty) {
-                const userDoc = querySnapshot.docs[0];
+            if (userDoc.exists()) {
                 const data = { uid: userDoc.id, ...userDoc.data() } as UserProfile;
                 setProfileData(data);
                 form.reset({
@@ -110,6 +110,7 @@ export default function ProfilePage() {
                 });
             } else {
                 setProfileData(null);
+                 toast({ title: "Error", description: "Your profile data could not be found.", variant: "destructive" });
             }
         } catch (err) {
              toast({ title: "Error", description: "Failed to fetch profile data.", variant: "destructive" });
@@ -117,8 +118,12 @@ export default function ProfilePage() {
             setIsFetching(false);
         }
     };
-    fetchProfileData();
-  }, [profileEnrollmentNumber, form, toast]);
+    if (user) {
+        fetchProfileData();
+    } else if (!authLoading) {
+        setIsFetching(false);
+    }
+  }, [user, authLoading, form, toast]);
 
   useEffect(() => {
     const fetchDepartments = async () => {
