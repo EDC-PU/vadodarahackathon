@@ -153,7 +153,9 @@ export function CompleteSpocProfileForm() {
       )
   }
   
-  if (user?.spocStatus === 'pending' || isSubmitted) {
+  // Show pending message only if they have already submitted the form's core data.
+  const hasSubmittedCoreData = user?.spocStatus === 'pending' && user?.institute && user?.misId;
+  if (hasSubmittedCoreData || isSubmitted) {
       return (
         <div className="flex flex-col items-center text-center gap-4 animate-in fade-in-50 p-6">
             <Alert variant="default" className="border-green-500 text-left">

@@ -109,16 +109,15 @@ export function useAuth() {
     }
     
     const performRedirect = (path: string) => {
-        // Prevent redirecting if already on the target page, or if on a join page which has its own logic.
-        if (pathname !== path && !pathname.startsWith('/join/')) {
+        // Allow access to profile pages and join pages; they have their own internal logic.
+        const excludedPaths = ['/join/', '/profile/'];
+        if (pathname !== path && !excludedPaths.some(p => pathname.startsWith(p))) {
             setIsNavigating(true);
             router.push(path);
-            // Reset navigating state after a short delay
             setTimeout(() => setIsNavigating(false), 1000);
         }
     };
     
-    // --- Start of Redirection and Route Protection Logic ---
     if (!user) {
         // If there's no user and we're not on a public page, redirect to login
         const publicPaths = ['/login', '/register', '/forgot-password', '/', '/privacy', '/terms'];
@@ -138,19 +137,7 @@ export function useAuth() {
         return;
      }
      
-     // 2. SPOC status check
-     if (user.role === 'spoc' && user.spocStatus === 'pending') {
-        // A pending SPOC needs to complete their profile.
-        // If they have completed it, they will see a "pending" message on the form page.
-        // If not, they need to fill it out. Don't sign them out.
-        if (pathname !== '/complete-spoc-profile') {
-             console.log("Redirect Check: SPOC is pending approval, redirecting to complete profile page.");
-             performRedirect('/complete-spoc-profile');
-        }
-        return;
-     }
-     
-     // 3. Profile completion checks
+     // 2. Profile completion checks for various roles
      if (user.role === 'spoc' && (!user.institute || !user.contactNumber)) {
         console.log("Redirect Check: SPOC profile is incomplete.");
         performRedirect('/complete-spoc-profile');
@@ -163,17 +150,15 @@ export function useAuth() {
          return;
      }
      
-    // A member/leader with an incomplete profile should be redirected,
-    // UNLESS they are on the join page, which handles this case specifically.
-    if ((user.role === 'member' || user.role === 'leader') && !user.enrollmentNumber && !pathname.startsWith('/join/')) {
+    if ((user.role === 'member' || user.role === 'leader') && !user.enrollmentNumber) {
         console.log("Redirect Check: Member/Leader profile is incomplete.");
         performRedirect('/complete-profile');
         return;
     }
     
-    // 4. Role-based route protection
+    // 3. Role-based route protection for main dashboard areas
     const currentRole = user.role;
-    if (!currentRole) return; // Exit if role is not yet defined
+    if (!currentRole) return;
     
     const isDashboardPath = pathname.startsWith('/admin') || pathname.startsWith('/leader') || pathname.startsWith('/spoc') || pathname.startsWith('/member');
               
@@ -187,7 +172,7 @@ export function useAuth() {
     }
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, loading, pathname, router, handleSignOut]);
+  }, [user, loading, pathname, router]);
 
 
   const handleLogin = useCallback(async (loggedInUser: FirebaseUser, inviteToken?: string) => {
