@@ -48,7 +48,7 @@ const AnimatedSection = ({ children, className, id }: { children: React.ReactNod
       initial={{ opacity: 0, y: 50 }}
       animate={isInView ? { opacity: 1, y: 0 } : {}}
       transition={{ duration: 0.8, ease: "easeOut" }}
-      className={cn('py-20 md:py-28', className)}
+      className={cn('py-16 md:py-21', className)}
     >
       {children}
     </motion.section>
@@ -588,7 +588,9 @@ export default function LandingPage({ spocDetails, announcements }: LandingPageP
                   <img src="https://www.pierc.org/_next/static/media/PIERC%20WHITE.a9ef7cc8.svg" alt="PIERC Logo" className="h-10" />
               </div>
               <div className="text-center md:text-right text-sm text-foreground/60">
-                <p>&copy; {new Date().getFullYear()} Vadodara Hackathon. All rights reserved.</p>
+                <p>&copy; {new Date().getFullYear()}© 2025 Vadodara Hackathon. All rights reserved.
+                </p>
+                <p>Designed & Developed by Pranav Rathi</p>
                 <div className="flex gap-4 justify-center md:justify-end mt-1">
                     <Link href="/privacy" className="hover:text-primary transition-colors">Privacy Policy</Link>
                     <Link href="/terms" className="hover:text-primary transition-colors">Terms of Service</Link>
