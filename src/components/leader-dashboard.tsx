@@ -149,7 +149,7 @@ export default function LeaderDashboard() {
             });
             return () => unsubscribeMembers();
         } else {
-            setTeamMembers([]);
+            setTeamMembers([user as UserProfile]); // If no members, at least show the leader
             setLoading(false);
         }
     }, (error) => {
@@ -159,7 +159,7 @@ export default function LeaderDashboard() {
     });
 
     return () => unsubscribeTeam();
-  }, [user?.teamId, toast]);
+  }, [user, toast]);
   
   useEffect(() => {
     if (!team) return;
@@ -209,7 +209,7 @@ export default function LeaderDashboard() {
             members: arrayRemove(memberDataForRemoval)
         });
 
-        // 2. Find the user by email and clear their teamId and role
+        // 2. Find the user by email and clear their teamId
         const usersRef = collection(db, "users");
         const q = query(usersRef, where("email", "==", memberToRemove.email));
         const querySnapshot = await getDocs(q);
@@ -217,7 +217,7 @@ export default function LeaderDashboard() {
         if (!querySnapshot.empty) {
             const userDoc = querySnapshot.docs[0];
             const userDocRef = doc(db, "users", userDoc.id);
-            batch.update(userDocRef, { teamId: "" }); // keep role
+            batch.update(userDocRef, { teamId: "" });
         }
 
         await batch.commit();
@@ -231,13 +231,13 @@ export default function LeaderDashboard() {
   };
   
   const sortedTeamMembers = useMemo(() => {
-    const leader = teamMembers.find(m => m.role === 'leader');
-    const members = teamMembers.filter(m => m.role !== 'leader');
+    const leader = teamMembers.find(m => m.uid === user?.uid);
+    const members = teamMembers.filter(m => m.uid !== user?.uid);
 
     if (sortConfig !== null) {
       members.sort((a, b) => {
-        const aValue = a[sortConfig.key] ?? '';
-        const bValue = b[sortConfig.key] ?? '';
+        const aValue = a[sortConfig.key as keyof UserProfile] as any ?? '';
+        const bValue = b[sortConfig.key as keyof UserProfile] as any ?? '';
         if (aValue < bValue) {
           return sortConfig.direction === 'asc' ? -1 : 1;
         }
@@ -249,7 +249,7 @@ export default function LeaderDashboard() {
     }
 
     return leader ? [leader, ...members] : members;
-  }, [teamMembers, sortConfig]);
+  }, [teamMembers, sortConfig, user?.uid]);
 
   const requestSort = (key: SortKey) => {
     let direction: SortDirection = 'asc';
@@ -363,8 +363,8 @@ export default function LeaderDashboard() {
                       <TableBody>
                           {sortedTeamMembers.length > 0 ? (
                               sortedTeamMembers.map((member, index) => {
-                                  const isLeader = member.role === 'leader';
-                                  const role = isLeader ? 'Leader' : `Member - ${teamMembers.filter(m => m.role !== 'leader').findIndex(m => m.uid === member.uid) + 1}`;
+                                  const isLeader = member.uid === user.uid;
+                                  const role = isLeader ? 'Leader' : `Member`;
                                   return (
                                   <TableRow key={member.uid}>
                                       <TableCell className="font-medium">
@@ -434,7 +434,7 @@ export default function LeaderDashboard() {
                 <div className="md:hidden space-y-4">
                   {sortedTeamMembers.length > 0 ? (
                     sortedTeamMembers.map((member) => {
-                      const isLeader = member.role === 'leader';
+                      const isLeader = member.uid === user.uid;
                       return (
                         <Card key={member.uid} className="p-4">
                           <div className="flex justify-between items-start">
