@@ -23,7 +23,7 @@ async function sendApprovalEmail(spoc: UserProfile) {
     });
 
     const mailOptions = {
-        from: `"Vadodara Hackathon 6.0 Team" <${process.env.GMAIL_EMAIL!}>`,
+        from: `"Vadodara Hackathon 6.0" <noreply@vadodarahackathon.pierc.org>`,
         to: spoc.email,
         subject: `Your Vadodara Hackathon SPOC Application has been Approved`,
         html: emailHtml,
@@ -54,7 +54,7 @@ async function sendRejectionEmail(spoc: UserProfile) {
     });
 
     const mailOptions = {
-        from: `"Vadodara Hackathon 6.0 Team" <${process.env.GMAIL_EMAIL!}>`,
+        from: `"Vadodara Hackathon 6.0" <noreply@vadodarahackathon.pierc.org>`,
         to: spoc.email,
         subject: `Update on Your Vadodara Hackathon SPOC Application`,
         html: emailHtml,

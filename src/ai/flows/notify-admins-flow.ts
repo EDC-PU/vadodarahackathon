@@ -43,7 +43,7 @@ async function sendSpocRequestEmail(adminEmails: string[], spocName: string, spo
 
 
     const mailOptions = {
-        from: `"Vadodara Hackathon 6.0 Team" <${process.env.GMAIL_EMAIL}>`,
+        from: `"Vadodara Hackathon 6.0" <noreply@vadodarahackathon.pierc.org>`,
         to: adminEmails.join(','), // Send to all admins
         subject: `New SPOC Registration Request`,
         html: emailHtml,
