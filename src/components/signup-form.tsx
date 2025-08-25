@@ -61,7 +61,16 @@ const formSchema = z.object({
 }, {
     message: "You must confirm you are the team leader.",
     path: ["leaderConfirmation"],
+}).refine((data) => {
+    if (data.role === 'spoc' && !data.email.endsWith('@paruluniversity.ac.in')) {
+      return false;
+    }
+    return true;
+}, {
+    message: "SPOC email must end with @paruluniversity.ac.in",
+    path: ["email"],
 });
+
 
 export function SignupForm({ inviteToken, deadlineMillis }: SignupFormProps) {
   const [isLoading, setIsLoading] = useState(false);
