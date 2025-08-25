@@ -5,7 +5,7 @@
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { Award, Code, Cpu, Mail, MapPin, Phone, Users, Calendar, Trophy, FileText, BarChart, FileQuestion, Loader2, LayoutDashboard, MoveRight } from 'lucide-react';
+import { Award, Code, Cpu, Mail, MapPin, Phone, Users, Calendar, Trophy, FileText, BarChart, FileQuestion, Loader2, LayoutDashboard, MoveRight, UserCheck, Users2, Venus } from 'lucide-react';
 import Image from 'next/image';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { useState, useEffect, useRef, MouseEvent } from 'react';
@@ -197,6 +197,7 @@ export default function LandingPage({ spocDetails, announcements }: LandingPageP
   const navLinks = [
     { name: 'Home', href: '#home' },
     { name: 'About', href: '#about' },
+    { name: 'Eligibility', href: '#eligibility' },
     { name: 'Timeline', href: '#timeline' },
     { name: 'Rewards', href: '#rewards' },
     { name: 'SPOCs', href: '#spocs'},
@@ -362,6 +363,38 @@ export default function LandingPage({ spocDetails, announcements }: LandingPageP
           </div>
         </AnimatedSection>
         
+        <AnimatedSection id="eligibility" className="bg-secondary/10">
+          <div className="container max-w-7xl text-center">
+            <SectionTitle>Eligibility Criteria</SectionTitle>
+            <p className="max-w-3xl mx-auto text-foreground/80 mb-12">
+              Ensure your team meets the following criteria to participate in the hackathon.
+            </p>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              <Card className="glass-card p-6 text-center transform hover:-translate-y-2 transition-transform duration-300">
+                <UserCheck className="h-10 w-10 text-amber-400 mx-auto mb-4" />
+                <CardTitle className="text-2xl mt-2">University Students</CardTitle>
+                <CardContent className="mt-4 text-foreground/80 p-0">
+                  <p>Open to all students currently enrolled at Parul University.</p>
+                </CardContent>
+              </Card>
+              <Card className="glass-card p-6 text-center transform hover:-translate-y-2 transition-transform duration-300">
+                <Users2 className="h-10 w-10 text-primary mx-auto mb-4" />
+                <CardTitle className="text-2xl mt-2">Team of 6</CardTitle>
+                <CardContent className="mt-4 text-foreground/80 p-0">
+                  <p>Each team must consist of exactly six participants.</p>
+                </CardContent>
+              </Card>
+              <Card className="glass-card p-6 text-center transform hover:-translate-y-2 transition-transform duration-300">
+                <Venus className="h-10 w-10 text-accent mx-auto mb-4" />
+                <CardTitle className="text-2xl mt-2">Female Representation</CardTitle>
+                <CardContent className="mt-4 text-foreground/80 p-0">
+                  <p>Each team must have at least one female member.</p>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        </AnimatedSection>
+
         <AnimatedSection id="problem-statements">
           <div className="container max-w-7xl">
             <div className="space-y-4 text-center max-w-3xl mx-auto">
