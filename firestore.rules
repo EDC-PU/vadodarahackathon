@@ -4,83 +4,86 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Helper functions
-    function isOwner(userId) {
-      return request.auth.uid == userId;
+    // Helper function to check if a user has a specific role
+    function isRole(role) {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == role;
     }
 
+    // Helper function to check if user is an admin
     function isAdmin() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+      return isRole('admin');
     }
-    
+
+    // Helper function to check if user is a SPOC
     function isSpoc() {
-        return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'spoc';
+      return isRole('spoc');
     }
 
-    function isSpocApproved() {
-      return isSpoc() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.spocStatus == 'approved';
-    }
-    
-    function isLeader() {
-        return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'leader';
+    // Helper function to check if user is authenticated
+    function isSignedIn() {
+      return request.auth != null;
     }
 
-    function isTeamMember(teamId) {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.teamId == teamId;
-    }
-
-    // USERS collection
+    // Rules for users
     match /users/{userId} {
-      allow read: if request.auth != null; // Any authenticated user can read user profiles
-      allow create: if request.auth.uid != null; // Any authenticated user can create their own user document
-      allow write: if isOwner(userId) || isAdmin(); // Only the user themselves or an admin can update a profile
-    }
-
-    // TEAMS collection
-    match /teams/{teamId} {
-      allow read: if request.auth != null; // Any authenticated user can read team details
-      allow create: if isLeader(); // Only a team leader can create a team
-      allow update: if 
-          isTeamMember(teamId) ||
-          (isSpocApproved() && get(/databases/$(database)/documents/teams/$(teamId)).data.institute == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.institute) ||
-          isAdmin();
-      allow delete: if 
-          (isSpocApproved() && get(/databases/$(database)/documents/teams/$(teamId)).data.institute == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.institute) ||
-          isAdmin();
-    }
-    
-    // TEAM INVITES (Permanent links)
-    match /teamInvites/{inviteId} {
-      allow read: if request.auth != null; // Allow any authenticated user to read to check invite details
-      allow create: if isLeader() || isSpocApproved(); // Leaders and SPOCs can create invite links
-      allow write: if isAdmin(); // Only admins can modify them
+      allow read: if isSignedIn();
+      allow create: if request.auth.uid == userId;
+      allow update: if request.auth.uid == userId || isAdmin() || (isSpoc() && get(/databases/$(database)/documents/users/$(userId)).data.institute == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.institute);
       allow delete: if isAdmin();
     }
 
-    // PROBLEM STATEMENTS collection
-    match /problemStatements/{statementId} {
-      allow read: if true; // Problem statements are public
-      allow write: if isAdmin(); // Only admins can create/update/delete
-    }
-
-    // NOTIFICATIONS collection
-    match /notifications/{notificationId} {
-        allow read, write: if isOwner(get(/databases/$(database)/documents/notifications/$(notificationId)).data.recipientUid); // Only recipient can manage their notification
-        allow create: if request.auth != null; // Any authenticated user can trigger a notification creation through a backend flow
-        allow delete: if isAdmin() || isOwner(get(/databases/$(database)/documents/notifications/$(notificationId)).data.recipientUid);
+    // Rules for teams
+    match /teams/{teamId} {
+      allow read: if isSignedIn();
+      allow create: if request.auth.uid == request.resource.data.leader.uid;
+      allow update: if isAdmin() || (isSpoc() && resource.data.institute == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.institute) || request.auth.uid == resource.data.leader.uid;
+      allow delete: if isAdmin() || (isSpoc() && resource.data.institute == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.institute);
     }
     
-    // ANNOUNCEMENTS collection
-    match /announcements/{announcementId} {
-      allow read: if true; // Announcements are public
-      allow write: if isAdmin() || isSpocApproved();
-    }
-    
-    // CONFIG collection
-    match /config/{configId} {
-        allow read: if true;
+    // Rules for problem statements
+    match /problemStatements/{psId} {
+        allow read: if isSignedIn();
         allow write: if isAdmin();
     }
+    
+    // Rules for announcements
+    match /announcements/{announcementId} {
+        allow read: if isSignedIn();
+        // Allow write if user is admin OR if user is a SPOC and the announcement is for their institute
+        allow write: if isAdmin() || (isSpoc() && request.resource.data.institute == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.institute);
+    }
+    
+    // Rules for event configuration
+    match /config/{configId} {
+        allow read: if isSignedIn();
+        allow write: if isAdmin();
+    }
+    
+    // Rules for permanent team invites (join links)
+    match /teamInvites/{inviteId} {
+        allow read: if isSignedIn();
+        allow create: if isRole('leader') || isSpoc() || isAdmin();
+        allow write: if isRole('leader') || isSpoc() || isAdmin();
+    }
+    
+    // Rules for notifications
+    match /notifications/{notificationId} {
+        allow read, delete: if request.auth.uid == resource.data.recipientUid;
+        allow create: if isSignedIn();
+        allow update(writeFields: ['read']): if request.auth.uid == resource.data.recipientUid;
+    }
 
+    // Rules for institutes list
+    match /institutes/{instituteId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    // Rules for departments list
+    match /departments/{instituteName} {
+      allow read: if isSignedIn();
+      // Allow write if user is an admin OR if they are a SPOC for that specific institute
+      allow write: if isAdmin() || (isSpoc() && instituteName == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.institute);
+    }
   }
 }
