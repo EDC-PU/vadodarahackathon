@@ -33,7 +33,7 @@ export default function RootLayout({
         {/* Google tag (gtag.js) */}
         <Script
           strategy="afterInteractive"
-          src={`https://www.googletagmanager.com/gtag/js?id=YOUR_GA_MEASUREMENT_ID`}
+          src={`https://www.googletagmanager.com/gtag/js?id=G-3P33CMH217`}
         />
         <Script
           id="gtag-init"
@@ -43,7 +43,7 @@ export default function RootLayout({
               window.dataLayer = window.dataLayer || [];
               function gtag(){dataLayer.push(arguments);}
               gtag('js', new Date());
-              gtag('config', 'YOUR_GA_MEASUREMENT_ID');
+              gtag('config', 'G-3P33CMH217');
             `,
           }}
         />
