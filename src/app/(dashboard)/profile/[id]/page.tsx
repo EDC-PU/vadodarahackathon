@@ -37,7 +37,7 @@ import {
 const formSchema = z.object({
   name: z.string().min(2, { message: "Name must be at least 2 characters." }),
   gender: z.enum(["M", "F", "O"], { required_error: "Please select a gender." }),
-  department: z.string({ required_error: "Please select a department." }).min(1, "Please select a department."),
+  department: z.string({ required_error: "Please select or enter a department." }).min(1, "Please select or enter a department."),
   enrollmentNumber: z.string().min(5, { message: "Enrollment number is required." }),
   contactNumber: z.string().regex(/^\d{10}$/, { message: "Please enter a valid 10-digit phone number." }),
   semester: z.coerce.number({invalid_type_error: "Semester is required."}).min(1, { message: "Semester must be between 1 and 8." }).max(8, { message: "Semester must be between 1 and 8." }),
@@ -66,6 +66,11 @@ export default function ProfilePage() {
         semester: undefined,
         yearOfStudy: "",
     },
+  });
+
+  const selectedDepartment = useWatch({
+    control: form.control,
+    name: 'department'
   });
   
   useEffect(() => {
@@ -277,14 +282,22 @@ export default function ProfilePage() {
                                                 <Loader2 className="h-4 w-4 animate-spin" />
                                             </div>
                                         ) : departments.length > 0 ? (
-                                            departments.map((dept) => (
-                                                <SelectItem key={dept} value={dept}>{dept}</SelectItem>
-                                            ))
+                                            <>
+                                                {departments.map((dept) => (
+                                                    <SelectItem key={dept} value={dept}>{dept}</SelectItem>
+                                                ))}
+                                                <SelectItem value="Other">Other</SelectItem>
+                                            </>
                                         ) : (
-                                            <div className="p-2 text-sm text-muted-foreground">No departments found.</div>
+                                            <SelectItem value="Other">Other</SelectItem>
                                         )}
                                     </SelectContent>
                                 </Select>
+                                {selectedDepartment === 'Other' && (
+                                    <FormControl className="mt-2">
+                                        <Input placeholder="Please specify your department" {...field} disabled={isLoading} />
+                                    </FormControl>
+                                )}
                                 <FormMessage />
                             </FormItem>
                         )}
