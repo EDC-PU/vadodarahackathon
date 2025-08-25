@@ -108,6 +108,8 @@ export default function ProfilePage() {
                     semester: data.semester,
                     yearOfStudy: data.yearOfStudy,
                 });
+            } else {
+                setProfileData(null);
             }
         } catch (err) {
              toast({ title: "Error", description: "Failed to fetch profile data.", variant: "destructive" });
@@ -255,12 +257,25 @@ export default function ProfilePage() {
       )
   }
   
+  if (!profileData) {
+     return (
+        <div className="p-4 sm:p-6 lg:p-8">
+            <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>Profile Not Found</AlertTitle>
+                <AlertDescription>The profile you are trying to view does not exist.</AlertDescription>
+            </Alert>
+        </div>
+    )
+  }
+
   // Authorization check
   const isOwner = user?.enrollmentNumber === profileEnrollmentNumber;
   const isSpocOfInstitute = user?.role === 'spoc' && user?.institute === profileData?.institute;
-  const canEdit = isOwner || isSpocOfInstitute;
+  const isAdmin = user?.role === 'admin';
+  const canView = isOwner || isSpocOfInstitute || isAdmin;
 
-  if (!canEdit) {
+  if (!canView) {
     return (
         <div className="p-4 sm:p-6 lg:p-8">
             <Alert variant="destructive">
@@ -484,5 +499,3 @@ export default function ProfilePage() {
     </div>
   );
 }
-
-    
