@@ -8,7 +8,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Award, Code, Cpu, Mail, MapPin, Phone, Users, Calendar, Trophy, FileText, BarChart, FileQuestion, Loader2, LayoutDashboard, MoveRight } from 'lucide-react';
 import Image from 'next/image';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, MouseEvent } from 'react';
 import {
   Carousel,
   CarouselContent,
@@ -223,6 +223,15 @@ export default function LandingPage({ spocDetails, announcements }: LandingPageP
     '/VadodaraHackathon/14.jpg',
     '/VadodaraHackathon/15.jpg',
   ];
+
+  const handleNavClick = (e: MouseEvent<HTMLAnchorElement>, href: string) => {
+    e.preventDefault();
+    const targetId = href.replace(/.*#/, "");
+    const elem = document.getElementById(targetId);
+    elem?.scrollIntoView({
+        behavior: "smooth",
+    });
+  };
   
 
   return (
@@ -235,7 +244,12 @@ export default function LandingPage({ spocDetails, announcements }: LandingPageP
           <nav className="hidden md:flex items-center gap-1">
             {navLinks.map((link) => (
               <Button key={link.name} variant="ghost" asChild>
-                <Link href={link.href} className="text-foreground/80 transition-colors hover:text-foreground" prefetch={false}>
+                <Link 
+                    href={link.href} 
+                    className="text-foreground/80 transition-colors hover:text-foreground" 
+                    onClick={(e) => handleNavClick(e, link.href)}
+                    prefetch={false}
+                >
                   {link.name}
                 </Link>
               </Button>
@@ -548,17 +562,17 @@ export default function LandingPage({ spocDetails, announcements }: LandingPageP
                  <div className="text-center">
                     <SectionTitle>For Any Queries</SectionTitle>
                 </div>
-                <div className="grid md:grid-cols-3 gap-8 text-center mt-12">
+                <div className="grid md:grid-cols-2 gap-8 text-center mt-12">
                  <motion.div whileHover={{ y: -5, boxShadow: "0 0 20px hsl(var(--brand-yellow))" }} className="glass-card p-6 flex flex-col items-center">
                     <Mail className="h-10 w-10 text-primary mb-4" />
                     <h3 className="text-xl font-semibold">Email Us</h3>
-                    <a href="mailto:programs.pierc@paruluniversity.ac.in" className="text-foreground/80 hover:text-primary">pierc@paruluniversity.ac.in</a>
+                    <a href="mailto:programs.pierc@paruluniversity.ac.in" className="text-foreground/80 hover:text-primary">programs.pierc@paruluniversity.ac.in</a>
                 </motion.div>
              
                 <motion.div whileHover={{ y: -5, boxShadow: "0 0 20px hsl(var(--brand-red))" }} className="glass-card p-6 flex flex-col items-center">
                     <MapPin className="h-10 w-10 text-primary mb-4" />
                     <h3 className="text-xl font-semibold">Our Address</h3>
-                    <p className="text-foreground/80 max-w-xs">PARUL INNOVATION &amp; ENTREPRENEURSHIP RESEARCH CENTRE (PIERC), Parul University</p>
+                    <p className="text-foreground/80 max-w-xs">Parul Innovation & Entrepreneurship Research Center, BBA Building, Parul University</p>
                 </motion.div>
                 </div>
             </div>
