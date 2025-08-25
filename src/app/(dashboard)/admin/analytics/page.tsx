@@ -5,7 +5,7 @@ import { useEffect, useState, useRef } from "react";
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis, ResponsiveContainer, Tooltip, Legend, Pie, PieChart, Cell, Label } from "recharts";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
-import { Team, UserProfile } from "@/lib/types";
+import { Team, UserProfile, ProblemStatement } from "@/lib/types";
 import { collection, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useToast } from "@/hooks/use-toast";
@@ -34,9 +34,15 @@ interface TeamStatusChartData {
   fill: string;
 }
 
+interface ProblemStatementChartData {
+    psId: string;
+    count: number;
+}
+
 export default function AnalyticsPage() {
   const [teams, setTeams] = useState<Team[]>([]);
   const [users, setUsers] = useState<UserProfile[]>([]);
+  const [problemStatements, setProblemStatements] = useState<ProblemStatement[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
@@ -60,16 +66,24 @@ export default function AnalyticsPage() {
         console.error("Error fetching users:", error);
         toast({ title: "Error", description: "Failed to fetch user data for analytics.", variant: "destructive" });
     });
+
+    const psCollection = collection(db, 'problemStatements');
+    const unsubscribePs = onSnapshot(psCollection, (snapshot) => {
+        const psData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ProblemStatement));
+        setProblemStatements(psData);
+    });
     
-    // Use a promise to wait for the initial fetch of both collections
+    // Use a promise to wait for the initial fetch of all collections
     Promise.all([
         new Promise(resolve => onSnapshot(teamsCollection, () => resolve(true), () => resolve(false))),
         new Promise(resolve => onSnapshot(usersCollection, () => resolve(true), () => resolve(false))),
+        new Promise(resolve => onSnapshot(psCollection, () => resolve(true), () => resolve(false))),
     ]).finally(() => setLoading(false));
 
     return () => {
       unsubscribeTeams();
       unsubscribeUsers();
+      unsubscribePs();
     };
   }, [toast]);
   
@@ -138,10 +152,28 @@ export default function AnalyticsPage() {
     ];
   };
 
+  const getProblemStatementData = (): ProblemStatementChartData[] => {
+    const psCounts: { [key: string]: number } = {};
+    teams.forEach(team => {
+        if (team.problemStatementId) {
+            const ps = problemStatements.find(p => p.id === team.problemStatementId);
+            if (ps && ps.problemStatementId) {
+                psCounts[ps.problemStatementId] = (psCounts[ps.problemStatementId] || 0) + 1;
+            }
+        }
+    });
+
+    return Object.entries(psCounts)
+        .map(([psId, count]) => ({ psId, count }))
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 10); // Get top 10
+  };
+
   const instituteChartData = getInstituteData();
   const categoryChartData = getCategoryData();
   const genderChartData = getGenderData();
   const teamStatusChartData = getTeamStatusData();
+  const problemStatementChartData = getProblemStatementData();
   const totalParticipants = genderChartData.reduce((acc, curr) => acc + curr.value, 0);
 
   const chartConfig = {
@@ -283,6 +315,30 @@ export default function AnalyticsPage() {
                 </ResponsiveContainer>
             </ChartContainer>
           </CardContent>
+        </Card>
+
+        <Card className="lg:col-span-2">
+            <CardHeader>
+                <CardTitle>Top 10 Problem Statements</CardTitle>
+                <CardDescription>Most frequently selected problem statements by teams.</CardDescription>
+            </CardHeader>
+            <CardContent>
+                {problemStatementChartData.length > 0 ? (
+                    <ChartContainer config={chartConfig} className="min-h-[300px] w-full">
+                        <ResponsiveContainer width="100%" height={400}>
+                            <BarChart data={problemStatementChartData}>
+                                <CartesianGrid strokeDasharray="3 3" />
+                                <XAxis dataKey="psId" angle={-45} textAnchor="end" height={80} interval={0} tick={{ fontSize: 10 }} />
+                                <YAxis allowDecimals={false}/>
+                                <Tooltip content={<ChartTooltipContent />} />
+                                <Bar dataKey="count" fill="var(--color-teams)" radius={[4, 4, 0, 0]} />
+                            </BarChart>
+                        </ResponsiveContainer>
+                    </ChartContainer>
+                ) : (
+                    <p className="text-center text-muted-foreground py-10">No teams have selected a problem statement yet.</p>
+                )}
+            </CardContent>
         </Card>
 
       </div>
