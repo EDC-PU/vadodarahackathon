@@ -2,7 +2,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import * as z from "zod";
 import { Button } from "@/components/ui/button";
 import {
@@ -24,11 +24,20 @@ import { RadioGroup, RadioGroupItem } from "./ui/radio-group";
 import { useAuth } from "@/hooks/use-auth";
 import { Team, UserProfile, TeamInvite } from "@/lib/types";
 import { addMemberToTeam } from "@/ai/flows/add-member-to-team-flow";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { INSTITUTES } from "@/lib/constants";
+
 
 const formSchema = z.object({
   name: z.string().min(2, { message: "Name must be at least 2 characters." }),
   gender: z.enum(["M", "F", "O"], { required_error: "Please select a gender." }),
-  department: z.string().min(2, { message: "Department is required." }),
+  department: z.string({ required_error: "Please select a department." }).min(1, "Please select a department."),
   enrollmentNumber: z.string().min(5, { message: "Enrollment number is required." }),
   semester: z.coerce.number({invalid_type_error: "Semester is required."}).min(1, { message: "Semester must be between 1 and 8." }).max(8, { message: "Semester must be between 1 and 8." }),
   yearOfStudy: z.string().min(1, { message: "Year of study is required." }),
@@ -39,12 +48,15 @@ export function CompleteProfileForm() {
   const { user, loading: authLoading, redirectToDashboard } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
+  const [departments, setDepartments] = useState<string[]>([]);
+  const [isDeptLoading, setIsDeptLoading] = useState(false);
+  const [teamInstitute, setTeamInstitute] = useState<string | null>(null);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: "",
-      department: "",
+      department: undefined,
       enrollmentNumber: "",
       contactNumber: "",
       gender: undefined,
@@ -52,12 +64,59 @@ export function CompleteProfileForm() {
       yearOfStudy: "",
     },
   });
+  
+  useEffect(() => {
+    const fetchTeamInstitute = async () => {
+      const inviteToken = sessionStorage.getItem('inviteToken');
+      if (inviteToken) {
+          const inviteDocRef = doc(db, "teamInvites", inviteToken);
+          const inviteDoc = await getDoc(inviteDocRef);
+          if(inviteDoc.exists()) {
+              const teamDocRef = doc(db, 'teams', inviteDoc.data().teamId);
+              const teamDoc = await getDoc(teamDocRef);
+              if(teamDoc.exists()) {
+                  setTeamInstitute(teamDoc.data().institute);
+              }
+          }
+      } else if (user?.institute) {
+          setTeamInstitute(user.institute);
+      }
+    };
+    fetchTeamInstitute();
+  }, [user?.institute]);
+
+
+  useEffect(() => {
+    const fetchDepartments = async () => {
+        if (!teamInstitute) {
+            setDepartments([]);
+            return;
+        }
+        setIsDeptLoading(true);
+        try {
+            const deptDocRef = doc(db, "departments", teamInstitute);
+            const docSnap = await getDoc(deptDocRef);
+            if (docSnap.exists()) {
+                setDepartments(docSnap.data().departments.sort() || []);
+            } else {
+                setDepartments([]);
+            }
+        } catch (error) {
+            console.error("Error fetching departments:", error);
+            setDepartments([]);
+        } finally {
+            setIsDeptLoading(false);
+        }
+    };
+    fetchDepartments();
+  }, [teamInstitute]);
+
 
   useEffect(() => {
     if (user) {
         form.reset({
             name: user.name || "",
-            department: user.department || "",
+            department: user.department || undefined,
             enrollmentNumber: user.enrollmentNumber || "",
             contactNumber: user.contactNumber || "",
             gender: user.gender || undefined,
@@ -87,6 +146,7 @@ export function CompleteProfileForm() {
             contactNumber: values.contactNumber,
             semester: values.semester,
             yearOfStudy: values.yearOfStudy,
+            institute: teamInstitute, // Add institute to profile
         };
         
         const inviteToken = sessionStorage.getItem('inviteToken');
@@ -184,6 +244,7 @@ export function CompleteProfileForm() {
       <CardContent className="p-6">
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            <p className="text-sm text-muted-foreground">Institute: <span className="font-medium">{teamInstitute || 'Loading...'}</span></p>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormField
                 control={form.control}
@@ -199,17 +260,34 @@ export function CompleteProfileForm() {
                 )}
               />
               <FormField
-                control={form.control}
-                name="department"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Department</FormLabel>
-                    <FormControl>
-                        <Input placeholder="e.g., Computer Engineering" {...field} disabled={isLoading}/>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
+                  control={form.control}
+                  name="department"
+                  render={({ field }) => (
+                      <FormItem>
+                          <FormLabel>Department</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value} disabled={isLoading || isDeptLoading || !teamInstitute}>
+                              <FormControl>
+                                  <SelectTrigger>
+                                      <SelectValue placeholder={isDeptLoading ? "Loading..." : "Select your department"} />
+                                  </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                  {isDeptLoading ? (
+                                      <div className="flex items-center justify-center p-2">
+                                          <Loader2 className="h-4 w-4 animate-spin" />
+                                      </div>
+                                  ) : departments.length > 0 ? (
+                                      departments.map((dept) => (
+                                          <SelectItem key={dept} value={dept}>{dept}</SelectItem>
+                                      ))
+                                  ) : (
+                                      <div className="p-2 text-sm text-muted-foreground">No departments found.</div>
+                                  )}
+                              </SelectContent>
+                          </Select>
+                          <FormMessage />
+                      </FormItem>
+                  )}
               />
             </div>
             

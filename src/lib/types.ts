@@ -55,6 +55,12 @@ export interface Notification {
     link?: string;
 }
 
+export interface DepartmentList {
+    id: string;
+    name: string;
+    departments: string[];
+}
+
 
 export interface TeamMember {
   uid: string; 

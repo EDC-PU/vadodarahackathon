@@ -30,6 +30,7 @@ import {
   HeartPulse,
   UserRoundCheck,
   Users2,
+  List,
 } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { Button } from "./ui/button";
@@ -55,6 +56,7 @@ const navItems = {
     { href: "/spoc", icon: <LayoutDashboard />, label: "Dashboard" },
     { href: "/spoc/teams", icon: <Users />, label: "All Teams" },
     { href: "/spoc/analytics", icon: <BarChart2 />, label: "Analytics" },
+    { href: "/spoc/departments", icon: <List />, label: "Manage Departments" },
     { href: "/spoc/announcements", icon: <Megaphone />, label: "Announcements" },
   ],
   leader: [

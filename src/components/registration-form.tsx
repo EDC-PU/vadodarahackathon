@@ -2,7 +2,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import * as z from "zod";
 import { Button } from "@/components/ui/button";
 import {
@@ -32,13 +32,15 @@ import { RadioGroup, RadioGroupItem } from "./ui/radio-group";
 import { useAuth } from "@/hooks/use-auth";
 import { createTeam, CreateTeamInput } from "@/ai/flows/create-team-flow";
 import { suggestTeamName } from "@/ai/flows/suggest-team-name-flow";
+import { db } from "@/lib/firebase";
+import { doc, getDoc } from "firebase/firestore";
 
 const formSchema = z.object({
   teamName: z.string().min(3, { message: "Team name must be at least 3 characters." }),
   name: z.string().min(2, { message: "Name must be at least 2 characters." }),
   gender: z.enum(["M", "F", "O"], { required_error: "Please select a gender." }),
   institute: z.string({ required_error: "Please select an institute." }),
-  department: z.string().min(2, { message: "Department is required." }),
+  department: z.string({ required_error: "Please select a department." }).min(1, "Please select a department."),
   enrollmentNumber: z.string().min(5, { message: "Enrollment number is required." }),
   semester: z.coerce.number({invalid_type_error: "Semester is required."}).min(1, { message: "Semester must be between 1 and 8." }).max(8, { message: "Semester must be between 1 and 8." }),
   yearOfStudy: z.string().min(1, { message: "Year of study is required." }),
@@ -52,6 +54,8 @@ export function RegistrationForm() {
   const [nameSuggestions, setNameSuggestions] = useState<string[]>([]);
   const [currentSuggestion, setCurrentSuggestion] = useState<string>("e.g., Tech Titans");
   const [isSuggestionLoading, setIsSuggestionLoading] = useState(true);
+  const [departments, setDepartments] = useState<string[]>([]);
+  const [isDeptLoading, setIsDeptLoading] = useState(false);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -59,7 +63,7 @@ export function RegistrationForm() {
       teamName: "",
       name: "",
       institute: undefined,
-      department: "",
+      department: undefined,
       enrollmentNumber: "",
       contactNumber: "",
       gender: undefined,
@@ -67,6 +71,37 @@ export function RegistrationForm() {
       yearOfStudy: "",
     },
   });
+
+  const selectedInstitute = useWatch({
+    control: form.control,
+    name: "institute",
+  });
+
+  useEffect(() => {
+    const fetchDepartments = async () => {
+        if (!selectedInstitute) {
+            setDepartments([]);
+            return;
+        }
+        setIsDeptLoading(true);
+        try {
+            const deptDocRef = doc(db, "departments", selectedInstitute);
+            const docSnap = await getDoc(deptDocRef);
+            if (docSnap.exists()) {
+                setDepartments(docSnap.data().departments.sort() || []);
+            } else {
+                setDepartments([]);
+            }
+        } catch (error) {
+            console.error("Error fetching departments:", error);
+            setDepartments([]);
+        } finally {
+            setIsDeptLoading(false);
+        }
+    };
+    fetchDepartments();
+  }, [selectedInstitute]);
+
 
   const fetchNameSuggestions = useCallback(async () => {
     setIsSuggestionLoading(true);
@@ -105,7 +140,7 @@ export function RegistrationForm() {
             teamName: "",
             name: user.name || "",
             institute: user.institute || undefined,
-            department: user.department || "",
+            department: user.department || undefined,
             enrollmentNumber: user.enrollmentNumber || "",
             contactNumber: user.contactNumber || "",
             gender: user.gender || undefined,
@@ -291,17 +326,34 @@ export function RegistrationForm() {
                 )}
               />
               <FormField
-                control={form.control}
-                name="department"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Department</FormLabel>
-                    <FormControl>
-                      <Input placeholder="e.g., Computer Engineering" {...field} disabled={isLoading}/>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
+                  control={form.control}
+                  name="department"
+                  render={({ field }) => (
+                      <FormItem>
+                          <FormLabel>Department</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value} disabled={isLoading || isDeptLoading || !selectedInstitute}>
+                              <FormControl>
+                                  <SelectTrigger>
+                                      <SelectValue placeholder={isDeptLoading ? "Loading..." : "Select your department"} />
+                                  </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                  {isDeptLoading ? (
+                                      <div className="flex items-center justify-center p-2">
+                                          <Loader2 className="h-4 w-4 animate-spin" />
+                                      </div>
+                                  ) : departments.length > 0 ? (
+                                      departments.map((dept) => (
+                                          <SelectItem key={dept} value={dept}>{dept}</SelectItem>
+                                      ))
+                                  ) : (
+                                      <div className="p-2 text-sm text-muted-foreground">No departments found.</div>
+                                  )}
+                              </SelectContent>
+                          </Select>
+                          <FormMessage />
+                      </FormItem>
+                  )}
               />
             </div>
 

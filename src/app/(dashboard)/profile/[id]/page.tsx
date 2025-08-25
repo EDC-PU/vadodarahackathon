@@ -2,7 +2,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import * as z from "zod";
 import { Button } from "@/components/ui/button";
 import {
@@ -26,11 +26,18 @@ import { Team, UserProfile } from "@/lib/types";
 import { useParams } from "next/navigation";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 const formSchema = z.object({
   name: z.string().min(2, { message: "Name must be at least 2 characters." }),
   gender: z.enum(["M", "F", "O"], { required_error: "Please select a gender." }),
-  department: z.string().min(2, { message: "Department is required." }),
+  department: z.string({ required_error: "Please select a department." }).min(1, "Please select a department."),
   enrollmentNumber: z.string().min(5, { message: "Enrollment number is required." }),
   contactNumber: z.string().regex(/^\d{10}$/, { message: "Please enter a valid 10-digit phone number." }),
   semester: z.coerce.number({invalid_type_error: "Semester is required."}).min(1, { message: "Semester must be between 1 and 8." }).max(8, { message: "Semester must be between 1 and 8." }),
@@ -45,13 +52,15 @@ export default function ProfilePage() {
   const { toast } = useToast();
   const params = useParams();
   const profileEnrollmentNumber = params.id as string;
+  const [departments, setDepartments] = useState<string[]>([]);
+  const [isDeptLoading, setIsDeptLoading] = useState(false);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
         name: "",
         gender: undefined,
-        department: "",
+        department: undefined,
         enrollmentNumber: "",
         contactNumber: "",
         semester: undefined,
@@ -75,7 +84,7 @@ export default function ProfilePage() {
                 form.reset({
                     name: data.name || "",
                     gender: data.gender || undefined,
-                    department: data.department || "",
+                    department: data.department || undefined,
                     enrollmentNumber: data.enrollmentNumber || "",
                     contactNumber: data.contactNumber || "",
                     semester: data.semester,
@@ -90,6 +99,30 @@ export default function ProfilePage() {
     };
     fetchProfileData();
   }, [profileEnrollmentNumber, form, toast]);
+
+  useEffect(() => {
+    const fetchDepartments = async () => {
+        if (!profileData?.institute) return;
+        setIsDeptLoading(true);
+        try {
+            const deptDocRef = doc(db, "departments", profileData.institute);
+            const docSnap = await getDoc(deptDocRef);
+            if (docSnap.exists()) {
+                setDepartments(docSnap.data().departments.sort() || []);
+            } else {
+                setDepartments([]);
+            }
+        } catch (error) {
+            console.error("Error fetching departments:", error);
+            setDepartments([]);
+        } finally {
+            setIsDeptLoading(false);
+        }
+    };
+    if (profileData) {
+        fetchDepartments();
+    }
+  }, [profileData]);
 
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
@@ -230,13 +263,30 @@ export default function ProfilePage() {
                         control={form.control}
                         name="department"
                         render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Department</FormLabel>
-                            <FormControl>
-                                <Input placeholder="e.g., Computer Engineering" {...field} disabled={isLoading}/>
-                            </FormControl>
-                            <FormMessage />
-                        </FormItem>
+                            <FormItem>
+                                <FormLabel>Department</FormLabel>
+                                <Select onValueChange={field.onChange} value={field.value} disabled={isLoading || isDeptLoading}>
+                                    <FormControl>
+                                        <SelectTrigger>
+                                            <SelectValue placeholder={isDeptLoading ? "Loading..." : "Select department"} />
+                                        </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                        {isDeptLoading ? (
+                                            <div className="flex items-center justify-center p-2">
+                                                <Loader2 className="h-4 w-4 animate-spin" />
+                                            </div>
+                                        ) : departments.length > 0 ? (
+                                            departments.map((dept) => (
+                                                <SelectItem key={dept} value={dept}>{dept}</SelectItem>
+                                            ))
+                                        ) : (
+                                            <div className="p-2 text-sm text-muted-foreground">No departments found.</div>
+                                        )}
+                                    </SelectContent>
+                                </Select>
+                                <FormMessage />
+                            </FormItem>
                         )}
                     />
                     </div>
