@@ -498,13 +498,13 @@ export default function LeaderDashboard() {
             </CardContent>
          </Card>
 
-        <div className="grid gap-8 lg:grid-cols-3">
-             <div className="lg:col-span-2 grid grid-cols-1 gap-8">
+        <div className="grid gap-8 lg:grid-cols-2">
+             <div className="space-y-8">
                 <AnnouncementsSection audience="teams_and_all" />
                 <NotificationsSection />
             </div>
             
-            <div className="space-y-8 lg:col-span-1">
+            <div className="space-y-8">
                  <Card>
                     <CardHeader>
                         <CardTitle>Team Status</CardTitle>
