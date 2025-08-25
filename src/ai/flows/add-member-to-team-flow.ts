@@ -88,7 +88,7 @@ const addMemberToTeamFlow = ai.defineFlow(
     try {
       // Check if user is already on a team
       const userDoc = await userDocRef.get();
-      if (userDoc.exists()) {
+      if (userDoc.exists) {
           const userData = userDoc.data() as UserProfile;
           if (userData.teamId) {
               return { success: false, message: "This user is already a member of another team." };
