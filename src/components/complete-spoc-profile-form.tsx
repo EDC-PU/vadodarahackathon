@@ -43,7 +43,7 @@ const formSchema = z.object({
 });
 
 export function CompleteSpocProfileForm() {
-  const { user, loading: authLoading, handleSignOut } = useAuth();
+  const { user, loading: authLoading, handleSignOut, reloadUser } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [institutes, setInstitutes] = useState<{ id: string; name: string }[]>([]);
@@ -73,6 +73,10 @@ export function CompleteSpocProfileForm() {
 
   useEffect(() => {
       if (user) {
+          // If the user's profile already shows they are pending, immediately show the message.
+          if (user.spocStatus === 'pending' && user.institute && user.misId) {
+            setIsSubmitted(true);
+          }
           form.reset({
               name: user.name || "",
               institute: user.institute || "",
@@ -131,7 +135,9 @@ export function CompleteSpocProfileForm() {
             spocInstitute: values.institute,
         });
 
-        setIsSubmitted(true);
+        toast({ title: "Submitted!", description: "Your application is now pending approval." });
+        setIsSubmitted(true); // This will trigger the UI change
+        await reloadUser(); // This ensures the `useAuth` hook gets the latest user data with `spocStatus: pending`
 
     } catch (error: any) {
       console.error("SPOC Profile Update Error:", error);
@@ -153,9 +159,7 @@ export function CompleteSpocProfileForm() {
       )
   }
   
-  // Show pending message only if they have already submitted the form's core data.
-  const hasSubmittedCoreData = user?.spocStatus === 'pending' && user?.institute && user?.misId;
-  if (hasSubmittedCoreData || isSubmitted) {
+  if (isSubmitted) {
       return (
         <div className="flex flex-col items-center text-center gap-4 animate-in fade-in-50 p-6">
             <Alert variant="default" className="border-green-500 text-left">
