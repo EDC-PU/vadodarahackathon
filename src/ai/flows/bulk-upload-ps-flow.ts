@@ -8,22 +8,9 @@ import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
 import { getAdminDb } from '@/lib/firebase-admin';
 import ExcelJS from 'exceljs';
-import { ProblemStatement, ProblemStatementCategory } from '@/lib/types';
+import { ProblemStatement, ProblemStatementCategory, BulkUploadPsInput, BulkUploadPsInputSchema, BulkUploadPsOutput, BulkUploadPsOutputSchema } from '@/lib/types';
 import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
 
-export const BulkUploadPsInputSchema = z.object({
-  fileContent: z.string().describe('Base64 encoded content of the Excel file.'),
-});
-export type BulkUploadPsInput = z.infer<typeof BulkUploadPsInputSchema>;
-
-export const BulkUploadPsOutputSchema = z.object({
-  success: z.boolean(),
-  message: z.string(),
-  addedCount: z.number().optional(),
-  failedCount: z.number().optional(),
-  errors: z.array(z.string()).optional(),
-});
-export type BulkUploadPsOutput = z.infer<typeof BulkUploadPsOutputSchema>;
 
 export async function bulkUploadProblemStatements(input: BulkUploadPsInput): Promise<BulkUploadPsOutput> {
   return bulkUploadPsFlow(input);

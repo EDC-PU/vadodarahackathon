@@ -420,3 +420,19 @@ export const SystemHealthStateSchema = z.object({
   timestamp: z.string(),
 });
 export type SystemHealthState = z.infer<typeof SystemHealthStateSchema>;
+
+
+// bulk-upload-ps-flow
+export const BulkUploadPsInputSchema = z.object({
+  fileContent: z.string().describe('Base64 encoded content of the Excel file.'),
+});
+export type BulkUploadPsInput = z.infer<typeof BulkUploadPsInputSchema>;
+
+export const BulkUploadPsOutputSchema = z.object({
+  success: z.boolean(),
+  message: z.string(),
+  addedCount: z.number().optional(),
+  failedCount: z.number().optional(),
+  errors: z.array(z.string()).optional(),
+});
+export type BulkUploadPsOutput = z.infer<typeof BulkUploadPsOutputSchema>;
