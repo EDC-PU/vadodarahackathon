@@ -682,5 +682,3 @@ export default function AllTeamsPage() {
         </Suspense>
     )
 }
-
-    
