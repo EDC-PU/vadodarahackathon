@@ -39,6 +39,7 @@ import Link from "next/link";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 type CategoryFilter = ProblemStatementCategory | "All Categories";
+type StatusFilter = "All Statuses" | "Registered" | "Pending";
 type SortKey = 'teamName' | 'problemStatementId' | 'name' | 'email' | 'enrollmentNumber' | 'contactNumber' | 'yearOfStudy' | 'semester';
 type SortDirection = 'asc' | 'desc';
 
@@ -57,6 +58,7 @@ function AllTeamsContent() {
 
   const [instituteFilter, setInstituteFilter] = useState<string>("All Institutes");
   const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>("All Categories");
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("All Statuses");
   const [selectedProblemStatements, setSelectedProblemStatements] = useState<string[]>([]);
   const [filteredProblemStatements, setFilteredProblemStatements] = useState<ProblemStatement[]>([]);
   const [sortConfig, setSortConfig] = useState<{ key: SortKey, direction: SortDirection } | null>(null);
@@ -66,6 +68,7 @@ function AllTeamsContent() {
   const searchParams = useSearchParams();
   
   const categories: CategoryFilter[] = ["All Categories", "Software", "Hardware", "Hardware & Software"];
+  const statuses: StatusFilter[] = ["All Statuses", "Registered", "Pending"];
 
   useEffect(() => {
     const psIdFromQuery = searchParams.get('problemStatementId');
@@ -157,9 +160,29 @@ function AllTeamsContent() {
         const instituteMatch = instituteFilter === 'All Institutes' || team.institute === instituteFilter;
         const categoryMatch = categoryFilter === 'All Categories' || team.category === categoryFilter;
         const psMatch = selectedProblemStatements.length === 0 || (team.problemStatementId && selectedProblemStatements.includes(team.problemStatementId));
-        return instituteMatch && categoryMatch && psMatch;
+        
+        if (statusFilter === 'All Statuses') {
+          return instituteMatch && categoryMatch && psMatch;
+        }
+
+        const leaderProfile = allUsers.get(team.leader.uid);
+        const membersWithDetails = team.members.map(m => allUsers.get(m.uid));
+        
+        const memberCount = (team.members?.length || 0) + 1;
+        
+        let femaleCount = 0;
+        if (leaderProfile?.gender === 'F') femaleCount++;
+        membersWithDetails.forEach(member => {
+            if (member?.gender === 'F') femaleCount++;
+        });
+
+        const isRegistered = memberCount === 6 && femaleCount >= 1;
+        
+        const statusMatch = statusFilter === 'Registered' ? isRegistered : !isRegistered;
+        
+        return instituteMatch && categoryMatch && psMatch && statusMatch;
     });
-  }, [allTeams, instituteFilter, categoryFilter, selectedProblemStatements]);
+  }, [allTeams, instituteFilter, categoryFilter, selectedProblemStatements, statusFilter, allUsers]);
   
   const handleExport = async () => {
     setIsExporting(true);
@@ -409,6 +432,14 @@ function AllTeamsContent() {
                     {categories.map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}
                 </SelectContent>
             </Select>
+             <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-full sm:w-48">
+                    <SelectValue placeholder="Filter by Status" />
+                </SelectTrigger>
+                <SelectContent>
+                    {statuses.map(st => <SelectItem key={st} value={st}>{st}</SelectItem>)}
+                </SelectContent>
+            </Select>
              <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                     <Button variant="outline" className="w-full sm:w-48 justify-between">
@@ -585,3 +616,5 @@ export default function AllTeamsPage() {
         </Suspense>
     )
 }
+
+    

@@ -20,6 +20,10 @@ service cloud.firestore {
     function isSpoc() {
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'spoc';
     }
+ 		function isMember() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'member';
+    }
+
 
     function isOwner(userId) {
       return request.auth.uid == userId;
@@ -67,7 +71,7 @@ service cloud.firestore {
         // Joining a team is handled by a separate flow with its own security.
         allow update: if isSignedIn() && (
                         isLeader() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.teamId == teamId ||
-                        isAdmin() || 
+                        isAdmin() || isMember ||
                         isSpocForInstitute(resource.data.institute)
                       );
 
