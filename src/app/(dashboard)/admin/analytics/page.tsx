@@ -28,6 +28,12 @@ interface GenderChartData {
   fill: string;
 }
 
+interface TeamStatusChartData {
+  status: 'Registered' | 'Pending';
+  count: number;
+  fill: string;
+}
+
 export default function AnalyticsPage() {
   const [teams, setTeams] = useState<Team[]>([]);
   const [users, setUsers] = useState<UserProfile[]>([]);
@@ -105,24 +111,36 @@ export default function AnalyticsPage() {
     ];
   };
 
+  const getTeamStatusData = (): TeamStatusChartData[] => {
+    let registeredCount = 0;
+    let pendingCount = 0;
+    teams.forEach(team => {
+       const allMemberUIDs = [team.leader.uid, ...team.members.map(m => m.uid)];
+       const hasFemale = users.some(u => allMemberUIDs.includes(u.uid) && u.gender === 'F');
+       
+       if (team.members.length + 1 === 6 && hasFemale) {
+         registeredCount++;
+       } else {
+         pendingCount++;
+       }
+    });
+    return [
+      { status: 'Registered', count: registeredCount, fill: 'hsl(var(--chart-1))' },
+      { status: 'Pending', count: pendingCount, fill: 'hsl(var(--chart-4))' },
+    ];
+  };
+
   const instituteChartData = getInstituteData();
   const categoryChartData = getCategoryData();
   const genderChartData = getGenderData();
+  const teamStatusChartData = getTeamStatusData();
   const totalParticipants = genderChartData.reduce((acc, curr) => acc + curr.value, 0);
 
   const chartConfig = {
-    teams: {
-      label: "Teams",
-      color: "hsl(var(--chart-1))",
-    },
-    male: {
-      label: "Male",
-      color: "hsl(var(--chart-2))",
-    },
-    female: {
-      label: "Female",
-      color: "hsl(var(--chart-5))",
-    }
+    teams: { label: "Teams", color: "hsl(var(--chart-1))" },
+    count: { label: "Count", color: "hsl(var(--chart-1))" },
+    male: { label: "Male", color: "hsl(var(--chart-2))" },
+    female: { label: "Female", color: "hsl(var(--chart-5))" }
   };
   
   if (loading) {
@@ -233,6 +251,32 @@ export default function AnalyticsPage() {
              )}
           </CardContent>
         </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Team Registration Status</CardTitle>
+            <CardDescription>Number of fully registered vs. pending teams.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ChartContainer config={chartConfig} className="min-h-[300px] w-full">
+                <ResponsiveContainer width="100%" height={400}>
+                <BarChart data={teamStatusChartData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="status" />
+                    <YAxis />
+                    <Tooltip content={<ChartTooltipContent />} />
+                    <Legend />
+                    <Bar dataKey="count" radius={[4, 4, 0, 0]}>
+                       {teamStatusChartData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.fill} />
+                        ))}
+                    </Bar>
+                </BarChart>
+                </ResponsiveContainer>
+            </ChartContainer>
+          </CardContent>
+        </Card>
+
       </div>
     </div>
   );

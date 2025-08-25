@@ -102,7 +102,9 @@ export default function SpocAnalyticsPage() {
     let registeredCount = 0;
     let pendingCount = 0;
     teams.forEach(team => {
-       const hasFemale = team.members.some(m => users.find(u => u.uid === m.uid)?.gender === 'F') || users.find(u => u.uid === team.leader.uid)?.gender === 'F';
+       const allMemberUIDs = [team.leader.uid, ...team.members.map(m => m.uid)];
+       const hasFemale = users.some(u => allMemberUIDs.includes(u.uid) && u.gender === 'F');
+
        if (team.members.length + 1 === 6 && hasFemale) {
          registeredCount++;
        } else {
@@ -211,7 +213,11 @@ export default function SpocAnalyticsPage() {
                     <YAxis />
                     <Tooltip content={<ChartTooltipContent />} />
                     <Legend />
-                    <Bar dataKey="count" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="count" radius={[4, 4, 0, 0]}>
+                       {teamStatusChartData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.fill} />
+                        ))}
+                    </Bar>
                   </BarChart>
                 </ResponsiveContainer>
               </ChartContainer>
