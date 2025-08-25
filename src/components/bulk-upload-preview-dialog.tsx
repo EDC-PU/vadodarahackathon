@@ -45,7 +45,7 @@ export function BulkUploadPreviewDialog({ isOpen, onOpenChange, data, onConfirm 
               <TableHeader className="sticky top-0 bg-background">
                 <TableRow>
                   {headers.map((header) => (
-                    <TableHead key={header}>{header}</TableHead>
+                    <TableHead key={header}>{header.replace(/_/g, ' ')}</TableHead>
                   ))}
                 </TableRow>
               </TableHeader>
