@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import { SignupForm } from "@/components/signup-form";
@@ -14,8 +13,6 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
 import { addMemberToTeam } from "@/ai/flows/add-member-to-team-flow";
 import { useToast } from "@/hooks/use-toast";
-import { doc, setDoc, collection, getDocs, getDoc, serverTimestamp } from "firebase/firestore";
-import { db } from "@/lib/firebase";
 
 interface TeamInfo {
     teamName: string;
@@ -32,20 +29,18 @@ function JoinPageContent() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [processingJoin, setProcessingJoin] = useState(false);
+    const [joinCompleted, setJoinCompleted] = useState(false); // New state to prevent re-entry
     
     const { user, loading: authLoading } = useAuth();
     const { toast } = useToast();
 
     useEffect(() => {
         const processJoinRequest = async () => {
-            if (!token) {
-                setError("Invalid invitation link.");
-                setLoading(false);
+            if (!token || !user || authLoading || processingJoin || joinCompleted) {
                 return;
             }
 
             // This flag is set after a user completes their profile via an invite link.
-            // It prevents the join page from trying to re-process the join request.
             const justCompletedJoin = sessionStorage.getItem('justCompletedJoin');
             if (justCompletedJoin === 'true') {
                 sessionStorage.removeItem('justCompletedJoin');
@@ -53,11 +48,7 @@ function JoinPageContent() {
                 return;
             }
             
-            if (authLoading) {
-                return; 
-            }
-
-            setLoading(true);
+            setProcessingJoin(true);
             try {
                 // First, get the invite details
                 const inviteResult = await getInviteDetails({ inviteId: token });
@@ -67,47 +58,41 @@ function JoinPageContent() {
                 const currentTeamInfo = { teamId: inviteResult.teamId, teamName: inviteResult.teamName, leaderName: inviteResult.leaderName };
                 setTeamInfo(currentTeamInfo);
 
-                // If user is logged in, handle them
-                if (user) {
-                    if (processingJoin) return; // Prevent re-entry
+                // Check if user is already on a team
+                if (user.teamId) {
+                     setError("You are already on a team. To join a new team, you must first leave your current one or be removed by your leader.");
+                     setLoading(false);
+                     setProcessingJoin(false);
+                     return;
+                }
+                // Check if profile is complete
+                if (!user.enrollmentNumber) {
+                    sessionStorage.setItem('inviteToken', token);
+                    toast({ title: "Profile Incomplete", description: "Please complete your profile to join the team.", variant: "default" });
+                    router.push('/complete-profile');
+                    return; // Stop execution here
+                }
+                
+                // Profile is complete, proceed to join team
+                const joinResult = await addMemberToTeam({
+                    userId: user.uid,
+                    teamId: currentTeamInfo.teamId,
+                    name: user.name,
+                    email: user.email,
+                    enrollmentNumber: user.enrollmentNumber,
+                    contactNumber: user.contactNumber,
+                    gender: user.gender,
+                    semester: user.semester,
+                    yearOfStudy: user.yearOfStudy
+                });
 
-                    // Check if user is already on a team
-                    if (user.teamId) {
-                         setError("You are already on a team. To join a new team, you must first leave your current one or be removed by your leader.");
-                         setLoading(false);
-                         return;
-                    }
-                    // Check if profile is complete
-                    if (!user.enrollmentNumber) {
-                        sessionStorage.setItem('inviteToken', token);
-                        toast({ title: "Profile Incomplete", description: "Please complete your profile to join the team.", variant: "default" });
-                        router.push('/complete-profile');
-                        return; // Stop execution here
-                    }
-                    
-                    // Profile is complete, proceed to join team
-                    setProcessingJoin(true);
-                    const joinResult = await addMemberToTeam({
-                        userId: user.uid,
-                        teamId: currentTeamInfo.teamId,
-                        name: user.name,
-                        email: user.email,
-                        enrollmentNumber: user.enrollmentNumber,
-                        contactNumber: user.contactNumber,
-                        gender: user.gender,
-                        semester: user.semester,
-                        yearOfStudy: user.yearOfStudy
-                    });
-
-                    if (joinResult.success) {
-                        toast({ title: "Success!", description: `You have joined ${currentTeamInfo.teamName}.` });
-                        router.push('/member');
-                    } else {
-                        setError(joinResult.message);
-                        setProcessingJoin(false);
-                    }
+                if (joinResult.success) {
+                    toast({ title: "Success!", description: `You have joined ${currentTeamInfo.teamName}.` });
+                    setJoinCompleted(true); // Mark as completed
+                    router.push('/member');
                 } else {
-                    setLoading(false);
+                    setError(joinResult.message);
+                    setProcessingJoin(false);
                 }
                 
             } catch (err: any) {
@@ -118,10 +103,41 @@ function JoinPageContent() {
         };
 
         processJoinRequest();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [token, user, authLoading, router, toast]);
+    }, [token, user, authLoading, router, toast, processingJoin, joinCompleted]);
+    
+    useEffect(() => {
+        // Handle non-logged-in user or initial loading of team info
+        const fetchInitialInfo = async () => {
+            if (user) {
+                setLoading(false); // User is logged in, the other useEffect handles it
+                return;
+            }
+            if (!token) {
+                setError("Invalid invitation link.");
+                setLoading(false);
+                return;
+            }
+            try {
+                const inviteResult = await getInviteDetails({ inviteId: token });
+                 if (!inviteResult.success || !inviteResult.teamId || !inviteResult.teamName || !inviteResult.leaderName) {
+                    throw new Error(inviteResult.message || "Could not validate the invitation.");
+                }
+                setTeamInfo({ teamId: inviteResult.teamId, teamName: inviteResult.teamName, leaderName: inviteResult.leaderName });
+            } catch (err: any) {
+                setError(err.message);
+            } finally {
+                setLoading(false);
+            }
+        };
 
-    if (loading || authLoading) {
+        if (!user && !teamInfo) {
+            fetchInitialInfo();
+        }
+
+    }, [token, user, teamInfo]);
+
+
+    if (loading || authLoading || processingJoin) {
         return (
              <div className="flex flex-col items-center justify-center text-center gap-4 w-full max-w-md">
                 <Loader2 className="h-8 w-8 animate-spin" />

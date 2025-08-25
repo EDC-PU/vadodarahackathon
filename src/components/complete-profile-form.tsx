@@ -32,7 +32,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { INSTITUTES } from "@/lib/constants";
 
 
 const formSchema = z.object({
@@ -178,22 +177,6 @@ export function CompleteProfileForm() {
                     finalTeamId = teamId;
                     toast({ title: "Welcome!", description: `You have successfully joined ${inviteData.teamName}.` });
                     
-                    const teamDocRef = doc(db, 'teams', teamId);
-                    const teamDoc = await getDoc(teamDocRef);
-                    const leaderId = teamDoc.data()?.leader.uid;
-                    if(leaderId) {
-                        const notificationsCollectionRef = collection(db, 'notifications');
-                        const newNotificationRef = doc(notificationsCollectionRef);
-                        await setDoc(newNotificationRef, {
-                            recipientUid: leaderId,
-                            title: "New Member Joined!",
-                            message: `${values.name} has joined your team, "${inviteData.teamName}".`,
-                            read: false,
-                            createdAt: new Date(),
-                            link: '/leader'
-                        });
-                    }
-
                     // Set flag to indicate join was just completed to prevent loop
                     sessionStorage.setItem('justCompletedJoin', 'true');
                     sessionStorage.removeItem('inviteToken');
