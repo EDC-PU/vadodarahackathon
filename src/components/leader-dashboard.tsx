@@ -113,16 +113,16 @@ export default function LeaderDashboard() {
   const [isLoadingLink, setIsLoadingLink] = useState(true);
   const appBaseUrl = "https://vadodarahackathon.pierc.org";
 
-  const fetchTeamAndMembers = useCallback(async () => {
+  useEffect(() => {
     if (!user?.teamId) {
-      setLoading(false);
-      return;
+        setLoading(false);
+        return;
     }
+    
     setLoading(true);
-    try {
-        const teamDocRef = doc(db, 'teams', user.teamId);
-        const teamDoc = await getDoc(teamDocRef);
 
+    const teamDocRef = doc(db, 'teams', user.teamId);
+    const unsubscribeTeam = onSnapshot(teamDocRef, (teamDoc) => {
         if (!teamDoc.exists()) {
             setTeam(null);
             setTeamMembers([]);
@@ -138,24 +138,28 @@ export default function LeaderDashboard() {
         
         if (allUIDs.length > 0) {
             const usersQuery = query(collection(db, 'users'), where('uid', 'in', allUIDs));
-            const usersSnapshot = await getDocs(usersQuery);
-            const usersData = usersSnapshot.docs.map(doc => ({ uid: doc.id, ...doc.data() } as UserProfile));
-            setTeamMembers(usersData);
+            const unsubscribeMembers = onSnapshot(usersQuery, (usersSnapshot) => {
+                 const usersData = usersSnapshot.docs.map(doc => ({ uid: doc.id, ...doc.data() } as UserProfile));
+                 setTeamMembers(usersData);
+                 setLoading(false);
+            }, (error) => {
+                console.error("Error fetching team members:", error);
+                toast({ title: "Error", description: "Failed to fetch team member details.", variant: "destructive" });
+                setLoading(false);
+            });
+            return () => unsubscribeMembers();
         } else {
             setTeamMembers([]);
+            setLoading(false);
         }
-
-    } catch (error) {
+    }, (error) => {
         console.error("Error fetching team data:", error);
         toast({ title: "Error", description: "Failed to fetch team data.", variant: "destructive" });
-    } finally {
         setLoading(false);
-    }
-  }, [user?.teamId, toast]);
+    });
 
-  useEffect(() => {
-    fetchTeamAndMembers();
-  }, [fetchTeamAndMembers]);
+    return () => unsubscribeTeam();
+  }, [user?.teamId, toast]);
   
   useEffect(() => {
     if (!team) return;
@@ -218,7 +222,6 @@ export default function LeaderDashboard() {
 
         await batch.commit();
         toast({ title: "Success", description: "Team member removed." });
-        await fetchTeamAndMembers(); // Refetch data
     } catch (error) {
         console.error("Error removing member:", error);
         toast({ title: "Error", description: "Failed to remove member.", variant: "destructive" });
@@ -308,9 +311,6 @@ export default function LeaderDashboard() {
               <p className="text-muted-foreground">Manage your team and review your registration status.</p>
             </div>
             <div className="flex items-center gap-2">
-                <Button onClick={fetchTeamAndMembers} disabled={loading} size="sm" variant="outline">
-                    <RefreshCw className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} /> Refresh
-                </Button>
                 <span className="text-sm text-muted-foreground">Status: </span>
                 {teamValidation.isRegistered ? (
                     <Badge variant="default" className="bg-green-600 hover:bg-green-600">Registered</Badge>

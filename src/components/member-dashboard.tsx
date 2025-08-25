@@ -49,58 +49,61 @@ export default function MemberDashboard() {
   const router = useRouter();
 
 
-  const fetchTeamAndMembers = useCallback(async () => {
+  useEffect(() => {
     if (!user?.teamId) {
       setLoading(false);
       return;
     }
+    
     setLoading(true);
 
-    try {
-        const teamDocRef = doc(db, 'teams', user.teamId);
-        const teamDoc = await getDoc(teamDocRef);
-
-        if (!teamDoc.exists()) {
-            setTeam(null);
-            setTeamMembers([]);
-            setLoading(false);
-            return;
-        }
-
-        const teamData = { id: teamDoc.id, ...teamDoc.data() } as Team;
-        setTeam(teamData);
-
-        const spocsQuery = query(collection(db, "users"), where("institute", "==", teamData.institute), where("role", "==", "spoc"), where("spocStatus", "==", "approved"));
-        const spocSnapshot = await getDocs(spocsQuery);
-        if (!spocSnapshot.empty) {
-            setSpoc(spocSnapshot.docs[0].data() as UserProfile);
-        } else {
-            setSpoc(null);
-        }
-
-        const memberUIDs = teamData.members.map(m => m.uid).filter(Boolean);
-        const allUIDs = [...new Set([teamData.leader.uid, ...memberUIDs])];
-
-        if (allUIDs.length > 0) {
-            const usersQuery = query(collection(db, 'users'), where('uid', 'in', allUIDs));
-            const usersSnapshot = await getDocs(usersQuery);
-            const usersData = usersSnapshot.docs.map(doc => ({ uid: doc.id, ...doc.data() } as UserProfile));
-            setTeamMembers(usersData);
-        } else {
-            setTeamMembers([]);
-        }
-
-    } catch (error) {
-        console.error("Error fetching team data:", error);
-        toast({ title: "Error", description: "Failed to fetch team data.", variant: "destructive" });
-    } finally {
+    const teamDocRef = doc(db, 'teams', user.teamId);
+    const unsubscribeTeam = onSnapshot(teamDocRef, async (teamDoc) => {
+      if (!teamDoc.exists()) {
+        setTeam(null);
+        setTeamMembers([]);
         setLoading(false);
-    }
-  }, [user?.teamId, toast]);
+        return;
+      }
 
-  useEffect(() => {
-    fetchTeamAndMembers();
-  }, [fetchTeamAndMembers]);
+      const teamData = { id: teamDoc.id, ...teamDoc.data() } as Team;
+      setTeam(teamData);
+
+      const spocsQuery = query(collection(db, "users"), where("institute", "==", teamData.institute), where("role", "==", "spoc"), where("spocStatus", "==", "approved"));
+      const spocSnapshot = await getDocs(spocsQuery);
+      if (!spocSnapshot.empty) {
+          setSpoc(spocSnapshot.docs[0].data() as UserProfile);
+      } else {
+          setSpoc(null);
+      }
+
+      const memberUIDs = teamData.members.map(m => m.uid).filter(Boolean);
+      const allUIDs = [...new Set([teamData.leader.uid, ...memberUIDs])];
+      
+      if (allUIDs.length > 0) {
+        const usersQuery = query(collection(db, 'users'), where('uid', 'in', allUIDs));
+        const unsubscribeMembers = onSnapshot(usersQuery, (usersSnapshot) => {
+          const usersData = usersSnapshot.docs.map(doc => ({ uid: doc.id, ...doc.data() } as UserProfile));
+          setTeamMembers(usersData);
+          setLoading(false);
+        }, (error) => {
+          console.error("Error fetching team members:", error);
+          toast({ title: "Error", description: "Failed to fetch team member details.", variant: "destructive" });
+          setLoading(false);
+        });
+        return () => unsubscribeMembers();
+      } else {
+        setTeamMembers([]);
+        setLoading(false);
+      }
+    }, (error) => {
+      console.error("Error fetching team data:", error);
+      toast({ title: "Error", description: "Failed to fetch team data.", variant: "destructive" });
+      setLoading(false);
+    });
+
+    return () => unsubscribeTeam();
+  }, [user?.teamId, toast]);
   
   const sortedTeamMembers = useMemo(() => {
     const leader = teamMembers.find(m => m.role === 'leader');

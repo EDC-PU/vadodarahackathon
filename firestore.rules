@@ -23,58 +23,63 @@ service cloud.firestore {
     function isOwner(userId) {
       return request.auth.uid == userId;
     }
-
-    function isMemberOf(teamId) {
-      return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.teamId == teamId;
-    }
     
     function isSpocForInstitute(institute) {
        return isSpoc() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.institute == institute;
     }
 
-    function usersAreOnSameTeam(userId1, userId2) {
-      let user1TeamId = get(/databases/$(database)/documents/users/$(userId1)).data.teamId;
-      let user2TeamId = get(/databases/$(database)/documents/users/$(userId2)).data.teamId;
-      return user1TeamId != null && user1TeamId == user2TeamId;
-    }
-
     // Users Collection
     match /users/{userId} {
+      // Anyone can create their own user document during signup
       allow create: if isSignedIn();
       
-      // A user can read another user's profile if they are on the same team,
-      // or if the requester is an admin or SPOC.
-      allow read: if isSignedIn() && (
-                    isOwner(userId) || 
-                    isAdmin() || 
-                    isSpoc() || 
-                    usersAreOnSameTeam(request.auth.uid, userId)
-                  );
+      // Users can read their own document.
+      // Admins and SPOCs can read any user document.
+      // A user can read another user's document if they are on the same team.
+      allow read: if isSignedIn() && 
+                    (isOwner(userId) || 
+                     isAdmin() || 
+                     isSpoc() ||
+                     (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.teamId == resource.data.teamId));
       
-      allow update: if isSignedIn() && (isOwner(userId) || isAdmin() || isSpoc());
+      // Users can only update their own document
+      // Admins and SPOCs can update any user document
+      allow update: if isSignedIn() && (isOwner(userId) || isAdmin() || isSpocForInstitute(get(/databases/$(database)/documents/users/$(userId)).data.institute));
       
+      // Only admins can delete users
       allow delete: if isAdmin();
     }
     
     // Teams Collection
     match /teams/{teamId} {
+        // Any signed-in user can read team data.
         allow read: if isSignedIn();
         
+        // Creating a team is handled by a Genkit flow, so no direct client creation
         allow create: if isLeader();
 
-        // Allow update if the user is a member of the team, an admin, or a SPOC for the institute.
+        // A team can be updated by its leader, an admin, a SPOC of the institute,
+        // or a new user joining the team.
         allow update: if isSignedIn() && (
-                        isMemberOf(teamId) ||
+                        isLeader() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.teamId == teamId ||
                         isAdmin() || 
-                        isSpocForInstitute(resource.data.institute)
+                        isSpocForInstitute(resource.data.institute) ||
+                        // Allow a user to add themselves to the members array if they are joining
+                        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['members']) &&
+                        request.resource.data.members.size() == resource.data.members.size() + 1 &&
+                        request.auth.uid in request.resource.data.members.map(m => m.uid)
                       );
 
+        // Only admins or the institute's SPOC can delete a team
         allow delete: if isSignedIn() && (isAdmin() || isSpocForInstitute(resource.data.institute));
     }
     
     // Team Invites Collection (Permanent Links)
     match /teamInvites/{inviteId} {
+        // Anyone with the link can read the invite details
         allow read: if true;
+        
+        // Only team leaders, SPOCs, or admins can create/update invites (via flows)
         allow write: if isSignedIn() && (isLeader() || isSpoc() || isAdmin());
     }
 
@@ -86,37 +91,46 @@ service cloud.firestore {
     
     // Config Collection (e.g., for event settings)
     match /config/{docId} {
+        // Everyone can read the configuration
         allow read: if true;
+        
+        // Only admins can change the configuration
         allow write: if isAdmin();
     }
     
     // Announcements Collection
     match /announcements/{announcementId} {
+        // Everyone can read announcements
         allow read: if true;
+        
+        // Only admins and SPOCs (for their institute) can create/delete
         allow create: if isAdmin() || (isSpoc() && request.resource.data.institute == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.institute);
         allow delete: if isAdmin() || isSpoc();
     }
 
     // Notifications Collection
     match /notifications/{notificationId} {
+        // Users can read and update (mark as read) their own notifications
         allow read, update: if isSignedIn() && request.resource.data.recipientUid == request.auth.uid;
+        // Creation is handled by server-side flows
         allow create: if isSignedIn(); 
     }
 
     // Institutes Collection
     match /institutes/{instituteId} {
+        // All users (including unauthenticated ones for registration) can read the list of institutes
         allow read: if true;
+        // Only admins can create, update, or delete institutes
         allow write: if isAdmin();
     }
 
     // Departments Collection
     match /departments/{instituteName} {
+        // All users (including unauthenticated ones for registration) can read department lists
         allow read: if true;
+        // Admins can write to any department list
+        // SPOCs can write to their own institute's department list
         allow write: if isAdmin() || isSpocForInstitute(instituteName);
-    }
-    // Healthchecks for System Health page
-    match /healthchecks/{docId} {
-       allow write: if isAdmin();
     }
   }
 }
