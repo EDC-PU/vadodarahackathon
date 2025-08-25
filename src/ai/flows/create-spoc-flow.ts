@@ -80,6 +80,12 @@ const createSpocFlow = ai.defineFlow(
   async (input) => {
     console.log("createSpocFlow started with input:", input);
     
+    if (!input.email.endsWith('@paruluniversity.ac.in')) {
+      const errorMessage = "SPOC email must end with @paruluniversity.ac.in";
+      console.error(errorMessage);
+      return { success: false, message: errorMessage };
+    }
+    
     const adminAuth = getAdminAuth();
     const adminDb = getAdminDb();
 
