@@ -37,7 +37,7 @@ async function sendLeaveNotificationEmail(leaderEmail: string, leaderName: strin
     });
 
     const mailOptions = {
-        from: `"Vadodara Hackathon 6.0" <noreply@vadodarahackathon.pierc.org>`,
+        from: `"Vadodara Hackathon 6.0" <${process.env.GMAIL_EMAIL}>`,
         to: leaderEmail,
         subject: `Member Update: ${memberName} has left your team`,
         html: emailHtml,

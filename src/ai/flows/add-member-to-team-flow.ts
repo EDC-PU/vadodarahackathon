@@ -41,7 +41,7 @@ async function sendNewMemberNotificationEmail(leaderEmail: string, leaderName: s
     });
 
     const mailOptions = {
-        from: `"Vadodara Hackathon 6.0" <noreply@vadodarahackathon.pierc.org>`,
+        from: `"Vadodara Hackathon 6.0" <${process.env.GMAIL_EMAIL}>`,
         to: leaderEmail,
         subject: `New Member Alert: ${newMember.name} joined ${teamName}`,
         html: emailHtml,

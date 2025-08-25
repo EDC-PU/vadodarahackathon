@@ -27,7 +27,7 @@ async function sendNotificationEmailToLeader(leaderEmail: string, teamName: stri
     const emailHtml = sendMemberLeftEmail(leaderEmail, deletedUserName, teamName);
 
     const mailOptions = {
-        from: `"Vadodara Hackathon 6.0" <noreply@vadodarahackathon.pierc.org>`,
+        from: `"Vadodara Hackathon 6.0" <${process.env.GMAIL_EMAIL}>`,
         to: leaderEmail,
         subject: `Member Update for your team: ${teamName}`,
         html: emailHtml,
