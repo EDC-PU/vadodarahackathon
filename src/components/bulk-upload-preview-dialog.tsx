@@ -30,7 +30,7 @@ export function BulkUploadPreviewDialog({ isOpen, onOpenChange, data, onConfirm 
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl">
+      <DialogContent className="max-w-6xl">
         <DialogHeader>
           <DialogTitle>Confirm Bulk Upload</DialogTitle>
           <DialogDescription>
@@ -41,7 +41,7 @@ export function BulkUploadPreviewDialog({ isOpen, onOpenChange, data, onConfirm 
         
         {data.length > 0 ? (
           <ScrollArea className="h-[60vh] border rounded-md">
-            <Table>
+            <Table className="whitespace-nowrap">
               <TableHeader className="sticky top-0 bg-background">
                 <TableRow>
                   {headers.map((header) => (
