@@ -3,8 +3,8 @@
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { PlusCircle, Loader2, Users, Pencil, Trash2 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { PlusCircle, Loader2, Users, Pencil, Trash2, Upload } from "lucide-react";
+import { useEffect, useState, useRef } from "react";
 import { db } from "@/lib/firebase";
 import { collection, onSnapshot, query, orderBy, deleteDoc, doc } from "firebase/firestore";
 import { ProblemStatement, Team } from "@/lib/types";
@@ -24,7 +24,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import Link from "next/link";
-
+import { bulkUploadProblemStatements } from "@/ai/flows/bulk-upload-ps-flow";
 
 export default function ProblemStatementsPage() {
   const [problemStatements, setProblemStatements] = useState<ProblemStatement[]>([]);
@@ -32,8 +32,10 @@ export default function ProblemStatementsPage() {
   const [loading, setLoading] = useState(true);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   const [selectedStatement, setSelectedStatement] = useState<ProblemStatement | null>(null);
   const { toast } = useToast();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     setLoading(true);
@@ -88,6 +90,53 @@ export default function ProblemStatementsPage() {
     }
   };
 
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setIsUploading(true);
+    toast({ title: "Uploading...", description: "Your file is being processed. This may take a moment." });
+
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = async () => {
+      try {
+        const base64Content = (reader.result as string).split(',')[1];
+        const result = await bulkUploadProblemStatements({ fileContent: base64Content });
+        
+        if (result.success) {
+          toast({
+            title: "Upload Successful",
+            description: result.message,
+            duration: 10000,
+          });
+          if (result.errors && result.errors.length > 0) {
+            console.warn("Bulk upload errors:", result.errors);
+            // Optionally display errors in a more prominent way
+          }
+        } else {
+          throw new Error(result.message);
+        }
+      } catch (error: any) {
+        toast({
+          title: "Upload Failed",
+          description: error.message || "An unexpected error occurred during the file upload.",
+          variant: "destructive",
+        });
+      } finally {
+        setIsUploading(false);
+        // Reset file input
+        if(fileInputRef.current) {
+          fileInputRef.current.value = "";
+        }
+      }
+    };
+    reader.onerror = () => {
+      toast({ title: "Error Reading File", description: "Could not read the selected file.", variant: "destructive" });
+      setIsUploading(false);
+    };
+  };
+
   return (
     <>
       <AddProblemStatementDialog
@@ -102,14 +151,21 @@ export default function ProblemStatementsPage() {
         />
       )}
       <div className="p-4 sm:p-6 lg:p-8">
-        <header className="mb-8 flex justify-between items-center">
+        <header className="mb-8 flex flex-col sm:flex-row justify-between sm:items-center gap-4">
           <div>
             <h1 className="text-3xl font-bold font-headline">Problem Statements</h1>
             <p className="text-muted-foreground">Manage hackathon problem statements.</p>
           </div>
-           <Button onClick={() => setIsAddDialogOpen(true)}>
+          <div className="flex gap-2">
+            <input type="file" ref={fileInputRef} onChange={handleFileUpload} accept=".xlsx, .xls" className="hidden" />
+            <Button variant="outline" onClick={() => fileInputRef.current?.click()} disabled={isUploading}>
+              {isUploading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
+              Bulk Upload
+            </Button>
+            <Button onClick={() => setIsAddDialogOpen(true)}>
               <PlusCircle className="mr-2 h-4 w-4" /> Add Statement
             </Button>
+          </div>
         </header>
 
         <Card>

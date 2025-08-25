@@ -19,3 +19,4 @@ import '@/ai/flows/create-team-flow.ts';
 import '@/ai/flows/suggest-team-name-flow.ts';
 import '@/ai/flows/export-evaluation-flow.ts';
 import '@/ai/flows/generate-nomination-form-flow.ts';
+import '@/ai/flows/bulk-upload-ps-flow.ts';
