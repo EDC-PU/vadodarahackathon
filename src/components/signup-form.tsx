@@ -27,7 +27,7 @@ import { useState, useEffect } from "react";
 import { Chrome, Eye, EyeOff, Loader2, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { auth, db } from "@/lib/firebase";
-import { createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from "firebase/auth";
+import { createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, getRedirectResult, signOut } from "firebase/auth";
 import { Separator } from "./ui/separator";
 import { useAuth } from "@/hooks/use-auth";
 import { doc, getDoc } from "firebase/firestore";
@@ -161,6 +161,22 @@ export function SignupForm({ inviteToken, deadlineMillis }: SignupFormProps) {
     const provider = new GoogleAuthProvider();
     try {
       const result = await signInWithPopup(auth, provider);
+
+      if (selectedRole === 'spoc' && !result.user.email?.endsWith('@paruluniversity.ac.in')) {
+          toast({
+            title: "Invalid Email for SPOC",
+            description: "SPOC registration requires a @paruluniversity.ac.in email address. Please use your official university account or register as a Team Leader.",
+            variant: "destructive",
+            duration: 8000,
+          });
+          // Sign out the user to prevent them from being left in a logged-in but unusable state
+          if (auth.currentUser) {
+              await signOut(auth);
+          }
+          setIsGoogleLoading(false);
+          return;
+      }
+
       await handleLogin(result.user, inviteToken);
     } catch (error: any)
        {
@@ -168,8 +184,10 @@ export function SignupForm({ inviteToken, deadlineMillis }: SignupFormProps) {
       let errorMessage = "An unexpected error occurred.";
       if (error.code === 'auth/user-disabled') {
         errorMessage = "Your account is pending approval or has been disabled. Please contact an administrator."
-      } else {
+      } else if (error.code !== 'auth/popup-closed-by-user') {
         errorMessage = error.message;
+      } else {
+        errorMessage = "Sign-in was cancelled."
       }
       toast({
         title: "Google Sign-In Failed",
