@@ -198,8 +198,8 @@ export default function AnalyticsPage() {
         <p className="text-muted-foreground">A visual overview of hackathon registration data.</p>
       </header>
 
-      <div className="grid gap-8 lg:grid-cols-2 xl:grid-cols-3">
-        <Card className="xl:col-span-2">
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
+        <Card className="md:col-span-2 xl:col-span-3">
           <CardHeader>
             <CardTitle>Teams per Institute</CardTitle>
             <CardDescription>Distribution of teams across different institutes.</CardDescription>
@@ -207,11 +207,11 @@ export default function AnalyticsPage() {
           <CardContent>
             {instituteChartData.length > 0 ? (
                 <ChartContainer config={chartConfig} className="min-h-[300px] w-full">
-                  <ResponsiveContainer width="100%" height={400}>
-                    <BarChart data={instituteChartData} layout="vertical" margin={{ left: 20, right: 20 }}>
+                  <ResponsiveContainer width="100%" height={Math.max(300, instituteChartData.length * 40)}>
+                    <BarChart data={instituteChartData} layout="vertical" margin={{ left: 100, right: 20 }}>
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis type="number" />
-                      <YAxis dataKey="institute" type="category" width={150} interval={0} tick={{ fontSize: 12 }} />
+                      <YAxis dataKey="institute" type="category" width={100} interval={0} tick={{ fontSize: 12 }} />
                       <Tooltip content={<ChartTooltipContent />} />
                       <Bar dataKey="teams" fill="var(--color-teams)" radius={4} />
                     </BarChart>
@@ -231,7 +231,7 @@ export default function AnalyticsPage() {
           <CardContent>
              {categoryChartData.length > 0 ? (
                 <ChartContainer config={chartConfig} className="min-h-[300px] w-full">
-                   <ResponsiveContainer width="100%" height={400}>
+                   <ResponsiveContainer width="100%" height={300}>
                     <BarChart data={categoryChartData}>
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis dataKey="category" />
@@ -256,7 +256,7 @@ export default function AnalyticsPage() {
           <CardContent>
              {totalParticipants > 0 ? (
                 <ChartContainer config={chartConfig} className="min-h-[300px] w-full">
-                    <ResponsiveContainer width="100%" height={400}>
+                    <ResponsiveContainer width="100%" height={300}>
                         <PieChart>
                             <Tooltip content={<ChartTooltipContent />} />
                             <Pie
@@ -265,14 +265,14 @@ export default function AnalyticsPage() {
                                 nameKey="gender"
                                 cx="50%"
                                 cy="50%"
-                                outerRadius={120}
+                                outerRadius={100}
                                 labelLine={false}
                                 label={({ cx, cy, midAngle, innerRadius, outerRadius, percent }) => {
                                     const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
                                     const x = cx + radius * Math.cos(-midAngle * (Math.PI / 180));
                                     const y = cy + radius * Math.sin(-midAngle * (Math.PI / 180));
                                     return (
-                                        <text x={x} y={y} fill="white" textAnchor={x > cx ? 'start' : 'end'} dominantBaseline="central">
+                                        <text x={x} y={y} fill="white" textAnchor={x > cx ? 'start' : 'end'} dominantBaseline="central" fontSize={14}>
                                             {`${(percent * 100).toFixed(0)}%`}
                                         </text>
                                     );
@@ -299,7 +299,7 @@ export default function AnalyticsPage() {
           </CardHeader>
           <CardContent>
             <ChartContainer config={chartConfig} className="min-h-[300px] w-full">
-                <ResponsiveContainer width="100%" height={400}>
+                <ResponsiveContainer width="100%" height={300}>
                 <BarChart data={teamStatusChartData}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="status" />
@@ -317,7 +317,7 @@ export default function AnalyticsPage() {
           </CardContent>
         </Card>
 
-        <Card className="lg:col-span-2">
+        <Card className="md:col-span-2 xl:col-span-3">
             <CardHeader>
                 <CardTitle>Top 10 Problem Statements</CardTitle>
                 <CardDescription>Most frequently selected problem statements by teams.</CardDescription>

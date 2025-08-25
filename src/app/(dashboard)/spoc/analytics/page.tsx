@@ -187,19 +187,19 @@ export default function SpocAnalyticsPage() {
               </AlertDescription>
             </Alert>
       ) : (
-        <div className="grid gap-8 lg:grid-cols-2 xl:grid-cols-3">
-          <Card className="xl:col-span-2">
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+          <Card className="md:col-span-2">
             <CardHeader>
               <CardTitle>Teams per Department</CardTitle>
               <CardDescription>Distribution of teams across different departments.</CardDescription>
             </CardHeader>
             <CardContent>
               <ChartContainer config={chartConfig} className="min-h-[300px] w-full">
-                <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={departmentChartData} layout="vertical" margin={{ left: 20, right: 20 }}>
+                <ResponsiveContainer width="100%" height={Math.max(300, departmentChartData.length * 40)}>
+                  <BarChart data={departmentChartData} layout="vertical" margin={{ left: 100, right: 20 }}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis type="number" />
-                    <YAxis dataKey="department" type="category" width={150} interval={0} tick={{ fontSize: 12 }} />
+                    <YAxis dataKey="department" type="category" width={100} interval={0} tick={{ fontSize: 12 }} />
                     <Tooltip content={<ChartTooltipContent />} />
                     <Bar dataKey="teams" fill="var(--color-teams)" radius={4} />
                   </BarChart>
@@ -257,7 +257,7 @@ export default function SpocAnalyticsPage() {
                                       const x = cx + radius * Math.cos(-midAngle * (Math.PI / 180));
                                       const y = cy + radius * Math.sin(-midAngle * (Math.PI / 180));
                                       return (
-                                          <text x={x} y={y} fill="white" textAnchor={x > cx ? 'start' : 'end'} dominantBaseline="central">
+                                          <text x={x} y={y} fill="white" textAnchor={x > cx ? 'start' : 'end'} dominantBaseline="central" fontSize={14}>
                                               {`${(percent * 100).toFixed(0)}%`}
                                           </text>
                                       );
