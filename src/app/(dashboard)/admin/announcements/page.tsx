@@ -26,8 +26,6 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import Link from "next/link";
-import { useScrollAnimation } from "@/hooks/use-scroll-animation";
-import { cn } from "@/lib/utils";
 
 export default function AnnouncementsPage() {
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
@@ -35,9 +33,6 @@ export default function AnnouncementsPage() {
   const [isCreating, setIsCreating] = useState(false);
   const { user } = useAuth();
   const { toast } = useToast();
-  
-  const mainRef = useRef<HTMLDivElement>(null);
-  const isInView = useScrollAnimation(mainRef);
 
   useEffect(() => {
     setLoading(true);
@@ -107,7 +102,7 @@ export default function AnnouncementsPage() {
   };
 
   return (
-    <div ref={mainRef} className={cn("p-4 sm:p-6 lg:p-8 scroll-animate", isInView && "in-view")}>
+    <div className="p-4 sm:p-6 lg:p-8">
         <header className="mb-8">
             <h1 className="text-3xl font-bold font-headline">Manage Announcements</h1>
             <p className="text-muted-foreground">Post updates that will be visible to all users.</p>

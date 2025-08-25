@@ -33,7 +33,6 @@ import { exportEvaluation } from "@/ai/flows/export-evaluation-flow.ts";
 import { Download, FileSpreadsheet } from "lucide-react";
 import { Buffer } from 'buffer';
 import { getTeamInviteLink } from "@/ai/flows/get-team-invite-link-flow";
-import { useScrollAnimation } from "@/hooks/use-scroll-animation";
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "./ui/scroll-area";
 
@@ -55,9 +54,6 @@ export default function SpocDashboard() {
   const [inviteLinks, setInviteLinks] = useState<Map<string, string>>(new Map());
   const [loadingLink, setLoadingLink] = useState<string | null>(null);
   const appBaseUrl = "https://vadodarahackathon.pierc.org";
-
-  const mainRef = useRef<HTMLDivElement>(null);
-  const isInView = useScrollAnimation(mainRef);
   
   const fetchInstituteData = useCallback(async (institute: string) => {
     setLoading(true);
@@ -390,7 +386,7 @@ export default function SpocDashboard() {
   const totalParticipants = teams ? teams.reduce((acc, team) => acc + 1 + team.members.length, 0) : 0;
 
   return (
-    <div ref={mainRef} className={cn("p-4 sm:p-6 lg:p-8")}>
+    <div className="p-4 sm:p-6 lg:p-8">
       <header className="mb-8 flex flex-col sm:flex-row justify-between sm:items-center gap-4">
         <div>
             <h1 className="text-3xl font-bold font-headline">SPOC Dashboard</h1>

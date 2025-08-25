@@ -25,8 +25,6 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import Link from "next/link";
-import { useScrollAnimation } from "@/hooks/use-scroll-animation";
-import { cn } from "@/lib/utils";
 
 export default function SpocAnnouncementsPage() {
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
@@ -34,9 +32,6 @@ export default function SpocAnnouncementsPage() {
   const [isCreating, setIsCreating] = useState(false);
   const { user } = useAuth();
   const { toast } = useToast();
-  
-  const mainRef = useRef<HTMLDivElement>(null);
-  const isInView = useScrollAnimation(mainRef);
 
   useEffect(() => {
     if (!user?.institute) {
@@ -109,7 +104,7 @@ export default function SpocAnnouncementsPage() {
   };
 
   return (
-    <div ref={mainRef} className={cn("p-4 sm:p-6 lg:p-8 scroll-animate", isInView && "in-view")}>
+    <div className="p-4 sm:p-6 lg:p-8">
         <header className="mb-8">
             <h1 className="text-3xl font-bold font-headline">Institute Announcements</h1>
             <p className="text-muted-foreground">Post updates that will be visible to all teams from {user?.institute}.</p>

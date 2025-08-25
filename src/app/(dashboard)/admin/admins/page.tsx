@@ -12,17 +12,12 @@ import { collection, query, where, onSnapshot, getDocs } from "firebase/firestor
 import { UserProfile } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 import { makeAdmin } from "@/ai/flows/make-admin-flow";
-import { useScrollAnimation } from "@/hooks/use-scroll-animation";
-import { cn } from "@/lib/utils";
 
 export default function ManageAdminsPage() {
   const [admins, setAdmins] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [isCreatingAdmin, setIsCreatingAdmin] = useState(false);
   const { toast } = useToast();
-
-  const mainRef = useRef<HTMLDivElement>(null);
-  const isInView = useScrollAnimation(mainRef);
 
   const fetchAdmins = async () => {
     const usersCollection = collection(db, 'users');
@@ -72,7 +67,7 @@ export default function ManageAdminsPage() {
   };
 
   return (
-    <div ref={mainRef} className={cn("p-4 sm:p-6 lg:p-8 scroll-animate", isInView && "in-view")}>
+    <div className="p-4 sm:p-6 lg:p-8">
         <header className="mb-8">
             <h1 className="text-3xl font-bold font-headline">Manage Admins</h1>
             <p className="text-muted-foreground">Grant or revoke administrator privileges.</p>
