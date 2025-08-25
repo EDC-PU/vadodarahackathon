@@ -63,6 +63,7 @@ export default function MemberDashboard() {
         setTeam(null);
         setTeamMembers([]);
         setLoading(false);
+        console.warn(`Member Dashboard: Team document with ID ${user.teamId} not found.`);
         return;
       }
 
@@ -97,8 +98,10 @@ export default function MemberDashboard() {
       }
 
     }, (error) => {
-      console.error("Error fetching team data:", error);
-      toast({ title: "Error", description: "Failed to fetch team data.", variant: "destructive" });
+      console.error("Error fetching team data (likely permissions):", error);
+      toast({ title: "Error Loading Team", description: "Could not load your team data. You may not have permission to view it.", variant: "destructive" });
+      setTeam(null);
+      setTeamMembers([]);
       setLoading(false);
     });
 
@@ -223,7 +226,7 @@ export default function MemberDashboard() {
         )}
       </header>
       
-      {!user.teamId && (
+      {!user.teamId && !team && (
         <div className="mb-8 space-y-8">
             <InvitationsSection />
              <Alert>
@@ -250,6 +253,16 @@ export default function MemberDashboard() {
                 </CardContent>
               </Card>
         </div>
+      )}
+
+      {user.teamId && !team && !loading && (
+           <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>Error Loading Team Data</AlertTitle>
+                <AlertDescription>
+                    We couldn't load the data for your team. This might be a temporary issue, or your permissions may have changed. Please try refreshing the page. If the problem persists, contact your team leader or SPOC.
+                </AlertDescription>
+            </Alert>
       )}
       
       {team ? (
@@ -492,6 +505,3 @@ export default function MemberDashboard() {
   );
 }
 
-  
-
-    
