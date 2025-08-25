@@ -230,7 +230,7 @@ export default function LandingPage({ spocDetails, announcements }: LandingPageP
       <header className="sticky top-0 z-50 w-full border-b border-border/20 bg-background/50 backdrop-blur-lg">
         <div className="container flex h-28 max-w-7xl items-center justify-between">
           <Link href="/" className="flex items-center gap-2 font-bold text-xl" prefetch={false}>
-             <Image src="https://www.pierc.org/_next/static/media/PIERC%20WHITE.a9ef7cc8.svg" alt="Vadodara Hackathon Logo" width={150} height={150}/>
+             <Image src="https://www.pierc.org/_next/static/media/PIERC%20WHITE.a9ef7cc8.svg" alt="PIERC Logo" width={150} height={150}/>
           </Link>
           <nav className="hidden md:flex items-center gap-1">
             {navLinks.map((link) => (
@@ -333,7 +333,7 @@ export default function LandingPage({ spocDetails, announcements }: LandingPageP
                     <CarouselItem key={index}>
                       <Image
                         src={src}
-                        alt={`Vadodara Hackathon - Image ${index + 1}`}
+                        alt={`A scene from a past Vadodara Hackathon event showing students collaborating.`}
                         width={600}
                         height={400}
                         className="rounded-lg shadow-xl object-cover aspect-[3/2] border border-primary/20"
@@ -470,7 +470,7 @@ export default function LandingPage({ spocDetails, announcements }: LandingPageP
                                 >
                                     <Image
                                         src={src}
-                                        alt={`Gallery Image ${index + 1}`}
+                                        alt={`Photo from a past Vadodara Hackathon event showing participants and mentors.`}
                                         width={600}
                                         height={400}
                                         className="w-full h-full object-cover aspect-video transition-transform"

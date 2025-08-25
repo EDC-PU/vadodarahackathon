@@ -11,14 +11,43 @@ const fontInter = Inter({
   variable: "--font-inter",
 })
 
+const title = 'Vadodara Hackathon 6.0 | PIERC & Parul University';
+const description = 'Join Vadodara Hackathon 6.0, the premier innovation challenge hosted by PIERC and Parul University. Collaborate, code, and create solutions for real-world problems. Register now!';
+const url = 'https://vadodarahackathon.pierc.org';
+
 export const metadata: Metadata = {
-  title: 'Vadodara Hackathon 6.0 | PIERC X PU',
-  description: 'Welcome to the Vadodara Hackathon 6.0 , hosted by Parul University, PIERC.',
+  title: title,
+  description: description,
+  keywords: ['Vadodara Hackathon', 'Parul University', 'PIERC', 'Hackathon 2025', 'Smart India Hackathon', 'SIH', 'Coding Competition', 'Innovation Challenge', 'Gujarat'],
+  authors: [{ name: 'Parul University & PIERC' }],
+  metadataBase: new URL(url),
+  openGraph: {
+    title: title,
+    description: description,
+    url: url,
+    siteName: 'Vadodara Hackathon 6.0 Portal',
+    images: [
+      {
+        url: 'https://www.pierc.org/vhlogo.png', // Main OG image
+        width: 1200,
+        height: 630,
+        alt: 'Vadodara Hackathon 6.0 Logo',
+      },
+    ],
+    locale: 'en_US',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: title,
+    description: description,
+    images: ['https://www.pierc.org/vhlogo.png'],
+  },
   icons: {
     icon: '/favicon.ico',
   },
   verification: {
-    google: 'google992b607e8b55e6e8',
+    google: 'Fs3-LSr4iB5QCFGSJPXhKQ7nTRZZUOMMysGEj3cz0Po',
   },
 };
 

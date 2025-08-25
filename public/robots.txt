@@ -1,0 +1,30 @@
+# See https://www.robotstxt.org/robotstxt.html for documentation on how to use the robots.txt file
+#
+# *
+User-agent: *
+Allow: /
+
+# Specific rules for major crawlers
+User-agent: Googlebot
+Allow: /
+Crawl-delay: 2
+
+User-agent: Bingbot
+Allow: /
+Crawl-delay: 2
+
+# Disallow crawling of specific paths that are not useful for search engines
+Disallow: /admin/
+Disallow: /spoc/
+Disallow: /leader/
+Disallow: /member/
+Disallow: /profile/
+Disallow: /join/
+Disallow: /change-password
+Disallow: /complete-profile
+Disallow: /complete-spoc-profile
+Disallow: /create-team
+Disallow: /forgot-password
+
+# Sitemap
+Sitemap: https://vadodarahackathon.pierc.org/sitemap.xml
