@@ -7,7 +7,6 @@ import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Award, Code, Cpu, Mail, MapPin, Phone, Users, Calendar, Trophy, FileText, BarChart, FileQuestion, Loader2, LayoutDashboard, MoveRight } from 'lucide-react';
 import Image from 'next/image';
-import { INSTITUTES } from '@/lib/constants';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { useState, useEffect, useRef } from 'react';
 import {
@@ -22,9 +21,11 @@ import { Skeleton } from './ui/skeleton';
 import { AnnouncementsSection } from './announcements-section';
 import { cn } from '@/lib/utils';
 import Autoplay from "embla-carousel-autoplay"
-import { Announcement } from '@/lib/types';
+import { Announcement, Institute } from '@/lib/types';
 import { motion, useAnimation, useInView } from "framer-motion";
 import { CountUp } from './count-up';
+import { collection, onSnapshot, orderBy, query } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 
 
 interface SpocDetails {
@@ -180,8 +181,18 @@ const HeroSection = () => {
 
 export default function LandingPage({ spocDetails, announcements }: LandingPageProps) {
   const [selectedInstitute, setSelectedInstitute] = useState<string | null>(null);
+  const [institutes, setInstitutes] = useState<Institute[]>([]);
   const { user, loading: authLoading } = useAuth();
   const autoplayPlugin = useRef(Autoplay({ delay: 2000, stopOnInteraction: true }));
+
+  useEffect(() => {
+    const q = query(collection(db, "institutes"), orderBy("name"));
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+        const institutesData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Institute));
+        setInstitutes(institutesData);
+    });
+    return () => unsubscribe();
+  }, []);
 
   const navLinks = [
     { name: 'Home', href: '#home' },
@@ -473,9 +484,9 @@ export default function LandingPage({ spocDetails, announcements }: LandingPageP
                             <SelectValue placeholder="Select your institute to view SPOC details" />
                         </SelectTrigger>
                         <SelectContent>
-                            {INSTITUTES.map((institute) => (
-                            <SelectItem key={institute} value={institute}>
-                                {institute}
+                            {institutes.map((institute) => (
+                            <SelectItem key={institute.id} value={institute.name}>
+                                {institute.name}
                             </SelectItem>
                             ))}
                         </SelectContent>

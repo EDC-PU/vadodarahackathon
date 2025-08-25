@@ -24,7 +24,6 @@ import {
 import { Card, CardContent } from "@/components/ui/card";
 import { useState, useEffect, useCallback }from "react";
 import { Loader2, RefreshCw } from "lucide-react";
-import { INSTITUTES } from "@/lib/constants";
 import { useToast } from "@/hooks/use-toast";
 import { SmartFieldTip } from "./smart-field-tip";
 import { Separator } from "./ui/separator";
@@ -33,7 +32,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { createTeam, CreateTeamInput } from "@/ai/flows/create-team-flow";
 import { suggestTeamName } from "@/ai/flows/suggest-team-name-flow";
 import { db } from "@/lib/firebase";
-import { doc, getDoc } from "firebase/firestore";
+import { doc, getDoc, collection, onSnapshot, query, orderBy } from "firebase/firestore";
 
 const formSchema = z.object({
   teamName: z.string().min(3, { message: "Team name must be at least 3 characters." }),
@@ -54,6 +53,7 @@ export function RegistrationForm() {
   const [nameSuggestions, setNameSuggestions] = useState<string[]>([]);
   const [currentSuggestion, setCurrentSuggestion] = useState<string>("e.g., Tech Titans");
   const [isSuggestionLoading, setIsSuggestionLoading] = useState(true);
+  const [institutes, setInstitutes] = useState<{ id: string; name: string }[]>([]);
   const [departments, setDepartments] = useState<string[]>([]);
   const [isDeptLoading, setIsDeptLoading] = useState(false);
 
@@ -76,6 +76,15 @@ export function RegistrationForm() {
     control: form.control,
     name: "institute",
   });
+
+  useEffect(() => {
+    const q = collection(db, "institutes");
+    const unsubscribe = onSnapshot(query(q, orderBy("name")), (querySnapshot) => {
+      const institutesData = querySnapshot.docs.map(doc => ({ id: doc.id, name: doc.data().name }));
+      setInstitutes(institutesData);
+    });
+    return () => unsubscribe();
+  }, []);
 
   useEffect(() => {
     const fetchDepartments = async () => {
@@ -316,8 +325,8 @@ export function RegistrationForm() {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {INSTITUTES.map((inst) => (
-                          <SelectItem key={inst} value={inst}>{inst}</SelectItem>
+                        {institutes.map((inst) => (
+                          <SelectItem key={inst.id} value={inst.name}>{inst.name}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
@@ -347,7 +356,7 @@ export function RegistrationForm() {
                                           <SelectItem key={dept} value={dept}>{dept}</SelectItem>
                                       ))
                                   ) : (
-                                      <div className="p-2 text-sm text-muted-foreground">No departments found.</div>
+                                      <div className="p-2 text-sm text-muted-foreground">No departments found for this institute.</div>
                                   )}
                               </SelectContent>
                           </Select>

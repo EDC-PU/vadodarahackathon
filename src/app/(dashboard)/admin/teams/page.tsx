@@ -6,7 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Loader2, Download, Save, Pencil, X, Trash2, MinusCircle, ChevronDown, ArrowUpDown, FileText } from "lucide-react";
 import { useEffect, useState, useMemo, useCallback, Suspense } from "react";
 import { db } from "@/lib/firebase";
-import { collection, onSnapshot, doc, updateDoc, query } from "firebase/firestore";
+import { collection, onSnapshot, doc, updateDoc, query, orderBy } from "firebase/firestore";
 import { Team, UserProfile, ProblemStatementCategory, TeamMember, ProblemStatement } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -14,7 +14,6 @@ import { exportTeams } from "@/ai/flows/export-teams-flow";
 import { generateNominationForm } from "@/ai/flows/generate-nomination-form-flow";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { INSTITUTES } from "@/lib/constants";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -47,6 +46,7 @@ function AllTeamsContent() {
   const [allTeams, setAllTeams] = useState<Team[]>([]);
   const [allUsers, setAllUsers] = useState<Map<string, UserProfile>>(new Map());
   const [problemStatements, setProblemStatements] = useState<ProblemStatement[]>([]);
+  const [institutes, setInstitutes] = useState<{ id: string; name: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [isExporting, setIsExporting] = useState(false);
   const [isNominating, setIsNominating] = useState<string | null>(null);
@@ -125,10 +125,17 @@ function AllTeamsContent() {
       console.error("Error fetching problem statements:", error);
       toast({ title: "Error", description: "Failed to fetch problem statements.", variant: "destructive" });
     });
+    
+    const institutesQuery = query(collection(db, 'institutes'), orderBy("name"));
+    const unsubscribeInstitutes = onSnapshot(institutesQuery, (snapshot) => {
+        const institutesData = snapshot.docs.map(doc => ({ id: doc.id, name: doc.data().name }));
+        setInstitutes(institutesData);
+    });
 
     return () => {
       unsubscribeTeams();
       unsubscribeProblemStatements();
+      unsubscribeInstitutes();
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -391,7 +398,7 @@ function AllTeamsContent() {
                 </SelectTrigger>
                 <SelectContent>
                     <SelectItem value="All Institutes">All Institutes</SelectItem>
-                    {INSTITUTES.map(inst => <SelectItem key={inst} value={inst}>{inst}</SelectItem>)}
+                    {institutes.map(inst => <SelectItem key={inst.id} value={inst.name}>{inst.name}</SelectItem>)}
                 </SelectContent>
             </Select>
             <Select value={categoryFilter} onValueChange={setCategoryFilter}>

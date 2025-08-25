@@ -1,3 +1,6 @@
+// This file is now deprecated for the institutes list.
+// The list of institutes is now fetched dynamically from the 'institutes' collection in Firestore.
+
 export const INSTITUTES = [
   "Parul Institute of Paramedical & Health Sciences",
   "Parul Institute of Ayurved & Research",

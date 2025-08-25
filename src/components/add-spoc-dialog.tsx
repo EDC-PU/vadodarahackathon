@@ -17,12 +17,13 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "./ui/form";
-import { INSTITUTES } from "@/lib/constants";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { createSpoc, CreateSpocInput } from "@/ai/flows/create-spoc-flow";
 import { RadioGroup, RadioGroupItem } from "./ui/radio-group";
+import { db } from "@/lib/firebase";
+import { collection, onSnapshot, orderBy } from "firebase/firestore";
 
 interface AddSpocDialogProps {
   isOpen: boolean;
@@ -43,6 +44,7 @@ const spocSchema = z.object({
 
 export function AddSpocDialog({ isOpen, onOpenChange, onSpocAdded }: AddSpocDialogProps) {
   const [isLoading, setIsLoading] = useState(false);
+  const [institutes, setInstitutes] = useState<{ id: string; name: string }[]>([]);
   const { toast } = useToast();
 
   const form = useForm<z.infer<typeof spocSchema>>({
@@ -55,6 +57,15 @@ export function AddSpocDialog({ isOpen, onOpenChange, onSpocAdded }: AddSpocDial
       gender: undefined,
     },
   });
+
+  useEffect(() => {
+    const q = collection(db, "institutes");
+    const unsubscribe = onSnapshot(query(q, orderBy("name")), (querySnapshot) => {
+      const institutesData = querySnapshot.docs.map(doc => ({ id: doc.id, name: doc.data().name }));
+      setInstitutes(institutesData);
+    });
+    return () => unsubscribe();
+  }, []);
 
   const onSubmit = async (values: z.infer<typeof spocSchema>) => {
     setIsLoading(true);
@@ -138,8 +149,8 @@ export function AddSpocDialog({ isOpen, onOpenChange, onSpocAdded }: AddSpocDial
                           </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {INSTITUTES.map((inst) => (
-                          <SelectItem key={inst} value={inst}>{inst}</SelectItem>
+                        {institutes.map((inst) => (
+                          <SelectItem key={inst.id} value={inst.name}>{inst.name}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>

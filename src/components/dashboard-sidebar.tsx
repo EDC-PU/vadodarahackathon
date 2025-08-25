@@ -31,6 +31,7 @@ import {
   UserRoundCheck,
   Users2,
   List,
+  Library,
 } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { Button } from "./ui/button";
@@ -46,6 +47,8 @@ const navItems = {
     { href: "/admin/problem-statements", icon: <FileQuestion />, label: "Problem Statements" },
     { href: "/admin/teams", icon: <Users />, label: "All Teams" },
     { href: "/admin/users", icon: <Users2 />, label: "Manage Users" },
+    { href: "/admin/institutes", icon: <Library />, label: "Manage Institutes" },
+    { href: "/admin/departments", icon: <List />, label: "Manage Departments" },
     { href: "/admin/spocs", icon: <Building2 />, label: "Manage SPOCs" },
     { href: "/admin/spoc-requests", icon: <UserRoundCheck />, label: "SPOC Requests" },
     { href: "/admin/admins", icon: <Shield />, label: "Manage Admins" },

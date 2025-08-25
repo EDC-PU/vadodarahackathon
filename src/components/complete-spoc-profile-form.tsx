@@ -19,7 +19,7 @@ import { useState, useEffect } from "react";
 import { Loader2, CheckCircle, LogOut } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { db } from "@/lib/firebase";
-import { doc, updateDoc, collection, query, where, getDocs } from "firebase/firestore";
+import { doc, updateDoc, collection, query, where, getDocs, onSnapshot, orderBy } from "firebase/firestore";
 import { useAuth } from "@/hooks/use-auth";
 import { UserProfile } from "@/lib/types";
 import {
@@ -29,7 +29,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { INSTITUTES } from "@/lib/constants";
 import { notifyAdminsOfSpocRequest } from "@/ai/flows/notify-admins-flow";
 import { Alert, AlertDescription, AlertTitle } from "./ui/alert";
 import { RadioGroup, RadioGroupItem } from "./ui/radio-group";
@@ -47,6 +46,7 @@ export function CompleteSpocProfileForm() {
   const { user, loading: authLoading, handleSignOut } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [institutes, setInstitutes] = useState<{ id: string; name: string }[]>([]);
   const { toast } = useToast();
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -60,6 +60,16 @@ export function CompleteSpocProfileForm() {
       gender: undefined,
     },
   });
+
+  useEffect(() => {
+    const q = collection(db, "institutes");
+    const unsubscribe = onSnapshot(query(q, orderBy("name")), (querySnapshot) => {
+      const institutesData = querySnapshot.docs.map(doc => ({ id: doc.id, name: doc.data().name }));
+      setInstitutes(institutesData);
+    });
+    return () => unsubscribe();
+  }, []);
+
 
   useEffect(() => {
       if (user) {
@@ -243,8 +253,8 @@ export function CompleteSpocProfileForm() {
                                 </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                                {INSTITUTES.map((inst) => (
-                                <SelectItem key={inst} value={inst}>{inst}</SelectItem>
+                                {institutes.map((inst) => (
+                                <SelectItem key={inst.id} value={inst.name}>{inst.name}</SelectItem>
                                 ))}
                             </SelectContent>
                             </Select>
