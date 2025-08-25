@@ -2,7 +2,7 @@
 "use client";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { User, Users, Phone, Mail, FileText, Trophy, Calendar, Loader2, AlertCircle, ArrowUpDown, CheckCircle, Pencil } from "lucide-react";
+import { User, Users, Phone, Mail, FileText, Trophy, Calendar, Loader2, AlertCircle, ArrowUpDown, CheckCircle, Pencil, Trash2 } from "lucide-react";
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { db } from "@/lib/firebase";
 import { doc, getDoc, onSnapshot, collection, query, where } from "firebase/firestore";
@@ -16,6 +16,20 @@ import { Button } from "./ui/button";
 import Link from "next/link";
 import { Badge } from "./ui/badge";
 import { ScrollArea } from "./ui/scroll-area";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { useToast } from "@/hooks/use-toast";
+import { leaveTeam } from "@/ai/flows/leave-team-flow";
+
 
 type SortKey = 'name' | 'role' | 'email' | 'contactNumber' | 'enrollmentNumber' | 'yearOfStudy' | 'semester';
 type SortDirection = 'asc' | 'desc';
@@ -27,6 +41,8 @@ export default function MemberDashboard() {
   const [spoc, setSpoc] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [sortConfig, setSortConfig] = useState<{ key: SortKey, direction: SortDirection } | null>(null);
+  const [isLeaving, setIsLeaving] = useState(false);
+  const { toast } = useToast();
 
   const fetchTeamAndMembers = useCallback(() => {
     if (!user?.teamId) {
@@ -133,6 +149,25 @@ export default function MemberDashboard() {
     }
     return sortConfig.direction === 'asc' ? '▲' : '▼';
   };
+  
+  const handleLeaveTeam = async () => {
+    if (!user) return;
+    setIsLeaving(true);
+    try {
+        const result = await leaveTeam({ userId: user.uid });
+        if (result.success) {
+            toast({ title: "Success", description: result.message });
+            // The onSnapshot listener will automatically update the UI
+        } else {
+            throw new Error(result.message);
+        }
+    } catch (error: any) {
+        toast({ title: "Error Leaving Team", description: error.message, variant: "destructive" });
+    } finally {
+        setIsLeaving(false);
+    }
+  }
+
 
   if (authLoading || loading) {
     return (
@@ -382,6 +417,39 @@ export default function MemberDashboard() {
                   </div>
                 </CardContent>
               </Card>
+
+              <Card className="border-destructive">
+                <CardHeader>
+                    <CardTitle className="text-destructive">Danger Zone</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <CardDescription className="mb-4">
+                       If you leave the team, you will become a free agent. You can join another team if you are invited.
+                    </CardDescription>
+                     <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                            <Button variant="destructive" disabled={isLeaving}>
+                                {isLeaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
+                                Leave Team
+                            </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                            <AlertDialogHeader>
+                            <AlertDialogTitle>Are you sure you want to leave the team?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                                This action will remove you from the team "{team.name}". You will need a new invitation to rejoin this team or another team.
+                            </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction onClick={handleLeaveTeam} className="bg-destructive hover:bg-destructive/90">
+                                Yes, Leave Team
+                            </AlertDialogAction>
+                            </AlertDialogFooter>
+                        </AlertDialogContent>
+                    </AlertDialog>
+                </CardContent>
+            </Card>
             </div>
           </div>
         </div>
@@ -397,5 +465,3 @@ export default function MemberDashboard() {
     </div>
   );
 }
-
-    

@@ -437,4 +437,14 @@ export const BulkUploadPsOutputSchema = z.object({
 });
 export type BulkUploadPsOutput = z.infer<typeof BulkUploadPsOutputSchema>;
 
-    
+// leave-team-flow
+export const LeaveTeamInputSchema = z.object({
+  userId: z.string().describe("The UID of the user leaving the team."),
+});
+export type LeaveTeamInput = z.infer<typeof LeaveTeamInputSchema>;
+
+export const LeaveTeamOutputSchema = z.object({
+  success: z.boolean(),
+  message: z.string(),
+});
+export type LeaveTeamOutput = z.infer<typeof LeaveTeamOutputSchema>;
