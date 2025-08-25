@@ -11,6 +11,7 @@ import { ProblemStatement, Team } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 import { AddProblemStatementDialog } from "@/components/add-problem-statement-dialog";
 import { EditProblemStatementDialog } from "@/components/edit-problem-statement-dialog";
+import { BulkUploadPreviewDialog } from "@/components/bulk-upload-preview-dialog";
 import { Badge } from "@/components/ui/badge";
 import {
   AlertDialog,
@@ -25,6 +26,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import Link from "next/link";
 import { bulkUploadProblemStatements } from "@/ai/flows/bulk-upload-ps-flow";
+import ExcelJS from 'exceljs';
 
 export default function ProblemStatementsPage() {
   const [problemStatements, setProblemStatements] = useState<ProblemStatement[]>([]);
@@ -36,6 +38,10 @@ export default function ProblemStatementsPage() {
   const [selectedStatement, setSelectedStatement] = useState<ProblemStatement | null>(null);
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  const [previewData, setPreviewData] = useState<any[]>([]);
+  const [fileToUpload, setFileToUpload] = useState<string | null>(null);
 
   useEffect(() => {
     setLoading(true);
@@ -89,52 +95,96 @@ export default function ProblemStatementsPage() {
        toast({ title: "Error", description: "Could not delete problem statement.", variant: "destructive" });
     }
   };
-
+  
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
     setIsUploading(true);
-    toast({ title: "Uploading...", description: "Your file is being processed. This may take a moment." });
-
     const reader = new FileReader();
-    reader.readAsDataURL(file);
-    reader.onload = async () => {
+    reader.readAsArrayBuffer(file);
+    reader.onload = async (e) => {
       try {
-        const base64Content = (reader.result as string).split(',')[1];
-        const result = await bulkUploadProblemStatements({ fileContent: base64Content });
-        
-        if (result.success) {
-          toast({
-            title: "Upload Successful",
-            description: result.message,
-            duration: 10000,
-          });
-          if (result.errors && result.errors.length > 0) {
-            console.warn("Bulk upload errors:", result.errors);
-            // Optionally display errors in a more prominent way
-          }
-        } else {
-          throw new Error(result.message);
+        const buffer = e.target?.result;
+        if (!buffer) {
+          throw new Error("Failed to read file buffer.");
         }
+        
+        const workbook = new ExcelJS.Workbook();
+        await workbook.xlsx.load(buffer as ArrayBuffer);
+        const worksheet = workbook.worksheets[0];
+        const jsonData: any[] = [];
+        const header = (worksheet.getRow(1).values as string[]).slice(1);
+        
+        worksheet.eachRow((row, rowNumber) => {
+            if (rowNumber > 1) { // Skip header
+                let rowData: any = {};
+                row.values.forEach((value, index) => {
+                    if (index > 0) { // Skip empty first cell from exceljs
+                      const key = header[index - 1];
+                      rowData[key] = (value as any)?.text || value;
+                    }
+                });
+                jsonData.push(rowData);
+            }
+        });
+        
+        setPreviewData(jsonData);
+
+        const base64Reader = new FileReader();
+        base64Reader.readAsDataURL(file);
+        base64Reader.onloadend = () => {
+           setFileToUpload(base64Reader.result as string);
+           setIsUploading(false);
+           setIsPreviewOpen(true);
+        };
+
       } catch (error: any) {
         toast({
-          title: "Upload Failed",
-          description: error.message || "An unexpected error occurred during the file upload.",
+          title: "Error Reading File",
+          description: error.message || "Could not parse the Excel file.",
           variant: "destructive",
         });
-      } finally {
         setIsUploading(false);
-        // Reset file input
-        if(fileInputRef.current) {
-          fileInputRef.current.value = "";
-        }
       }
     };
-    reader.onerror = () => {
-      toast({ title: "Error Reading File", description: "Could not read the selected file.", variant: "destructive" });
+  };
+
+  const handleConfirmUpload = async () => {
+    if (!fileToUpload) return;
+    
+    setIsUploading(true);
+    setIsPreviewOpen(false);
+    toast({ title: "Uploading...", description: "Your file is being processed. This may take a moment." });
+
+    try {
+      const base64Content = fileToUpload.split(',')[1];
+      const result = await bulkUploadProblemStatements({ fileContent: base64Content });
+      
+      if (result.success) {
+        toast({
+          title: "Upload Successful",
+          description: result.message,
+          duration: 10000,
+        });
+        if (result.errors && result.errors.length > 0) {
+          console.warn("Bulk upload errors:", result.errors);
+        }
+      } else {
+        throw new Error(result.message);
+      }
+    } catch (error: any) {
+      toast({
+        title: "Upload Failed",
+        description: error.message || "An unexpected error occurred during the file upload.",
+        variant: "destructive",
+      });
+    } finally {
       setIsUploading(false);
-    };
+      if(fileInputRef.current) fileInputRef.current.value = "";
+      setFileToUpload(null);
+      setPreviewData([]);
+    }
   };
 
   return (
@@ -150,6 +200,13 @@ export default function ProblemStatementsPage() {
             problemStatement={selectedStatement}
         />
       )}
+      <BulkUploadPreviewDialog
+        isOpen={isPreviewOpen}
+        onOpenChange={setIsPreviewOpen}
+        data={previewData}
+        onConfirm={handleConfirmUpload}
+      />
+
       <div className="p-4 sm:p-6 lg:p-8">
         <header className="mb-8 flex flex-col sm:flex-row justify-between sm:items-center gap-4">
           <div>
