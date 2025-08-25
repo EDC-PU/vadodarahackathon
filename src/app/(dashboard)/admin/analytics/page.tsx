@@ -98,16 +98,23 @@ export default function AnalyticsPage() {
   };
 
   const getGenderData = (): GenderChartData[] => {
-    const participants = users.filter(u => u.teamId); // Only count users who are in a team
+    const registeredTeams = teams.filter(team => {
+      const members = [team.leader, ...team.members].map(m => users.find(u => u.uid === m.uid)).filter(Boolean) as UserProfile[];
+      return members.length === 6 && members.some(m => m.gender === 'F');
+    });
+
+    const registeredParticipantUids = new Set(registeredTeams.flatMap(t => [t.leader.uid, ...t.members.map(m => m.uid)]));
+    const participants = users.filter(u => registeredParticipantUids.has(u.uid));
+
     const genderCounts = participants.reduce((acc, user) => {
-        if (user.gender === 'M') acc.male++;
-        if (user.gender === 'F') acc.female++;
-        return acc;
+      if (user.gender === 'M') acc.male++;
+      if (user.gender === 'F') acc.female++;
+      return acc;
     }, { male: 0, female: 0 });
 
     return [
-        { gender: 'Male', value: genderCounts.male, fill: 'hsl(var(--chart-2))' },
-        { gender: 'Female', value: genderCounts.female, fill: 'hsl(var(--chart-5))' },
+      { gender: 'Male', value: genderCounts.male, fill: 'hsl(var(--chart-2))' },
+      { gender: 'Female', value: genderCounts.female, fill: 'hsl(var(--chart-5))' },
     ];
   };
 
@@ -116,9 +123,10 @@ export default function AnalyticsPage() {
     let pendingCount = 0;
     teams.forEach(team => {
        const allMemberUIDs = [team.leader.uid, ...team.members.map(m => m.uid)];
-       const hasFemale = users.some(u => allMemberUIDs.includes(u.uid) && u.gender === 'F');
+       const members = users.filter(u => allMemberUIDs.includes(u.uid));
+       const hasFemale = members.some(m => m.gender === 'F');
        
-       if (team.members.length + 1 === 6 && hasFemale) {
+       if (members.length === 6 && hasFemale) {
          registeredCount++;
        } else {
          pendingCount++;
@@ -210,8 +218,8 @@ export default function AnalyticsPage() {
 
         <Card>
            <CardHeader>
-            <CardTitle>Participant Gender Distribution</CardTitle>
-            <CardDescription>Total Participants: {totalParticipants}</CardDescription>
+            <CardTitle>Gender Distribution (Registered Teams)</CardTitle>
+            <CardDescription>Total Participants in Registered Teams: {totalParticipants}</CardDescription>
           </CardHeader>
           <CardContent>
              {totalParticipants > 0 ? (
@@ -247,7 +255,7 @@ export default function AnalyticsPage() {
                     </ResponsiveContainer>
                 </ChartContainer>
              ) : (
-                <p className="text-center text-muted-foreground py-10">No participant data available to display.</p>
+                <p className="text-center text-muted-foreground py-10">No fully registered teams available to display stats for.</p>
              )}
           </CardContent>
         </Card>

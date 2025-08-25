@@ -103,9 +103,10 @@ export default function SpocAnalyticsPage() {
     let pendingCount = 0;
     teams.forEach(team => {
        const allMemberUIDs = [team.leader.uid, ...team.members.map(m => m.uid)];
-       const hasFemale = users.some(u => allMemberUIDs.includes(u.uid) && u.gender === 'F');
+       const members = users.filter(u => allMemberUIDs.includes(u.uid));
+       const hasFemale = members.some(m => m.gender === 'F');
 
-       if (team.members.length + 1 === 6 && hasFemale) {
+       if (members.length === 6 && hasFemale) {
          registeredCount++;
        } else {
          pendingCount++;
@@ -118,7 +119,15 @@ export default function SpocAnalyticsPage() {
   };
 
   const getGenderData = (): GenderChartData[] => {
-    const genderCounts = users.reduce((acc, user) => {
+    const registeredTeams = teams.filter(team => {
+      const members = [team.leader, ...team.members].map(m => users.find(u => u.uid === m.uid)).filter(Boolean) as UserProfile[];
+      return members.length === 6 && members.some(m => m.gender === 'F');
+    });
+
+    const registeredParticipantUids = new Set(registeredTeams.flatMap(t => [t.leader.uid, ...t.members.map(m => m.uid)]));
+    const participants = users.filter(u => registeredParticipantUids.has(u.uid));
+    
+    const genderCounts = participants.reduce((acc, user) => {
         if (user.gender === 'M') acc.male++;
         if (user.gender === 'F') acc.female++;
         return acc;
@@ -133,7 +142,7 @@ export default function SpocAnalyticsPage() {
   const departmentChartData = getDepartmentData();
   const teamStatusChartData = getTeamStatusData();
   const genderChartData = getGenderData();
-  const totalParticipants = users.length;
+  const totalParticipants = genderChartData.reduce((acc, curr) => acc + curr.value, 0);
   
   const chartConfig = {
     teams: { label: "Teams", color: "hsl(var(--chart-1))" },
@@ -226,41 +235,45 @@ export default function SpocAnalyticsPage() {
 
           <Card>
             <CardHeader>
-              <CardTitle>Participant Gender Distribution</CardTitle>
-              <CardDescription>Total Participants: {totalParticipants}</CardDescription>
+              <CardTitle>Gender Distribution (Registered Teams)</CardTitle>
+              <CardDescription>Total Participants in Registered Teams: {totalParticipants}</CardDescription>
             </CardHeader>
             <CardContent>
-              <ChartContainer config={chartConfig} className="min-h-[300px] w-full">
-                  <ResponsiveContainer width="100%" height={300}>
-                      <PieChart>
-                          <Tooltip content={<ChartTooltipContent />} />
-                          <Pie
-                              data={genderChartData}
-                              dataKey="value"
-                              nameKey="gender"
-                              cx="50%"
-                              cy="50%"
-                              outerRadius={100}
-                              labelLine={false}
-                              label={({ cx, cy, midAngle, innerRadius, outerRadius, percent }) => {
-                                  const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
-                                  const x = cx + radius * Math.cos(-midAngle * (Math.PI / 180));
-                                  const y = cy + radius * Math.sin(-midAngle * (Math.PI / 180));
-                                  return (
-                                      <text x={x} y={y} fill="white" textAnchor={x > cx ? 'start' : 'end'} dominantBaseline="central">
-                                          {`${(percent * 100).toFixed(0)}%`}
-                                      </text>
-                                  );
-                              }}
-                          >
-                              {genderChartData.map((entry, index) => (
-                                  <Cell key={`cell-${index}`} fill={entry.fill} />
-                              ))}
-                          </Pie>
-                          <Legend />
-                      </PieChart>
-                  </ResponsiveContainer>
-              </ChartContainer>
+               {totalParticipants > 0 ? (
+                  <ChartContainer config={chartConfig} className="min-h-[300px] w-full">
+                      <ResponsiveContainer width="100%" height={300}>
+                          <PieChart>
+                              <Tooltip content={<ChartTooltipContent />} />
+                              <Pie
+                                  data={genderChartData}
+                                  dataKey="value"
+                                  nameKey="gender"
+                                  cx="50%"
+                                  cy="50%"
+                                  outerRadius={100}
+                                  labelLine={false}
+                                  label={({ cx, cy, midAngle, innerRadius, outerRadius, percent }) => {
+                                      const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
+                                      const x = cx + radius * Math.cos(-midAngle * (Math.PI / 180));
+                                      const y = cy + radius * Math.sin(-midAngle * (Math.PI / 180));
+                                      return (
+                                          <text x={x} y={y} fill="white" textAnchor={x > cx ? 'start' : 'end'} dominantBaseline="central">
+                                              {`${(percent * 100).toFixed(0)}%`}
+                                          </text>
+                                      );
+                                  }}
+                              >
+                                  {genderChartData.map((entry, index) => (
+                                      <Cell key={`cell-${index}`} fill={entry.fill} />
+                                  ))}
+                              </Pie>
+                              <Legend />
+                          </PieChart>
+                      </ResponsiveContainer>
+                  </ChartContainer>
+                ) : (
+                  <p className="text-center text-muted-foreground py-10">No fully registered teams available to display stats for.</p>
+                )}
             </CardContent>
           </Card>
         </div>
