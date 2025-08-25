@@ -82,34 +82,29 @@ const manageTeamBySpocFlow = ai.defineFlow(
 
         if (action === 'delete-team') {
             console.log(`Attempting to delete team: ${teamData.name} (${teamId})`);
-            
+            const batch = adminDb.batch();
+
             // 1. Get all user UIDs associated with the team
             const allMemberUIDs = [teamData.leader.uid, ...teamData.members.map(m => m.uid)];
-            console.log("Deleting all users associated with the team:", allMemberUIDs);
             
-            // 2. Delete each user from Auth and Firestore
+            // 2. For each member, clear their teamId
             for (const uid of allMemberUIDs) {
-                try {
-                    // Delete from Auth
-                    await adminAuth.deleteUser(uid);
-                    console.log(`Deleted user ${uid} from Auth.`);
-                    
-                    // Delete from Firestore
+                if(uid) {
                     const userDocRef = adminDb.collection('users').doc(uid);
-                    await userDocRef.delete();
-                    console.log(`Deleted user ${uid} from Firestore.`);
-
-                } catch (error) {
-                    console.warn(`Could not delete user ${uid}. They may have already been removed. Error:`, error);
+                    batch.update(userDocRef, { teamId: FieldValue.delete() });
+                    console.log(`Scheduled to clear teamId for user ${uid}.`);
                 }
             }
             
             // 3. Delete the team document
-            console.log(`Deleting team document ${teamId}.`);
-            await teamDocRef.delete();
+            batch.delete(teamDocRef);
+            console.log(`Scheduled deletion for team document ${teamId}.`);
 
-            console.log("Team and all members deleted successfully.");
-            return { success: true, message: `Team "${teamData.name}" and all its members have been deleted.` };
+            // Commit all batched writes
+            await batch.commit();
+
+            console.log("Team deleted and members' teamId cleared successfully.");
+            return { success: true, message: `Team "${teamData.name}" has been deleted.` };
         }
         
         console.warn("Invalid action specified in manageTeamBySpocFlow.");

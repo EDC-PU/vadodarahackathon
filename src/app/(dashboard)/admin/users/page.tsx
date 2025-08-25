@@ -3,7 +3,7 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Loader2, Trash2, ArrowUpDown } from "lucide-react";
+import { Loader2, Trash2, ArrowUpDown, ShieldCheck } from "lucide-react";
 import { useEffect, useState, useMemo } from "react";
 import { db } from "@/lib/firebase";
 import { collection, onSnapshot, query, orderBy } from "firebase/firestore";
@@ -23,6 +23,8 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { deleteUser } from "@/ai/flows/delete-user-flow";
+import { makeAdmin } from "@/ai/flows/make-admin-flow";
+import { manageTeamBySpoc } from "@/ai/flows/manage-team-by-spoc-flow";
 import { Input } from "@/components/ui/input";
 
 type SortKey = 'name' | 'email' | 'role' | 'institute' | 'createdAt';
@@ -55,7 +57,7 @@ export default function ManageUsersPage() {
   }, [toast]);
   
   const handleDeleteUser = async (userToDelete: UserProfile) => {
-    setIsProcessing(userToDelete.uid);
+    setIsProcessing(`delete-user-${userToDelete.uid}`);
     try {
         const result = await deleteUser({ uid: userToDelete.uid });
         if (result.success) {
@@ -65,6 +67,38 @@ export default function ManageUsersPage() {
         }
     } catch (error) {
         toast({ title: "Error", description: "An unexpected error occurred while deleting the user.", variant: "destructive" });
+    } finally {
+        setIsProcessing(null);
+    }
+  };
+  
+  const handleMakeAdmin = async (userToPromote: UserProfile) => {
+    setIsProcessing(`promote-${userToPromote.uid}`);
+    try {
+        const result = await makeAdmin({ email: userToPromote.email });
+        if (result.success) {
+            toast({ title: "Success", description: result.message });
+        } else {
+            toast({ title: "Error", description: result.message, variant: "destructive" });
+        }
+    } catch (error) {
+        toast({ title: "Error", description: "An unexpected error occurred while promoting the user.", variant: "destructive" });
+    } finally {
+        setIsProcessing(null);
+    }
+  };
+
+  const handleDeleteTeam = async (teamId: string, teamName: string) => {
+    setIsProcessing(`delete-team-${teamId}`);
+     try {
+        const result = await manageTeamBySpoc({ teamId, action: 'delete-team' });
+        if (result.success) {
+            toast({ title: "Success", description: result.message });
+        } else {
+            toast({ title: "Error", description: result.message, variant: "destructive" });
+        }
+    } catch (error) {
+         toast({ title: "Error", description: "An unexpected error occurred while deleting the team.", variant: "destructive" });
     } finally {
         setIsProcessing(null);
     }
@@ -151,6 +185,7 @@ export default function ManageUsersPage() {
                   <TableHead><Button variant="ghost" onClick={() => requestSort('email')}>Email {getSortIndicator('email')}</Button></TableHead>
                   <TableHead><Button variant="ghost" onClick={() => requestSort('role')}>Role {getSortIndicator('role')}</Button></TableHead>
                   <TableHead><Button variant="ghost" onClick={() => requestSort('institute')}>Institute {getSortIndicator('institute')}</Button></TableHead>
+                  <TableHead>Team ID</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -161,11 +196,42 @@ export default function ManageUsersPage() {
                     <TableCell>{user.email}</TableCell>
                     <TableCell><Badge variant={user.role === 'admin' ? 'destructive' : 'secondary'}>{user.role}</Badge></TableCell>
                     <TableCell>{user.institute || 'N/A'}</TableCell>
-                    <TableCell className="text-right">
+                    <TableCell className="text-xs">{user.teamId || 'N/A'}</TableCell>
+                    <TableCell className="text-right space-x-1">
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleMakeAdmin(user)}
+                            disabled={isProcessing?.includes(user.uid) || user.role === 'admin'}
+                        >
+                            {isProcessing === `promote-${user.uid}` ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <ShieldCheck className="mr-2 h-4 w-4"/>}
+                            Make Admin
+                        </Button>
+                        {user.teamId && (
+                           <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                    <Button variant="destructive" size="sm" disabled={isProcessing?.includes(user.uid)}>
+                                        <Trash2 className="mr-2 h-4 w-4"/> Delete Team
+                                    </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                    <AlertDialogTitle>Delete {user.name}&apos;s Team?</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                        This will permanently delete the team associated with this user ({user.teamId}). Members will be unassigned but their accounts will NOT be deleted. Are you sure?
+                                    </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                    <AlertDialogAction onClick={() => handleDeleteTeam(user.teamId!, 'this team')} className="bg-destructive hover:bg-destructive/90">Delete Team</AlertDialogAction>
+                                    </AlertDialogFooter>
+                                </AlertDialogContent>
+                            </AlertDialog>
+                        )}
                        <AlertDialog>
                             <AlertDialogTrigger asChild>
-                                <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" disabled={isProcessing === user.uid || user.role === 'admin'}>
-                                    {isProcessing === user.uid ? <Loader2 className="h-4 w-4 animate-spin"/> : <Trash2 className="h-4 w-4"/>}
+                                <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" disabled={isProcessing?.includes(user.uid) || user.role === 'admin'}>
+                                    {isProcessing === `delete-user-${user.uid}` ? <Loader2 className="h-4 w-4 animate-spin"/> : <Trash2 className="h-4 w-4"/>}
                                 </Button>
                             </AlertDialogTrigger>
                             <AlertDialogContent>
