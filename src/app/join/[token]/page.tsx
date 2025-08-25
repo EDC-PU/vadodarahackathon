@@ -125,7 +125,7 @@ function JoinPageContent() {
         return (
              <div className="flex flex-col items-center justify-center text-center gap-4 w-full max-w-md">
                 <Loader2 className="h-8 w-8 animate-spin" />
-                <p className="text-muted-foreground">{user ? "Processing request..." : "Loading invitation..."}</p>
+                <p className="text-muted-foreground">{user ? "Adding you to the team..." : "Loading invitation..."}</p>
             </div>
         );
     }
