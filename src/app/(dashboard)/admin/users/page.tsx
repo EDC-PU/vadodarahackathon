@@ -26,6 +26,7 @@ import { deleteUser } from "@/ai/flows/delete-user-flow";
 import { makeAdmin } from "@/ai/flows/make-admin-flow";
 import { manageTeamBySpoc } from "@/ai/flows/manage-team-by-spoc-flow";
 import { Input } from "@/components/ui/input";
+import Link from "next/link";
 
 type SortKey = 'name' | 'email' | 'role' | 'institute' | 'createdAt';
 type SortDirection = 'asc' | 'desc';
@@ -192,7 +193,15 @@ export default function ManageUsersPage() {
               <TableBody>
                 {filteredAndSortedUsers.map((user) => (
                   <TableRow key={user.uid}>
-                    <TableCell className="font-medium">{user.name}</TableCell>
+                    <TableCell className="font-medium">
+                      {user.enrollmentNumber && user.enrollmentNumber !== 'N/A' ? (
+                        <Link href={`/profile/${user.enrollmentNumber}`} className="hover:underline">
+                            {user.name}
+                        </Link>
+                      ) : (
+                        user.name
+                      )}
+                    </TableCell>
                     <TableCell>{user.email}</TableCell>
                     <TableCell><Badge variant={user.role === 'admin' ? 'destructive' : 'secondary'}>{user.role}</Badge></TableCell>
                     <TableCell>{user.institute || 'N/A'}</TableCell>
