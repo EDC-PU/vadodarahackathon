@@ -80,22 +80,21 @@ export default function MemberDashboard() {
       const memberUIDs = teamData.members.map(m => m.uid).filter(Boolean);
       const allUIDs = [...new Set([teamData.leader.uid, ...memberUIDs])];
       
-      const unsubscribers = allUIDs.map(uid => {
-        const userDocRef = doc(db, 'users', uid);
-        return onSnapshot(userDocRef, (userDoc) => {
-          if (userDoc.exists()) {
-            const userProfile = { uid: userDoc.id, ...userDoc.data() } as UserProfile;
-            setTeamMembers(prevMembers => {
-              const otherMembers = prevMembers.filter(m => m.uid !== uid);
-              return [...otherMembers, userProfile];
-            });
-          }
-        });
-      });
+      const memberPromises = allUIDs.map(uid => getDoc(doc(db, 'users', uid)));
       
-      setLoading(false);
-      
-      return () => unsubscribers.forEach(unsub => unsub());
+      try {
+        const memberDocs = await Promise.all(memberPromises);
+        const membersData = memberDocs
+          .filter(doc => doc.exists())
+          .map(doc => ({ uid: doc.id, ...doc.data() } as UserProfile));
+        
+        setTeamMembers(membersData);
+      } catch (error) {
+         console.error("Error fetching all member data:", error);
+         toast({ title: "Error", description: "Could not load all member details.", variant: "destructive" });
+      } finally {
+        setLoading(false);
+      }
 
     }, (error) => {
       console.error("Error fetching team data:", error);
@@ -494,3 +493,5 @@ export default function MemberDashboard() {
 }
 
   
+
+    
