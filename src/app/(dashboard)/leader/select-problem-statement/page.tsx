@@ -3,7 +3,7 @@
 
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Loader2, Search } from "lucide-react";
+import { Loader2, Search, BrainCircuit, Building, Book, Database } from "lucide-react";
 import { ProblemStatement, ProblemStatementCategory } from "@/lib/types";
 import { db } from "@/lib/firebase";
 import { collection, getDocs, query, orderBy, doc, updateDoc } from "firebase/firestore";
@@ -14,6 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/hooks/use-auth";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 type CategoryFilter = ProblemStatementCategory | "All";
 
@@ -65,7 +66,9 @@ export default function SelectProblemStatementPage() {
         return (
           item.title.toLowerCase().includes(lowercasedFilter) ||
           (item.description && item.description.toLowerCase().includes(lowercasedFilter)) ||
-          (item.problemStatementId && item.problemStatementId.toLowerCase().includes(lowercasedFilter))
+          (item.problemStatementId && item.problemStatementId.toLowerCase().includes(lowercasedFilter)) ||
+          (item.organization && item.organization.toLowerCase().includes(lowercasedFilter)) ||
+          (item.theme && item.theme.toLowerCase().includes(lowercasedFilter))
         );
       });
     setFilteredStatements(filteredData);
@@ -137,25 +140,40 @@ export default function SelectProblemStatementPage() {
                 </div>
             </div>
             <ScrollArea className="h-[60vh]">
-            <div className="space-y-3 pr-4">
+            <div className="space-y-4 pr-4">
                 {filteredStatements.length > 0 ? (
                 filteredStatements.map(ps => (
-                    <div key={ps.id} className="p-4 border rounded-lg flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                        <div>
-                            <div className="flex items-center gap-2 mb-1">
-                                <Badge variant={ps.category === 'Software' ? 'default' : 'secondary'}>{ps.category}</Badge>
-                                <h3 className="font-semibold">{ps.title} ({ps.problemStatementId})</h3>
+                    <div key={ps.id} className="p-4 border rounded-lg flex flex-col sm:flex-row justify-between items-start sm:items-start gap-4">
+                        <div className="flex-1">
+                            <div className="flex items-start justify-between mb-2">
+                                <div>
+                                    <Badge variant={ps.category === 'Software' ? 'default' : ps.category === 'Hardware' ? 'secondary' : 'outline'}>{ps.category}</Badge>
+                                    <h3 className="font-semibold text-lg mt-1">{ps.title} ({ps.problemStatementId})</h3>
+                                </div>
+                                <Button 
+                                    onClick={() => handleProblemStatementSelect(ps)}
+                                    disabled={!!isSubmitting}
+                                    className="w-full sm:w-auto shrink-0"
+                                >
+                                   {isSubmitting === ps.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                                   Select
+                                </Button>
                             </div>
-                            <p className="text-sm text-muted-foreground whitespace-pre-wrap">{ps.description}</p>
+                            <p className="text-sm text-muted-foreground whitespace-pre-wrap mb-4">{ps.description}</p>
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-2 text-sm">
+                                {ps.organization && <div className="flex items-center gap-2"><Building className="h-4 w-4 text-primary shrink-0" /><div><strong>Organization:</strong> {ps.organization}</div></div>}
+                                {ps.department && <div className="flex items-center gap-2"><Book className="h-4 w-4 text-primary shrink-0" /><div><strong>Department:</strong> {ps.department}</div></div>}
+                                {ps.theme && <div className="flex items-center gap-2"><BrainCircuit className="h-4 w-4 text-primary shrink-0" /><div><strong>Theme/Bucket:</strong> {ps.theme}</div></div>}
+                                {ps.datasetLink && (
+                                    <div className="flex items-center gap-2">
+                                        <Database className="h-4 w-4 text-primary shrink-0" />
+                                        <a href={ps.datasetLink} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                                            <strong>View Dataset</strong>
+                                        </a>
+                                    </div>
+                                )}
+                            </div>
                         </div>
-                        <Button 
-                            onClick={() => handleProblemStatementSelect(ps)}
-                            disabled={!!isSubmitting}
-                            className="w-full sm:w-auto"
-                        >
-                           {isSubmitting === ps.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                           Select
-                        </Button>
                     </div>
                 ))
                 ) : (
