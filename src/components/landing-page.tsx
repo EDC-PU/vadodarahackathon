@@ -416,6 +416,20 @@ export default function LandingPage({ spocDetails, announcements }: LandingPageP
                   Mark your calendars for these important dates.
                 </p>
                 <div className="flex flex-col md:flex-row justify-center items-center gap-8">
+                <Card className="glass-card p-6 text-center transform hover:-translate-y-2 transition-transform duration-300">
+                        <Calendar className="h-10 w-10 text-primary mx-auto mb-4" />
+                        <CardTitle className="text-xl mt-2">Registrations Open</CardTitle>
+                        <CardContent className="mt-2 text-foreground/80 p-0">
+                            <p>25th August, 2025</p>
+                        </CardContent>
+                    </Card>
+                    <Card className="glass-card p-6 text-center transform hover:-translate-y-2 transition-transform duration-300">
+                        <Calendar className="h-10 w-10 text-primary mx-auto mb-4" />
+                        <CardTitle className="text-xl mt-2">Registrations Close</CardTitle>
+                        <CardContent className="mt-2 text-foreground/80 p-0">
+                            <p>31st August, 2025</p>
+                        </CardContent>
+                    </Card>
                    <Card className="glass-card p-6 text-center transform hover:-translate-y-2 transition-transform duration-300">
                         <Calendar className="h-10 w-10 text-primary mx-auto mb-4" />
                         <CardTitle className="text-xl mt-2">Intra-Institute Round</CardTitle>

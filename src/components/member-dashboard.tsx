@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { User, Users, Phone, Mail, FileText, Trophy, Calendar, Loader2, AlertCircle, ArrowUpDown, CheckCircle, Pencil, Trash2, Link as LinkIcon } from "lucide-react";
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { db } from "@/lib/firebase";
-import { doc, getDoc, onSnapshot, collection, query, where } from "firebase/firestore";
+import { doc, getDoc, onSnapshot, collection, query, where, getDocs } from "firebase/firestore";
 import { Team, UserProfile } from "@/lib/types";
 import { Alert, AlertDescription, AlertTitle } from "./ui/alert";
 import { useAuth } from "@/hooks/use-auth";
@@ -49,75 +49,57 @@ export default function MemberDashboard() {
   const router = useRouter();
 
 
-  const fetchTeamAndMembers = useCallback(() => {
+  const fetchTeamAndMembers = useCallback(async () => {
     if (!user?.teamId) {
       setLoading(false);
-      return () => {};
+      return;
     }
     setLoading(true);
 
-    const teamDocRef = doc(db, 'teams', user.teamId);
+    try {
+        const teamDocRef = doc(db, 'teams', user.teamId);
+        const teamDoc = await getDoc(teamDocRef);
 
-    const unsubscribeTeam = onSnapshot(teamDocRef, (teamDoc) => {
-      if (!teamDoc.exists()) {
-        setTeam(null);
-        setTeamMembers([]);
+        if (!teamDoc.exists()) {
+            setTeam(null);
+            setTeamMembers([]);
+            setLoading(false);
+            return;
+        }
+
+        const teamData = { id: teamDoc.id, ...teamDoc.data() } as Team;
+        setTeam(teamData);
+
+        const spocsQuery = query(collection(db, "users"), where("institute", "==", teamData.institute), where("role", "==", "spoc"), where("spocStatus", "==", "approved"));
+        const spocSnapshot = await getDocs(spocsQuery);
+        if (!spocSnapshot.empty) {
+            setSpoc(spocSnapshot.docs[0].data() as UserProfile);
+        } else {
+            setSpoc(null);
+        }
+
+        const memberUIDs = teamData.members.map(m => m.uid).filter(Boolean);
+        const allUIDs = [...new Set([teamData.leader.uid, ...memberUIDs])];
+
+        if (allUIDs.length > 0) {
+            const usersQuery = query(collection(db, 'users'), where('uid', 'in', allUIDs));
+            const usersSnapshot = await getDocs(usersQuery);
+            const usersData = usersSnapshot.docs.map(doc => ({ uid: doc.id, ...doc.data() } as UserProfile));
+            setTeamMembers(usersData);
+        } else {
+            setTeamMembers([]);
+        }
+
+    } catch (error) {
+        console.error("Error fetching team data:", error);
+        toast({ title: "Error", description: "Failed to fetch team data.", variant: "destructive" });
+    } finally {
         setLoading(false);
-        return;
-      }
-
-      const teamData = { id: teamDoc.id, ...teamDoc.data() } as Team;
-      setTeam(teamData);
-      
-      const spocsQuery = query(collection(db, "users"), where("institute", "==", teamData.institute), where("role", "==", "spoc"), where("spocStatus", "==", "approved"));
-      const unsubscribeSpoc = onSnapshot(spocsQuery, (snapshot) => {
-          if (!snapshot.empty) {
-              setSpoc(snapshot.docs[0].data() as UserProfile);
-          } else {
-              setSpoc(null);
-          }
-      });
-
-      const memberUIDs = teamData.members.map(m => m.uid).filter(Boolean);
-      const allUIDs = [...new Set([teamData.leader.uid, ...memberUIDs])];
-      
-      const memberUnsubscribers: (() => void)[] = [];
-
-      allUIDs.forEach(uid => {
-        const userDocRef = doc(db, 'users', uid);
-        const unsubscribeUser = onSnapshot(userDocRef, (userDoc) => {
-          if (userDoc.exists()) {
-            const memberData = { uid: userDoc.id, ...userDoc.data() } as UserProfile;
-            setTeamMembers(prevMembers => {
-              const memberExists = prevMembers.some(m => m.uid === memberData.uid);
-              if (memberExists) {
-                return prevMembers.map(m => m.uid === memberData.uid ? memberData : m);
-              }
-              return [...prevMembers, memberData];
-            });
-          }
-        });
-        memberUnsubscribers.push(unsubscribeUser);
-      });
-      
-      setLoading(false);
-
-      return () => {
-        memberUnsubscribers.forEach(unsub => unsub());
-        unsubscribeSpoc();
-      };
-    }, (error) => {
-      console.error("Error fetching team data:", error);
-      setLoading(false);
-    });
-
-    return unsubscribeTeam;
-
-  }, [user?.teamId]);
+    }
+  }, [user?.teamId, toast]);
 
   useEffect(() => {
-    const unsubscribe = fetchTeamAndMembers();
-    return () => unsubscribe();
+    fetchTeamAndMembers();
   }, [fetchTeamAndMembers]);
   
   const sortedTeamMembers = useMemo(() => {
@@ -162,7 +144,8 @@ export default function MemberDashboard() {
         const result = await leaveTeam({ userId: user.uid });
         if (result.success) {
             toast({ title: "Success", description: result.message });
-            // The onSnapshot listener will automatically update the UI
+            setTeam(null);
+            setTeamMembers([]);
         } else {
             throw new Error(result.message);
         }
