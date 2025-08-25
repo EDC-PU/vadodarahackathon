@@ -167,9 +167,12 @@ export default function SelectProblemStatementPage() {
                                 {ps.datasetLink && (
                                     <div className="flex items-center gap-2">
                                         <Database className="h-4 w-4 text-primary shrink-0" />
-                                        <a href={ps.datasetLink} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
-                                            <strong>View Dataset</strong>
-                                        </a>
+                                        <div>
+                                            <strong>Dataset:</strong>{' '}
+                                            <a href={ps.datasetLink} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline break-all">
+                                                {ps.datasetLink}
+                                            </a>
+                                        </div>
                                     </div>
                                 )}
                             </div>
