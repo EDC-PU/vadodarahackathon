@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useEffect, useState } from "react";
@@ -169,9 +168,7 @@ export default function SelectProblemStatementPage() {
                                         <Database className="h-4 w-4 text-primary shrink-0" />
                                         <div>
                                             <strong>Dataset:</strong>{' '}
-                                            <a href={ps.datasetLink} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline break-all">
-                                                {ps.datasetLink}
-                                            </a>
+                                            <span className="break-all">{ps.datasetLink}</span>
                                         </div>
                                     </div>
                                 )}
