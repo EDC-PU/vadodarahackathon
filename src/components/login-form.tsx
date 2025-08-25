@@ -18,12 +18,14 @@ import { Card, CardContent } from "@/components/ui/card";
 import { useState } from "react";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { auth } from "@/lib/firebase";
-import { signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from "firebase/auth";
+import { auth, db } from "@/lib/firebase";
+import { signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, User as FirebaseUser } from "firebase/auth";
 import { Separator } from "./ui/separator";
 import { Chrome } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import Link from "next/link";
+import { doc, getDoc } from "firebase/firestore";
+import { UserProfile } from "@/lib/types";
 
 
 const formSchema = z.object({
@@ -45,12 +47,33 @@ export function LoginForm() {
       password: "",
     },
   });
+  
+  const checkSpocStatusAndLogin = async (firebaseUser: FirebaseUser) => {
+    const userDocRef = doc(db, "users", firebaseUser.uid);
+    const userDoc = await getDoc(userDocRef);
+
+    if (userDoc.exists()) {
+        const userProfile = userDoc.data() as UserProfile;
+        if (userProfile.role === 'spoc' && userProfile.spocStatus === 'pending') {
+            toast({
+                title: "Account Pending Approval",
+                description: "Your SPOC account is awaiting admin approval. You will be notified via email once it's approved. Please contact an administrator if you have any questions.",
+                variant: "default",
+                duration: 10000,
+            });
+            return; // Abort login
+        }
+    }
+    // If user is not a pending SPOC, or doesn't exist yet (will be created), proceed with login
+    await handleLogin(firebaseUser);
+  }
+
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
     try {
       const userCredential = await signInWithEmailAndPassword(auth, values.email, values.password);
-      await handleLogin(userCredential.user);
+      await checkSpocStatusAndLogin(userCredential.user);
     } catch (error: any) {
       console.error("Login Error:", error);
       const errorCode = error.code;
@@ -60,8 +83,8 @@ export function LoginForm() {
       if (errorCode === 'auth/user-not-found' || errorCode === 'auth/wrong-password' || errorCode === 'auth/invalid-credential') {
         errorMessage = "Invalid email or password. Please check your credentials and try again."
       } else if (errorCode === 'auth/user-disabled') {
-        errorTitle = "Account Pending Approval";
-        errorMessage = "Your SPOC account is awaiting admin approval. You will be notified via email once it's approved. Please contact an administrator if you have any questions."
+        errorTitle = "Account Disabled";
+        errorMessage = "This account has been disabled by an administrator. Please contact support for assistance."
       }
       else {
         errorMessage = error.message;
@@ -82,15 +105,15 @@ export function LoginForm() {
     const provider = new GoogleAuthProvider();
     try {
       const result = await signInWithPopup(auth, provider);
-      await handleLogin(result.user);
+      await checkSpocStatusAndLogin(result.user);
     } catch (error: any)
        {
       console.error("Google Sign-In Error:", error);
       let errorTitle = "Google Sign-In Failed";
       let errorMessage = "An unexpected error occurred.";
       if (error.code === 'auth/user-disabled') {
-        errorTitle = "Account Pending Approval";
-        errorMessage = "Your SPOC account is awaiting admin approval. You will be notified via email once it's approved. Please contact an administrator if you have any questions."
+        errorTitle = "Account Disabled";
+        errorMessage = "This account has been disabled by an administrator. Please contact support for assistance."
       } else {
         errorMessage = error.message;
       }
