@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
@@ -108,6 +109,7 @@ export function useAuth() {
     }
     
     const performRedirect = (path: string) => {
+        // Prevent redirecting if already on the target page, or if on a join page which has its own logic.
         if (pathname !== path && !pathname.startsWith('/join/')) {
             setIsNavigating(true);
             router.push(path);
@@ -161,7 +163,8 @@ export function useAuth() {
          return;
      }
      
-    // This rule is now ignored on the join page to prevent loops.
+    // A member/leader with an incomplete profile should be redirected,
+    // UNLESS they are on the join page, which handles this case specifically.
     if ((user.role === 'member' || user.role === 'leader') && !user.enrollmentNumber && !pathname.startsWith('/join/')) {
         console.log("Redirect Check: Member/Leader profile is incomplete.");
         performRedirect('/complete-profile');

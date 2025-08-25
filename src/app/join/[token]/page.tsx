@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { SignupForm } from "@/components/signup-form";
@@ -31,28 +32,28 @@ function JoinPageContent() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [processingJoin, setProcessingJoin] = useState(false);
-    const [joinCompleted, setJoinCompleted] = useState(false);
     
     const { user, loading: authLoading } = useAuth();
     const { toast } = useToast();
 
     useEffect(() => {
-        // Check if we just completed a join process from profile completion
-        const justCompletedJoin = sessionStorage.getItem('justCompletedJoin');
-        if (justCompletedJoin === 'true') {
-            sessionStorage.removeItem('justCompletedJoin');
-            // Redirect to dashboard instead of processing join again
-            router.push(user?.role === 'leader' ? '/leader' : '/member');
-            return;
-        }
-
         const processJoinRequest = async () => {
             if (!token) {
                 setError("Invalid invitation link.");
                 setLoading(false);
                 return;
             }
-            if (authLoading || processingJoin || joinCompleted) {
+
+            // This flag is set after a user completes their profile via an invite link.
+            // It prevents the join page from trying to re-process the join request.
+            const justCompletedJoin = sessionStorage.getItem('justCompletedJoin');
+            if (justCompletedJoin === 'true') {
+                sessionStorage.removeItem('justCompletedJoin');
+                router.push('/member');
+                return;
+            }
+            
+            if (authLoading) {
                 return; 
             }
 
@@ -68,16 +69,16 @@ function JoinPageContent() {
 
                 // If user is logged in, handle them
                 if (user) {
+                    if (processingJoin) return; // Prevent re-entry
+
                     // Check if user is already on a team
                     if (user.teamId) {
-                         setError("You are already on a team. To join a new team, you must first be removed from your current one.");
+                         setError("You are already on a team. To join a new team, you must first leave your current one or be removed by your leader.");
                          setLoading(false);
                          return;
                     }
                     // Check if profile is complete
                     if (!user.enrollmentNumber) {
-                        // Profile is not complete, redirect to complete it.
-                        // Store token so we can add them to team after profile completion.
                         sessionStorage.setItem('inviteToken', token);
                         toast({ title: "Profile Incomplete", description: "Please complete your profile to join the team.", variant: "default" });
                         router.push('/complete-profile');
@@ -99,52 +100,32 @@ function JoinPageContent() {
                     });
 
                     if (joinResult.success) {
-                        // Create notification for the leader
-                        const teamDocRef = doc(db, 'teams', currentTeamInfo.teamId);
-                        const teamDoc = await getDoc(teamDocRef);
-                        const leaderId = teamDoc.data()?.leader.uid;
-
-                        if(leaderId) {
-                            const newNotificationRef = doc(collection(db, 'notifications'));
-                            await setDoc(newNotificationRef, {
-                                recipientUid: leaderId,
-                                title: "New Member Joined!",
-                                message: `${user.name} has joined your team, "${currentTeamInfo.teamName}".`,
-                                read: false,
-                                createdAt: serverTimestamp(),
-                                link: '/leader'
-                            });
-                        }
-
                         toast({ title: "Success!", description: `You have joined ${currentTeamInfo.teamName}.` });
-                        setJoinCompleted(true);
                         router.push('/member');
                     } else {
                         setError(joinResult.message);
                         setProcessingJoin(false);
                     }
+                } else {
+                    setLoading(false);
                 }
                 
             } catch (err: any) {
                 console.error("Error processing join request:", err);
                 setError(err.message || "An unexpected error occurred.");
                 setProcessingJoin(false);
-            } finally {
-                // Only stop loading if user is not logged in, otherwise they get redirected.
-                if (!user) {
-                    setLoading(false);
-                }
             }
         };
 
         processJoinRequest();
-    }, [token, user, authLoading, router, toast, processingJoin, joinCompleted]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [token, user, authLoading, router, toast]);
 
     if (loading || authLoading) {
         return (
              <div className="flex flex-col items-center justify-center text-center gap-4 w-full max-w-md">
                 <Loader2 className="h-8 w-8 animate-spin" />
-                <p className="text-muted-foreground">{user ? "Joining team..." : "Loading invitation..."}</p>
+                <p className="text-muted-foreground">{user ? "Processing request..." : "Loading invitation..."}</p>
             </div>
         );
     }
@@ -205,7 +186,3 @@ export default function JoinPage() {
     </div>
   );
 }
-
-    
-
-    
