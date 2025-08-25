@@ -1,141 +1,74 @@
-
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-  
-    // Helper functions
-    function isSignedIn() {
-      return request.auth != null;
-    }
     
-    function isLeader() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'leader';
-    }
-
-    function isAdmin() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
-    }
-    
-    function isSpoc() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'spoc';
-    }
- 		function isMember() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'member';
-    }
-
-
-    function isOwner(userId) {
-      return request.auth.uid == userId;
-    }
-    
-    function isSpocForInstitute(institute) {
-       return isSpoc() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.institute == institute;
-    }
-
-    // Users Collection
-    match /users/{userId} {
-      // Anyone can create their own user document during signup
-      allow create: if isSignedIn();
-      
-      // A user can read another user's document if:
-      // 1. They are the owner of the document.
-      // 2. They are an admin.
-      // 3. They are a SPOC.
-      // 4. They are on the same team.
-      allow read: if isSignedIn() && 
-                    (isOwner(userId) || 
-                     isAdmin() || 
-                     isSpoc() ||
-                     (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.teamId != null &&
-                      get(/databases/$(database)/documents/users/$(request.auth.uid)).data.teamId == get(/databases/$(database)/documents/users/$(userId)).data.teamId)
-                    );
-      
-      // Users can only update their own document
-      // Admins and SPOCs can update any user document from their institute
-      allow update: if isSignedIn() && (isOwner(userId) || isAdmin() || isSpocForInstitute(get(/databases/$(database)/documents/users/$(userId)).data.institute));
-      
-      // Only admins can delete users
-      allow delete: if isAdmin();
-    }
-    
-    // Teams Collection
-    match /teams/{teamId} {
-        // Any signed-in user can read team data.
-        allow read: if isSignedIn();
-        
-        // Creating a team is handled by a Genkit flow, but we allow leaders to create.
-        allow create: if isLeader();
-
-        // A team can be updated by its leader, an admin, or a SPOC of the institute.
-        // Joining a team is handled by a separate flow with its own security.
-        allow update: if isSignedIn() && (
-                        isLeader() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.teamId == teamId ||
-                        isAdmin() || isMember ||
-                        isSpocForInstitute(resource.data.institute)
-                      );
-
-        // Only admins or the institute's SPOC can delete a team
-        allow delete: if isSignedIn() && (isAdmin() || isSpocForInstitute(resource.data.institute));
-    }
-    
-    // Team Invites Collection (Permanent Links)
-    match /teamInvites/{inviteId} {
-        // Anyone with the link can read the invite details
-        allow read: if true;
-        
-        // Only team leaders, SPOCs, or admins can create/update invites (via flows)
-        allow write: if isSignedIn() && (isLeader() || isSpoc() || isAdmin());
-    }
-
-    // Problem Statements
-    match /problemStatements/{psId} {
-        allow read: if isSignedIn();
-        allow write: if isAdmin();
-    }
-    
-    // Config Collection (e.g., for event settings)
+    // Allow public read for specific configuration and problem statements
     match /config/{docId} {
-        // Everyone can read the configuration
+      allow read: if true;
+    }
+
+    match /problemStatements/{statementId} {
+      allow read: if true;
+    }
+
+    match /institutes/{instituteId} {
+      allow read: if true;
+    }
+
+    match /departments/{departmentId} {
         allow read: if true;
-        
-        // Only admins can change the configuration
-        allow write: if isAdmin();
+    }
+
+    // Users can read their own profile, admins and SPOCs can also read profiles within their institute
+    match /users/{userId} {
+      allow read: if request.auth != null && (request.auth.uid == userId 
+        || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' 
+        || (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'spoc' 
+            && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.institute == resource.data.institute));
+      allow update, write: if request.auth != null && request.auth.uid == userId;
     }
     
-    // Announcements Collection
+    // Team invitations can be read by the invited user
+    match /teamInvites/{inviteId} {
+      allow read: if request.auth != null;
+    }
+
+    // Team documents can be read by their members or an admin/SPOC
+    match /teams/{teamId} {
+      allow read: if request.auth != null && (
+        request.auth.uid == resource.data.leader.uid 
+        || resource.data.members.exists(member, member.uid == request.auth.uid)
+        || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'
+        || (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'spoc'
+            && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.institute == resource.data.institute)
+      );
+      allow update: if request.auth != null && (
+        request.auth.uid == resource.data.leader.uid
+        || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'
+        || (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'spoc'
+            && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.institute == resource.data.institute)
+      );
+    }
+    
+    // Announcements can be read by anyone, but only written by admins/spocs
     match /announcements/{announcementId} {
-        // Everyone can read announcements
         allow read: if true;
-        
-        // Only admins and SPOCs (for their institute) can create/delete
-        allow create: if isAdmin() || (isSpoc() && request.resource.data.institute == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.institute);
-        allow delete: if isAdmin() || isSpoc();
+        allow create, delete: if request.auth != null && (
+            get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'
+            || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'spoc'
+        );
     }
 
-    // Notifications Collection
+    // Notifications can only be accessed by the recipient
     match /notifications/{notificationId} {
-        // Users can read and update (mark as read) their own notifications
-        allow read, update: if isSignedIn() && request.resource.data.recipientUid == request.auth.uid;
-        // Creation is handled by server-side flows
-        allow create: if isSignedIn(); 
+        allow read, update, delete: if request.auth != null && request.auth.uid == resource.data.recipientUid;
+        allow create: if request.auth != null;
     }
 
-    // Institutes Collection
-    match /institutes/{instituteId} {
-        // All users (including unauthenticated ones for registration) can read the list of institutes
-        allow read: if true;
-        // Only admins can create, update, or delete institutes
-        allow write: if isAdmin();
-    }
-
-    // Departments Collection
-    match /departments/{instituteName} {
-        // All users (including unauthenticated ones for registration) can read department lists
-        allow read: if true;
-        // Admins can write to any department list
-        // SPOCs can write to their own institute's department list
-        allow write: if isAdmin() || isSpocForInstitute(instituteName);
+    // Admins have super access
+    match /{document=**} {
+      allow read, write: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
   }
 }
