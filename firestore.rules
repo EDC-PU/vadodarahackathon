@@ -61,6 +61,8 @@ service cloud.firestore {
         allow delete: if isSignedIn() && (isAdmin() || isSpocForInstitute(resource.data.institute));
     }
     
+
+
     // Team Invites Collection (Permanent Links)
     match /teamInvites/{inviteId} {
         // Anyone with the link can read the invite details
@@ -97,7 +99,7 @@ service cloud.firestore {
         allow create: if isSignedIn(); 
     }
 
-    // Institutes Collection
+   // Institutes Collection
     match /institutes/{instituteId} {
         // All users (including unauthenticated ones for registration) can read the list of institutes
         allow read: if true;
