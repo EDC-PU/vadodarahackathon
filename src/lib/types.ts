@@ -248,6 +248,8 @@ export type CreateSpocOutput = z.infer<typeof CreateSpocOutputSchema>;
 export const ExportTeamsInputSchema = z.object({
     institute: z.string().optional().describe("Filter teams by institute. 'All Institutes' for no filter."),
     category: z.string().optional().describe("Filter teams by category. 'All Categories' for no filter."),
+    status: z.string().optional().describe("Filter teams by registration status. 'All Statuses' for no filter."),
+    problemStatementIds: z.array(z.string()).optional().describe("Filter teams by selected problem statement IDs."),
 });
 export type ExportTeamsInput = z.infer<typeof ExportTeamsInputSchema>;
 

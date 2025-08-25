@@ -190,6 +190,8 @@ function AllTeamsContent() {
         const result = await exportTeams({
             institute: instituteFilter,
             category: categoryFilter,
+            status: statusFilter,
+            problemStatementIds: selectedProblemStatements
         });
         if (result.success && result.fileContent) {
             const blob = new Blob([Buffer.from(result.fileContent, 'base64')], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });

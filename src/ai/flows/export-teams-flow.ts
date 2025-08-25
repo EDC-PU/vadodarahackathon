@@ -21,6 +21,8 @@ export async function exportTeams(input: ExportTeamsInput): Promise<ExportTeamsO
 // Helper to get all user profiles in one go, handling chunks
 async function getAllUserProfiles(db: FirebaseFirestore.Firestore, userIds: string[]): Promise<Map<string, UserProfile>> {
     const userProfiles = new Map<string, UserProfile>();
+    if (userIds.length === 0) return userProfiles;
+
     const chunkSize = 30; // Firestore 'in' query limit
     for (let i = 0; i < userIds.length; i += chunkSize) {
         const chunk = userIds.slice(i, i + chunkSize);
@@ -45,8 +47,8 @@ const exportTeamsFlow = ai.defineFlow(
         inputSchema: ExportTeamsInputSchema,
         outputSchema: ExportTeamsOutputSchema,
     },
-    async ({ institute, category }) => {
-        console.log("exportTeamsFlow (merged version) started with filters:", { institute, category });
+    async ({ institute, category, status, problemStatementIds }) => {
+        console.log("exportTeamsFlow (merged version) started with filters:", { institute, category, status, problemStatementIds });
         const db = getAdminDb();
         if (!db) {
             return { success: false, message: "Database connection failed." };
@@ -62,14 +64,12 @@ const exportTeamsFlow = ai.defineFlow(
             if (category && category !== 'All Categories') {
                 teamsQuery = teamsQuery.where('category', '==', category);
             }
+            if (problemStatementIds && problemStatementIds.length > 0) {
+                teamsQuery = teamsQuery.where('problemStatementId', 'in', problemStatementIds);
+            }
 
             const teamsSnapshot = await teamsQuery.get();
-            const teamsData = teamsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Team));
-
-            if (teamsData.length === 0) {
-                return { success: false, message: "No teams found for the selected filters." };
-            }
-            console.log(`Found ${teamsData.length} teams.`);
+            let teamsData = teamsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Team));
 
             const problemStatementsSnapshot = await db.collection('problemStatements').get();
             const problemStatementsData = new Map(problemStatementsSnapshot.docs.map(doc => [doc.id, doc.data() as ProblemStatement]));
@@ -81,8 +81,34 @@ const exportTeamsFlow = ai.defineFlow(
                     if (member.uid) allUserIds.add(member.uid);
                 });
             });
-
             const usersData = await getAllUserProfiles(db, Array.from(allUserIds));
+
+            // Status Filter (post-query)
+            if (status && status !== 'All Statuses') {
+                teamsData = teamsData.filter(team => {
+                    const memberCount = (team.members?.length || 0) + 1;
+                    let femaleCount = 0;
+                    
+                    const leaderProfile = usersData.get(team.leader.uid);
+                    if (leaderProfile?.gender === 'F') femaleCount++;
+                    
+                    team.members.forEach(m => {
+                        const memberProfile = usersData.get(m.uid);
+                        if (memberProfile?.gender === 'F') femaleCount++;
+                    });
+                    
+                    const isRegistered = memberCount === 6 && femaleCount >= 1;
+                    return status === 'Registered' ? isRegistered : !isRegistered;
+                });
+            }
+
+
+            if (teamsData.length === 0) {
+                return { success: false, message: "No teams found for the selected filters." };
+            }
+            console.log(`Found ${teamsData.length} teams after filtering.`);
+
+
             console.log(`Fetched ${usersData.size} users and ${problemStatementsData.size} problem statements.`);
 
             // 2. Load ExcelJS Template
