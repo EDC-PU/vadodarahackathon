@@ -423,7 +423,7 @@ export default function MemberDashboard() {
                       </div>
                     </>
                   ) : (
-                    <p className="text-muted-foreground">SPOC details are not available yet.</p>
+                    <p className="text-muted-foreground">SPOC details are not available yet. An SPOC for your institute will be assigned soon.</p>
                   )}
                 </CardContent>
               </Card>
