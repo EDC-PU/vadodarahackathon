@@ -431,7 +431,7 @@ export default function LandingPage({ spocDetails, announcements }: LandingPageP
                         </CardContent>
                     </Card>
                    <Card className="glass-card p-6 text-center transform hover:-translate-y-2 transition-transform duration-300">
-                        <Calendar className="h-10 w-10 text-primary mx-auto mb-4" />
+                   <Trophy className="h-10 w-10 text-primary mx-auto mb-4" />
                         <CardTitle className="text-xl mt-2">Intra-Institute Round</CardTitle>
                         <CardContent className="mt-2 text-foreground/80 p-0">
                             <p>2nd, 3rd &amp; 4th September, 2025</p>
