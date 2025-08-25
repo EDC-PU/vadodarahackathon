@@ -53,7 +53,8 @@ service cloud.firestore {
         
         // Creating a team is handled by a Genkit flow, so no direct client creation
         allow create: if isLeader();
-        
+              allow create: if isSignedIn();
+
         // Only the leader of the team, an admin, or the institute's SPOC can update the team
         allow update: if isSignedIn() && (isLeader() && resource.data.leader.uid == request.auth.uid || isAdmin() || isSpocForInstitute(resource.data.institute));
         
@@ -68,6 +69,12 @@ service cloud.firestore {
         
         // Only team leaders, SPOCs, or admins can create/update invites (via flows)
         allow write: if isSignedIn() && (isLeader() || isSpoc() || isAdmin());
+    }
+
+    // Problem Statements
+    match /problemStatements/{psId} {
+        allow read: if isSignedIn();
+        allow write: if isRole('admin');
     }
     
     // Config Collection (e.g., for event settings)

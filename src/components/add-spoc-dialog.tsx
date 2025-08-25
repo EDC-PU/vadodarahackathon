@@ -23,7 +23,7 @@ import { useToast } from "@/hooks/use-toast";
 import { createSpoc, CreateSpocInput } from "@/ai/flows/create-spoc-flow";
 import { RadioGroup, RadioGroupItem } from "./ui/radio-group";
 import { db } from "@/lib/firebase";
-import { collection, onSnapshot, orderBy } from "firebase/firestore";
+import { collection, onSnapshot, query, orderBy } from "firebase/firestore";
 
 interface AddSpocDialogProps {
   isOpen: boolean;
