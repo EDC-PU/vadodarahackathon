@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { AlertCircle } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface BulkUploadPreviewDialogProps {
   isOpen: boolean;
@@ -53,7 +54,10 @@ export function BulkUploadPreviewDialog({ isOpen, onOpenChange, data, onConfirm 
                 {data.map((row, rowIndex) => (
                   <TableRow key={rowIndex}>
                     {headers.map((header) => (
-                      <TableCell key={`${rowIndex}-${header}`} className="text-xs">
+                      <TableCell 
+                        key={`${rowIndex}-${header}`} 
+                        className={cn("text-xs", header.toLowerCase() === 'description' && "whitespace-pre-wrap")}
+                      >
                         {row[header]?.toString() || ''}
                       </TableCell>
                     ))}
