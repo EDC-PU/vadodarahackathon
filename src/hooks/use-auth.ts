@@ -144,6 +144,12 @@ export function useAuth() {
         return;
      }
 
+     if (user.role === 'spoc' && user.spocStatus === 'pending') {
+        console.log("Redirect Check: SPOC is pending approval.");
+        performRedirect('/complete-spoc-profile');
+        return;
+    }
+
      if (user.role === 'leader' && !user.teamId) {
          console.log("Redirect Check: User is a leader but has no team.");
          performRedirect('/create-team');
