@@ -54,7 +54,7 @@ async function sendSpocCredentialsEmail(name: string, email: string, password: s
     });
 
     const mailOptions = {
-        from: process.env.GMAIL_EMAIL,
+        from: `"Vadodara Hackathon 6.0 Team" <${process.env.GMAIL_EMAIL}>`,
         to: email,
         subject: `Your SPOC Account for the Vadodara Hackathon Portal`,
         html: emailHtml,
