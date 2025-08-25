@@ -56,8 +56,8 @@ export default function MemberDashboard() {
     }
     
     setLoading(true);
-
     const teamDocRef = doc(db, 'teams', user.teamId);
+
     const unsubscribeTeam = onSnapshot(teamDocRef, async (teamDoc) => {
       if (!teamDoc.exists()) {
         setTeam(null);
@@ -80,22 +80,23 @@ export default function MemberDashboard() {
       const memberUIDs = teamData.members.map(m => m.uid).filter(Boolean);
       const allUIDs = [...new Set([teamData.leader.uid, ...memberUIDs])];
       
-      if (allUIDs.length > 0) {
-        const usersQuery = query(collection(db, 'users'), where('uid', 'in', allUIDs));
-        const unsubscribeMembers = onSnapshot(usersQuery, (usersSnapshot) => {
-          const usersData = usersSnapshot.docs.map(doc => ({ uid: doc.id, ...doc.data() } as UserProfile));
-          setTeamMembers(usersData);
-          setLoading(false);
-        }, (error) => {
-          console.error("Error fetching team members:", error);
-          toast({ title: "Error", description: "Failed to fetch team member details.", variant: "destructive" });
-          setLoading(false);
+      const unsubscribers = allUIDs.map(uid => {
+        const userDocRef = doc(db, 'users', uid);
+        return onSnapshot(userDocRef, (userDoc) => {
+          if (userDoc.exists()) {
+            const userProfile = { uid: userDoc.id, ...userDoc.data() } as UserProfile;
+            setTeamMembers(prevMembers => {
+              const otherMembers = prevMembers.filter(m => m.uid !== uid);
+              return [...otherMembers, userProfile];
+            });
+          }
         });
-        return () => unsubscribeMembers();
-      } else {
-        setTeamMembers([]);
-        setLoading(false);
-      }
+      });
+      
+      setLoading(false);
+      
+      return () => unsubscribers.forEach(unsub => unsub());
+
     }, (error) => {
       console.error("Error fetching team data:", error);
       toast({ title: "Error", description: "Failed to fetch team data.", variant: "destructive" });
@@ -111,8 +112,8 @@ export default function MemberDashboard() {
     
     if (sortConfig !== null) {
       members.sort((a, b) => {
-        const aValue = a[sortConfig.key] ?? '';
-        const bValue = b[sortConfig.key] ?? '';
+        const aValue = a[sortConfig.key as keyof UserProfile] ?? '';
+        const bValue = b[sortConfig.key as keyof UserProfile] ?? '';
         if (aValue < bValue) {
           return sortConfig.direction === 'asc' ? -1 : 1;
         }

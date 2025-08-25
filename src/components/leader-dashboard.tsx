@@ -115,51 +115,52 @@ export default function LeaderDashboard() {
 
   useEffect(() => {
     if (!user?.teamId) {
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
+    const teamDocRef = doc(db, 'teams', user.teamId);
+
+    const unsubscribeTeam = onSnapshot(teamDocRef, (teamDoc) => {
+      if (!teamDoc.exists()) {
+        setTeam(null);
+        setTeamMembers([]);
         setLoading(false);
         return;
-    }
-    
-    setLoading(true);
+      }
 
-    const teamDocRef = doc(db, 'teams', user.teamId);
-    const unsubscribeTeam = onSnapshot(teamDocRef, (teamDoc) => {
-        if (!teamDoc.exists()) {
-            setTeam(null);
-            setTeamMembers([]);
-            setLoading(false);
-            return;
-        }
+      const teamData = { id: teamDoc.id, ...teamDoc.data() } as Team;
+      setTeam(teamData);
 
-        const teamData = { id: teamDoc.id, ...teamDoc.data() } as Team;
-        setTeam(teamData);
-
-        const memberUIDs = teamData.members.map(m => m.uid).filter(Boolean);
-        const allUIDs = [...new Set([teamData.leader.uid, ...memberUIDs])];
-        
-        if (allUIDs.length > 0) {
-            const usersQuery = query(collection(db, 'users'), where('uid', 'in', allUIDs));
-            const unsubscribeMembers = onSnapshot(usersQuery, (usersSnapshot) => {
-                 const usersData = usersSnapshot.docs.map(doc => ({ uid: doc.id, ...doc.data() } as UserProfile));
-                 setTeamMembers(usersData);
-                 setLoading(false);
-            }, (error) => {
-                console.error("Error fetching team members:", error);
-                toast({ title: "Error", description: "Failed to fetch team member details.", variant: "destructive" });
-                setLoading(false);
+      const memberUIDs = teamData.members.map(m => m.uid).filter(Boolean);
+      const allUIDs = [...new Set([teamData.leader.uid, ...memberUIDs])];
+      
+      const unsubscribers = allUIDs.map(uid => {
+        const userDocRef = doc(db, 'users', uid);
+        return onSnapshot(userDocRef, (userDoc) => {
+          if (userDoc.exists()) {
+            const userProfile = { uid: userDoc.id, ...userDoc.data() } as UserProfile;
+            setTeamMembers(prevMembers => {
+              const otherMembers = prevMembers.filter(m => m.uid !== uid);
+              return [...otherMembers, userProfile];
             });
-            return () => unsubscribeMembers();
-        } else {
-            setTeamMembers([user as UserProfile]); // If no members, at least show the leader
-            setLoading(false);
-        }
+          }
+        });
+      });
+      
+      setLoading(false);
+
+      return () => unsubscribers.forEach(unsub => unsub());
+
     }, (error) => {
-        console.error("Error fetching team data:", error);
-        toast({ title: "Error", description: "Failed to fetch team data.", variant: "destructive" });
-        setLoading(false);
+      console.error("Error fetching team data:", error);
+      toast({ title: "Error", description: "Failed to fetch team data.", variant: "destructive" });
+      setLoading(false);
     });
 
     return () => unsubscribeTeam();
-  }, [user, toast]);
+  }, [user?.teamId, toast]);
   
   useEffect(() => {
     if (!team) return;
@@ -289,14 +290,14 @@ export default function LeaderDashboard() {
 
   const teamValidation = {
     memberCount: {
-        current: (team?.members?.length || 0) + 1,
+        current: team.members.length + 1,
         required: 6,
-        isMet: ((team?.members?.length || 0) + 1) === 6,
+        isMet: team.members.length + 1 === 6,
     },
     femaleCount: {
-        current: (team?.members?.filter(m => m.gender === "F").length || 0) + (user?.gender === 'F' ? 1 : 0),
+        current: team.members.filter(m => m.gender === "F").length + (teamMembers.find(m => m.uid === team.leader.uid)?.gender === 'F' ? 1 : 0),
         required: 1,
-        isMet: ((team?.members?.filter(m => m.gender === "F").length || 0) + (user?.gender === 'F' ? 1 : 0)) >= 1,
+        isMet: (team.members.filter(m => m.gender === "F").length + (teamMembers.find(m => m.uid === team.leader.uid)?.gender === 'F' ? 1 : 0)) >= 1,
     },
     isRegistered() {
       return this.memberCount.isMet && this.femaleCount.isMet;
