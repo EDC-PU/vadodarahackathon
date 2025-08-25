@@ -289,19 +289,21 @@ export default function LeaderDashboard() {
 
   const teamValidation = {
     memberCount: {
-        current: teamMembers.length,
+        current: (team?.members?.length || 0) + 1,
         required: 6,
-        isMet: teamMembers.length === 6,
+        isMet: ((team?.members?.length || 0) + 1) === 6,
     },
     femaleCount: {
-        current: teamMembers.filter(m => m.gender === "F").length,
+        current: (team?.members?.filter(m => m.gender === "F").length || 0) + (user?.gender === 'F' ? 1 : 0),
         required: 1,
-        isMet: teamMembers.filter(m => m.gender === "F").length >= 1,
+        isMet: ((team?.members?.filter(m => m.gender === "F").length || 0) + (user?.gender === 'F' ? 1 : 0)) >= 1,
     },
-    isRegistered: teamMembers.length === 6 && teamMembers.filter(m => m.gender === "F").length >= 1,
-  }
+    isRegistered() {
+      return this.memberCount.isMet && this.femaleCount.isMet;
+    }
+  };
 
-  const canAddMoreMembers = teamMembers.length < 6;
+  const canAddMoreMembers = teamValidation.memberCount.current < 6;
 
   return (
     <div className="p-4 sm:p-6 lg:p-8">
@@ -312,7 +314,7 @@ export default function LeaderDashboard() {
             </div>
             <div className="flex items-center gap-2">
                 <span className="text-sm text-muted-foreground">Status: </span>
-                {teamValidation.isRegistered ? (
+                {teamValidation.isRegistered() ? (
                     <Badge variant="default" className="bg-green-600 hover:bg-green-600">Registered</Badge>
                 ) : (
                     <Badge variant="destructive">Registration Pending</Badge>
@@ -324,7 +326,7 @@ export default function LeaderDashboard() {
             <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                     <Users2 />
-                    Team Members ({teamMembers.length} / 6)
+                    Team Members ({teamValidation.memberCount.current} / 6)
                     {team.teamNumber && <Badge variant="secondary" className="ml-auto">{`Team No: ${team.teamNumber}`}</Badge>}
                 </CardTitle>
                 <CardDescription>Your current team roster. Invite members using the link below.</CardDescription>
@@ -497,7 +499,7 @@ export default function LeaderDashboard() {
                         <CardDescription>Check if your team meets the hackathon requirements.</CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-4">
-                        {teamValidation.isRegistered ? (
+                        {teamValidation.isRegistered() ? (
                              <Alert variant="default" className="border-green-500">
                                 <CheckCircle className="h-4 w-4 text-green-500"/>
                                 <AlertTitle>Team is Officially Registered!</AlertTitle>
@@ -517,7 +519,7 @@ export default function LeaderDashboard() {
                             <Alert variant="default" className="border-green-500/50 bg-transparent text-foreground">
                                 <CheckCircle className="h-4 w-4 text-green-500"/>
                                 <AlertTitle>Team Size Correct</AlertTitle>
-                                <AlertDescription>You have 6 members in your team. Great job!</AlertDescription>
+                                <AlertDescription>You have {teamValidation.memberCount.current} members in your team. Great job!</AlertDescription>
                             </Alert>
                         ) : (
                             <Alert variant="destructive" className="bg-transparent text-foreground">
