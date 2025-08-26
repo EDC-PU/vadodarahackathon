@@ -86,14 +86,21 @@ export default function ManageSpocsPage() {
                         <Loader2 className="h-8 w-8 animate-spin" />
                     </div>
                 ) : spocs.length > 0 ? (
-                  <ul className="space-y-3">
+                  <ul className="space-y-4">
                     {spocs.map(spoc => (
-                        <li key={spoc.uid} className="p-4 border rounded-md flex justify-between items-center">
-                            <div>
-                                <p className="font-semibold text-lg">{spoc.name}</p>
-                                <p className="text-sm text-muted-foreground">{spoc.email}</p>
-                                <p className="text-sm text-muted-foreground">{spoc.contactNumber || 'N/A'}</p>
-                                <p className="text-sm text-muted-foreground">{spoc.institute}</p>
+                        <li key={spoc.uid} className="p-4 border rounded-md flex justify-between items-start">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-2 flex-1">
+                                <div className="space-y-1">
+                                    <p className="font-semibold text-lg">{spoc.name}</p>
+                                    <p className="text-sm text-muted-foreground">{spoc.email}</p>
+                                    <p className="text-sm text-muted-foreground">{spoc.contactNumber || 'N/A'}</p>
+                                    <p className="text-sm text-muted-foreground font-medium">{spoc.institute}</p>
+                                </div>
+                                 <div className="space-y-1 text-sm text-muted-foreground">
+                                    <p><strong>AICTE No:</strong> {spoc.aicteApplicationNumber || 'N/A'}</p>
+                                    <p><strong>Principal:</strong> {spoc.principalInitial || ''} {spoc.principalName || 'N/A'}</p>
+                                    
+                                </div>
                             </div>
                             <Badge variant={getStatusVariant(spoc.spocStatus)} className={spoc.spocStatus === 'approved' ? 'bg-green-600' : ''}>
                               {spoc.spocStatus ? spoc.spocStatus.charAt(0).toUpperCase() + spoc.spocStatus.slice(1) : 'N/A'}

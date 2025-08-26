@@ -26,6 +26,9 @@ export interface UserProfile {
       seconds: number,
       nanoseconds: number,
   } | null;
+  aicteApplicationNumber?: string;
+  principalName?: string;
+  principalInitial?: "Dr." | "Prof.";
 }
 
 export interface Invitation {

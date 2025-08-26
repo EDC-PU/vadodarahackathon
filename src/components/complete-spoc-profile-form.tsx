@@ -40,6 +40,9 @@ const formSchema = z.object({
   institute: z.string({ required_error: "Please select an institute." }).min(1, "Please select an institute."),
   department: z.string().min(2, { message: "Department is required." }),
   contactNumber: z.string().regex(/^\d{10}$/, { message: "Please enter a valid 10-digit phone number." }),
+  aicteApplicationNumber: z.string().min(1, { message: "AICTE Application Number is required." }),
+  principalName: z.string().min(2, { message: "Principal's name is required." }),
+  principalInitial: z.enum(["Dr.", "Prof."], { required_error: "Please select the principal's initial." }),
 });
 
 export function CompleteSpocProfileForm() {
@@ -58,6 +61,9 @@ export function CompleteSpocProfileForm() {
       misId: "",
       department: "",
       gender: undefined,
+      aicteApplicationNumber: "",
+      principalName: "",
+      principalInitial: undefined,
     },
   });
 
@@ -84,6 +90,9 @@ export function CompleteSpocProfileForm() {
               misId: user.misId || "",
               department: user.department || "",
               gender: user.gender || undefined,
+              aicteApplicationNumber: user.aicteApplicationNumber || "",
+              principalName: user.principalName || "",
+              principalInitial: user.principalInitial || undefined,
           })
       }
   }, [user, form]);
@@ -125,7 +134,10 @@ export function CompleteSpocProfileForm() {
             institute: values.institute,
             department: values.department,
             contactNumber: values.contactNumber,
-            spocStatus: 'pending', 
+            spocStatus: 'pending',
+            aicteApplicationNumber: values.aicteApplicationNumber,
+            principalName: values.principalName,
+            principalInitial: values.principalInitial,
         };
         await updateDoc(userDocRef, updatedProfileData);
 
@@ -292,7 +304,55 @@ export function CompleteSpocProfileForm() {
                     )}
                 />
             </div>
-            
+             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                 <FormField
+                    control={form.control}
+                    name="principalName"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>Principal's Name</FormLabel>
+                        <FormControl>
+                            <Input placeholder="Enter principal's full name" {...field} disabled={isLoading}/>
+                        </FormControl>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                />
+                 <FormField
+                    control={form.control}
+                    name="principalInitial"
+                    render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Principal's Initial</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value} disabled={isLoading}>
+                        <FormControl>
+                            <SelectTrigger>
+                            <SelectValue placeholder="Select an initial" />
+                            </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                            <SelectItem value="Dr.">Dr.</SelectItem>
+                            <SelectItem value="Prof.">Prof.</SelectItem>
+                        </SelectContent>
+                        </Select>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
+            </div>
+             <FormField
+                    control={form.control}
+                    name="aicteApplicationNumber"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>AICTE Application Number</FormLabel>
+                        <FormControl>
+                            <Input placeholder="Enter AICTE application number" {...field} disabled={isLoading}/>
+                        </FormControl>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                />
             <FormField
             control={form.control}
             name="contactNumber"
