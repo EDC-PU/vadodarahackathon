@@ -221,7 +221,7 @@ export default function SpocEvaluationPage() {
                           <Button
                             variant={"outline"}
                             className={cn(
-                              "w-[300px] justify-start text-left font-normal",
+                              "w-full md:w-auto md:max-w-md justify-start text-left font-normal",
                               !field.value?.length && "text-muted-foreground"
                             )}
                           >
