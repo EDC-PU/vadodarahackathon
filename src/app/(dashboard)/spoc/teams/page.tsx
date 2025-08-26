@@ -4,7 +4,7 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Loader2, AlertCircle, Save, Pencil, X, Trash2, Users, User, MinusCircle, ArrowUpDown, Link as LinkIcon, Copy } from "lucide-react";
+import { Loader2, AlertCircle, Save, Pencil, X, Trash2, Users, User, MinusCircle, ArrowUpDown, Link as LinkIcon, Copy, RefreshCw } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useEffect, useState, useMemo, useCallback } from "react";
 import { auth, db } from "@/lib/firebase";
@@ -523,7 +523,7 @@ export default function SpocTeamsPage() {
                             </CardHeader>
                             <CardContent className="p-0 space-y-3">
                               {team.allMembers.map(member => (
-                                <div key={member.uid} className="text-sm border-t pt-3">
+                                <div key={member.uid || member.email} className="text-sm border-t pt-3">
                                   <div className="flex justify-between items-center">
                                       <p className="font-semibold">{member.name} {member.isLeader && <span className="text-xs font-normal text-primary">(Leader)</span>}</p>
                                       {!member.isLeader && (
