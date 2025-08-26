@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -39,7 +40,6 @@ import { manageTeamBySpoc } from "@/ai/flows/manage-team-by-spoc-flow";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { getAdminDb } from "@/lib/firebase-admin";
 import { Badge } from "@/components/ui/badge";
 
 type CategoryFilter = ProblemStatementCategory | "All Categories";
@@ -743,4 +743,5 @@ export default function AllTeamsPage() {
     
 
     
+
 
