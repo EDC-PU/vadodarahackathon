@@ -362,7 +362,7 @@ export function CompleteSpocProfileForm() {
                     name="aicteApplicationNumber"
                     render={({ field }) => (
                         <FormItem>
-                        <FormLabel>AICTE Application Number</FormLabel>
+                        <FormLabel>AICTE Application Number of Institute</FormLabel>
                         <FormControl>
                             <Input placeholder="Enter AICTE application number" {...field} disabled={isLoading}/>
                         </FormControl>
