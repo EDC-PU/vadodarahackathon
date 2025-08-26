@@ -40,6 +40,7 @@ import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { getAdminDb } from "@/lib/firebase-admin";
+import { Badge } from "@/components/ui/badge";
 
 type CategoryFilter = ProblemStatementCategory | "All Categories";
 type StatusFilter = "All Statuses" | "Registered" | "Pending";
@@ -240,9 +241,24 @@ function AllTeamsContent() {
 
   const handleBulkGenerateNomination = async () => {
     if (selectedTeamIds.length === 0) return;
+    
+    const nominatedSelectedTeams = selectedTeamIds.filter(teamId => {
+        const team = allTeams.find(t => t.id === teamId);
+        return team?.isNominated;
+    });
+
+    if (nominatedSelectedTeams.length === 0) {
+        toast({
+            title: "No Nominated Teams Selected",
+            description: "You can only generate forms for teams that have been nominated by their SPOC.",
+            variant: "destructive"
+        });
+        return;
+    }
+
     setIsBulkNominating(true);
     try {
-        const result = await generateBulkNomination({ teamIds: selectedTeamIds });
+        const result = await generateBulkNomination({ teamIds: nominatedSelectedTeams });
         if (result.success && result.fileContent) {
             const blob = new Blob([Buffer.from(result.fileContent, 'base64')], { type: 'application/zip' });
             const url = window.URL.createObjectURL(blob);
@@ -253,7 +269,7 @@ function AllTeamsContent() {
             a.click();
             window.URL.revokeObjectURL(url);
             a.remove();
-            toast({ title: "Success", description: result.message });
+            toast({ title: "Success", description: `${result.message} Included ${nominatedSelectedTeams.length} nominated team(s).` });
             setSelectedTeamIds([]);
         } else {
             toast({ title: "Generation Failed", description: result.message || "Could not generate the zip file.", variant: "destructive" });
@@ -382,6 +398,7 @@ function AllTeamsContent() {
                 ...member,
                 teamName: team.name,
                 teamId: team.id,
+                isNominated: team.isNominated,
                 problemStatementId: team.problemStatementId || 'Not Selected',
                 isFirstRow: memberIndex === 0,
                 rowSpan: team.allMembers.length,
@@ -586,11 +603,14 @@ function AllTeamsContent() {
                               )}
                               {row.isFirstRow && (
                                   <TableCell rowSpan={row.rowSpan} className="font-medium align-top">
-                                      <div className="flex items-center gap-2 group">
-                                          <span>{row.teamName}</span>
-                                          <Button size="icon" variant="ghost" className="h-7 w-7 opacity-0 group-hover:opacity-100" onClick={() => handleEditTeamName(row.teamId)}>
-                                              <Pencil className="h-4 w-4 text-muted-foreground"/>
-                                          </Button>
+                                      <div className="flex flex-col gap-1 items-start">
+                                        <div className="flex items-center gap-2 group">
+                                            <span>{row.teamName}</span>
+                                            <Button size="icon" variant="ghost" className="h-7 w-7 opacity-0 group-hover:opacity-100" onClick={() => handleEditTeamName(row.teamId)}>
+                                                <Pencil className="h-4 w-4 text-muted-foreground"/>
+                                            </Button>
+                                        </div>
+                                        {row.isNominated && <Badge className="bg-green-600 hover:bg-green-700">Nominated</Badge>}
                                       </div>
                                   </TableCell>
                               )}
@@ -618,7 +638,7 @@ function AllTeamsContent() {
                               <TableCell className="text-right">
                                   {row.isFirstRow ? (
                                     <div className="flex gap-1 justify-end">
-                                      <Button variant="outline" size="sm" onClick={() => handleGenerateNomination(row.teamId)} disabled={isNominating === row.teamId}>
+                                      <Button variant="outline" size="sm" onClick={() => handleGenerateNomination(row.teamId)} disabled={isNominating === row.teamId || !row.isNominated}>
                                           {isNominating === row.teamId ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <FileText className="mr-2 h-4 w-4"/>}
                                           Nomination
                                       </Button>
