@@ -6,7 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Loader2, Download, Save, Pencil, X, Trash2, MinusCircle, ChevronDown, ArrowUpDown, FileText, RefreshCw } from "lucide-react";
 import { useEffect, useState, useMemo, useCallback, Suspense } from "react";
 import { db } from "@/lib/firebase";
-import { collection, onSnapshot, doc, updateDoc, query, orderBy } from "firebase/firestore";
+import { collection, onSnapshot, doc, updateDoc, query, orderBy, getDocs } from "firebase/firestore";
 import { Team, UserProfile, ProblemStatementCategory, TeamMember, ProblemStatement } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -685,5 +685,6 @@ export default function AllTeamsPage() {
         </Suspense>
     )
 }
+    
 
     
