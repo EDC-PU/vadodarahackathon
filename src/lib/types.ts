@@ -103,11 +103,17 @@ export interface Team {
   problemStatementId?: string;
   problemStatementTitle?: string;
   teamNumber?: string;
+  isNominated?: boolean;
 }
 
 export interface Institute {
   id: string;
   name: string;
+  nominationLimit?: number;
+  evaluationDates?: {
+    seconds: number;
+    nanoseconds: number;
+  }[];
 }
 
 export interface Spoc extends UserProfile {
