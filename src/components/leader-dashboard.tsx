@@ -111,7 +111,23 @@ export default function LeaderDashboard() {
   const { toast } = useToast();
   const [inviteLink, setInviteLink] = useState<string | null>(null);
   const [isLoadingLink, setIsLoadingLink] = useState(true);
+  const [deadline, setDeadline] = useState<Date | null>(null);
   const appBaseUrl = "https://vadodarahackathon.pierc.org";
+
+  useEffect(() => {
+    const fetchDeadline = async () => {
+        try {
+            const configDocRef = doc(db, "config", "event");
+            const configDoc = await getDoc(configDocRef);
+            if (configDoc.exists() && configDoc.data()?.registrationDeadline) {
+                setDeadline(configDoc.data().registrationDeadline.toDate());
+            }
+        } catch (error) {
+            console.error("Could not fetch registration deadline:", error);
+        }
+    };
+    fetchDeadline();
+  }, []);
 
   useEffect(() => {
     if (!user?.teamId) {
@@ -305,6 +321,7 @@ export default function LeaderDashboard() {
   };
 
   const canAddMoreMembers = teamValidation.memberCount.current < 6;
+  const isDeadlinePassed = deadline ? new Date() > deadline : false;
 
   return (
     <div className="p-4 sm:p-6 lg:p-8">
@@ -548,7 +565,11 @@ export default function LeaderDashboard() {
                 <Card>
                     <CardHeader>
                         <CardTitle>Problem Statement & Category</CardTitle>
-                        <CardDescription>Select a problem statement. Your team's category will be set automatically.</CardDescription>
+                        <CardDescription>
+                            {isDeadlinePassed 
+                                ? "The deadline for changing problem statements has passed." 
+                                : "Select a problem statement. Your team's category will be set automatically."}
+                        </CardDescription>
                     </CardHeader>
                     <CardContent>
                         {team.problemStatementId ? (
@@ -556,20 +577,22 @@ export default function LeaderDashboard() {
                                 <p className="text-muted-foreground">Your team has selected:</p>
                                 <h3 className="text-lg font-semibold">{team.problemStatementTitle}</h3>
                                 <p className="text-sm">Team Category: <span className="font-semibold">{team.category}</span></p>
-                                 <Button variant="outline" asChild>
+                                 <Button variant="outline" asChild disabled={isDeadlinePassed}>
                                     <Link href="/leader/select-problem-statement">
                                         <Pencil className="mr-2 h-4 w-4" /> Change Problem Statement
                                     </Link>
                                 </Button>
+                                {isDeadlinePassed && <p className="text-xs text-destructive mt-2">The deadline was on {deadline?.toLocaleDateString()}</p>}
                             </div>
                         ) : (
                             <div className="flex flex-col items-start gap-4">
                                 <p>Your team has not selected a problem statement yet.</p>
-                                <Button asChild>
+                                <Button asChild disabled={isDeadlinePassed}>
                                    <Link href="/leader/select-problem-statement">
                                         <FileText className="mr-2 h-4 w-4" /> Select Problem Statement
                                    </Link>
                                 </Button>
+                                {isDeadlinePassed && <p className="text-xs text-destructive mt-2">The deadline was on {deadline?.toLocaleDateString()}</p>}
                             </div>
                         )}
                     </CardContent>
