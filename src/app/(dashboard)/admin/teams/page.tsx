@@ -1,8 +1,9 @@
+
 "use client";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Loader2, Download, Save, Pencil, X, Trash2, MinusCircle, ChevronDown, ArrowUpDown, FileText } from "lucide-react";
+import { Loader2, Download, Save, Pencil, X, Trash2, MinusCircle, ChevronDown, ArrowUpDown, FileText, RefreshCw } from "lucide-react";
 import { useEffect, useState, useMemo, useCallback, Suspense } from "react";
 import { db } from "@/lib/firebase";
 import { collection, onSnapshot, doc, updateDoc, query, orderBy } from "firebase/firestore";
@@ -38,6 +39,7 @@ import { manageTeamBySpoc } from "@/ai/flows/manage-team-by-spoc-flow";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { getAdminDb } from "@/lib/firebase-admin";
 
 type CategoryFilter = ProblemStatementCategory | "All Categories";
 type StatusFilter = "All Statuses" | "Registered" | "Pending";
@@ -80,68 +82,64 @@ function AllTeamsContent() {
     }
   }, [searchParams]);
 
-  useEffect(() => {
+  const fetchData = useCallback(async () => {
     setLoading(true);
-    const teamsQuery = query(collection(db, 'teams'));
-    const unsubscribeTeams = onSnapshot(teamsQuery, (snapshot) => {
+    try {
+      const teamsCollection = collection(db, 'teams');
+      const unsubscribeTeams = onSnapshot(query(teamsCollection), (snapshot) => {
         const teamsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Team));
         setAllTeams(teamsData);
+      });
 
-        const allUserIds = new Set<string>();
-        teamsData.forEach(team => {
-            allUserIds.add(team.leader.uid);
-            team.members.forEach(member => {
-                if (member.uid) allUserIds.add(member.uid);
-            });
+      const usersCollection = collection(db, 'users');
+      const unsubscribeUsers = onSnapshot(query(usersCollection), (snapshot) => {
+        const usersData = new Map<string, UserProfile>();
+        snapshot.forEach(doc => {
+            usersData.set(doc.id, { uid: doc.id, ...doc.data() } as UserProfile);
         });
-        
-        const userUnsubscribers: (()=>void)[] = [];
-        if (allUserIds.size > 0) {
-             Array.from(allUserIds).forEach(uid => {
-                const userDocRef = doc(db, 'users', uid);
-                const unsub = onSnapshot(userDocRef, (userDoc) => {
-                    if (userDoc.exists()) {
-                        const userData = { uid: userDoc.id, ...userDoc.data() } as UserProfile;
-                        setAllUsers(prevUsers => new Map(prevUsers).set(uid, userData));
-                    }
-                });
-                userUnsubscribers.push(unsub);
-            });
-        }
+        setAllUsers(usersData);
+      });
+      
+      const problemStatementsCollection = collection(db, 'problemStatements');
+      const unsubscribePS = onSnapshot(query(problemStatementsCollection), (snapshot) => {
+        const psData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ProblemStatement));
+        setProblemStatements(psData);
+        setFilteredProblemStatements(psData);
+      });
+      
+      const institutesQuery = query(collection(db, 'institutes'), orderBy("name"));
+      const unsubscribeInstitutes = onSnapshot(institutesQuery, (snapshot) => {
+          const institutesData = snapshot.docs.map(doc => ({ id: doc.id, name: doc.data().name }));
+          setInstitutes(institutesData);
+      });
 
-        if (loading) setLoading(false);
-
-        return () => userUnsubscribers.forEach(unsub => unsub());
-
-    }, (error) => {
-        console.error("Error fetching teams:", error);
-        toast({ title: "Error", description: "Failed to fetch teams.", variant: "destructive" });
+      // Let the listeners fetch initial data, then set loading to false.
+      // This is a simplified approach; for large datasets, a direct fetch might be better.
+      await Promise.all([
+          getDocs(query(teamsCollection)),
+          getDocs(query(usersCollection)),
+          getDocs(query(problemStatementsCollection)),
+          getDocs(institutesQuery)
+      ]);
+      
+      return () => {
+          unsubscribeTeams();
+          unsubscribeUsers();
+          unsubscribePS();
+          unsubscribeInstitutes();
+      };
+    } catch (error) {
+        console.error("Error setting up listeners:", error);
+        toast({ title: "Error", description: "Could not initialize data listeners.", variant: "destructive" });
+    } finally {
         setLoading(false);
-    });
+    }
+  }, [toast]);
+  
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
-    const problemStatementsCollection = collection(db, 'problemStatements');
-    const unsubscribeProblemStatements = onSnapshot(problemStatementsCollection, (snapshot) => {
-      const psData = snapshot.docs.map(doc => ({id: doc.id, ...doc.data()} as ProblemStatement));
-      setProblemStatements(psData);
-      setFilteredProblemStatements(psData); 
-    }, (error) => {
-      console.error("Error fetching problem statements:", error);
-      toast({ title: "Error", description: "Failed to fetch problem statements.", variant: "destructive" });
-    });
-    
-    const institutesQuery = query(collection(db, 'institutes'), orderBy("name"));
-    const unsubscribeInstitutes = onSnapshot(institutesQuery, (snapshot) => {
-        const institutesData = snapshot.docs.map(doc => ({ id: doc.id, name: doc.data().name }));
-        setInstitutes(institutesData);
-    });
-
-    return () => {
-      unsubscribeTeams();
-      unsubscribeProblemStatements();
-      unsubscribeInstitutes();
-    };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   useEffect(() => {
     if (categoryFilter === "All Categories") {
@@ -460,6 +458,10 @@ function AllTeamsContent() {
             <p className="text-muted-foreground">View and manage all registered teams.</p>
         </div>
         <div className="flex flex-wrap gap-2">
+             <Button onClick={() => fetchData()} variant="outline" disabled={loading}>
+              {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
+              Refresh
+            </Button>
             {selectedTeamIds.length > 0 && (
                 <Button variant="outline" onClick={handleBulkGenerateNomination} disabled={isBulkNominating}>
                     {isBulkNominating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
@@ -683,3 +685,5 @@ export default function AllTeamsPage() {
         </Suspense>
     )
 }
+
+    
