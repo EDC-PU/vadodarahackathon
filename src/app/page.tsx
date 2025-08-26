@@ -3,7 +3,7 @@ import LandingPage from "@/components/landing-page";
 import { Suspense } from "react";
 import { Loader2 } from "lucide-react";
 import { getAdminDb } from "@/lib/firebase-admin";
-import { Announcement, UserProfile } from "@/lib/types";
+import { Announcement, ProblemStatement, UserProfile } from "@/lib/types";
 import { collection, query, where, orderBy, limit, getDocs } from "firebase/firestore";
 
 async function getSpocDetails() {
@@ -71,13 +71,34 @@ async function getPublicAnnouncements() {
   }
 }
 
+async function getProblemStatements() {
+    const db = getAdminDb();
+    if (!db) {
+        console.error("Could not get admin db instance for Problem Statements.");
+        return [];
+    }
+    try {
+        const psCollection = db.collection('problemStatements');
+        const q = query(psCollection, orderBy("problemStatementId"));
+        const snapshot = await q.get();
+        if (snapshot.empty) {
+            return [];
+        }
+        return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ProblemStatement));
+    } catch (error) {
+        console.error("Error fetching problem statements on server: ", error);
+        return [];
+    }
+}
+
 export default async function Home() {
   const spocDetails = await getSpocDetails();
   const announcements = await getPublicAnnouncements();
+  const problemStatements = await getProblemStatements();
 
   return (
     <Suspense fallback={<div className="flex h-screen w-full items-center justify-center"><Loader2 className="h-8 w-8 animate-spin" /></div>}>
-        <LandingPage spocDetails={spocDetails} announcements={announcements} />
+        <LandingPage spocDetails={spocDetails} announcements={announcements} problemStatements={problemStatements} />
     </Suspense>
   );
 }

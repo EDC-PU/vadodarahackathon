@@ -20,11 +20,12 @@ import { Skeleton } from './ui/skeleton';
 import { AnnouncementsSection } from './announcements-section';
 import { cn } from '@/lib/utils';
 import Autoplay from "embla-carousel-autoplay"
-import { Announcement, Institute } from '@/lib/types';
+import { Announcement, Institute, ProblemStatement } from '@/lib/types';
 import { motion, useAnimation, useInView } from "framer-motion";
 import { CountUp } from './count-up';
 import { collection, onSnapshot, orderBy, query } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { ProblemStatementsSection } from './problem-statements-section';
 
 
 interface SpocDetails {
@@ -34,6 +35,7 @@ interface SpocDetails {
 interface LandingPageProps {
   spocDetails: SpocDetails;
   announcements: Announcement[];
+  problemStatements: ProblemStatement[];
 }
 
 const AnimatedSection = ({ children, className, id }: { children: React.ReactNode, className?: string, id: string }) => {
@@ -178,7 +180,7 @@ const HeroSection = () => {
 };
 
 
-export default function LandingPage({ spocDetails, announcements }: LandingPageProps) {
+export default function LandingPage({ spocDetails, announcements, problemStatements }: LandingPageProps) {
   const [selectedInstitute, setSelectedInstitute] = useState<string | null>(null);
   const [institutes, setInstitutes] = useState<Institute[]>([]);
   const { user, loading: authLoading } = useAuth();
@@ -196,6 +198,7 @@ export default function LandingPage({ spocDetails, announcements }: LandingPageP
   const navLinks = [
     { name: 'Home', href: '#home' },
     { name: 'Eligibility', href: '#eligibility' },
+    { name: 'Problem Statements', href: '#problem-statements' },
     { name: 'Timeline', href: '#timeline' },
     { name: 'Rewards', href: '#rewards' },
     { name: 'Contact', href: '#contact' },
@@ -311,54 +314,6 @@ export default function LandingPage({ spocDetails, announcements }: LandingPageP
                 </div>
             </div>
         </AnimatedSection>
-
-        <AnimatedSection id="about">
-          <div className="container max-w-7xl grid md:grid-cols-2 gap-12 items-center">
-            <div className="space-y-4">
-               <SectionTitle>About The Hackathon</SectionTitle>
-              <p className="text-foreground/80">
-               Vadodara Hackathon 6.0 is an internal hackathon organized with the primary purpose of fostering innovation and problem-solving within our community. The event aims to bring together creative minds and tech enthusiasts to collaborate, brainstorm, and develop innovative solutions to real-world problems.
-              </p>
-              <div className="grid grid-cols-2 gap-4 pt-4">
-                  <motion.div
-                    className="glass-card p-4 rounded-lg text-center"
-                    whileHover={{ scale: 1.05, boxShadow: "0px 0px 15px hsl(var(--brand-orange))" }}
-                  >
-                      <BarChart className="h-8 w-8 text-primary mx-auto mb-2" />
-                      <p className="text-2xl font-bold"><CountUp end={400} />+</p>
-                      <p className="text-sm text-muted-foreground">Teams Expected</p>
-                  </motion.div>
-                  <motion.div
-                     className="glass-card p-4 rounded-lg text-center"
-                     whileHover={{ scale: 1.05, boxShadow: "0px 0px 15px hsl(var(--brand-red))" }}
-                  >
-                      <FileQuestion className="h-8 w-8 text-primary mx-auto mb-2" />
-                      <p className="text-2xl font-bold"><CountUp end={250} />+</p>
-                      <p className="text-sm text-muted-foreground">Problem Statements</p>
-                  </motion.div>
-              </div>
-            </div>
-            <div>
-              <Carousel className="w-full max-w-xl mx-auto" plugins={[autoplayPlugin.current]}>
-                <CarouselContent>
-                  {aboutImages.map((src, index) => (
-                    <CarouselItem key={index}>
-                      <Image
-                        src={src}
-                        alt={`A scene from a past Vadodara Hackathon event showing students collaborating.`}
-                        width={600}
-                        height={400}
-                        className="rounded-lg shadow-xl object-cover aspect-[3/2] border border-primary/20"
-                      />
-                    </CarouselItem>
-                  ))}
-                </CarouselContent>
-                <CarouselPrevious className="left-[-1rem]" />
-                <CarouselNext className="right-[-1rem]"/>
-              </Carousel>
-            </div>
-          </div>
-        </AnimatedSection>
         
         <AnimatedSection id="eligibility" className="bg-secondary/10">
           <div className="container max-w-7xl text-center">
@@ -393,32 +348,9 @@ export default function LandingPage({ spocDetails, announcements }: LandingPageP
         </AnimatedSection>
 
         <AnimatedSection id="problem-statements">
-          <div className="container max-w-7xl">
-            <div className="space-y-4 text-center max-w-3xl mx-auto">
-               <SectionTitle>About the Problem Statement</SectionTitle>
-              <p className="text-foreground/80">
-                The problem statements for Vadodara Hackathon 5.0 were taken from Smart India Hackathon 2024. In total, 239 problem statements were provided, with 68 in the hardware category and 186 in the software category.
-              </p>
-              <div className="grid grid-cols-2 gap-4 pt-4">
-                  <motion.div
-                    className="glass-card p-4 rounded-lg text-center"
-                    whileHover={{ scale: 1.05, boxShadow: "0px 0px 15px hsl(var(--brand-orange))" }}
-                  >
-                      <Cpu className="h-8 w-8 text-primary mx-auto mb-2" />
-                      <p className="text-2xl font-bold"><CountUp end={68} />+</p>
-                      <p className="text-sm text-muted-foreground">Problem Statements in Hardware Category</p>
-                  </motion.div>
-                  <motion.div
-                     className="glass-card p-4 rounded-lg text-center"
-                     whileHover={{ scale: 1.05, boxShadow: "0px 0px 15px hsl(var(--brand-red))" }}
-                  >
-                      <Code className="h-8 w-8 text-primary mx-auto mb-2" />
-                      <p className="text-2xl font-bold"><CountUp end={186} />+</p>
-                      <p className="text-sm text-muted-foreground">Problem Statements in Software Category</p>
-                  </motion.div>
-              </div>
+            <div className="container max-w-7xl">
+                <ProblemStatementsSection initialProblemStatements={problemStatements} />
             </div>
-          </div>
         </AnimatedSection>
         
         <AnimatedSection id="last-year-stats" className="bg-secondary/10">
@@ -530,63 +462,6 @@ export default function LandingPage({ spocDetails, announcements }: LandingPageP
             </div>
         </AnimatedSection>
         
-        <AnimatedSection id="spocs">
-            <div className="container max-w-4xl text-center">
-                <SectionTitle>Institute SPOCs</SectionTitle>
-                <p className="max-w-2xl mx-auto text-foreground/80 mb-8">
-                  Find the Single Point of Contact (SPOC) for your institute.
-                </p>
-                <div className="flex flex-col items-center gap-4">
-                    <Select onValueChange={setSelectedInstitute}>
-                        <SelectTrigger className="w-full max-w-md glass-card !border-primary/50">
-                            <SelectValue placeholder="Select your institute to view SPOC details" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {institutes.map((institute) => (
-                            <SelectItem key={institute.id} value={institute.name}>
-                                {institute.name}
-                            </SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
-                    {selectedInstitute && (
-                        <motion.div
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ duration: 0.5 }}
-                        >
-                            <Card className="w-full max-w-md mt-4 glass-card text-left animate-in fade-in-50">
-                                <CardHeader>
-                                    <CardTitle>{selectedInstitute}</CardTitle>
-                                </CardHeader>
-                                <CardContent>
-                                    {spocDetails[selectedInstitute] ? (
-                                    <div className="space-y-3">
-                                        <div className="flex items-center gap-3">
-                                            <Users className="h-5 w-5 text-primary" />
-                                            <span>{spocDetails[selectedInstitute].name}</span>
-                                        </div>
-                                        <div className="flex items-center gap-3">
-                                            <Mail className="h-5 w-5 text-primary" />
-                                            <a href={`mailto:${spocDetails[selectedInstitute].email}`} className="hover:underline">{spocDetails[selectedInstitute].email}</a>
-                                        </div>
-                                        <div className="flex items-center gap-3">
-                                            <Phone className="h-5 w-5 text-primary" />
-                                            <a href={`tel:${spocDetails[selectedInstitute].contact}`} className="hover:underline">{spocDetails[selectedInstitute].contact}</a>
-                                        </div>
-                                    </div>
-                                    ) : (
-                                    <p className="text-foreground/80">No SPOC assigned for this institute yet. Please check back later.</p>
-                                    )}
-                                </CardContent>
-                            </Card>
-                        </motion.div>
-                    )}
-                </div>
-            </div>
-        </AnimatedSection>
-
-
         <AnimatedSection id="contact">
             <div className="container max-w-7xl">
                  <div className="text-center">
