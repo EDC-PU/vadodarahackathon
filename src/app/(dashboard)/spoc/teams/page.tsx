@@ -32,9 +32,11 @@ import { Buffer } from 'buffer';
 import { getTeamInviteLink } from "@/ai/flows/get-team-invite-link-flow";
 import Link from "next/link";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 type SortKey = 'teamName' | 'teamNumber' | 'name' | 'email' | 'enrollmentNumber' | 'contactNumber';
 type SortDirection = 'asc' | 'desc';
+type StatusFilter = "All Statuses" | "Registered" | "Pending";
 
 export default function SpocTeamsPage() {
   const { user, loading: authLoading } = useAuth();
@@ -45,11 +47,14 @@ export default function SpocTeamsPage() {
   const [isSaving, setIsSaving] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState<string | null>(null);
   const [isExporting, setIsExporting] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("All Statuses");
   const [sortConfig, setSortConfig] = useState<{ key: SortKey, direction: SortDirection } | null>(null);
   const { toast } = useToast();
   const [inviteLinks, setInviteLinks] = useState<Map<string, string>>(new Map());
   const [loadingLink, setLoadingLink] = useState<string | null>(null);
   const appBaseUrl = "https://vadodarahackathon.pierc.org";
+
+  const statuses: StatusFilter[] = ["All Statuses", "Registered", "Pending"];
 
   const fetchInstituteData = useCallback((institute: string) => {
     setLoading(true);
@@ -102,7 +107,7 @@ export default function SpocTeamsPage() {
             throw new Error("Institute information not available");
         }
         
-        const result = await exportTeams({ institute: user.institute, category: "All Categories" });
+        const result = await exportTeams({ institute: user.institute, category: "All Categories", status: statusFilter });
         if (result.success && result.fileContent) {
             const blob = new Blob([Buffer.from(result.fileContent, 'base64')], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
             const url = window.URL.createObjectURL(blob);
@@ -138,6 +143,28 @@ export default function SpocTeamsPage() {
       }
     };
   }, [user, authLoading, fetchInstituteData]);
+
+  const filteredTeams = useMemo(() => {
+    if (statusFilter === 'All Statuses') {
+        return teams;
+    }
+    
+    return teams.filter(team => {
+        const leaderProfile = users.get(team.leader.uid);
+        const membersWithDetails = team.members.map(m => users.get(m.uid));
+        
+        const memberCount = (team.members?.length || 0) + 1;
+        
+        let femaleCount = 0;
+        if (leaderProfile?.gender === 'F') femaleCount++;
+        membersWithDetails.forEach(member => {
+            if (member?.gender === 'F') femaleCount++;
+        });
+
+        const isRegistered = memberCount === 6 && femaleCount >= 1;
+        return statusFilter === 'Registered' ? isRegistered : !isRegistered;
+    });
+  }, [teams, statusFilter, users]);
   
   const getTeamWithFullDetails = (teamsToProcess: Team[]) => {
     return teamsToProcess.map(team => {
@@ -171,7 +198,7 @@ export default function SpocTeamsPage() {
   };
 
   const teamsWithDetails = useMemo(() => {
-    const detailedTeams = getTeamWithFullDetails(teams);
+    const detailedTeams = getTeamWithFullDetails(filteredTeams);
     if (sortConfig !== null) {
       return [...detailedTeams].sort((a, b) => {
         let aVal: string = '';
@@ -224,7 +251,7 @@ export default function SpocTeamsPage() {
       });
     }
     return detailedTeams;
-  }, [teams, users, sortConfig]);
+  }, [filteredTeams, users, sortConfig]);
 
   const requestSort = (key: SortKey) => {
     let direction: SortDirection = 'asc';
@@ -344,16 +371,26 @@ export default function SpocTeamsPage() {
                 <h1 className="text-3xl font-bold font-headline">Institute Teams</h1>
                 <p className="text-muted-foreground">View and manage all teams from <strong>{user?.institute}</strong></p>
             </div>
-            <Button onClick={handleExport} disabled={isExporting}>
-              {isExporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
-              Export Teams
-            </Button>
+             <div className="flex flex-wrap gap-2">
+                 <Select value={statusFilter} onValueChange={setStatusFilter}>
+                    <SelectTrigger className="w-full sm:w-48">
+                        <SelectValue placeholder="Filter by Status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        {statuses.map(st => <SelectItem key={st} value={st}>{st}</SelectItem>)}
+                    </SelectContent>
+                </Select>
+                <Button onClick={handleExport} disabled={isExporting}>
+                  {isExporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
+                  Export Teams
+                </Button>
+            </div>
         </header>
 
         <Card>
             <CardHeader>
             <CardTitle>Teams List</CardTitle>
-            <CardDescription>{teams.length} team(s) registered from your institute.</CardDescription>
+            <CardDescription>{filteredTeams.length} team(s) found with the current filters.</CardDescription>
             </CardHeader>
             <CardContent>
                 {teams.length === 0 ? (
