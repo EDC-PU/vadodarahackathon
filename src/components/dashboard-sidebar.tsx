@@ -64,7 +64,7 @@ const navItems = {
     { href: "/spoc/teams", icon: <Users />, label: "All Teams" },
     { href: "/spoc/analytics", icon: <BarChart2 />, label: "Analytics" },
     { href: "/spoc/evaluation", icon: <ClipboardCheck />, label: "Evaluation & Nomination" },
-    { href: "/spoc/ssih-enrollment", icon: <FileSignature />, label: "SSIH Enrollment" },
+    { href: "/spoc/ssih-enrollment", icon: <FileSignature />, label: "SIH Enrollment" },
     { href: "/spoc/departments", icon: <List />, label: "Manage Departments" },
     { href: "/spoc/announcements", icon: <Megaphone />, label: "Announcements" },
   ],

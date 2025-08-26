@@ -62,12 +62,12 @@ const formSchema = z.object({
     message: "You must confirm you are the team leader.",
     path: ["leaderConfirmation"],
 }).refine((data) => {
-    if (data.role === 'spoc' && !data.email.endsWith('@paruluniversity.ac.in')) {
-      return false;
+    if (data.role === 'spoc') {
+        return data.email.endsWith('@paruluniversity.ac.in');
     }
-    return true;
+    return data.email.endsWith('@paruluniversity.ac.in') || data.email.endsWith('@gmail.com');
 }, {
-    message: "SPOC email must end with @paruluniversity.ac.in",
+    message: "Please use a valid @paruluniversity.ac.in or @gmail.com email. SPOCs must use a @paruluniversity.ac.in email.",
     path: ["email"],
 });
 

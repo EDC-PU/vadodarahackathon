@@ -28,7 +28,7 @@ interface EmailTemplateProps {
   
     // Auto text color
     const textColor = getContrastColor(cardColor);
-    const mutedColor = getContrastColor(bgColor) === '#FFFFFF' ? '#A0A0A0' : '#555555';
+    const mutedColor = getContrastColor(bgColor) === '#A0A0A0' ? '#FFFFFF' : '#555555';
   
     return `
       <!DOCTYPE html>

@@ -43,10 +43,10 @@ const enrollTeamInSsihFlow = ai.defineFlow(
 
       return {
         success: true,
-        message: 'Team successfully marked as enrolled in SSIH 2025.',
+        message: 'Team successfully marked as enrolled in SIH 2025.',
       };
     } catch (error: any) {
-      console.error('Error enrolling team in SSIH:', error);
+      console.error('Error enrolling team in SIH:', error);
       return {
         success: false,
         message: `Failed to enroll team: ${error.message}`,

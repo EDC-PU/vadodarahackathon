@@ -21,7 +21,7 @@ export default function UniversityNominationsPage() {
   const [isSaving, setIsSaving] = useState<string | null>(null);
   const { toast } = useToast();
 
-  const canModify = isAfter(new Date(), new Date(2025, 7, 25)); // September 6th, 2025
+  const canModify = isAfter(new Date(), new Date(2025, 8, 6)); // September 6th, 2025
 
   useEffect(() => {
     setLoading(true);

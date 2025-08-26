@@ -77,9 +77,9 @@ SPOCs act as the bridge between the hackathon organizers and the participating t
     *   Set the two dates for their institute's internal hackathon (must be between Sept 1-4, 2025). This can be changed until a fixed deadline (Aug 31, 2025).
     *   View the nomination limit set by the Admin.
     *   After their hackathon dates pass, they can nominate a set number of teams for the university-level round.
-*   **SSIH Enrollment:**
+*   **SIH Enrollment:**
     *   View a list of teams that were nominated but not selected for the university-level SIH.
-    *   Mandatorily enroll these teams in the State Smart India Hackathon (SSIH) 2025.
+    *   Mandatorily enroll these teams in the  Smart India Hackathon (SIH) 2025.
 *   **Manage Departments:** Add or remove department names to be listed for students during registration.
 *   **Export Data:** Export their institute's team data to Excel and generate a pre-formatted evaluation sheet after the admin-set date.
 *   **View Announcements:** See announcements targeted at SPOCs and all users.

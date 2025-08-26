@@ -38,8 +38,8 @@ export default function SsihEnrollmentPage() {
       setTeams(teamsData);
       setLoading(false);
     }, (error) => {
-      console.error("Error fetching teams for SSIH enrollment:", error);
-      toast({ title: "Error", description: "Could not fetch teams for SSIH enrollment.", variant: "destructive" });
+      console.error("Error fetching teams for SIH enrollment:", error);
+      toast({ title: "Error", description: "Could not fetch teams for SIH enrollment.", variant: "destructive" });
       setLoading(false);
     });
 
@@ -51,9 +51,9 @@ export default function SsihEnrollmentPage() {
     try {
         const teamRef = doc(db, "teams", teamId);
         await updateDoc(teamRef, { ssihEnrolled: true });
-        toast({ title: "Success", description: "Team has been marked as enrolled for SSIH." });
+        toast({ title: "Success", description: "Team has been marked as enrolled for SIH." });
     } catch(e) {
-        console.error("Error enrolling team in SSIH:", e);
+        console.error("Error enrolling team in SIH:", e);
         toast({ title: "Error", description: "Could not update team enrollment status.", variant: "destructive" });
     } finally {
         setIsSaving(null);
@@ -64,7 +64,7 @@ export default function SsihEnrollmentPage() {
     <div className="p-4 sm:p-6 lg:p-8">
       <header className="mb-8">
         <h1 className="text-3xl font-bold font-headline flex items-center gap-2">
-            <FileSignature /> State Smart India Hackathon (SSIH) 2025 Enrollment
+            <FileSignature /> Smart India Hackathon (SIH) 2025 Enrollment
         </h1>
         <p className="text-muted-foreground">
           Enroll teams from your institute that were selected for institute-level SIH into the state-level hackathon.
@@ -72,9 +72,9 @@ export default function SsihEnrollmentPage() {
       </header>
       <Card>
         <CardHeader>
-          <CardTitle>Teams for SSIH Enrollment</CardTitle>
+          <CardTitle>Teams for SIH Enrollment</CardTitle>
           <CardDescription>
-            These teams were nominated but not selected for the university-level SIH round and must be enrolled in SSIH 2025.
+            These teams were nominated but not selected for the university-level SIH round and must be enrolled in SIH 2025.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -87,7 +87,7 @@ export default function SsihEnrollmentPage() {
               <AlertCircle className="h-4 w-4" />
               <AlertTitle>No Teams Pending Enrollment</AlertTitle>
               <AlertDescription>
-                There are currently no teams from your institute that need to be enrolled in SSIH 2025.
+                There are currently no teams from your institute that need to be enrolled in SIH 2025.
               </AlertDescription>
             </Alert>
           ) : (
