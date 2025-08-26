@@ -92,6 +92,7 @@ export default function ManageSpocsPage() {
                             <div>
                                 <p className="font-semibold text-lg">{spoc.name}</p>
                                 <p className="text-sm text-muted-foreground">{spoc.email}</p>
+                                <p className="text-sm text-muted-foreground">{spoc.contactNumber || 'N/A'}</p>
                                 <p className="text-sm text-muted-foreground">{spoc.institute}</p>
                             </div>
                             <Badge variant={getStatusVariant(spoc.spocStatus)} className={spoc.spocStatus === 'approved' ? 'bg-green-600' : ''}>
