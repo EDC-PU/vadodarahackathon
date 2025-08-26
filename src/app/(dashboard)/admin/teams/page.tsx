@@ -6,7 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Loader2, Download, Save, Pencil, X, Trash2, MinusCircle, ChevronDown, ArrowUpDown, FileText, RefreshCw } from "lucide-react";
 import { useEffect, useState, useMemo, useCallback, Suspense } from "react";
 import { db } from "@/lib/firebase";
-import { collection, onSnapshot, doc, updateDoc, query, orderBy, getDocs } from "firebase/firestore";
+import { collection, onSnapshot, doc, updateDoc, query, orderBy, getDocs, where } from "firebase/firestore";
 import { Team, UserProfile, ProblemStatementCategory, TeamMember, ProblemStatement } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -85,6 +85,7 @@ function AllTeamsContent() {
   const [instituteFilter, setInstituteFilter] = useState<string>("All Institutes");
   const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>("All Categories");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("All Statuses");
+  const [searchTerm, setSearchTerm] = useState("");
   const [selectedProblemStatements, setSelectedProblemStatements] = useState<string[]>([]);
   const [filteredProblemStatements, setFilteredProblemStatements] = useState<ProblemStatement[]>([]);
   const [sortConfig, setSortConfig] = useState<{ key: SortKey, direction: SortDirection } | null>(null);
@@ -171,8 +172,24 @@ function AllTeamsContent() {
         const categoryMatch = categoryFilter === 'All Categories' || team.category === categoryFilter;
         const psMatch = selectedProblemStatements.length === 0 || (team.problemStatementId && selectedProblemStatements.includes(team.problemStatementId));
         
+        let searchMatch = true;
+        if (searchTerm) {
+            const lowercasedSearch = searchTerm.toLowerCase();
+            const leader = allUsers.get(team.leader.uid);
+            const members = team.members.map(m => allUsers.get(m.uid));
+            const teamText = [
+                team.name,
+                team.institute,
+                leader?.name,
+                leader?.email,
+                ...members.flatMap(m => [m?.name, m?.email])
+            ].join(' ').toLowerCase();
+
+            searchMatch = teamText.includes(lowercasedSearch);
+        }
+
         if (statusFilter === 'All Statuses') {
-          return instituteMatch && categoryMatch && psMatch;
+          return instituteMatch && categoryMatch && psMatch && searchMatch;
         }
 
         const leaderProfile = allUsers.get(team.leader.uid);
@@ -190,9 +207,9 @@ function AllTeamsContent() {
         
         const statusMatch = statusFilter === 'Registered' ? isRegistered : !isRegistered;
         
-        return instituteMatch && categoryMatch && psMatch && statusMatch;
+        return instituteMatch && categoryMatch && psMatch && statusMatch && searchMatch;
     });
-  }, [allTeams, instituteFilter, categoryFilter, selectedProblemStatements, statusFilter, allUsers]);
+  }, [allTeams, instituteFilter, categoryFilter, selectedProblemStatements, statusFilter, allUsers, searchTerm]);
   
   const handleExport = async () => {
     setIsExporting(true);
@@ -497,6 +514,12 @@ function AllTeamsContent() {
                     Download Nominations ({selectedTeamIds.length})
                 </Button>
             )}
+            <Input
+              placeholder="Search..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full sm:w-48"
+            />
             <Select value={instituteFilter} onValueChange={setInstituteFilter}>
                 <SelectTrigger className="w-full sm:w-48">
                     <SelectValue placeholder="Filter by Institute" />
@@ -720,3 +743,4 @@ export default function AllTeamsPage() {
     
 
     
+
