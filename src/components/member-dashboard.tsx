@@ -1,3 +1,4 @@
+
 "use client"
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -60,87 +61,57 @@ export default function MemberDashboard() {
   const router = useRouter()
 
   useEffect(() => {
-    if (!user?.teamId) {
-      setLoading(false)
-      return
-    }
+    const fetchTeamData = async () => {
+      if (!user?.teamId) {
+        setLoading(false);
+        return;
+      }
+      setLoading(true);
 
-    console.log("[v0] Member Dashboard - User teamId:", user.teamId)
-    console.log("[v0] Member Dashboard - User UID:", user.uid)
+      try {
+        const teamDocRef = doc(db, "teams", user.teamId);
+        const teamDoc = await getDoc(teamDocRef);
 
-    setLoading(true)
-    const teamDocRef = doc(db, "teams", user.teamId)
-
-    const unsubscribeTeam = onSnapshot(
-      teamDocRef,
-      async (teamDoc) => {
-        console.log("[v0] Team document exists:", teamDoc.exists())
         if (!teamDoc.exists()) {
-          setTeam(null)
-          setTeamMembers([])
-          setLoading(false)
-          console.warn(`Member Dashboard: Team document with ID ${user.teamId} not found.`)
-          return
+          throw new Error("Your team could not be found.");
         }
 
-        const teamData = { id: teamDoc.id, ...teamDoc.data() } as Team
-        console.log("[v0] Team data loaded:", teamData)
-        console.log("[v0] Team leader UID:", teamData.leader?.uid)
-        console.log(
-          "[v0] Team members:",
-          teamData.members?.map((m) => m.uid),
-        )
-        setTeam(teamData)
+        const teamData = { id: teamDoc.id, ...teamDoc.data() } as Team;
+        setTeam(teamData);
 
+        // Fetch SPOC
         const spocsQuery = query(
           collection(db, "users"),
           where("institute", "==", teamData.institute),
           where("role", "==", "spoc"),
           where("spocStatus", "==", "approved"),
-        )
-        const spocSnapshot = await getDocs(spocsQuery)
-        if (!spocSnapshot.empty) {
-          setSpoc(spocSnapshot.docs[0].data() as UserProfile)
-        } else {
-          setSpoc(null)
-        }
+        );
+        const spocSnapshot = await getDocs(spocsQuery);
+        setSpoc(spocSnapshot.empty ? null : spocSnapshot.docs[0].data() as UserProfile);
 
-        const memberUIDs = teamData.members.map((m) => m.uid).filter(Boolean)
-        const allUIDs = [...new Set([teamData.leader.uid, ...memberUIDs])]
+        // Fetch all members
+        const memberUIDs = teamData.members.map(m => m.uid).filter(Boolean);
+        const allUIDs = [...new Set([teamData.leader.uid, ...memberUIDs])];
+        
+        const usersQuery = query(collection(db, 'users'), where('uid', 'in', allUIDs));
+        const usersSnapshot = await getDocs(usersQuery);
+        const membersData = usersSnapshot.docs.map(d => ({...d.data(), uid: d.id}) as UserProfile);
+        setTeamMembers(membersData);
 
-        const memberPromises = allUIDs.map((uid) => getDoc(doc(db, "users", uid)))
-
-        try {
-          const memberDocs = await Promise.all(memberPromises)
-          const membersData = memberDocs
-            .filter((doc) => doc.exists())
-            .map((doc) => ({ uid: doc.id, ...doc.data() }) as UserProfile)
-
-          setTeamMembers(membersData)
-        } catch (error) {
-          console.error("Error fetching all member data:", error)
-          toast({ title: "Error", description: "Could not load all member details.", variant: "destructive" })
-        } finally {
-          setLoading(false)
-        }
-      },
-      (error) => {
-        console.error("[v0] Error fetching team data (likely permissions):", error)
-        console.error("[v0] Error code:", error.code)
-        console.error("[v0] Error message:", error.message)
+      } catch (error: any) {
+        console.error("Error fetching member dashboard data:", error);
         toast({
-          title: "Error Loading Team",
-          description: "Could not load your team data. You may not have permission to view it.",
+          title: "Error Loading Data",
+          description: error.message || "Could not load your team information.",
           variant: "destructive",
-        })
-        setTeam(null)
-        setTeamMembers([])
-        setLoading(false)
-      },
-    )
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
 
-    return () => unsubscribeTeam()
-  }, [user?.teamId, toast])
+    fetchTeamData();
+  }, [user?.teamId, toast]);
 
   const sortedTeamMembers = useMemo(() => {
     const leader = teamMembers.find((m) => m.role === "leader")
