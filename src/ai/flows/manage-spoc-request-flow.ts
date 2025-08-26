@@ -9,6 +9,7 @@ import { ManageSpocRequestInput, ManageSpocRequestInputSchema, ManageSpocRequest
 import { getAdminAuth, getAdminDb } from '@/lib/firebase-admin';
 import nodemailer from 'nodemailer';
 import { getEmailTemplate } from '@/lib/email-templates';
+import { FieldValue } from 'firebase-admin/firestore';
 
 async function sendApprovalEmail(spoc: UserProfile) {
     const emailHtml = getEmailTemplate({
@@ -95,6 +96,7 @@ const manageSpocRequestFlow = ai.defineFlow(
     }
 
     const userDocRef = adminDb.collection('users').doc(uid);
+    const batch = adminDb.batch();
 
     try {
         const userDoc = await userDocRef.get();
@@ -103,21 +105,32 @@ const manageSpocRequestFlow = ai.defineFlow(
         }
         const spocProfile = userDoc.data() as UserProfile;
 
+        // Log the action
+        const logDocRef = adminDb.collection("logs").doc();
+        const logTitle = action === 'approve' ? "SPOC Request Approved" : "SPOC Request Rejected";
+        const logMessage = `SPOC request for ${spocProfile.name} from ${spocProfile.institute} was ${action}d.`;
+        batch.set(logDocRef, {
+            id: logDocRef.id,
+            title: logTitle,
+            message: logMessage,
+            createdAt: FieldValue.serverTimestamp(),
+        });
+
       if (action === 'approve') {
         console.log(`Approving SPOC request for UID: ${uid}`);
         
-        console.log("Enabling user in Firebase Auth...");
         // 1. Enable the user in Firebase Auth
         await adminAuth.updateUser(uid, { disabled: false });
         console.log("Auth user enabled.");
         
-        console.log("Updating spocStatus in Firestore...");
         // 2. Update their status in Firestore
-        await userDocRef.update({ spocStatus: 'approved' });
+        batch.update(userDocRef, { spocStatus: 'approved' });
         console.log("Firestore spocStatus updated to 'approved'.");
 
+        await batch.commit();
+
+        // 3. Send an approval email to the SPOC. (Outside of batch)
         console.log("Sending approval email...");
-        // 3. Send an approval email to the SPOC.
         await sendApprovalEmail(spocProfile);
         
         return { success: true, message: 'SPOC request approved and account enabled. An email has been sent.' };
@@ -125,17 +138,18 @@ const manageSpocRequestFlow = ai.defineFlow(
       } else if (action === 'reject') {
         console.log(`Rejecting SPOC request for UID: ${uid}`);
         
+        // 1. Delete the user from Firestore
+        batch.delete(userDocRef);
+        console.log("Firestore user document scheduled for deletion.");
+
+        await batch.commit();
+        
+        // 2. Send rejection email (outside of batch)
         console.log("Sending rejection email...");
-        // 1. Send rejection email
         await sendRejectionEmail(spocProfile);
 
-        console.log("Deleting user from Firestore...");
-        // 2. Delete the user from Firestore
-        await userDocRef.delete();
-        console.log("Firestore user document deleted.");
-
-        console.log("Deleting user from Firebase Auth...");
         // 3. Delete the user from Firebase Auth
+        console.log("Deleting user from Firebase Auth...");
         await adminAuth.deleteUser(uid);
         console.log("Firebase Auth user deleted.");
         

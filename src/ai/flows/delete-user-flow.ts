@@ -80,6 +80,8 @@ const deleteUserFlow = ai.defineFlow(
           return { success: false, message: 'Team leaders cannot delete their own accounts. The team must be deleted by a SPOC or an Admin.' };
       }
       
+      const batch = adminDb.batch();
+
       // If user is a member of a team, remove them from the team.
       if (userProfile.teamId && userProfile.role === 'member') {
         const teamDocRef = adminDb.collection('teams').doc(userProfile.teamId);
@@ -90,7 +92,6 @@ const deleteUserFlow = ai.defineFlow(
             const memberToRemove = teamData.members.find(m => m.uid === uid);
             
             if (memberToRemove) {
-                const batch = adminDb.batch();
                 
                 // 1. Remove member from team's array
                 batch.update(teamDocRef, { members: FieldValue.arrayRemove(memberToRemove) });
@@ -106,8 +107,6 @@ const deleteUserFlow = ai.defineFlow(
                     link: '/leader'
                 });
                 
-                await batch.commit();
-
                 // 3. Send email notification to leader (outside of batch)
                 try {
                     await sendNotificationEmailToLeader(teamData.leader.email, teamData.name, userProfile.name);
@@ -118,11 +117,22 @@ const deleteUserFlow = ai.defineFlow(
         }
       }
 
-      // 1. Delete user from Firestore
-      await userDocRef.delete();
-      console.log(`Successfully deleted user document from Firestore for UID: ${uid}`);
+      // 4. Log this activity
+      const logDocRef = adminDb.collection("logs").doc();
+      batch.set(logDocRef, {
+          id: logDocRef.id,
+          title: "User Account Deleted",
+          message: `User ${userProfile.name} (${userProfile.email}) was deleted.`,
+          createdAt: FieldValue.serverTimestamp(),
+      });
 
-      // 2. Delete user from Firebase Auth
+      // 5. Delete user from Firestore
+      batch.delete(userDocRef);
+      console.log(`Successfully scheduled deletion of user document from Firestore for UID: ${uid}`);
+
+      await batch.commit();
+
+      // 6. Delete user from Firebase Auth
       await adminAuth.deleteUser(uid);
       console.log(`Successfully deleted user from Firebase Authentication for UID: ${uid}`);
 

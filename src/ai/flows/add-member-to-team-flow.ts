@@ -9,6 +9,7 @@ import { getAdminDb } from '@/lib/firebase-admin';
 import { AddMemberToTeamInput, AddMemberToTeamInputSchema, AddMemberToTeamOutput, AddMemberToTeamOutputSchema, Team, UserProfile } from '@/lib/types';
 import nodemailer from 'nodemailer';
 import { getEmailTemplate } from '@/lib/email-templates';
+import { FieldValue } from 'firebase-admin/firestore';
 
 async function sendNewMemberNotificationEmail(leaderEmail: string, leaderName: string, teamName: string, newMember: { name: string, email: string, contactNumber?: string }) {
   console.log(`Attempting to send new member notification to: ${leaderEmail}`);
@@ -130,6 +131,15 @@ const addMemberToTeamFlow = ai.defineFlow(
       
       batch.update(userDocRef, {
         teamId: teamId
+      });
+
+      // Log this activity
+      const logDocRef = adminDb.collection("logs").doc();
+      batch.set(logDocRef, {
+          id: logDocRef.id,
+          title: "Member Joined Team",
+          message: `${name} joined team "${teamData.name}".`,
+          createdAt: FieldValue.serverTimestamp(),
       });
 
       await batch.commit();

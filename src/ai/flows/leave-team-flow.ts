@@ -92,15 +92,13 @@ const leaveTeamFlow = ai.defineFlow(
                 // 1. Remove member from team's array
                 batch.update(teamDocRef, { members: FieldValue.arrayRemove(memberToRemove) });
 
-                // 2. Create in-app notification for the leader
-                const notificationRef = adminDb.collection('notifications').doc();
-                batch.set(notificationRef, {
-                    recipientUid: teamData.leader.uid,
-                    title: "A Member has Left Your Team",
-                    message: `${userProfile.name} has chosen to leave your team "${teamData.name}".`,
-                    read: false,
+                // 2. Log this activity
+                const logDocRef = adminDb.collection("logs").doc();
+                batch.set(logDocRef, {
+                    id: logDocRef.id,
+                    title: "Member Left Team",
+                    message: `${userProfile.name} left team "${teamData.name}".`,
                     createdAt: FieldValue.serverTimestamp(),
-                    link: '/leader'
                 });
 
                  // 3. Send email notification (outside of batch)
@@ -115,7 +113,7 @@ const leaveTeamFlow = ai.defineFlow(
         }
 
         // 4. Clear teamId from the user's profile
-        batch.update(userDocRef, { teamId: '' });
+        batch.update(userDocRef, { teamId: FieldValue.delete() });
 
         await batch.commit();
 

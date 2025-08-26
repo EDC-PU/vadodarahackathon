@@ -2,7 +2,7 @@
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Users, User, Shield, UserPlus, FileText, Download, Loader2, List, CaseSensitive } from "lucide-react";
+import { Users, User, Shield, UserPlus, FileText, Download, Loader2, List, CaseSensitive, Bell } from "lucide-react";
 import { useEffect, useState, useRef } from "react";
 import { db } from "@/lib/firebase";
 import { collection, getDocs, query, where, onSnapshot, orderBy, limit } from "firebase/firestore";
@@ -33,6 +33,9 @@ export default function AdminDashboard() {
         const activities = snapshot.docs.map(doc => doc.data() as Notification);
         setRecentActivity(activities);
         setLoadingActivity(false);
+    }, (error) => {
+        console.error("Error fetching activity logs:", error);
+        setLoadingActivity(false);
     });
 
     return () => unsubscribeActivity();
@@ -41,7 +44,7 @@ export default function AdminDashboard() {
   const handleExport = async () => {
     setIsExporting(true);
     try {
-        const result = await exportTeams({ institute: "All Institutes", category: "All Categories" });
+        const result = await exportTeams({ institute: "All Institutes", category: "All Categories", status: "All Statuses", problemStatementIds: [] });
         if (result.success && result.fileContent) {
             const blob = new Blob([Buffer.from(result.fileContent, 'base64')], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
             const url = window.URL.createObjectURL(blob);
@@ -114,6 +117,13 @@ export default function AdminDashboard() {
       </div>
     );
   }
+
+  const ActivityIcon = ({ title }: { title: string }) => {
+    if (title.includes("Team")) return <Users className="h-5 w-5 text-primary" />;
+    if (title.includes("SPOC")) return <UserPlus className="h-5 w-5 text-accent" />;
+    if (title.includes("User") || title.includes("Member")) return <User className="h-5 w-5 text-muted-foreground" />;
+    return <Bell className="h-5 w-5 text-muted-foreground" />;
+  };
 
   return (
     <div ref={mainRef} className={cn("p-4 sm:p-6 lg:p-8")}>
@@ -189,20 +199,20 @@ export default function AdminDashboard() {
                     </div>
                 ) : recentActivity.length > 0 ? (
                     <div className="space-y-4">
-                        {recentActivity.map((activity) => (
-                            <div key={activity.id} className="flex items-start gap-3">
-                                <div className="flex-shrink-0">
-                                  {activity.title.includes("Team") ? <Users className="h-5 w-5 text-primary" /> 
-                                    : activity.title.includes("SPOC") ? <UserPlus className="h-5 w-5 text-accent" />
-                                    : <User className="h-5 w-5 text-muted-foreground" />}
+                        {recentActivity.map((activity, index) => (
+                            <div key={index} className="flex items-start gap-3">
+                                <div className="flex-shrink-0 pt-0.5">
+                                  <ActivityIcon title={activity.title} />
                                 </div>
                                 <div className="flex-grow">
                                     <p className="text-sm font-medium leading-tight">{activity.title}</p>
                                     <p className="text-xs text-muted-foreground">{activity.message}</p>
                                 </div>
-                                 <div className="text-xs text-muted-foreground flex-shrink-0">
-                                    {formatDistanceToNow(activity.createdAt.seconds * 1000, { addSuffix: true })}
-                                </div>
+                                {activity.createdAt?.seconds && (
+                                    <div className="text-xs text-muted-foreground flex-shrink-0">
+                                        {formatDistanceToNow(activity.createdAt.seconds * 1000, { addSuffix: true })}
+                                    </div>
+                                )}
                             </div>
                         ))}
                     </div>
