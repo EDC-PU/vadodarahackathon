@@ -42,6 +42,19 @@ export default function ManageSpocsPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const getStatusVariant = (status?: 'pending' | 'approved' | 'rejected'): "default" | "secondary" | "destructive" => {
+    switch (status) {
+        case 'approved':
+            return 'default';
+        case 'pending':
+            return 'secondary';
+        case 'rejected':
+            return 'destructive';
+        default:
+            return 'secondary';
+    }
+  }
+
   return (
     <>
       <AddSpocDialog
@@ -79,9 +92,11 @@ export default function ManageSpocsPage() {
                             <div>
                                 <p className="font-semibold text-lg">{spoc.name}</p>
                                 <p className="text-sm text-muted-foreground">{spoc.email}</p>
-                                <p className="text-sm text-muted-foreground">{spoc.contactNumber}</p>
+                                <p className="text-sm text-muted-foreground">{spoc.institute}</p>
                             </div>
-                            <Badge variant="secondary">{spoc.institute}</Badge>
+                            <Badge variant={getStatusVariant(spoc.spocStatus)} className={spoc.spocStatus === 'approved' ? 'bg-green-600' : ''}>
+                              {spoc.spocStatus ? spoc.spocStatus.charAt(0).toUpperCase() + spoc.spocStatus.slice(1) : 'N/A'}
+                            </Badge>
                         </li>
                     ))}
                   </ul>
