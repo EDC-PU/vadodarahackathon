@@ -124,7 +124,7 @@ export default function SsihEnrollmentPage() {
                                 disabled={isSaving === team.id}
                              >
                                 {isSaving === team.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
-                                Enroll for SSIH 2025
+                                Mark as Enrolled for SIH 2025 from Instiute Level
                              </Button>
                           )}
                       </TableCell>

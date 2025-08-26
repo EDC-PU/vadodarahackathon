@@ -6,7 +6,7 @@
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
 import { getAdminDb } from '@/lib/firebase-admin';
-import { Team, UserProfile } from '@/lib/types';
+import { Team, UserProfile, Institute } from '@/lib/types';
 import PizZip from 'pizzip';
 import Docxtemplater from 'docxtemplater';
 import { format } from 'date-fns';
@@ -48,7 +48,15 @@ const generateNominationFormFlow = ai.defineFlow(
       }
       const team = teamDoc.data() as Team;
 
-      // 2. Fetch User Profiles
+      // 2. Fetch Institute Data to get the form URL
+      const instituteQuery = await db.collection('institutes').where('name', '==', team.institute).limit(1).get();
+      if (instituteQuery.empty) {
+        return { success: false, message: `Institute '${team.institute}' not found.` };
+      }
+      const instituteData = instituteQuery.docs[0].data() as Institute;
+      const templateUrl = instituteData.nominationFormUrl || "https://mnaignsupdlayf72.public.blob.vercel-storage.com/nomination_university.docx"; // Fallback URL
+
+      // 3. Fetch User Profiles
       const allUserIds = [team.leader.uid, ...team.members.map(m => m.uid)];
       const usersSnapshot = await db.collection('users').where('uid', 'in', allUserIds).get();
       const usersData = new Map<string, UserProfile>();
@@ -61,15 +69,15 @@ const generateNominationFormFlow = ai.defineFlow(
         return { success: false, message: 'Leader profile not found.' };
       }
 
-      // 3. Fetch Template
-      const templateUrl = "https://mnaignsupdlayf72.public.blob.vercel-storage.com/nomination_university.docx";
+      // 4. Fetch Template
+      console.log(`Using template URL: ${templateUrl}`);
       const response = await fetch(templateUrl);
       if (!response.ok) {
-        throw new Error(`Failed to download template: ${response.statusText}`);
+        throw new Error(`Failed to download template from ${templateUrl}: ${response.statusText}`);
       }
       const templateBuffer = await response.arrayBuffer();
 
-      // 4. Populate Template
+      // 5. Populate Template
       const zip = new PizZip(templateBuffer);
       const doc = new Docxtemplater(zip, {
         paragraphLoop: true,
@@ -111,7 +119,7 @@ const generateNominationFormFlow = ai.defineFlow(
 
       doc.render(dataToFill);
 
-      // 5. Generate Output
+      // 6. Generate Output
       const buf = doc.getZip().generate({
         type: 'nodebuffer',
         compression: 'DEFLATE',

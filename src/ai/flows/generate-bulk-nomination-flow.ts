@@ -6,7 +6,7 @@
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
 import { getAdminDb } from '@/lib/firebase-admin';
-import { Team, UserProfile } from '@/lib/types';
+import { Team, UserProfile, Institute } from '@/lib/types';
 import PizZip from 'pizzip';
 import Docxtemplater from 'docxtemplater';
 import { format } from 'date-fns';
@@ -26,10 +26,30 @@ const GenerateBulkNominationOutputSchema = z.object({
 type GenerateBulkNominationOutput = z.infer<typeof GenerateBulkNominationOutputSchema>;
 
 // This helper function encapsulates the logic for creating a single docx file.
-async function createDocx(db: FirebaseFirestore.Firestore, teamId: string, templateBuffer: ArrayBuffer): Promise<{ fileName: string, buffer: Buffer } | null> {
+async function createDocx(db: FirebaseFirestore.Firestore, teamId: string, templateCache: Map<string, ArrayBuffer>): Promise<{ fileName: string, buffer: Buffer } | null> {
     const teamDoc = await db.collection('teams').doc(teamId).get();
     if (!teamDoc.exists) return null;
     const team = teamDoc.data() as Team;
+
+    let templateBuffer = templateCache.get(team.institute);
+    if (!templateBuffer) {
+        const instituteQuery = await db.collection('institutes').where('name', '==', team.institute).limit(1).get();
+        if (instituteQuery.empty) {
+            console.warn(`Institute '${team.institute}' not found for team ${team.name}. Skipping form generation.`);
+            return null;
+        }
+        const instituteData = instituteQuery.docs[0].data() as Institute;
+        const templateUrl = instituteData.nominationFormUrl || "https://mnaignsupdlayf72.public.blob.vercel-storage.com/nomination_university.docx"; // Fallback URL
+        
+        console.log(`Fetching template for ${team.institute}: ${templateUrl}`);
+        const response = await fetch(templateUrl);
+        if (!response.ok) {
+            console.error(`Failed to download template for ${team.institute} from ${templateUrl}`);
+            return null;
+        }
+        templateBuffer = await response.arrayBuffer();
+        templateCache.set(team.institute, templateBuffer);
+    }
 
     const allUserIds = [team.leader.uid, ...team.members.map(m => m.uid)];
     const usersSnapshot = await db.collection('users').where('uid', 'in', allUserIds).get();
@@ -101,18 +121,11 @@ const generateBulkNominationFlow = ai.defineFlow(
     }
 
     try {
-      // 1. Fetch Template
-      const templateUrl = "https://mnaignsupdlayf72.public.blob.vercel-storage.com/nomination_university.docx";
-      const response = await fetch(templateUrl);
-      if (!response.ok) {
-        throw new Error(`Failed to download template: ${response.statusText}`);
-      }
-      const templateBuffer = await response.arrayBuffer();
-      
+      const templateCache = new Map<string, ArrayBuffer>();
       const zip = new JSZip();
 
       // 2. Generate all DOCX files in parallel
-      const docxPromises = teamIds.map(teamId => createDocx(db, teamId, templateBuffer));
+      const docxPromises = teamIds.map(teamId => createDocx(db, teamId, templateCache));
       const results = await Promise.all(docxPromises);
       
       let generatedCount = 0;

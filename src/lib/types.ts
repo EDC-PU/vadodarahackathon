@@ -120,6 +120,7 @@ export interface Institute {
     seconds: number;
     nanoseconds: number;
   }[];
+  nominationFormUrl?: string;
 }
 
 export interface Spoc extends UserProfile {
