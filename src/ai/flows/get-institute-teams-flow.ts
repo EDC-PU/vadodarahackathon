@@ -65,12 +65,12 @@ const getInstituteTeamsFlow = ai.defineFlow(
           const usersSnapshot = await usersQuery.get();
           usersSnapshot.forEach(doc => {
               const data = doc.data();
+              // Firestore Timestamps are not serializable and must be converted.
               const createdAt = data.createdAt;
               usersData[doc.id] = { 
                 uid: doc.id, 
                 ...data,
-                // Convert Firestore Timestamp to a serializable format
-                createdAt: createdAt ? {
+                createdAt: createdAt && createdAt.toDate ? {
                     seconds: createdAt.seconds,
                     nanoseconds: createdAt.nanoseconds,
                 } : null,
