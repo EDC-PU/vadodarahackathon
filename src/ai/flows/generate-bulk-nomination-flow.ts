@@ -26,6 +26,25 @@ const GenerateBulkNominationOutputSchema = z.object({
 });
 type GenerateBulkNominationOutput = z.infer<typeof GenerateBulkNominationOutputSchema>;
 
+// Helper to fetch user profiles in chunks to avoid Firestore 30-item 'in' query limit
+async function getUserProfilesInChunks(db: FirebaseFirestore.Firestore, userIds: string[]): Promise<Map<string, UserProfile>> {
+    const userProfiles = new Map<string, UserProfile>();
+    if (userIds.length === 0) return userProfiles;
+
+    const chunkSize = 30; 
+    for (let i = 0; i < userIds.length; i += chunkSize) {
+        const chunk = userIds.slice(i, i + chunkSize);
+        if (chunk.length > 0) {
+            const usersQuery = db.collection('users').where('uid', 'in', chunk);
+            const usersSnapshot = await usersQuery.get();
+            usersSnapshot.forEach(doc => {
+                userProfiles.set(doc.id, { uid: doc.id, ...doc.data() } as UserProfile);
+            });
+        }
+    }
+    return userProfiles;
+}
+
 // This helper function encapsulates the logic for creating a single docx file.
 async function createDocx(db: FirebaseFirestore.Firestore, teamId: string, templateCache: Map<string, ArrayBuffer>, generatorRole: 'admin' | 'spoc'): Promise<{ fileName: string, buffer: Buffer } | null> {
     const teamDoc = await db.collection('teams').doc(teamId).get();
@@ -57,11 +76,7 @@ async function createDocx(db: FirebaseFirestore.Firestore, teamId: string, templ
     }
 
     const allUserIds = [team.leader.uid, ...team.members.map(m => m.uid)];
-    const usersSnapshot = await db.collection('users').where('uid', 'in', allUserIds).get();
-    const usersData = new Map<string, UserProfile>();
-    usersSnapshot.forEach(doc => {
-      usersData.set(doc.id, doc.data() as UserProfile);
-    });
+    const usersData = await getUserProfilesInChunks(db, allUserIds);
 
     const leaderProfile = usersData.get(team.leader.uid);
     if (!leaderProfile) return null;

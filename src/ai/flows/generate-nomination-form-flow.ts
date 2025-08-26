@@ -25,6 +25,26 @@ const GenerateNominationFormOutputSchema = z.object({
 });
 type GenerateNominationFormOutput = z.infer<typeof GenerateNominationFormOutputSchema>;
 
+// Helper to fetch user profiles in chunks to avoid Firestore 30-item 'in' query limit
+async function getUserProfilesInChunks(db: FirebaseFirestore.Firestore, userIds: string[]): Promise<Map<string, UserProfile>> {
+    const userProfiles = new Map<string, UserProfile>();
+    if (userIds.length === 0) return userProfiles;
+
+    const chunkSize = 30; 
+    for (let i = 0; i < userIds.length; i += chunkSize) {
+        const chunk = userIds.slice(i, i + chunkSize);
+        if (chunk.length > 0) {
+            const usersQuery = db.collection('users').where('uid', 'in', chunk);
+            const usersSnapshot = await usersQuery.get();
+            usersSnapshot.forEach(doc => {
+                userProfiles.set(doc.id, { uid: doc.id, ...doc.data() } as UserProfile);
+            });
+        }
+    }
+    return userProfiles;
+}
+
+
 export async function generateNominationForm(input: GenerateNominationFormInput): Promise<GenerateNominationFormOutput> {
   return generateNominationFormFlow(input);
 }
@@ -66,11 +86,7 @@ const generateNominationFormFlow = ai.defineFlow(
 
       // 3. Fetch User Profiles
       const allUserIds = [team.leader.uid, ...team.members.map(m => m.uid)];
-      const usersSnapshot = await db.collection('users').where('uid', 'in', allUserIds).get();
-      const usersData = new Map<string, UserProfile>();
-      usersSnapshot.forEach(doc => {
-        usersData.set(doc.id, doc.data() as UserProfile);
-      });
+      const usersData = await getUserProfilesInChunks(db, allUserIds);
 
       const leaderProfile = usersData.get(team.leader.uid);
       if (!leaderProfile) {
