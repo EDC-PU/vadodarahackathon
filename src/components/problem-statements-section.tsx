@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useMemo, useState } from 'react';
@@ -90,7 +91,7 @@ export function ProblemStatementsSection({ initialProblemStatements }: ProblemSt
               <TableHeader>
                 <TableRow>
                   <TableHead>Title</TableHead>
-                  <TableHead className="w-[200px] text-right">Category</TableHead>
+                  <TableHead className="w-[200px] text-right hidden md:table-cell">Category</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -105,7 +106,7 @@ export function ProblemStatementsSection({ initialProblemStatements }: ProblemSt
                           {ps.title}
                         </button>
                       </TableCell>
-                      <TableCell className="text-right">
+                      <TableCell className="text-right hidden md:table-cell">
                         <Badge variant={ps.category === 'Software' ? 'default' : 'secondary'}>
                           {ps.category}
                         </Badge>
