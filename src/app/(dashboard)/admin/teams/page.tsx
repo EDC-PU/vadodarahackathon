@@ -47,6 +47,26 @@ type StatusFilter = "All Statuses" | "Registered" | "Pending";
 type SortKey = 'teamName' | 'problemStatementId' | 'name' | 'email' | 'enrollmentNumber' | 'contactNumber' | 'yearOfStudy' | 'semester';
 type SortDirection = 'asc' | 'desc';
 
+// Helper to fetch user profiles in chunks to avoid Firestore 30-item 'in' query limit
+async function getUserProfilesInChunks(userIds: string[]): Promise<Map<string, UserProfile>> {
+    const userProfiles = new Map<string, UserProfile>();
+    if (userIds.length === 0) return userProfiles;
+
+    const chunkSize = 30;
+    for (let i = 0; i < userIds.length; i += chunkSize) {
+        const chunk = userIds.slice(i, i + chunkSize);
+        if (chunk.length > 0) {
+            const usersQuery = query(collection(db, 'users'), where('uid', 'in', chunk));
+            const usersSnapshot = await getDocs(usersQuery);
+            usersSnapshot.forEach(doc => {
+                userProfiles.set(doc.id, { uid: doc.id, ...doc.data() } as UserProfile);
+            });
+        }
+    }
+    return userProfiles;
+}
+
+
 function AllTeamsContent() {
   const [allTeams, setAllTeams] = useState<Team[]>([]);
   const [allUsers, setAllUsers] = useState<Map<string, UserProfile>>(new Map());
@@ -83,59 +103,51 @@ function AllTeamsContent() {
     }
   }, [searchParams]);
 
-  const fetchData = useCallback(async () => {
+ const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const teamsCollection = collection(db, 'teams');
-      const unsubscribeTeams = onSnapshot(query(teamsCollection), (snapshot) => {
-        const teamsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Team));
-        setAllTeams(teamsData);
-      });
+        const teamsQuery = query(collection(db, 'teams'));
+        const unsubscribeTeams = onSnapshot(teamsQuery, async (snapshot) => {
+            const teamsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Team));
+            setAllTeams(teamsData);
 
-      const usersCollection = collection(db, 'users');
-      const unsubscribeUsers = onSnapshot(query(usersCollection), (snapshot) => {
-        const usersData = new Map<string, UserProfile>();
-        snapshot.forEach(doc => {
-            usersData.set(doc.id, { uid: doc.id, ...doc.data() } as UserProfile);
+            const allUserIds = new Set<string>();
+            teamsData.forEach(team => {
+                allUserIds.add(team.leader.uid);
+                team.members.forEach(member => {
+                    if (member.uid) allUserIds.add(member.uid);
+                });
+            });
+
+            const usersData = await getUserProfilesInChunks(Array.from(allUserIds));
+            setAllUsers(usersData);
+            setLoading(false); // Set loading to false after users are fetched
         });
-        setAllUsers(usersData);
-      });
-      
-      const problemStatementsCollection = collection(db, 'problemStatements');
-      const unsubscribePS = onSnapshot(query(problemStatementsCollection), (snapshot) => {
-        const psData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ProblemStatement));
-        setProblemStatements(psData);
-        setFilteredProblemStatements(psData);
-      });
-      
-      const institutesQuery = query(collection(db, 'institutes'), orderBy("name"));
-      const unsubscribeInstitutes = onSnapshot(institutesQuery, (snapshot) => {
-          const institutesData = snapshot.docs.map(doc => ({ id: doc.id, name: doc.data().name }));
-          setInstitutes(institutesData);
-      });
 
-      // Let the listeners fetch initial data, then set loading to false.
-      // This is a simplified approach; for large datasets, a direct fetch might be better.
-      await Promise.all([
-          getDocs(query(teamsCollection)),
-          getDocs(query(usersCollection)),
-          getDocs(query(problemStatementsCollection)),
-          getDocs(institutesQuery)
-      ]);
-      
-      return () => {
-          unsubscribeTeams();
-          unsubscribeUsers();
-          unsubscribePS();
-          unsubscribeInstitutes();
-      };
+        const problemStatementsQuery = query(collection(db, 'problemStatements'));
+        const unsubscribePS = onSnapshot(problemStatementsQuery, (snapshot) => {
+            const psData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ProblemStatement));
+            setProblemStatements(psData);
+            setFilteredProblemStatements(psData);
+        });
+
+        const institutesQuery = query(collection(db, 'institutes'), orderBy("name"));
+        const unsubscribeInstitutes = onSnapshot(institutesQuery, (snapshot) => {
+            const institutesData = snapshot.docs.map(doc => ({ id: doc.id, name: doc.data().name }));
+            setInstitutes(institutesData);
+        });
+
+        return () => {
+            unsubscribeTeams();
+            unsubscribePS();
+            unsubscribeInstitutes();
+        };
     } catch (error) {
         console.error("Error setting up listeners:", error);
         toast({ title: "Error", description: "Could not initialize data listeners.", variant: "destructive" });
-    } finally {
         setLoading(false);
     }
-  }, [toast]);
+}, [toast]);
   
   useEffect(() => {
     fetchData();
