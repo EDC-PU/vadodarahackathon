@@ -33,6 +33,8 @@ import {
   List,
   Library,
   ClipboardCheck,
+  Medal,
+  FileSignature,
 } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { Button } from "./ui/button";
@@ -47,6 +49,7 @@ const navItems = {
     { href: "/admin/announcements", icon: <Megaphone />, label: "Announcements" },
     { href: "/admin/problem-statements", icon: <FileQuestion />, label: "Problem Statements" },
     { href: "/admin/teams", icon: <Users />, label: "All Teams" },
+    { href: "/admin/university-nominations", icon: <Medal />, label: "University Nominations" },
     { href: "/admin/users", icon: <Users2 />, label: "Manage Users" },
     { href: "/admin/institutes", icon: <Library />, label: "Manage Institutes" },
     { href: "/admin/departments", icon: <List />, label: "Manage Departments" },
@@ -61,6 +64,7 @@ const navItems = {
     { href: "/spoc/teams", icon: <Users />, label: "All Teams" },
     { href: "/spoc/analytics", icon: <BarChart2 />, label: "Analytics" },
     { href: "/spoc/evaluation", icon: <ClipboardCheck />, label: "Evaluation & Nomination" },
+    { href: "/spoc/ssih-enrollment", icon: <FileSignature />, label: "SSIH Enrollment" },
     { href: "/spoc/departments", icon: <List />, label: "Manage Departments" },
     { href: "/spoc/announcements", icon: <Megaphone />, label: "Announcements" },
   ],

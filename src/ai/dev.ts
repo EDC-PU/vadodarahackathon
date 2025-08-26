@@ -23,3 +23,5 @@ import '@/ai/flows/generate-bulk-nomination-flow.ts';
 import '@/ai/flows/bulk-upload-ps-flow.ts';
 import '@/ai/flows/leave-team-flow.ts';
 import '@/ai/flows/set-evaluation-dates-flow.ts';
+import '@/ai/flows/set-sih-status-flow.ts';
+import '@/ai/flows/enroll-team-in-ssih-flow.ts';

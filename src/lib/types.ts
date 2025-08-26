@@ -108,6 +108,8 @@ export interface Team {
   problemStatementTitle?: string;
   teamNumber?: string;
   isNominated?: boolean;
+  sihSelectionStatus?: 'university' | 'institute';
+  ssihEnrolled?: boolean;
 }
 
 export interface Institute {
