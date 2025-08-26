@@ -4,7 +4,7 @@
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { Award, Code, Cpu, Mail, MapPin, Phone, Users, Calendar, Trophy, FileText, BarChart, FileQuestion, Loader2, LayoutDashboard, MoveRight, UserCheck, Users2, Venus, User } from 'lucide-react';
+import { Award, Code, Cpu, Mail, MapPin, Phone, Users, Calendar, Trophy, FileText, BarChart, FileQuestion, Loader2, LayoutDashboard, MoveRight, UserCheck, Users2, Venus, User, Workflow } from 'lucide-react';
 import Image from 'next/image';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { useState, useEffect, useRef, MouseEvent } from 'react';
@@ -317,30 +317,38 @@ export default function LandingPage({ spocDetails, announcements, problemStateme
         
         <AnimatedSection id="eligibility" className="bg-secondary/10">
           <div className="container max-w-7xl text-center">
-            <SectionTitle>Eligibility Criteria</SectionTitle>
+            <SectionTitle>Eligibility &amp; Team Guidelines</SectionTitle>
             <p className="max-w-3xl mx-auto text-foreground/80 mb-12">
               Ensure your team meets the following criteria to participate in the hackathon.
             </p>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
               <Card className="glass-card p-6 text-center transform hover:-translate-y-2 transition-transform duration-300">
                 <UserCheck className="h-10 w-10 text-amber-400 mx-auto mb-4" />
-                <CardTitle className="text-2xl mt-2">University Students</CardTitle>
+                <CardTitle className="text-xl mt-2">University Students</CardTitle>
                 <CardContent className="mt-4 text-foreground/80 p-0">
                   <p>Open to all students currently enrolled at Parul University.</p>
                 </CardContent>
               </Card>
               <Card className="glass-card p-6 text-center transform hover:-translate-y-2 transition-transform duration-300">
                 <Users2 className="h-10 w-10 text-primary mx-auto mb-4" />
-                <CardTitle className="text-2xl mt-2">Team of 6</CardTitle>
+                <CardTitle className="text-xl mt-2">Team of 6</CardTitle>
                 <CardContent className="mt-4 text-foreground/80 p-0">
                   <p>Each team must consist of exactly six participants.</p>
                 </CardContent>
               </Card>
               <Card className="glass-card p-6 text-center transform hover:-translate-y-2 transition-transform duration-300">
                 <Venus className="h-10 w-10 text-accent mx-auto mb-4" />
-                <CardTitle className="text-2xl mt-2">Female Representation</CardTitle>
+                <CardTitle className="text-xl mt-2">Female Representation</CardTitle>
                 <CardContent className="mt-4 text-foreground/80 p-0">
                   <p>Each team must have at least one female member.</p>
+                </CardContent>
+              </Card>
+               <Card className="glass-card p-6 text-center transform hover:-translate-y-2 transition-transform duration-300">
+                <Workflow className="h-10 w-10 text-cyan-400 mx-auto mb-4" />
+                <CardTitle className="text-xl mt-2">Team Composition</CardTitle>
+                <CardContent className="mt-4 text-foreground/80 p-0 text-xs">
+                  <p><strong>Software:</strong> Programming skills are crucial.</p>
+                  <p className="mt-2"><strong>Hardware:</strong> Multi-disciplinary teams are encouraged (Mechanical, Electronic, Designers, Programmers, etc.)</p>
                 </CardContent>
               </Card>
             </div>
@@ -518,7 +526,7 @@ export default function LandingPage({ spocDetails, announcements, problemStateme
                   <img src="https://www.pierc.org/_next/static/media/PIERC%20WHITE.a9ef7cc8.svg" alt="PIERC Logo" className="h-10" />
               </div>
               <div className="text-center md:text-right text-sm text-foreground/60">
-                <p>&copy; {new Date().getFullYear()}© 2025 Vadodara Hackathon. All rights reserved.
+                <p>&copy; {new Date().getFullYear()} Vadodara Hackathon. All rights reserved.
                 </p>
                 <p>Designed & Developed by Pranav Rathi</p>
                 <div className="flex gap-4 justify-center md:justify-end mt-1">
