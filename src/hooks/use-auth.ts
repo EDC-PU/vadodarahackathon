@@ -222,15 +222,13 @@ export function useAuth() {
       userProfile = { uid: userDoc.id, ...userDoc.data() } as UserProfile;
       console.log("handleLogin: User document exists.", userProfile);
     } else {
-        console.log("handleLogin: New user detected. Creating profile from sessionStorage role.");
-        const role = sessionStorage.getItem('sign-up-role');
+        console.log("handleLogin: New user detected. Creating profile...");
+        let role = sessionStorage.getItem('sign-up-role');
         sessionStorage.removeItem('sign-up-role');
 
         if (!role) {
-            console.error("handleLogin: New user signed up, but role was not found in sessionStorage.");
-            toast({ title: "Error", description: "Role selection was not found. Please try signing up again.", variant: "destructive" });
-            signOut(auth);
-            return;
+            console.warn("handleLogin: Role not found in session storage for new user. Defaulting to 'member'. This is expected for first-time logins that aren't from the signup page.");
+            role = 'member'; // Default role for users who log in without registering first.
         }
         
         if (inviteToken) {
@@ -244,7 +242,7 @@ export function useAuth() {
             email: loggedInUser.email!,
             role: role as UserProfile['role'],
             photoURL: loggedInUser.photoURL || '',
-            passwordChanged: true, // User set their own password during signup
+            passwordChanged: true, // User set their own password during signup or used Google
             createdAt: serverTimestamp() as any,
         };
         
