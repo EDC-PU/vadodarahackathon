@@ -346,7 +346,7 @@ export function RegistrationForm() {
                   render={({ field }) => (
                       <FormItem>
                           <FormLabel>Department</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value} disabled={isLoading || isDeptLoading || !selectedInstitute}>
+                          <Select onValueChange={(value) => field.onChange(value === 'Other' ? '' : value)} value={field.value && departments.includes(field.value) ? field.value : 'Other'}>
                               <FormControl>
                                   <SelectTrigger>
                                       <SelectValue placeholder={isDeptLoading ? "Loading..." : "Select your department"} />
@@ -369,7 +369,7 @@ export function RegistrationForm() {
                                   )}
                               </SelectContent>
                           </Select>
-                          {selectedDepartment === 'Other' && (
+                          {(selectedDepartment === '' || !departments.includes(selectedDepartment)) && (
                               <FormControl className="mt-2">
                                   <Input placeholder="Please specify your department" {...field} disabled={isLoading} />
                               </FormControl>
@@ -446,5 +446,3 @@ export function RegistrationForm() {
     </Card>
   );
 }
-
-    
