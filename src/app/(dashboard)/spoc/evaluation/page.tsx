@@ -39,11 +39,13 @@ import {
   AlertCircle,
   Trophy,
   Users,
+  Download,
 } from "lucide-react";
 import { format, isAfter, startOfDay } from "date-fns";
 import { cn } from "@/lib/utils";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { setEvaluationDates } from "@/ai/flows/set-evaluation-dates-flow";
+import { generateNominationForm } from "@/ai/flows/generate-nomination-form-flow";
 
 const formSchema = z.object({
   evaluationDates: z
@@ -60,6 +62,7 @@ export default function SpocEvaluationPage() {
   const [nominatedTeamIds, setNominatedTeamIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [isGenerating, setIsGenerating] = useState<string | null>(null);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -177,6 +180,32 @@ export default function SpocEvaluationPage() {
        setIsSaving(false);
     }
   }
+
+  const handleGenerateForm = async (teamId: string) => {
+    setIsGenerating(teamId);
+    try {
+        const result = await generateNominationForm({ teamId, generatorRole: 'spoc' });
+        if (result.success && result.fileContent) {
+            const blob = new Blob([Buffer.from(result.fileContent, 'base64')], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = result.fileName || 'nomination-form.docx';
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            a.remove();
+            toast({ title: "Success", description: "Nomination form generated." });
+        } else {
+            toast({ title: "Generation Failed", description: result.message || "Could not generate the nomination form.", variant: "destructive" });
+        }
+    } catch (error: any) {
+        toast({ title: "Error", description: `An unexpected error occurred: ${error.message}`, variant: "destructive" });
+    } finally {
+        setIsGenerating(null);
+    }
+  };
+
 
   const canNominate = instituteData?.evaluationDates && instituteData.evaluationDates.length === 2
     ? isAfter(new Date(), (instituteData.evaluationDates[1] as any).toDate())
@@ -314,19 +343,30 @@ export default function SpocEvaluationPage() {
               </div>
               <div className="border rounded-md">
                 {teams.map(team => (
-                  <div key={team.id} className="flex items-center p-4 border-b last:border-b-0">
+                  <div key={team.id} className="flex items-center p-4 border-b last:border-b-0 gap-4">
                      <Checkbox 
                         id={`team-${team.id}`} 
                         onCheckedChange={(checked) => handleNominationChange(team.id, checked)}
                         checked={nominatedTeamIds.includes(team.id)}
                         disabled={!nominatedTeamIds.includes(team.id) && nominatedTeamIds.length >= nominationLimit}
                     />
-                    <label htmlFor={`team-${team.id}`} className="ml-4 flex-1">
+                    <label htmlFor={`team-${team.id}`} className="flex-1">
                       <p className="font-semibold">{team.name}</p>
                       <p className="text-sm text-muted-foreground flex items-center gap-2">
                         <Users className="h-3 w-3" /> {team.members.length + 1} members
                       </p>
                     </label>
+                    {nominatedTeamIds.includes(team.id) && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleGenerateForm(team.id)}
+                        disabled={isGenerating === team.id}
+                      >
+                        {isGenerating === team.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
+                        Generate Form
+                      </Button>
+                    )}
                   </div>
                 ))}
               </div>

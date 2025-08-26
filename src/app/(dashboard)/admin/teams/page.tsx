@@ -216,7 +216,7 @@ function AllTeamsContent() {
   const handleGenerateNomination = async (teamId: string) => {
     setIsNominating(teamId);
     try {
-        const result = await generateNominationForm({ teamId });
+        const result = await generateNominationForm({ teamId, generatorRole: 'admin' });
         if (result.success && result.fileContent) {
             const blob = new Blob([Buffer.from(result.fileContent, 'base64')], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
             const url = window.URL.createObjectURL(blob);
@@ -258,7 +258,7 @@ function AllTeamsContent() {
 
     setIsBulkNominating(true);
     try {
-        const result = await generateBulkNomination({ teamIds: nominatedSelectedTeams });
+        const result = await generateBulkNomination({ teamIds: nominatedSelectedTeams, generatorRole: 'admin' });
         if (result.success && result.fileContent) {
             const blob = new Blob([Buffer.from(result.fileContent, 'base64')], { type: 'application/zip' });
             const url = window.URL.createObjectURL(blob);

@@ -14,6 +14,7 @@ import JSZip from 'jszip';
 
 const GenerateBulkNominationInputSchema = z.object({
   teamIds: z.array(z.string()),
+  generatorRole: z.enum(['admin', 'spoc']).describe("The role of the user generating the form, to determine which template to use."),
 });
 type GenerateBulkNominationInput = z.infer<typeof GenerateBulkNominationInputSchema>;
 
@@ -26,29 +27,33 @@ const GenerateBulkNominationOutputSchema = z.object({
 type GenerateBulkNominationOutput = z.infer<typeof GenerateBulkNominationOutputSchema>;
 
 // This helper function encapsulates the logic for creating a single docx file.
-async function createDocx(db: FirebaseFirestore.Firestore, teamId: string, templateCache: Map<string, ArrayBuffer>): Promise<{ fileName: string, buffer: Buffer } | null> {
+async function createDocx(db: FirebaseFirestore.Firestore, teamId: string, templateCache: Map<string, ArrayBuffer>, generatorRole: 'admin' | 'spoc'): Promise<{ fileName: string, buffer: Buffer } | null> {
     const teamDoc = await db.collection('teams').doc(teamId).get();
     if (!teamDoc.exists) return null;
     const team = teamDoc.data() as Team;
 
-    let templateBuffer = templateCache.get(team.institute);
-    if (!templateBuffer) {
+    let templateUrl = "https://mnaignsupdlayf72.public.blob.vercel-storage.com/nomination_university.docx"; // Default to University level
+    
+    if (generatorRole === 'spoc') {
         const instituteQuery = await db.collection('institutes').where('name', '==', team.institute).limit(1).get();
         if (instituteQuery.empty) {
             console.warn(`Institute '${team.institute}' not found for team ${team.name}. Skipping form generation.`);
             return null;
         }
         const instituteData = instituteQuery.docs[0].data() as Institute;
-        const templateUrl = instituteData.nominationFormUrl || "https://mnaignsupdlayf72.public.blob.vercel-storage.com/nomination_university.docx"; // Fallback URL
-        
-        console.log(`Fetching template for ${team.institute}: ${templateUrl}`);
+        templateUrl = instituteData.nominationFormUrl || templateUrl; // Fallback to university if spoc template is not set
+    }
+    
+    let templateBuffer = templateCache.get(templateUrl); // Use URL as cache key
+    if (!templateBuffer) {
+        console.log(`Fetching template for ${team.institute} (role: ${generatorRole}): ${templateUrl}`);
         const response = await fetch(templateUrl);
         if (!response.ok) {
             console.error(`Failed to download template for ${team.institute} from ${templateUrl}`);
             return null;
         }
         templateBuffer = await response.arrayBuffer();
-        templateCache.set(team.institute, templateBuffer);
+        templateCache.set(templateUrl, templateBuffer);
     }
 
     const allUserIds = [team.leader.uid, ...team.members.map(m => m.uid)];
@@ -111,7 +116,7 @@ const generateBulkNominationFlow = ai.defineFlow(
     inputSchema: GenerateBulkNominationInputSchema,
     outputSchema: GenerateBulkNominationOutputSchema,
   },
-  async ({ teamIds }) => {
+  async ({ teamIds, generatorRole }) => {
     const db = getAdminDb();
     if (!db) {
       return { success: false, message: "Database connection failed." };
@@ -125,7 +130,7 @@ const generateBulkNominationFlow = ai.defineFlow(
       const zip = new JSZip();
 
       // 2. Generate all DOCX files in parallel
-      const docxPromises = teamIds.map(teamId => createDocx(db, teamId, templateCache));
+      const docxPromises = teamIds.map(teamId => createDocx(db, teamId, templateCache, generatorRole));
       const results = await Promise.all(docxPromises);
       
       let generatedCount = 0;

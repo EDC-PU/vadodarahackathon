@@ -13,6 +13,7 @@ import { format } from 'date-fns';
 
 const GenerateNominationFormInputSchema = z.object({
   teamId: z.string(),
+  generatorRole: z.enum(['admin', 'spoc']).describe("The role of the user generating the form, to determine which template to use."),
 });
 type GenerateNominationFormInput = z.infer<typeof GenerateNominationFormInputSchema>;
 
@@ -34,7 +35,7 @@ const generateNominationFormFlow = ai.defineFlow(
     inputSchema: GenerateNominationFormInputSchema,
     outputSchema: GenerateNominationFormOutputSchema,
   },
-  async ({ teamId }) => {
+  async ({ teamId, generatorRole }) => {
     const db = getAdminDb();
     if (!db) {
       return { success: false, message: "Database connection failed." };
@@ -48,13 +49,20 @@ const generateNominationFormFlow = ai.defineFlow(
       }
       const team = teamDoc.data() as Team;
 
-      // 2. Fetch Institute Data to get the form URL
-      const instituteQuery = await db.collection('institutes').where('name', '==', team.institute).limit(1).get();
-      if (instituteQuery.empty) {
-        return { success: false, message: `Institute '${team.institute}' not found.` };
+      // 2. Fetch Institute Data to get the form URL if needed
+      let templateUrl = "https://mnaignsupdlayf72.public.blob.vercel-storage.com/nomination_university.docx"; // Default to University level
+
+      if (generatorRole === 'spoc') {
+        const instituteQuery = await db.collection('institutes').where('name', '==', team.institute).limit(1).get();
+        if (instituteQuery.empty) {
+            return { success: false, message: `Your institute '${team.institute}' configuration could not be found.` };
+        }
+        const instituteData = instituteQuery.docs[0].data() as Institute;
+        if (!instituteData.nominationFormUrl) {
+            return { success: false, message: `A nomination form template has not been set for your institute. Please contact an administrator.` };
+        }
+        templateUrl = instituteData.nominationFormUrl;
       }
-      const instituteData = instituteQuery.docs[0].data() as Institute;
-      const templateUrl = instituteData.nominationFormUrl || "https://mnaignsupdlayf72.public.blob.vercel-storage.com/nomination_university.docx"; // Fallback URL
 
       // 3. Fetch User Profiles
       const allUserIds = [team.leader.uid, ...team.members.map(m => m.uid)];
@@ -70,7 +78,7 @@ const generateNominationFormFlow = ai.defineFlow(
       }
 
       // 4. Fetch Template
-      console.log(`Using template URL: ${templateUrl}`);
+      console.log(`Using template URL for role ${generatorRole}: ${templateUrl}`);
       const response = await fetch(templateUrl);
       if (!response.ok) {
         throw new Error(`Failed to download template from ${templateUrl}: ${response.statusText}`);
