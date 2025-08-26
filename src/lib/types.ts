@@ -1,4 +1,3 @@
-
 import {z} from 'genkit';
 import type {Query} from 'firebase-admin/firestore';
 
@@ -73,7 +72,7 @@ export interface TeamMember {
   yearOfStudy?: string;
 }
 
-export type ProblemStatementCategory = "Software" | "Hardware" | "Hardware & Software";
+export type ProblemStatementCategory = "Software" | "Hardware";
 
 export interface ProblemStatement {
   id: string;
@@ -99,7 +98,7 @@ export interface Team {
   };
   institute: string;
   department: string;
-  category?: "Software" | "Hardware" | "Hardware & Software";
+  category?: "Software" | "Hardware";
   members: TeamMember[];
   problemStatementId?: string;
   problemStatementTitle?: string;

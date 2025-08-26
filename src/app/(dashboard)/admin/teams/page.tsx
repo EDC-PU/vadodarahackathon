@@ -1,4 +1,3 @@
-
 "use client";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -71,7 +70,7 @@ function AllTeamsContent() {
   const { toast } = useToast();
   const searchParams = useSearchParams();
   
-  const categories: CategoryFilter[] = ["All Categories", "Software", "Hardware", "Hardware & Software"];
+  const categories: CategoryFilter[] = ["All Categories", "Software", "Hardware"];
   const statuses: StatusFilter[] = ["All Statuses", "Registered", "Pending"];
 
   useEffect(() => {

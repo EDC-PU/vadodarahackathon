@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect } from "react";
@@ -33,7 +32,7 @@ interface EditProblemStatementDialogProps {
 
 const formSchema = z.object({
   title: z.string().min(1, "Title is required."),
-  category: z.enum(["Software", "Hardware", "Hardware & Software"], {
+  category: z.enum(["Software", "Hardware"], {
     required_error: "You need to select a problem statement category.",
   }),
   description: z.string().optional(),
@@ -151,12 +150,6 @@ export function EditProblemStatementDialog({ isOpen, onOpenChange, problemStatem
                             <RadioGroupItem value="Hardware" />
                           </FormControl>
                           <FormLabel className="font-normal">Hardware</FormLabel>
-                        </FormItem>
-                        <FormItem className="flex items-center space-x-3 space-y-0">
-                          <FormControl>
-                            <RadioGroupItem value="Hardware & Software" />
-                          </FormControl>
-                          <FormLabel className="font-normal">Hardware & Software</FormLabel>
                         </FormItem>
                       </RadioGroup>
                     </FormControl>

@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useMemo, useState } from 'react';
@@ -62,7 +61,7 @@ export function ProblemStatementsSection({ initialProblemStatements }: ProblemSt
     setIsDialogOpen(true);
   };
 
-  const categories: CategoryFilter[] = ["All", "Software", "Hardware", "Hardware & Software"];
+  const categories: CategoryFilter[] = ["All", "Software", "Hardware"];
 
   return (
     <>
@@ -107,7 +106,7 @@ export function ProblemStatementsSection({ initialProblemStatements }: ProblemSt
                         </button>
                       </TableCell>
                       <TableCell className="text-right">
-                        <Badge variant={ps.category === 'Software' ? 'default' : ps.category === 'Hardware' ? 'secondary' : 'outline'}>
+                        <Badge variant={ps.category === 'Software' ? 'default' : 'secondary'}>
                           {ps.category}
                         </Badge>
                       </TableCell>

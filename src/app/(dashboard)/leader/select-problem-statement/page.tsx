@@ -104,7 +104,7 @@ export default function SelectProblemStatementPage() {
       )
   }
 
-  const filters: CategoryFilter[] = ["All", "Software", "Hardware", "Hardware & Software"];
+  const filters: CategoryFilter[] = ["All", "Software", "Hardware"];
 
   return (
     <div className="p-4 sm:p-6 lg:p-8">
@@ -146,7 +146,7 @@ export default function SelectProblemStatementPage() {
                         <div className="flex-1">
                             <div className="flex items-start justify-between mb-2">
                                 <div>
-                                    <Badge variant={ps.category === 'Software' ? 'default' : ps.category === 'Hardware' ? 'secondary' : 'outline'}>{ps.category}</Badge>
+                                    <Badge variant={ps.category === 'Software' ? 'default' : 'secondary'}>{ps.category}</Badge>
                                     <h3 className="font-semibold text-lg mt-1">{ps.title} ({ps.problemStatementId})</h3>
                                 </div>
                                 <Button 

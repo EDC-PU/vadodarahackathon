@@ -1,4 +1,3 @@
-
 'use server';
 /**
  * @fileOverview Flow to bulk upload problem statements from an Excel file.
@@ -73,8 +72,8 @@ const bulkUploadPsFlow = ai.defineFlow(
             continue;
         }
 
-        if (!["Software", "Hardware", "Hardware & Software"].includes(category)) {
-            errors.push(`Row ${rowNumber}: Invalid category "${category}". Must be one of "Software", "Hardware", "Hardware & Software".`);
+        if (!["Software", "Hardware"].includes(category)) {
+            errors.push(`Row ${rowNumber}: Invalid category "${category}". Must be one of "Software", "Hardware".`);
             failedCount++;
             continue;
         }
