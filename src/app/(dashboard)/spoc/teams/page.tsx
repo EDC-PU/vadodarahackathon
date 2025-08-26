@@ -4,12 +4,12 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Loader2, AlertCircle, Save, Pencil, X, Trash2, Users, User, MinusCircle, ArrowUpDown, Link as LinkIcon, Copy, RefreshCw } from "lucide-react";
+import { Loader2, AlertCircle, Save, Pencil, X, Trash2, Users, User, MinusCircle, ArrowUpDown, Link as LinkIcon, Copy, RefreshCw, ChevronDown } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useEffect, useState, useMemo, useCallback } from "react";
-import { auth, db } from "@/lib/firebase";
-import { doc, getDoc, collection, query, where, onSnapshot, updateDoc } from "firebase/firestore";
-import { Team, UserProfile, TeamMember } from "@/lib/types";
+import { db } from "@/lib/firebase";
+import { doc, onSnapshot, updateDoc, collection, query, where, orderBy } from "firebase/firestore";
+import { Team, UserProfile, TeamMember, ProblemStatement } from "@/lib/types";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
@@ -24,6 +24,14 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { manageTeamBySpoc } from "@/ai/flows/manage-team-by-spoc-flow";
 import { useAuth } from "@/hooks/use-auth";
 import { exportTeams } from "@/ai/flows/export-teams-flow";
@@ -42,12 +50,14 @@ export default function SpocTeamsPage() {
   const { user, loading: authLoading } = useAuth();
   const [teams, setTeams] = useState<Team[]>([]);
   const [users, setUsers] = useState<Map<string, UserProfile>>(new Map());
+  const [problemStatements, setProblemStatements] = useState<ProblemStatement[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingTeam, setEditingTeam] = useState<{ id: string, name: string } | null>(null);
   const [isSaving, setIsSaving] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState<string | null>(null);
   const [isExporting, setIsExporting] = useState(false);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("All Statuses");
+  const [selectedProblemStatements, setSelectedProblemStatements] = useState<string[]>([]);
   const [sortConfig, setSortConfig] = useState<{ key: SortKey, direction: SortDirection } | null>(null);
   const { toast } = useToast();
   const [inviteLinks, setInviteLinks] = useState<Map<string, string>>(new Map());
@@ -56,10 +66,11 @@ export default function SpocTeamsPage() {
 
   const statuses: StatusFilter[] = ["All Statuses", "Registered", "Pending"];
 
-  const fetchInstituteData = useCallback((institute: string) => {
+  const fetchAllData = useCallback((institute: string) => {
     setLoading(true);
-    const teamsQuery = query(collection(db, "teams"), where("institute", "==", institute));
     
+    // Fetch Teams
+    const teamsQuery = query(collection(db, "teams"), where("institute", "==", institute));
     const unsubscribeTeams = onSnapshot(teamsQuery, (snapshot) => {
         const teamsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Team));
         setTeams(teamsData);
@@ -72,32 +83,41 @@ export default function SpocTeamsPage() {
             });
         });
 
-        const userUnsubscribers: (()=>void)[] = [];
+        // Fetch Users
         if (allUserIds.size > 0) {
-            Array.from(allUserIds).forEach(uid => {
-                const userDocRef = doc(db, 'users', uid);
-                const unsub = onSnapshot(userDocRef, (userDoc) => {
-                    if (userDoc.exists()) {
-                        const userData = { uid: userDoc.id, ...userDoc.data() } as UserProfile;
-                        setUsers(prevUsers => new Map(prevUsers).set(uid, userData));
-                    }
-                }, (error) => {
-                    console.error(`Failed to listen to user ${uid}`, error);
-                });
-                userUnsubscribers.push(unsub);
-            });
+          const userUnsubscribers: (()=>void)[] = [];
+          Array.from(allUserIds).forEach(uid => {
+              const userDocRef = doc(db, 'users', uid);
+              const unsub = onSnapshot(userDocRef, (userDoc) => {
+                  if (userDoc.exists()) {
+                      const userData = { uid: userDoc.id, ...userDoc.data() } as UserProfile;
+                      setUsers(prevUsers => new Map(prevUsers).set(uid, userData));
+                  }
+              });
+              userUnsubscribers.push(unsub);
+          });
         }
-        
-        setLoading(false);
-
-        return () => userUnsubscribers.forEach(unsub => unsub());
     }, (error) => {
         console.error("Error listening to team updates:", error);
         toast({ title: "Error", description: "Could not load real-time team data.", variant: "destructive" });
-        setLoading(false);
     });
 
-    return unsubscribeTeams;
+    // Fetch Problem Statements
+    const psQuery = query(collection(db, 'problemStatements'), orderBy("problemStatementId"));
+    const unsubscribePs = onSnapshot(psQuery, (snapshot) => {
+        const psData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ProblemStatement));
+        setProblemStatements(psData);
+    });
+
+    Promise.all([
+        new Promise(res => onSnapshot(teamsQuery, () => res(true))),
+        new Promise(res => onSnapshot(psQuery, () => res(true))),
+    ]).finally(() => setLoading(false));
+
+    return () => {
+        unsubscribeTeams();
+        unsubscribePs();
+    };
   }, [toast]);
 
   const handleExport = async () => {
@@ -107,7 +127,13 @@ export default function SpocTeamsPage() {
             throw new Error("Institute information not available");
         }
         
-        const result = await exportTeams({ institute: user.institute, category: "All Categories", status: statusFilter });
+        const result = await exportTeams({ 
+            institute: user.institute, 
+            category: "All Categories", 
+            status: statusFilter, 
+            problemStatementIds: selectedProblemStatements 
+        });
+
         if (result.success && result.fileContent) {
             const blob = new Blob([Buffer.from(result.fileContent, 'base64')], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
             const url = window.URL.createObjectURL(blob);
@@ -133,7 +159,7 @@ export default function SpocTeamsPage() {
   useEffect(() => {
     let unsubscribe: (() => void) | undefined;
     if (user && user.institute) {
-      unsubscribe = fetchInstituteData(user.institute);
+      unsubscribe = fetchAllData(user.institute);
     } else if (!authLoading) {
       setLoading(false);
     }
@@ -142,29 +168,21 @@ export default function SpocTeamsPage() {
         unsubscribe();
       }
     };
-  }, [user, authLoading, fetchInstituteData]);
+  }, [user, authLoading, fetchAllData]);
 
   const filteredTeams = useMemo(() => {
-    if (statusFilter === 'All Statuses') {
-        return teams;
-    }
-    
     return teams.filter(team => {
-        const leaderProfile = users.get(team.leader.uid);
-        const membersWithDetails = team.members.map(m => users.get(m.uid));
-        
-        const memberCount = (team.members?.length || 0) + 1;
-        
-        let femaleCount = 0;
-        if (leaderProfile?.gender === 'F') femaleCount++;
-        membersWithDetails.forEach(member => {
-            if (member?.gender === 'F') femaleCount++;
-        });
+      const statusMatch = statusFilter === 'All Statuses' ? true : (
+        statusFilter === 'Registered' 
+          ? ((team.members?.length || 0) + 1 === 6 && (users.get(team.leader.uid)?.gender === 'F' || team.members.some(m => users.get(m.uid)?.gender === 'F')))
+          : !((team.members?.length || 0) + 1 === 6 && (users.get(team.leader.uid)?.gender === 'F' || team.members.some(m => users.get(m.uid)?.gender === 'F')))
+      );
 
-        const isRegistered = memberCount === 6 && femaleCount >= 1;
-        return statusFilter === 'Registered' ? isRegistered : !isRegistered;
+      const psMatch = selectedProblemStatements.length === 0 || (team.problemStatementId && selectedProblemStatements.includes(team.problemStatementId));
+      
+      return statusMatch && psMatch;
     });
-  }, [teams, statusFilter, users]);
+  }, [teams, statusFilter, users, selectedProblemStatements]);
   
   const getTeamWithFullDetails = (teamsToProcess: Team[]) => {
     return teamsToProcess.map(team => {
@@ -204,7 +222,6 @@ export default function SpocTeamsPage() {
         let aVal: string = '';
         let bVal: string = '';
 
-        // Handle team properties
         if (sortConfig.key === 'teamName') {
           aVal = a.name || '';
           bVal = b.name || '';
@@ -212,41 +229,22 @@ export default function SpocTeamsPage() {
           aVal = a.teamNumber || '';
           bVal = b.teamNumber || '';
         } else {
-          // For member properties, we'll sort by the first member's value
           if (a.allMembers.length > 0 && b.allMembers.length > 0) {
             const firstMemberA = a.allMembers[0];
             const firstMemberB = b.allMembers[0];
             
             switch (sortConfig.key) {
-              case 'name':
-                aVal = firstMemberA.name || '';
-                bVal = firstMemberB.name || '';
-                break;
-              case 'email':
-                aVal = firstMemberA.email || '';
-                bVal = firstMemberB.email || '';
-                break;
-              case 'enrollmentNumber':
-                aVal = firstMemberA.enrollmentNumber || '';
-                bVal = firstMemberB.enrollmentNumber || '';
-                break;
-              case 'contactNumber':
-                aVal = firstMemberA.contactNumber || '';
-                bVal = firstMemberB.contactNumber || '';
-                break;
-              default:
-                aVal = '';
-                bVal = '';
+              case 'name': aVal = firstMemberA.name || ''; bVal = firstMemberB.name || ''; break;
+              case 'email': aVal = firstMemberA.email || ''; bVal = firstMemberB.email || ''; break;
+              case 'enrollmentNumber': aVal = firstMemberA.enrollmentNumber || ''; bVal = firstMemberB.enrollmentNumber || ''; break;
+              case 'contactNumber': aVal = firstMemberA.contactNumber || ''; bVal = firstMemberB.contactNumber || ''; break;
+              default: aVal = ''; bVal = '';
             }
           }
         }
 
-        if (aVal < bVal) {
-          return sortConfig.direction === 'asc' ? -1 : 1;
-        }
-        if (aVal > bVal) {
-          return sortConfig.direction === 'asc' ? 1 : -1;
-        }
+        if (aVal < bVal) return sortConfig.direction === 'asc' ? -1 : 1;
+        if (aVal > bVal) return sortConfig.direction === 'asc' ? 1 : -1;
         return 0;
       });
     }
@@ -344,7 +342,19 @@ export default function SpocTeamsPage() {
     }
   };
 
-  if (loading || authLoading) {
+  const handleProblemStatementFilterChange = (psId: string) => {
+    setSelectedProblemStatements(prev => {
+        const newSelection = new Set(prev);
+        if (newSelection.has(psId)) {
+            newSelection.delete(psId);
+        } else {
+            newSelection.add(psId);
+        }
+        return Array.from(newSelection);
+    });
+  };
+
+  if (authLoading || loading) {
     return (
       <div className="flex justify-center items-center h-screen">
         <Loader2 className="h-8 w-8 animate-spin" />
@@ -380,6 +390,27 @@ export default function SpocTeamsPage() {
                         {statuses.map(st => <SelectItem key={st} value={st}>{st}</SelectItem>)}
                     </SelectContent>
                 </Select>
+                 <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <Button variant="outline" className="w-full sm:w-48 justify-between">
+                            {selectedProblemStatements.length > 0 ? `${selectedProblemStatements.length} PS selected` : 'Filter by PS'}
+                            <ChevronDown className="h-4 w-4 ml-2"/>
+                        </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent className="w-56">
+                        <DropdownMenuLabel>Problem Statements</DropdownMenuLabel>
+                        <DropdownMenuSeparator />
+                        {problemStatements.length > 0 ? problemStatements.map((ps) => (
+                            <DropdownMenuCheckboxItem
+                                key={ps.id}
+                                checked={selectedProblemStatements.includes(ps.id)}
+                                onCheckedChange={() => handleProblemStatementFilterChange(ps.id)}
+                            >
+                                {ps.problemStatementId}
+                            </DropdownMenuCheckboxItem>
+                        )) : <DropdownMenuLabel className="text-xs text-muted-foreground font-normal">No statements available</DropdownMenuLabel>}
+                    </DropdownMenuContent>
+                </DropdownMenu>
                 <Button onClick={handleExport} disabled={isExporting}>
                   {isExporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
                   Export Teams
