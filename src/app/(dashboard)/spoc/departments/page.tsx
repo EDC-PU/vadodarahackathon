@@ -120,8 +120,8 @@ export default function ManageDepartmentsPage() {
                 <p className="text-muted-foreground">Add or remove departments for your institute ({user?.institute}).</p>
             </header>
 
-            <div className="grid gap-8 md:grid-cols-2">
-                <Card>
+            <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
+                <Card className="lg:col-span-1">
                     <CardHeader>
                         <CardTitle>Add Department</CardTitle>
                         <CardDescription>Enter the name of a new department to add it to the list available for students.</CardDescription>
@@ -141,7 +141,7 @@ export default function ManageDepartmentsPage() {
                         </form>
                     </CardContent>
                 </Card>
-                <Card>
+                <Card className="lg:col-span-2">
                     <CardHeader>
                         <CardTitle>Department List</CardTitle>
                         <CardDescription>The following departments are available for selection.</CardDescription>

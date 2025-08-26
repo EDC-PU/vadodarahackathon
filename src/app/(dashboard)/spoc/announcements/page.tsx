@@ -110,7 +110,7 @@ export default function SpocAnnouncementsPage() {
             <p className="text-muted-foreground">Post updates that will be visible to all teams from {user?.institute}.</p>
         </header>
 
-         <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
+         <div className="grid gap-8 lg:grid-cols-3">
             <Card className="lg:col-span-1">
                 <CardHeader>
                     <CardTitle>New Announcement</CardTitle>

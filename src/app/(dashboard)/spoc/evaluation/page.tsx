@@ -11,6 +11,7 @@ import {
   FormField,
   FormItem,
   FormMessage,
+  FormLabel
 } from "@/components/ui/form";
 import {
   Card,
@@ -238,7 +239,7 @@ export default function SpocEvaluationPage() {
                               disabled={isDateDeadlinePassed}
                               variant={"outline"}
                               className={cn(
-                                "w-full md:w-auto md:max-w-md justify-start text-left font-normal",
+                                "w-full justify-start text-left font-normal md:w-auto",
                                 !field.value?.length && "text-muted-foreground"
                               )}
                             >
@@ -302,7 +303,7 @@ export default function SpocEvaluationPage() {
             </Alert>
           ) : (
             <div className="space-y-4">
-              <div className="flex justify-between items-center">
+              <div className="flex justify-between items-center flex-wrap gap-4">
                  <p className="text-sm font-medium">
                     Selected: {nominatedTeamIds.length} / {nominationLimit}
                 </p>
