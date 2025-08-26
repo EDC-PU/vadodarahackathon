@@ -4,7 +4,6 @@ import { Suspense } from "react";
 import { Loader2 } from "lucide-react";
 import { getAdminDb } from "@/lib/firebase-admin";
 import { Announcement, ProblemStatement, UserProfile } from "@/lib/types";
-import { collection, query, where, orderBy, limit, getDocs } from "firebase/firestore";
 
 async function getSpocDetails() {
   const db = getAdminDb();
@@ -79,7 +78,7 @@ async function getProblemStatements() {
     }
     try {
         const psCollection = db.collection('problemStatements');
-        const q = query(psCollection, orderBy("problemStatementId"));
+        const q = psCollection.orderBy("problemStatementId");
         const snapshot = await q.get();
         if (snapshot.empty) {
             return [];
