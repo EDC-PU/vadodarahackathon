@@ -30,7 +30,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { db } from "@/lib/firebase";
-import { doc, getDoc, updateDoc, writeBatch, collection, query, where, getDocs } from "firebase/firestore";
+import { doc, getDoc, updateDoc, writeBatch, collection, query, where, getDocs, Timestamp } from "firebase/firestore";
 import { useEffect, useState } from "react";
 import { Institute, Team } from "@/lib/types";
 import {
@@ -85,7 +85,7 @@ export default function SpocEvaluationPage() {
           if (data.evaluationDates) {
             form.setValue(
               "evaluationDates",
-              data.evaluationDates.map((ts) => ts.toDate())
+              data.evaluationDates.map((ts: any) => ts.toDate())
             );
           }
         }
@@ -116,14 +116,19 @@ export default function SpocEvaluationPage() {
     setIsSaving(true);
     try {
       const instituteRef = doc(db, "institutes", instituteData.id);
+      // Convert JavaScript dates to Firestore Timestamps before saving
+      const firestoreTimestamps = data.evaluationDates.map(date => Timestamp.fromDate(date));
+      
       await updateDoc(instituteRef, {
-        evaluationDates: data.evaluationDates,
+        evaluationDates: firestoreTimestamps,
       });
       toast({ title: "Success", description: "Evaluation dates saved." });
+      
       setInstituteData((prev) =>
-        prev ? { ...prev, evaluationDates: data.evaluationDates as any } : null
+        prev ? { ...prev, evaluationDates: firestoreTimestamps as any } : null
       );
     } catch (error) {
+      console.error("Error saving dates:", error);
       toast({
         title: "Error",
         description: "Could not save dates.",
@@ -173,7 +178,7 @@ export default function SpocEvaluationPage() {
   }
 
   const canNominate = instituteData?.evaluationDates && instituteData.evaluationDates.length === 2
-    ? isAfter(new Date(), instituteData.evaluationDates[1].toDate())
+    ? isAfter(new Date(), (instituteData.evaluationDates[1] as any).toDate())
     : false;
   
   const dateSelectionDeadline = new Date(2025, 7, 31); // August 31, 2025
