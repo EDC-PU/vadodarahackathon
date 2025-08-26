@@ -24,6 +24,7 @@ const settingsSchema = z.object({
   registrationDeadline: z.date({
     required_error: "A registration deadline is required.",
   }),
+  evaluationExportDate: z.date().optional(),
 });
 
 
@@ -44,9 +45,14 @@ export default function EventSettingsPage() {
             const configDoc = await getDoc(configDocRef);
             if (configDoc.exists()) {
                 const data = configDoc.data();
+                const valuesToReset: any = {};
                 if (data.registrationDeadline) {
-                    form.reset({ registrationDeadline: data.registrationDeadline.toDate() });
+                    valuesToReset.registrationDeadline = data.registrationDeadline.toDate();
                 }
+                 if (data.evaluationExportDate) {
+                    valuesToReset.evaluationExportDate = data.evaluationExportDate.toDate();
+                }
+                form.reset(valuesToReset);
             }
         } catch (error) {
              toast({ title: "Error", description: "Could not fetch existing settings.", variant: "destructive" });
@@ -62,9 +68,13 @@ export default function EventSettingsPage() {
     setIsLoading(true);
     try {
       const configDocRef = doc(db, "config", "event");
-      await setDoc(configDocRef, { 
-        registrationDeadline: values.registrationDeadline 
-      }, { merge: true });
+      const dataToSet: any = {
+        registrationDeadline: values.registrationDeadline,
+      };
+      if (values.evaluationExportDate) {
+        dataToSet.evaluationExportDate = values.evaluationExportDate;
+      }
+      await setDoc(configDocRef, dataToSet, { merge: true });
 
       toast({
         title: "Settings Saved",
@@ -92,8 +102,8 @@ export default function EventSettingsPage() {
       
       <Card>
          <CardHeader>
-          <CardTitle>Registration Deadline</CardTitle>
-          <CardDescription>Set the final date and time for new user and team registrations.</CardDescription>
+          <CardTitle>Global Dates</CardTitle>
+          <CardDescription>Set important deadlines and dates for the entire event.</CardDescription>
         </CardHeader>
         <CardContent>
            {isFetching ? (
@@ -102,62 +112,105 @@ export default function EventSettingsPage() {
             </div>
            ) : (
             <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                <FormField
-                  control={form.control}
-                  name="registrationDeadline"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-col">
-                      <FormLabel>Deadline Date & Time</FormLabel>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <FormControl>
-                            <Button
-                              variant={"outline"}
-                              className={cn(
-                                "w-[240px] pl-3 text-left font-normal",
-                                !field.value && "text-muted-foreground"
-                              )}
-                            >
-                              {field.value ? (
-                                format(field.value, "PPP p")
-                              ) : (
-                                <span>Pick a date</span>
-                              )}
-                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                            </Button>
-                          </FormControl>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar
-                            mode="single"
-                            selected={field.value}
-                            onSelect={field.onChange}
-                            disabled={(date) => date < new Date()}
-                            initialFocus
-                          />
-                           <div className="p-2 border-t border-border">
-                              <Input
-                                type="time"
-                                onChange={(e) => {
-                                  const [hours, minutes] = e.target.value.split(':');
-                                  const newDate = new Date(field.value);
-                                  newDate.setHours(parseInt(hours, 10));
-                                  newDate.setMinutes(parseInt(minutes, 10));
-                                  field.onChange(newDate);
-                                }}
-                                value={field.value ? format(field.value, 'HH:mm') : ''}
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <FormField
+                      control={form.control}
+                      name="registrationDeadline"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-col">
+                          <FormLabel>Registration Deadline</FormLabel>
+                          <FormDescription>The final date and time for new user and team registrations.</FormDescription>
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <FormControl>
+                                <Button
+                                  variant={"outline"}
+                                  className={cn(
+                                    "w-[240px] pl-3 text-left font-normal mt-2",
+                                    !field.value && "text-muted-foreground"
+                                  )}
+                                >
+                                  {field.value ? (
+                                    format(field.value, "PPP p")
+                                  ) : (
+                                    <span>Pick a date</span>
+                                  )}
+                                  <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                </Button>
+                              </FormControl>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="start">
+                              <Calendar
+                                mode="single"
+                                selected={field.value}
+                                onSelect={field.onChange}
+                                disabled={(date) => date < new Date()}
+                                initialFocus
                               />
-                            </div>
-                        </PopoverContent>
-                      </Popover>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-             <Button type="submit" disabled={isLoading}>
+                               <div className="p-2 border-t border-border">
+                                  <Input
+                                    type="time"
+                                    onChange={(e) => {
+                                      if (!field.value) return;
+                                      const [hours, minutes] = e.target.value.split(':');
+                                      const newDate = new Date(field.value);
+                                      newDate.setHours(parseInt(hours, 10));
+                                      newDate.setMinutes(parseInt(minutes, 10));
+                                      field.onChange(newDate);
+                                    }}
+                                    value={field.value ? format(field.value, 'HH:mm') : ''}
+                                  />
+                                </div>
+                            </PopoverContent>
+                          </Popover>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="evaluationExportDate"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-col">
+                          <FormLabel>Evaluation Export Enabled Date</FormLabel>
+                          <FormDescription>The date after which SPOCs can see the "Export for Evaluation" button.</FormDescription>
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <FormControl>
+                                <Button
+                                  variant={"outline"}
+                                  className={cn(
+                                    "w-[240px] pl-3 text-left font-normal mt-2",
+                                    !field.value && "text-muted-foreground"
+                                  )}
+                                >
+                                  {field.value ? (
+                                    format(field.value, "PPP")
+                                  ) : (
+                                    <span>Pick a date</span>
+                                  )}
+                                  <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                </Button>
+                              </FormControl>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="start">
+                              <Calendar
+                                mode="single"
+                                selected={field.value}
+                                onSelect={field.onChange}
+                                initialFocus
+                              />
+                            </PopoverContent>
+                          </Popover>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                </div>
+             <Button type="submit" disabled={isLoading} className="mt-6">
                 {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
-                Save Changes
+                Save All Settings
              </Button>
           </form>
           </Form>
