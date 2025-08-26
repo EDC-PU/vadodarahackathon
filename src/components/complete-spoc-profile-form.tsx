@@ -19,7 +19,7 @@ import { useState, useEffect } from "react";
 import { Loader2, CheckCircle, LogOut } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { db } from "@/lib/firebase";
-import { doc, updateDoc, collection, query, where, getDocs, onSnapshot, orderBy } from "firebase/firestore";
+import { doc, updateDoc, collection, query, where, getDocs, onSnapshot, orderBy, addDoc, serverTimestamp } from "firebase/firestore";
 import { useAuth } from "@/hooks/use-auth";
 import { UserProfile } from "@/lib/types";
 import {
@@ -128,6 +128,13 @@ export function CompleteSpocProfileForm() {
             spocStatus: 'pending', 
         };
         await updateDoc(userDocRef, updatedProfileData);
+
+        await addDoc(collection(db, "logs"), {
+            id: doc(collection(db, "logs")).id,
+            title: "New SPOC Request",
+            message: `${values.name} from ${values.institute} submitted a request to become a SPOC.`,
+            createdAt: serverTimestamp(),
+        });
 
         await notifyAdminsOfSpocRequest({
             spocName: values.name,

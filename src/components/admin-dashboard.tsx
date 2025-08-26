@@ -2,27 +2,41 @@
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, User, Shield, UserPlus, FileText, Download, Loader2 } from "lucide-react";
+import { Users, User, Shield, UserPlus, FileText, Download, Loader2, List, CaseSensitive } from "lucide-react";
 import { useEffect, useState, useRef } from "react";
 import { db } from "@/lib/firebase";
-import { collection, getDocs, query, where } from "firebase/firestore";
-import { Team, UserProfile } from "@/lib/types";
+import { collection, getDocs, query, where, onSnapshot, orderBy, limit } from "firebase/firestore";
+import { Team, UserProfile, Notification } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "./ui/button";
 import { exportTeams } from "@/ai/flows/export-teams-flow";
 import { Buffer } from 'buffer';
 import { useScrollAnimation } from "@/hooks/use-scroll-animation";
 import { cn } from "@/lib/utils";
+import { formatDistanceToNow } from "date-fns";
 
 
 export default function AdminDashboard() {
   const [stats, setStats] = useState({ teams: 0, participants: 0, spocs: 0, admins: 0 });
   const [loading, setLoading] = useState(true);
   const [isExporting, setIsExporting] = useState(false);
+  const [recentActivity, setRecentActivity] = useState<Notification[]>([]);
+  const [loadingActivity, setLoadingActivity] = useState(true);
   const { toast } = useToast();
 
   const mainRef = useRef<HTMLDivElement>(null);
   const isInView = useScrollAnimation(mainRef);
+
+  useEffect(() => {
+    const activityQuery = query(collection(db, "logs"), orderBy("createdAt", "desc"), limit(10));
+    const unsubscribeActivity = onSnapshot(activityQuery, (snapshot) => {
+        const activities = snapshot.docs.map(doc => doc.data() as Notification);
+        setRecentActivity(activities);
+        setLoadingActivity(false);
+    });
+
+    return () => unsubscribeActivity();
+  }, []);
 
   const handleExport = async () => {
     setIsExporting(true);
@@ -164,12 +178,38 @@ export default function AdminDashboard() {
           </CardContent>
         </Card>
         <Card>
-          <CardHeader>
-            <CardTitle>Recent Activity</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-muted-foreground">Recent activity feed will be shown here.</p>
-          </CardContent>
+            <CardHeader>
+                <CardTitle className="flex items-center gap-2"><List /> Recent Activity</CardTitle>
+                 <CardDescription>A feed of the latest events happening on the portal.</CardDescription>
+            </CardHeader>
+            <CardContent>
+                {loadingActivity ? (
+                     <div className="flex justify-center items-center h-32">
+                        <Loader2 className="h-6 w-6 animate-spin" />
+                    </div>
+                ) : recentActivity.length > 0 ? (
+                    <div className="space-y-4">
+                        {recentActivity.map((activity) => (
+                            <div key={activity.id} className="flex items-start gap-3">
+                                <div className="flex-shrink-0">
+                                  {activity.title.includes("Team") ? <Users className="h-5 w-5 text-primary" /> 
+                                    : activity.title.includes("SPOC") ? <UserPlus className="h-5 w-5 text-accent" />
+                                    : <User className="h-5 w-5 text-muted-foreground" />}
+                                </div>
+                                <div className="flex-grow">
+                                    <p className="text-sm font-medium leading-tight">{activity.title}</p>
+                                    <p className="text-xs text-muted-foreground">{activity.message}</p>
+                                </div>
+                                 <div className="text-xs text-muted-foreground flex-shrink-0">
+                                    {formatDistanceToNow(activity.createdAt.seconds * 1000, { addSuffix: true })}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                ) : (
+                    <p className="text-center text-sm text-muted-foreground py-10">No recent activity to display.</p>
+                )}
+            </CardContent>
         </Card>
       </div>
     </div>

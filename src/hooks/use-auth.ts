@@ -4,7 +4,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { onAuthStateChanged, signOut, User as FirebaseUser } from 'firebase/auth';
-import { doc, getDoc, onSnapshot, collection, query, where, getDocs, writeBatch, updateDoc, setDoc, arrayUnion, deleteDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, onSnapshot, collection, query, where, getDocs, writeBatch, updateDoc, setDoc, arrayUnion, deleteDoc, serverTimestamp, addDoc } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import { UserProfile, Team, TeamInvite } from '@/lib/types';
 import { useRouter, usePathname } from 'next/navigation';
@@ -253,6 +253,12 @@ export function useAuth() {
         }
 
         await setDoc(userDocRef, userProfile);
+        await addDoc(collection(db, "logs"), {
+            id: doc(collection(db, "logs")).id,
+            title: "New User Registered",
+            message: `${userProfile.name} (${userProfile.email}) registered as a ${userProfile.role}.`,
+            createdAt: serverTimestamp(),
+        });
         toast({ title: "Account Created!", description: "Let's complete your profile." });
         console.log("handleLogin: Creating new user document with profile:", userProfile);
     }

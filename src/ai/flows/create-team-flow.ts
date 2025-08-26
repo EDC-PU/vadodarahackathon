@@ -7,6 +7,7 @@
 import { ai } from '@/ai/genkit';
 import { getAdminDb } from '@/lib/firebase-admin';
 import { CreateTeamInput, CreateTeamInputSchema, CreateTeamOutput, CreateTeamOutputSchema, UserProfile } from '@/lib/types';
+import { FieldValue } from 'firebase-admin/firestore';
 
 
 export async function createTeam(input: CreateTeamInput): Promise<CreateTeamOutput> {
@@ -58,6 +59,7 @@ const createTeamFlow = ai.defineFlow(
             institute: input.institute,
             department: input.department,
             members: [],
+            createdAt: FieldValue.serverTimestamp(),
         };
         batch.set(teamDocRef, teamData);
 
@@ -77,6 +79,15 @@ const createTeamFlow = ai.defineFlow(
             passwordChanged: true,
         };
         batch.update(userDocRef, userProfileUpdate);
+
+        // 3. Log this activity
+        const logDocRef = adminDb.collection("logs").doc();
+        batch.set(logDocRef, {
+            id: logDocRef.id,
+            title: "New Team Created",
+            message: `Team "${input.teamName}" was created by ${input.name} from ${input.institute}.`,
+            createdAt: FieldValue.serverTimestamp(),
+        });
 
         await batch.commit();
 
