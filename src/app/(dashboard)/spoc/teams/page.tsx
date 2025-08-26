@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { Button } from "@/components/ui/button";
@@ -8,7 +9,7 @@ import { Loader2, AlertCircle, Save, Pencil, X, Trash2, Users, User, MinusCircle
 import { Badge } from "@/components/ui/badge";
 import { useEffect, useState, useMemo, useCallback } from "react";
 import { db } from "@/lib/firebase";
-import { doc, onSnapshot, updateDoc, collection, query, where, orderBy } from "firebase/firestore";
+import { doc, onSnapshot, updateDoc, collection, query, where, orderBy, getDoc } from "firebase/firestore";
 import { Team, UserProfile, TeamMember, ProblemStatement } from "@/lib/types";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
@@ -35,12 +36,14 @@ import {
 import { manageTeamBySpoc } from "@/ai/flows/manage-team-by-spoc-flow";
 import { useAuth } from "@/hooks/use-auth";
 import { exportTeams } from "@/ai/flows/export-teams-flow";
-import { Download } from "lucide-react";
+import { Download, FileSpreadsheet } from "lucide-react";
 import { Buffer } from 'buffer';
 import { getTeamInviteLink } from "@/ai/flows/get-team-invite-link-flow";
 import Link from "next/link";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { exportEvaluation } from "@/ai/flows/export-evaluation-flow";
+import { isAfter } from "date-fns";
 
 type SortKey = 'teamName' | 'teamNumber' | 'name' | 'email' | 'enrollmentNumber' | 'contactNumber';
 type SortDirection = 'asc' | 'desc';
@@ -56,12 +59,14 @@ export default function SpocTeamsPage() {
   const [isSaving, setIsSaving] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState<string | null>(null);
   const [isExporting, setIsExporting] = useState(false);
+  const [isExportingEval, setIsExportingEval] = useState(false);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("All Statuses");
   const [selectedProblemStatements, setSelectedProblemStatements] = useState<string[]>([]);
   const [sortConfig, setSortConfig] = useState<{ key: SortKey, direction: SortDirection } | null>(null);
   const { toast } = useToast();
   const [inviteLinks, setInviteLinks] = useState<Map<string, string>>(new Map());
   const [loadingLink, setLoadingLink] = useState<string | null>(null);
+  const [evaluationExportDate, setEvaluationExportDate] = useState<Date | null>(null);
   const appBaseUrl = "https://vadodarahackathon.pierc.org";
 
   const statuses: StatusFilter[] = ["All Statuses", "Registered", "Pending"];
@@ -109,6 +114,13 @@ export default function SpocTeamsPage() {
         setProblemStatements(psData);
     });
 
+    const configDocRef = doc(db, "config", "event");
+    const unsubscribeConfig = onSnapshot(configDocRef, (docSnap) => {
+        if (docSnap.exists() && docSnap.data()?.evaluationExportDate) {
+            setEvaluationExportDate(docSnap.data().evaluationExportDate.toDate());
+        }
+    });
+
     Promise.all([
         new Promise(res => onSnapshot(teamsQuery, () => res(true))),
         new Promise(res => onSnapshot(psQuery, () => res(true))),
@@ -117,6 +129,7 @@ export default function SpocTeamsPage() {
     return () => {
         unsubscribeTeams();
         unsubscribePs();
+        unsubscribeConfig();
     };
   }, [toast]);
 
@@ -153,6 +166,60 @@ export default function SpocTeamsPage() {
         toast({ title: "Error", description: "An unexpected error occurred during export.", variant: "destructive" });
     } finally {
         setIsExporting(false);
+    }
+  };
+
+  const handleExportEvaluation = async () => {
+    setIsExportingEval(true);
+    try {
+        if (!user?.institute) {
+            throw new Error("Institute information not available for export.");
+        }
+        if (filteredTeams.length === 0) {
+            toast({
+                title: "No Teams to Export",
+                description: "There are no teams that match the current filter criteria.",
+                variant: "destructive"
+            });
+            setIsExportingEval(false);
+            return;
+        }
+
+        const problemStatementsMap = new Map(problemStatements.map(ps => [ps.id, ps]));
+        
+        const teamsToExport = filteredTeams.map(team => {
+            const leader = users.get(team.leader.uid);
+            const ps = team.problemStatementId ? problemStatementsMap.get(team.problemStatementId) : null;
+            return {
+              team_id: team.id,
+              team_name: team.name,
+              leader_name: leader?.name || 'N/A',
+              problemstatement_number: ps?.problemStatementId || 'N/A',
+              problem_title: team.problemStatementTitle || 'N/A',
+            };
+        });
+        
+        const result = await exportEvaluation({ instituteName: user.institute, teams: teamsToExport });
+
+        if (result.success && result.fileContent) {
+            const blob = new Blob([Buffer.from(result.fileContent, 'base64')], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = result.fileName || `${user.institute}-evaluation.xlsx`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            a.remove();
+            toast({ title: "Success", description: "Evaluation sheet has been exported." });
+        } else {
+            toast({ title: "Export Failed", description: result.message || "Could not generate the export file.", variant: "destructive" });
+        }
+    } catch (error: any) {
+        console.error("Error exporting evaluation data:", error);
+        toast({ title: "Error", description: `An unexpected error occurred during evaluation export: ${error.message}`, variant: "destructive" });
+    } finally {
+        setIsExportingEval(false);
     }
   };
 
@@ -282,6 +349,7 @@ export default function SpocTeamsPage() {
           await updateDoc(teamDocRef, { name: editingTeam.name });
           toast({ title: "Success", description: "Team name updated." });
           setEditingTeam(null);
+          await fetchAllData(user!.institute!); // Refresh data
       } catch (error) {
           console.error("Error updating team name:", error);
           toast({ title: "Error", description: "Could not update team name.", variant: "destructive" });
@@ -303,6 +371,7 @@ export default function SpocTeamsPage() {
          toast({ title: "Error", description: "An unexpected error occurred.", variant: "destructive" });
     } finally {
         setIsProcessing(null);
+        fetchAllData(user!.institute!);
     }
   }
 
@@ -319,6 +388,7 @@ export default function SpocTeamsPage() {
          toast({ title: "Error", description: "An unexpected error occurred.", variant: "destructive" });
     } finally {
         setIsProcessing(null);
+        fetchAllData(user!.institute!);
     }
   }
 
@@ -374,6 +444,8 @@ export default function SpocTeamsPage() {
     )
   }
 
+  const canExportForEvaluation = evaluationExportDate ? isAfter(new Date(), evaluationExportDate) : false;
+
   return (
     <div className="p-4 sm:p-6 lg:p-8">
         <header className="mb-8 flex flex-col sm:flex-row justify-between sm:items-center gap-4">
@@ -415,6 +487,12 @@ export default function SpocTeamsPage() {
                   {isExporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
                   Export Teams
                 </Button>
+                 {canExportForEvaluation && (
+                  <Button onClick={handleExportEvaluation} disabled={isExportingEval}>
+                    {isExportingEval ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileSpreadsheet className="mr-2 h-4 w-4" />}
+                    Export for Evaluation
+                  </Button>
+                )}
             </div>
         </header>
 
@@ -631,3 +709,4 @@ export default function SpocTeamsPage() {
     </div>
   );
 }
+
