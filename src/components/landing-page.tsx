@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import Link from 'next/link';
@@ -167,7 +166,7 @@ const HeroSection = () => {
                         <Link href="/register">Register Now</Link>
                     </Button>
                      <Button variant="link" size="lg" className="text-white group text-lg rounded-full" asChild>
-                        <Link href="#about">
+                        <Link href="#eligibility">
                             Learn More
                             <span className="block max-w-0 group-hover:max-w-full transition-all duration-300 h-0.5 bg-brand-red"></span>
                         </Link>
@@ -196,11 +195,9 @@ export default function LandingPage({ spocDetails, announcements }: LandingPageP
 
   const navLinks = [
     { name: 'Home', href: '#home' },
-    { name: 'About', href: '#about' },
     { name: 'Eligibility', href: '#eligibility' },
     { name: 'Timeline', href: '#timeline' },
     { name: 'Rewards', href: '#rewards' },
-    { name: 'SPOCs', href: '#spocs'},
     { name: 'Contact', href: '#contact' },
   ];
   
