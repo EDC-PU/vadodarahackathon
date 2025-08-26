@@ -29,6 +29,7 @@ export interface UserProfile {
   aicteApplicationNumber?: string;
   principalName?: string;
   principalInitial?: "Dr." | "Prof.";
+  principalEmail?: string;
 }
 
 export interface Invitation {

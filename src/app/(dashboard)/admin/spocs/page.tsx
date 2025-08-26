@@ -99,7 +99,7 @@ export default function ManageSpocsPage() {
                                  <div className="space-y-1 text-sm text-muted-foreground">
                                     <p><strong>AICTE No:</strong> {spoc.aicteApplicationNumber || 'N/A'}</p>
                                     <p><strong>Principal:</strong> {spoc.principalInitial || ''} {spoc.principalName || 'N/A'}</p>
-                                    
+                                    <p><strong>Principal Email:</strong> {spoc.principalEmail || 'N/A'}</p>
                                 </div>
                             </div>
                             <Badge variant={getStatusVariant(spoc.spocStatus)} className={spoc.spocStatus === 'approved' ? 'bg-green-600' : ''}>

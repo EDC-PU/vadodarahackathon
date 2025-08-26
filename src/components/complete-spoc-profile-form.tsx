@@ -43,6 +43,7 @@ const formSchema = z.object({
   aicteApplicationNumber: z.string().min(1, { message: "AICTE Application Number is required." }),
   principalName: z.string().min(2, { message: "Principal's name is required." }),
   principalInitial: z.enum(["Dr.", "Prof."], { required_error: "Please select the principal's initial." }),
+  principalEmail: z.string().email("Please enter a valid email address."),
 });
 
 export function CompleteSpocProfileForm() {
@@ -64,6 +65,7 @@ export function CompleteSpocProfileForm() {
       aicteApplicationNumber: "",
       principalName: "",
       principalInitial: undefined,
+      principalEmail: "",
     },
   });
 
@@ -93,6 +95,7 @@ export function CompleteSpocProfileForm() {
               aicteApplicationNumber: user.aicteApplicationNumber || "",
               principalName: user.principalName || "",
               principalInitial: user.principalInitial || undefined,
+              principalEmail: user.principalEmail || "",
           })
       }
   }, [user, form]);
@@ -138,6 +141,7 @@ export function CompleteSpocProfileForm() {
             aicteApplicationNumber: values.aicteApplicationNumber,
             principalName: values.principalName,
             principalInitial: values.principalInitial,
+            principalEmail: values.principalEmail,
         };
         await updateDoc(userDocRef, updatedProfileData);
 
@@ -340,6 +344,19 @@ export function CompleteSpocProfileForm() {
                     )}
                 />
             </div>
+            <FormField
+              control={form.control}
+              name="principalEmail"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Principal's Email</FormLabel>
+                  <FormControl>
+                    <Input type="email" placeholder="piet@paruluniversity.ac.in" {...field} disabled={isLoading}/>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
              <FormField
                     control={form.control}
                     name="aicteApplicationNumber"

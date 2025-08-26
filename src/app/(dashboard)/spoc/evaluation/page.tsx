@@ -30,7 +30,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { db } from "@/lib/firebase";
-import { doc, getDoc, updateDoc, writeBatch } from "firebase/firestore";
+import { doc, getDoc, updateDoc, writeBatch, collection, query, where, getDocs } from "firebase/firestore";
 import { useEffect, useState } from "react";
 import { Institute, Team } from "@/lib/types";
 import {
@@ -75,11 +75,12 @@ export default function SpocEvaluationPage() {
     const fetchInstituteData = async () => {
       setLoading(true);
       try {
-        const instituteRef = doc(db, "institutes", user.institute);
-        const instituteDoc = await getDoc(instituteRef);
+        const q = query(collection(db, "institutes"), where("name", "==", user.institute));
+        const querySnapshot = await getDocs(q);
 
-        if (instituteDoc.exists()) {
-          const data = instituteDoc.data() as Institute;
+        if (!querySnapshot.empty) {
+          const instituteDoc = querySnapshot.docs[0];
+          const data = { id: instituteDoc.id, ...instituteDoc.data() } as Institute;
           setInstituteData(data);
           if (data.evaluationDates) {
             form.setValue(
@@ -111,10 +112,10 @@ export default function SpocEvaluationPage() {
   }, [user?.institute, form, toast]);
 
   const onDateSubmit = async (data: z.infer<typeof formSchema>) => {
-    if (!user?.institute) return;
+    if (!instituteData) return;
     setIsSaving(true);
     try {
-      const instituteRef = doc(db, "institutes", user.institute);
+      const instituteRef = doc(db, "institutes", instituteData.id);
       await updateDoc(instituteRef, {
         evaluationDates: data.evaluationDates,
       });
