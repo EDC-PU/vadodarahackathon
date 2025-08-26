@@ -4,6 +4,7 @@ import { Suspense } from "react";
 import { Loader2 } from "lucide-react";
 import { getAdminDb } from "@/lib/firebase-admin";
 import { Announcement, ProblemStatement, UserProfile } from "@/lib/types";
+import { Timestamp } from "firebase-admin/firestore";
 
 async function getSpocDetails() {
   const db = getAdminDb();
@@ -52,7 +53,7 @@ async function getPublicAnnouncements() {
 
     const announcements = snapshot.docs.map(doc => {
         const data = doc.data();
-        const createdAt = data.createdAt;
+        const createdAt = data.createdAt as Timestamp; // Cast to Firestore Timestamp
         return {
             id: doc.id,
             ...data,
@@ -83,7 +84,17 @@ async function getProblemStatements() {
         if (snapshot.empty) {
             return [];
         }
-        return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ProblemStatement));
+        // Serialize Timestamps before returning data
+        return snapshot.docs.map(doc => {
+            const data = doc.data();
+            const createdAt = data.createdAt as Timestamp | undefined;
+            return { 
+                id: doc.id, 
+                ...data,
+                // Ensure createdAt is serialized if it exists
+                createdAt: createdAt ? { seconds: createdAt.seconds, nanoseconds: createdAt.nanoseconds } : null,
+            } as ProblemStatement;
+        });
     } catch (error) {
         console.error("Error fetching problem statements on server: ", error);
         return [];
