@@ -231,7 +231,6 @@ export default function SpocEvaluationPage() {
                   name="evaluationDates"
                   render={({ field }) => (
                     <FormItem className="flex flex-col">
-                      <FormLabel>Evaluation Dates</FormLabel>
                       <Popover>
                         <PopoverTrigger asChild>
                           <FormControl>
