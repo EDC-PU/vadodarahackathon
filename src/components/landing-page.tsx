@@ -463,24 +463,49 @@ export default function LandingPage({ spocDetails, announcements, problemStateme
         </AnimatedSection>
         
         <AnimatedSection id="contact">
-            <div className="container max-w-7xl">
-                 <div className="text-center">
-                    <SectionTitle>For Any Queries</SectionTitle>
-                </div>
-                <div className="grid md:grid-cols-2 gap-8 text-center mt-12">
-                 <motion.div whileHover={{ y: -5, boxShadow: "0 0 20px hsl(var(--brand-yellow))" }} className="glass-card p-6 flex flex-col items-center">
-                    <Mail className="h-10 w-10 text-primary mb-4" />
-                    <h3 className="text-xl font-semibold">Email Us</h3>
-                    <a href="mailto:programs.pierc@paruluniversity.ac.in" className="text-foreground/80 hover:text-primary">programs.pierc@paruluniversity.ac.in</a>
-                </motion.div>
-             
-                <motion.div whileHover={{ y: -5, boxShadow: "0 0 20px hsl(var(--brand-red))" }} className="glass-card p-6 flex flex-col items-center">
-                    <MapPin className="h-10 w-10 text-primary mb-4" />
-                    <h3 className="text-xl font-semibold">Our Address</h3>
-                    <p className="text-foreground/80 max-w-xs">Parul Innovation & Entrepreneurship Research Center, BBA Building, Parul University</p>
-                </motion.div>
-                </div>
+          <div className="container max-w-7xl">
+            <div className="text-center">
+              <SectionTitle>For Any Queries</SectionTitle>
             </div>
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 mt-12">
+              <motion.div whileHover={{ y: -5, boxShadow: "0 0 20px hsl(var(--brand-yellow))" }} className="glass-card p-6 flex flex-col items-center text-center">
+                <Mail className="h-10 w-10 text-primary mb-4" />
+                <h3 className="text-xl font-semibold">Email Us</h3>
+                <a href="mailto:programs.pierc@paruluniversity.ac.in" className="text-foreground/80 hover:text-primary">programs.pierc@paruluniversity.ac.in</a>
+              </motion.div>
+
+              <motion.div whileHover={{ y: -5, boxShadow: "0 0 20px hsl(var(--brand-red))" }} className="glass-card p-6 flex flex-col items-center text-center">
+                <MapPin className="h-10 w-10 text-primary mb-4" />
+                <h3 className="text-xl font-semibold">Our Address</h3>
+                <p className="text-foreground/80 max-w-xs">Parul Innovation & Entrepreneurship Research Center, BBA Building, Parul University</p>
+              </motion.div>
+              
+               <motion.div whileHover={{ y: -5, boxShadow: "0 0 20px hsl(var(--brand-orange))" }} className="glass-card p-6 flex flex-col items-center text-center">
+                    <User className="h-10 w-10 text-primary mb-4" />
+                    <h3 className="text-xl font-semibold">SPOC Contact</h3>
+                     <Select onValueChange={setSelectedInstitute}>
+                        <SelectTrigger className="w-[280px] mt-4">
+                            <SelectValue placeholder="Select Institute to find SPOC" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {institutes.map((inst) => (
+                                <SelectItem key={inst.id} value={inst.name}>{inst.name}</SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                    {selectedInstitute && spocDetails[selectedInstitute] && (
+                        <div className="mt-4 text-left text-sm space-y-2 animate-in fade-in-50">
+                            <p className="flex items-center gap-2"><User className="h-4 w-4 text-primary" /> {spocDetails[selectedInstitute].name}</p>
+                            <p className="flex items-center gap-2"><Mail className="h-4 w-4 text-primary" /> <a href={`mailto:${spocDetails[selectedInstitute].email}`} className="hover:underline">{spocDetails[selectedInstitute].email}</a></p>
+                            <p className="flex items-center gap-2"><Phone className="h-4 w-4 text-primary" /> <a href={`tel:${spocDetails[selectedInstitute].contact}`} className="hover:underline">{spocDetails[selectedInstitute].contact}</a></p>
+                        </div>
+                    )}
+                    {selectedInstitute && !spocDetails[selectedInstitute] && (
+                        <p className="mt-4 text-sm text-muted-foreground animate-in fade-in-50">No SPOC assigned for this institute yet.</p>
+                    )}
+                </motion.div>
+            </div>
+          </div>
         </AnimatedSection>
       </main>
 
