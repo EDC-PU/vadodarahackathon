@@ -1,7 +1,7 @@
 
 "use client";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Users, User, Shield, UserPlus, FileText, Download, Loader2, List, CaseSensitive } from "lucide-react";
 import { useEffect, useState, useRef } from "react";
 import { db } from "@/lib/firebase";
