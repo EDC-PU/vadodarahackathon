@@ -3,11 +3,11 @@
 This document outlines the primary user flows for the Vadodara Hackathon Portal, detailing the registration process, dashboard functionalities, and key actions available to each user role.
 
 ## Table of Contents
-1.  [User Roles](#user-roles)
-2.  [Admin Flow](#admin-flow)
-3.  [SPOC (Single Point of Contact) Flow](#spoc-flow)
-4.  [Team Leader Flow](#team-leader-flow)
-5.  [Team Member Flow](#team-member-flow)
+1.  [User Roles](#1-user-roles)
+2.  [Admin Flow](#2-admin-flow)
+3.  [SPOC (Single Point of Contact) Flow](#3-spoc-flow)
+4.  [Team Leader Flow](#4-team-leader-flow)
+5.  [Team Member Flow](#5-team-member-flow)
 
 ---
 
@@ -28,7 +28,7 @@ Admins have the highest level of access and are responsible for the overall mana
 
 ### Key Actions:
 *   **Login:** Admins log in using their pre-assigned credentials.
-*   **Dashboard Overview:** View high-level statistics and a real-time feed of recent portal activities (e.g., new teams, user deletions, SPOC approvals).
+*   **Dashboard Overview:** View high-level statistics (total teams, participants, SPOCs, admins) and a real-time feed of recent portal activities (e.g., new teams, user deletions, SPOC approvals).
 *   **Manage Admins:** Grant or revoke admin privileges to other users.
 *   **Manage SPOCs:**
     *   Create new, pre-approved SPOC accounts. Credentials are automatically emailed.
@@ -43,6 +43,7 @@ Admins have the highest level of access and are responsible for the overall mana
 *   **Manage University Nominations:**
     *   View a list of all teams nominated by Institute SPOCs for the university-level round.
     *   After the event date, set the final selection status for each team (e.g., "Selected for SIH - University Level" or "Selected for SIH - Institute Level").
+    *   Generate `.docx` nomination forms, but only for teams that have been successfully nominated by their SPOC.
 *   **Manage Users:** View a list of all registered users and delete user accounts if necessary.
 *   **Manage Problem Statements:** Add, edit, bulk upload, and delete hackathon problem statements.
 *   **Manage Announcements:** Create and delete announcements visible to specific audiences (All Users, Teams, or SPOCs).
@@ -60,7 +61,7 @@ SPOCs act as the bridge between the hackathon organizers and the participating t
 
 ### Registration and Approval:
 1.  **Register:** A user selects the "Institute SPOC" role on the registration page using their official `@paruluniversity.ac.in` email.
-2.  **Complete Profile:** After creating an account, they are redirected to a form to complete their profile (Name, Institute, Contact, AICTE number, Principal's name and email, etc.).
+2.  **Complete Profile:** After creating an account, they are redirected to a form to complete their profile (Name, Institute, Contact, AICTE Application Number of Institute, Principal's name and email, etc.).
 3.  **Submit for Approval:** Upon submission, their request is sent to the Admins for review. The SPOC account is disabled at this stage.
 4.  **Login (Post-Approval):** Once an Admin approves the request, the SPOC can log in and access their dashboard.
 
@@ -74,7 +75,8 @@ SPOCs act as the bridge between the hackathon organizers and the participating t
     *   Get a shareable invite link for any team.
 *   **Evaluation & Nomination:**
     *   Set the two dates for their institute's internal hackathon (must be between Sept 1-4, 2025). This can be changed until a fixed deadline (Aug 31, 2025).
-    *   After their hackathon dates pass, they can nominate a set number of teams (limit controlled by Admin) for the university-level round.
+    *   View the nomination limit set by the Admin.
+    *   After their hackathon dates pass, they can nominate a set number of teams for the university-level round.
 *   **SSIH Enrollment:**
     *   View a list of teams that were nominated but not selected for the university-level SIH.
     *   Mandatorily enroll these teams in the State Smart India Hackathon (SSIH) 2025.
