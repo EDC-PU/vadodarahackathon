@@ -22,3 +22,4 @@ import '@/ai/flows/generate-nomination-form-flow.ts';
 import '@/ai/flows/generate-bulk-nomination-flow.ts';
 import '@/ai/flows/bulk-upload-ps-flow.ts';
 import '@/ai/flows/leave-team-flow.ts';
+import '@/ai/flows/set-evaluation-dates-flow.ts';

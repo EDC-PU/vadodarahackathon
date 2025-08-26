@@ -10,7 +10,6 @@ import {
   FormControl,
   FormField,
   FormItem,
-  FormLabel,
   FormMessage,
 } from "@/components/ui/form";
 import {
@@ -43,6 +42,7 @@ import {
 import { format, isAfter, startOfDay } from "date-fns";
 import { cn } from "@/lib/utils";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { setEvaluationDates } from "@/ai/flows/set-evaluation-dates-flow";
 
 const formSchema = z.object({
   evaluationDates: z
@@ -115,23 +115,23 @@ export default function SpocEvaluationPage() {
     if (!instituteData) return;
     setIsSaving(true);
     try {
-      const instituteRef = doc(db, "institutes", instituteData.id);
-      // Convert JavaScript dates to Firestore Timestamps before saving
-      const firestoreTimestamps = data.evaluationDates.map(date => Timestamp.fromDate(date));
-      
-      await updateDoc(instituteRef, {
-        evaluationDates: firestoreTimestamps,
+      const result = await setEvaluationDates({
+          instituteId: instituteData.id,
+          dates: data.evaluationDates.map(d => d.toISOString())
       });
-      toast({ title: "Success", description: "Evaluation dates saved." });
-      
-      setInstituteData((prev) =>
-        prev ? { ...prev, evaluationDates: firestoreTimestamps as any } : null
-      );
-    } catch (error) {
+
+      if (result.success) {
+        toast({ title: "Success", description: "Evaluation dates saved." });
+        // Manually update local state to reflect change immediately
+        setInstituteData(prev => prev ? { ...prev, evaluationDates: data.evaluationDates.map(date => Timestamp.fromDate(date)) as any } : null);
+      } else {
+        throw new Error(result.message);
+      }
+    } catch (error: any) {
       console.error("Error saving dates:", error);
       toast({
         title: "Error",
-        description: "Could not save dates.",
+        description: error.message || "Could not save dates.",
         variant: "destructive",
       });
     } finally {
