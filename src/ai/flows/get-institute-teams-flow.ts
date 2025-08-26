@@ -36,7 +36,20 @@ const getInstituteTeamsFlow = ai.defineFlow(
       console.log(`Querying teams for institute: ${institute}`);
       const teamsQuery = adminDb.collection('teams').where('institute', '==', institute);
       const teamsSnapshot = await teamsQuery.get();
-      const teamsData = teamsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Team));
+
+      // Serialize teams data, including the createdAt timestamp
+      const teamsData = teamsSnapshot.docs.map(doc => {
+        const data = doc.data();
+        const createdAt = data.createdAt;
+        return { 
+          id: doc.id, 
+          ...data,
+          createdAt: createdAt && createdAt.toDate ? {
+            seconds: createdAt.seconds,
+            nanoseconds: createdAt.nanoseconds,
+          } : null,
+        } as Team;
+      });
       console.log(`Found ${teamsData.length} teams.`);
 
       if (teamsData.length === 0) {
