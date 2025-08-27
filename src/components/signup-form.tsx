@@ -45,7 +45,7 @@ const formSchema = z.object({
   email: z.string().email({ message: "Invalid email address." }),
   password: z.string().min(6, { message: "Password must be at least 6 characters." }),
   confirmPassword: z.string().min(6, { message: "Password must be at least 6 characters." }),
-  role: z.enum(["leader", "member", "spoc"], { required_error: "Please select a role." }),
+  role: z.enum(["leader", "member"], { required_error: "Please select a role." }),
   leaderConfirmation: z.boolean().optional(),
   terms: z.boolean().refine((val) => val === true, {
     message: "You must accept the terms and policy.",
@@ -62,12 +62,9 @@ const formSchema = z.object({
     message: "You must confirm you are the team leader.",
     path: ["leaderConfirmation"],
 }).refine((data) => {
-    if (data.role === 'spoc') {
-        return data.email.endsWith('@paruluniversity.ac.in');
-    }
     return data.email.endsWith('@paruluniversity.ac.in') || data.email.endsWith('@gmail.com');
 }, {
-    message: "Please use a valid @paruluniversity.ac.in or @gmail.com email. SPOCs must use a @paruluniversity.ac.in email.",
+    message: "Please use a valid @paruluniversity.ac.in or @gmail.com email.",
     path: ["email"],
 });
 
@@ -162,21 +159,6 @@ export function SignupForm({ inviteToken, deadlineMillis }: SignupFormProps) {
     try {
       const result = await signInWithPopup(auth, provider);
 
-      if (selectedRole === 'spoc' && !result.user.email?.endsWith('@paruluniversity.ac.in')) {
-          toast({
-            title: "Invalid Email for SPOC",
-            description: "SPOC registration requires a @paruluniversity.ac.in email address. Please use your official university account or register as a Team Leader.",
-            variant: "destructive",
-            duration: 8000,
-          });
-          // Sign out the user to prevent them from being left in a logged-in but unusable state
-          if (auth.currentUser) {
-              await signOut(auth);
-          }
-          setIsGoogleLoading(false);
-          return;
-      }
-
       await handleLogin(result.user, inviteToken);
     } catch (error: any)
        {
@@ -237,7 +219,6 @@ export function SignupForm({ inviteToken, deadlineMillis }: SignupFormProps) {
                     <SelectContent>
                       <SelectItem value="leader">Team Leader</SelectItem>
                       {inviteToken && <SelectItem value="member">Team Member (Invited)</SelectItem>}
-                      <SelectItem value="spoc">Institute SPOC</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />
