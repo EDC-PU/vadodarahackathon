@@ -20,7 +20,7 @@ import {
             import { Loader2, Trash2 } from "lucide-react";
             import { useToast } from "@/hooks/use-toast";
             import { db } from "@/lib/firebase";
-            import { doc, updateDoc, getDoc, writeBatch, collection, query, where, getDocs } from "firebase/firestore";
+import { doc, updateDoc, getDoc, writeBatch, collection, query, where, getDocs, limit } from "firebase/firestore";
             import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
             import { useAuth } from "@/hooks/use-auth";
             import { Team, UserProfile } from "@/lib/types";
@@ -88,7 +88,8 @@ import {
                                                                                                                                                               });
                                                                                                                                                                 
                                                                                                                                                                   useEffect(() => {
-                                                                                                                                                                      const fetchProfileData = async () => {
+const fetchProfileData = async () => {
+    console.log("Fetching profile data for enrollment number:", profileEnrollmentNumber);
                                                                                                                                                                               if (!profileEnrollmentNumber) return;
                                                                                                                                                                                       setIsFetching(true);
                                                                                                                                                                                               try {
