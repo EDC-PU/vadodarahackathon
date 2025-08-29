@@ -20,10 +20,10 @@ import { Skeleton } from './ui/skeleton';
 import { AnnouncementsSection } from './announcements-section';
 import { cn } from '@/lib/utils';
 import Autoplay from "embla-carousel-autoplay"
-import { Announcement, Institute, ProblemStatement } from '@/lib/types';
+import { Announcement, Institute, ProblemStatement, Team, UserProfile } from '@/lib/types';
 import { motion, useAnimation, useInView } from "framer-motion";
 import { CountUp } from './count-up';
-import { collection, onSnapshot, orderBy, query } from 'firebase/firestore';
+import { collection, onSnapshot, orderBy, query, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { ProblemStatementsSection } from './problem-statements-section';
 
@@ -72,6 +72,97 @@ const SectionTitle = ({ children, className }: { children: React.ReactNode, clas
       />
     </h2>
   );
+};
+
+const LiveStatsCounter = () => {
+    const [stats, setStats] = useState({ registered: 0, pending: 0, participants: 0 });
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const teamsQuery = query(collection(db, "teams"));
+        const usersQuery = query(collection(db, "users"));
+
+        let allTeams: Team[] = [];
+        let allUsers: UserProfile[] = [];
+
+        const processStats = () => {
+            if (!allTeams.length || !allUsers.length) return;
+
+            let registeredCount = 0;
+            let pendingCount = 0;
+            let totalParticipants = 0;
+
+            const userMap = new Map(allUsers.map(u => [u.uid, u]));
+
+            allTeams.forEach(team => {
+                const memberUIDs = [team.leader.uid, ...team.members.map(m => m.uid)];
+                const teamMemberProfiles = memberUIDs.map(uid => userMap.get(uid)).filter(Boolean) as UserProfile[];
+                
+                totalParticipants += teamMemberProfiles.length;
+
+                const femaleCount = teamMemberProfiles.filter(m => m.gender === 'F').length;
+                const instituteCount = teamMemberProfiles.filter(m => m.institute === team.institute).length;
+
+                if (teamMemberProfiles.length === 6 && femaleCount >= 1 && instituteCount >= 3) {
+                    registeredCount++;
+                } else {
+                    pendingCount++;
+                }
+            });
+
+            setStats({
+                registered: registeredCount,
+                pending: pendingCount,
+                participants: totalParticipants
+            });
+            setLoading(false);
+        };
+
+        const unsubscribeTeams = onSnapshot(teamsQuery, (snapshot) => {
+            allTeams = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Team));
+            processStats();
+        });
+
+        const unsubscribeUsers = onSnapshot(usersQuery, (snapshot) => {
+            allUsers = snapshot.docs.map(doc => ({ uid: doc.id, ...doc.data() } as UserProfile));
+            processStats();
+        });
+
+        return () => {
+            unsubscribeTeams();
+            unsubscribeUsers();
+        };
+    }, []);
+
+    return (
+        <motion.div 
+            className="mt-12 w-full max-w-4xl glass-card p-6"
+            initial={{ y: 20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ delay: 1, duration: 0.5 }}
+        >
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 text-center">
+                <div className="flex flex-col items-center justify-center">
+                    <p className="text-4xl font-bold text-brand-yellow">
+                        {loading ? <Loader2 className="animate-spin h-8 w-8" /> : <CountUp end={stats.registered} />}
+                    </p>
+                    <p className="text-sm font-medium uppercase tracking-widest text-white/70 mt-2">Registered Teams</p>
+                </div>
+                <div className="flex flex-col items-center justify-center">
+                    <p className="text-4xl font-bold text-brand-orange">
+                        {loading ? <Loader2 className="animate-spin h-8 w-8" /> : <CountUp end={stats.pending} />}
+                    </p>
+                    <p className="text-sm font-medium uppercase tracking-widest text-white/70 mt-2">Ongoing Registrations</p>
+                </div>
+                <div className="flex flex-col items-center justify-center">
+                    <p className="text-4xl font-bold text-brand-red">
+                        {loading ? <Loader2 className="animate-spin h-8 w-8" /> : <CountUp end={stats.participants} />}
+                    </p>
+                    <p className="text-sm font-medium uppercase tracking-widest text-white/70 mt-2">Total Participants</p>
+                </div>
+            </div>
+        </motion.div>
+    );
 };
 
 
@@ -174,6 +265,7 @@ const HeroSection = () => {
                         </Link>
                     </Button>
                 </motion.div>
+                <LiveStatsCounter />
             </motion.div>
         </section>
     );
