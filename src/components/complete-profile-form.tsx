@@ -20,10 +20,10 @@ import { useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { db } from "@/lib/firebase";
-import { doc, updateDoc, getDoc, writeBatch, setDoc, collection } from "firebase/firestore";
+import { doc, updateDoc, getDoc, writeBatch, setDoc, collection, onSnapshot, query, orderBy } from "firebase/firestore";
 import { RadioGroup, RadioGroupItem } from "./ui/radio-group";
 import { useAuth } from "@/hooks/use-auth";
-import { Team, UserProfile, TeamInvite } from "@/lib/types";
+import { Team, UserProfile, TeamInvite, Institute } from "@/lib/types";
 import { addMemberToTeam } from "@/ai/flows/add-member-to-team-flow";
 import {
   Select,
@@ -37,6 +37,7 @@ import {
 const formSchema = z.object({
   name: z.string().min(2, { message: "Name must be at least 2 characters." }),
   gender: z.enum(["M", "F", "O"], { required_error: "Please select a gender." }),
+  institute: z.string({ required_error: "Please select your institute." }).min(1, "Please select your institute."),
   department: z.string({ required_error: "Please select or enter a department." }).min(1, "Please select or enter a department."),
   enrollmentNumber: z.string().min(5, { message: "Enrollment number is required." }),
   semester: z.coerce.number({invalid_type_error: "Semester is required."}).min(1, { message: "Semester must be between 1 and 10." }).max(10, { message: "Semester must be between 1 and 10." }),
@@ -49,13 +50,14 @@ export function CompleteProfileForm() {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
   const [departments, setDepartments] = useState<string[]>([]);
+  const [institutes, setInstitutes] = useState<Institute[]>([]);
   const [isDeptLoading, setIsDeptLoading] = useState(false);
-  const [teamInstitute, setTeamInstitute] = useState<string | null>(null);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: "",
+      institute: undefined,
       department: undefined,
       enrollmentNumber: "",
       contactNumber: "",
@@ -65,41 +67,27 @@ export function CompleteProfileForm() {
     },
   });
 
-  const selectedDepartment = useWatch({
-    control: form.control,
-    name: 'department'
-  });
+  const selectedInstitute = useWatch({ control: form.control, name: "institute" });
+  const selectedDepartment = useWatch({ control: form.control, name: 'department' });
   
   useEffect(() => {
-    const fetchTeamInstitute = async () => {
-      const inviteToken = sessionStorage.getItem('inviteToken');
-      if (inviteToken) {
-          const inviteDocRef = doc(db, "teamInvites", inviteToken);
-          const inviteDoc = await getDoc(inviteDocRef);
-          if(inviteDoc.exists()) {
-              const teamDocRef = doc(db, 'teams', inviteDoc.data().teamId);
-              const teamDoc = await getDoc(teamDocRef);
-              if(teamDoc.exists()) {
-                  setTeamInstitute(teamDoc.data().institute);
-              }
-          }
-      } else if (user?.institute) {
-          setTeamInstitute(user.institute);
-      }
-    };
-    fetchTeamInstitute();
-  }, [user?.institute]);
-
+    const q = query(collection(db, "institutes"), orderBy("name"));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+        const institutesData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Institute));
+        setInstitutes(institutesData);
+    });
+    return () => unsubscribe();
+  }, []);
 
   useEffect(() => {
     const fetchDepartments = async () => {
-        if (!teamInstitute) {
+        if (!selectedInstitute) {
             setDepartments([]);
             return;
         }
         setIsDeptLoading(true);
         try {
-            const deptDocRef = doc(db, "departments", teamInstitute);
+            const deptDocRef = doc(db, "departments", selectedInstitute);
             const docSnap = await getDoc(deptDocRef);
             if (docSnap.exists()) {
                 setDepartments(docSnap.data().departments.sort() || []);
@@ -114,13 +102,14 @@ export function CompleteProfileForm() {
         }
     };
     fetchDepartments();
-  }, [teamInstitute]);
+  }, [selectedInstitute]);
 
 
   useEffect(() => {
     if (user) {
         form.reset({
             name: user.name || "",
+            institute: user.institute || "",
             department: user.department || undefined,
             enrollmentNumber: user.enrollmentNumber || "",
             contactNumber: user.contactNumber || "",
@@ -146,12 +135,12 @@ export function CompleteProfileForm() {
         const updatedProfileData = {
             name: values.name,
             gender: values.gender,
+            institute: values.institute,
             department: values.department,
             enrollmentNumber: values.enrollmentNumber,
             contactNumber: values.contactNumber,
             semester: values.semester,
             yearOfStudy: values.yearOfStudy,
-            institute: teamInstitute, // Add institute to profile
         };
         
         const inviteToken = sessionStorage.getItem('inviteToken');
@@ -177,7 +166,6 @@ export function CompleteProfileForm() {
                     finalTeamId = teamId;
                     toast({ title: "Welcome!", description: `You have successfully joined ${inviteData.teamName}.` });
                     
-                    // Set flag to indicate join was just completed to prevent loop
                     sessionStorage.setItem('justCompletedJoin', 'true');
                     sessionStorage.removeItem('inviteToken');
                 } else {
@@ -205,7 +193,6 @@ export function CompleteProfileForm() {
             description: "Redirecting to your dashboard.",
         });
 
-        // Pass the updated user object to ensure redirection works correctly
         redirectToDashboard({ ...user, ...dataToUpdate });
 
     } catch (error: any) {
@@ -233,7 +220,6 @@ export function CompleteProfileForm() {
       <CardContent className="p-6">
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            <p className="text-sm text-muted-foreground">Institute: <span className="font-medium">{teamInstitute || 'Loading...'}</span></p>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormField
                 control={form.control}
@@ -249,42 +235,26 @@ export function CompleteProfileForm() {
                 )}
               />
               <FormField
-                  control={form.control}
-                  name="department"
-                  render={({ field }) => (
-                      <FormItem>
-                          <FormLabel>Department</FormLabel>
-                          <Select onValueChange={(value) => field.onChange(value === 'Other' ? '' : value)} value={field.value && departments.includes(field.value) ? field.value : (field.value ? "Other" : "")} disabled={isLoading || isDeptLoading || !teamInstitute}>
-                              <FormControl>
-                                  <SelectTrigger>
-                                      <SelectValue placeholder={isDeptLoading ? "Loading..." : "Select your department"} />
-                                  </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                  {isDeptLoading ? (
-                                      <div className="flex items-center justify-center p-2">
-                                          <Loader2 className="h-4 w-4 animate-spin" />
-                                      </div>
-                                  ) : departments.length > 0 ? (
-                                      <>
-                                        {departments.map((dept) => (
-                                            <SelectItem key={dept} value={dept}>{dept}</SelectItem>
-                                        ))}
-                                        <SelectItem value="Other">Other (Please specify)</SelectItem>
-                                      </>
-                                  ) : (
-                                    <SelectItem value="Other">Other (Please specify)</SelectItem>
-                                  )}
-                              </SelectContent>
-                          </Select>
-                          {(selectedDepartment === '' || (field.value && !departments.includes(field.value))) && (
-                            <FormControl className="mt-2">
-                                <Input placeholder="Please specify your department" {...field} disabled={isLoading}/>
-                            </FormControl>
-                          )}
-                          <FormMessage />
-                      </FormItem>
-                  )}
+                control={form.control}
+                name="institute"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Institute</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value} disabled={isLoading}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select your institute" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {institutes.map((inst) => (
+                          <SelectItem key={inst.id} value={inst.name}>{inst.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
             </div>
             
@@ -301,29 +271,51 @@ export function CompleteProfileForm() {
                         className="flex items-center space-x-4 pt-2"
                          disabled={isLoading}
                       >
-                        <FormItem className="flex items-center space-x-2 space-y-0">
-                          <FormControl>
-                            <RadioGroupItem value="M" />
-                          </FormControl>
-                          <FormLabel className="font-normal">Male</FormLabel>
-                        </FormItem>
-                        <FormItem className="flex items-center space-x-2 space-y-0">
-                          <FormControl>
-                            <RadioGroupItem value="F" />
-                          </FormControl>
-                          <FormLabel className="font-normal">Female</FormLabel>
-                        </FormItem>
-                         <FormItem className="flex items-center space-x-2 space-y-0">
-                          <FormControl>
-                            <RadioGroupItem value="O" />
-                          </FormControl>
-                          <FormLabel className="font-normal">Other</FormLabel>
-                        </FormItem>
+                        <FormItem className="flex items-center space-x-2 space-y-0"><FormControl><RadioGroupItem value="M" /></FormControl><FormLabel className="font-normal">Male</FormLabel></FormItem>
+                        <FormItem className="flex items-center space-x-2 space-y-0"><FormControl><RadioGroupItem value="F" /></FormControl><FormLabel className="font-normal">Female</FormLabel></FormItem>
+                         <FormItem className="flex items-center space-x-2 space-y-0"><FormControl><RadioGroupItem value="O" /></FormControl><FormLabel className="font-normal">Other</FormLabel></FormItem>
                       </RadioGroup>
                     </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
+            />
+            
+            <FormField
+                control={form.control}
+                name="department"
+                render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Department</FormLabel>
+                        <Select onValueChange={(value) => field.onChange(value === 'Other' ? '' : value)} value={field.value && departments.includes(field.value) ? field.value : (field.value ? "Other" : "")} disabled={isLoading || isDeptLoading || !selectedInstitute}>
+                            <FormControl>
+                                <SelectTrigger>
+                                    <SelectValue placeholder={isDeptLoading ? "Loading..." : "Select your department"} />
+                                </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                                {isDeptLoading ? (
+                                    <div className="flex items-center justify-center p-2">
+                                        <Loader2 className="h-4 w-4 animate-spin" />
+                                    </div>
+                                ) : departments.length > 0 ? (
+                                    <>
+                                      {departments.map((dept) => (<SelectItem key={dept} value={dept}>{dept}</SelectItem>))}
+                                      <SelectItem value="Other">Other (Please specify)</SelectItem>
+                                    </>
+                                ) : (
+                                  <SelectItem value="Other">Other (Please specify)</SelectItem>
+                                )}
+                            </SelectContent>
+                        </Select>
+                        {(selectedDepartment === '' || (field.value && !departments.includes(field.value))) && (
+                          <FormControl className="mt-2">
+                              <Input placeholder="Please specify your department" {...field} disabled={isLoading}/>
+                          </FormControl>
+                        )}
+                        <FormMessage />
+                    </FormItem>
+                )}
             />
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -394,4 +386,5 @@ export function CompleteProfileForm() {
 }
 
     
+
 

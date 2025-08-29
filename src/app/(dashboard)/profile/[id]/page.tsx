@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -19,9 +20,9 @@ import { useState, useEffect, useCallback } from "react";
 import { Loader2, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { db } from "@/lib/firebase";
-import { doc, updateDoc, getDoc, collection, query, where, onSnapshot, writeBatch } from "firebase/firestore";
+import { doc, updateDoc, getDoc, collection, query, where, onSnapshot, writeBatch, orderBy } from "firebase/firestore";
 import { useAuth } from "@/hooks/use-auth";
-import { UserProfile, Team } from "@/lib/types";
+import { UserProfile, Team, Institute } from "@/lib/types";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import {
   Select,
@@ -37,6 +38,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 const formSchema = z.object({
   name: z.string().min(2, { message: "Name must be at least 2 characters." }),
   gender: z.enum(["M", "F", "O"], { required_error: "Please select a gender." }),
+  institute: z.string().min(1, "Please select an institute."),
   department: z.string({ required_error: "Please select or enter a department." }).min(1, "Please select or enter a department."),
   enrollmentNumber: z.string().min(5, { message: "Enrollment number is required." }),
   semester: z.coerce.number({invalid_type_error: "Semester is required."}).min(1, { message: "Semester must be between 1 and 10." }).max(10, { message: "Semester must be between 1 and 10." }),
@@ -49,6 +51,7 @@ export default function ProfilePage() {
     const [profile, setProfile] = useState<UserProfile | null>(null);
     const [loading, setLoading] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [institutes, setInstitutes] = useState<Institute[]>([]);
     const [departments, setDepartments] = useState<string[]>([]);
     const [isDeptLoading, setIsDeptLoading] = useState(false);
     const params = useParams();
@@ -61,6 +64,7 @@ export default function ProfilePage() {
         defaultValues: {
             name: "",
             gender: undefined,
+            institute: "",
             department: "",
             enrollmentNumber: "",
             semester: undefined,
@@ -68,15 +72,23 @@ export default function ProfilePage() {
             contactNumber: "",
         }
     });
-
-    const selectedDepartment = useWatch({
-        control: form.control,
-        name: 'department'
-    });
+    
+    const selectedInstitute = useWatch({ control: form.control, name: 'institute' });
+    const selectedDepartment = useWatch({ control: form.control, name: 'department' });
 
     const canEdit = authUser?.role === 'admin' || 
                     authUser?.enrollmentNumber === enrollmentId || 
                     (authUser?.role === 'spoc' && authUser.institute === profile?.institute);
+
+    // Fetch Institutes List
+    useEffect(() => {
+      const q = query(collection(db, "institutes"), orderBy("name"));
+      const unsubscribe = onSnapshot(q, (snapshot) => {
+          const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Institute));
+          setInstitutes(data);
+      });
+      return () => unsubscribe();
+    }, []);
 
     // Fetch User Profile
     useEffect(() => {
@@ -107,20 +119,19 @@ export default function ProfilePage() {
         return () => unsubscribe();
     }, [enrollmentId, form, toast]);
 
-    // Fetch Departments based on Profile's Institute
+    // Fetch Departments based on selected Institute
     useEffect(() => {
-        if (!profile?.institute) return;
+        if (!selectedInstitute) {
+            setDepartments([]);
+            return
+        };
 
         setIsDeptLoading(true);
-        const deptDocRef = doc(db, "departments", profile.institute);
+        const deptDocRef = doc(db, "departments", selectedInstitute);
         const unsubscribe = onSnapshot(deptDocRef, (docSnap) => {
             if (docSnap.exists()) {
                 const departmentsData = docSnap.data().departments?.sort() || [];
                 setDepartments(departmentsData);
-                // Ensure form value is valid, or reset to "" to allow "Other"
-                if (form.getValues('department') && !departmentsData.includes(form.getValues('department'))) {
-                    // This handles when the saved value is an "Other" value
-                }
             } else {
                 setDepartments([]);
             }
@@ -130,7 +141,7 @@ export default function ProfilePage() {
             setIsDeptLoading(false);
         });
         return () => unsubscribe();
-    }, [profile?.institute, form]);
+    }, [selectedInstitute]);
 
     async function onSubmit(values: z.infer<typeof formSchema>) {
         if (!profile || !canEdit) {
@@ -157,22 +168,27 @@ export default function ProfilePage() {
 
                     if (teamData.leader.uid === profile.uid) {
                         teamData.leader.name = values.name;
+                        // Also update team's top-level institute if leader changes theirs
+                        teamData.institute = values.institute;
                         updated = true;
                     } else {
                         const memberIndex = teamData.members.findIndex(m => m.uid === profile.uid);
                         if (memberIndex > -1) {
                             teamData.members[memberIndex] = {
                                 ...teamData.members[memberIndex],
-                                ...values,
-                                uid: profile.uid,
-                                email: profile.email
+                                name: values.name,
+                                gender: values.gender,
+                                enrollmentNumber: values.enrollmentNumber,
+                                contactNumber: values.contactNumber,
+                                semester: values.semester,
+                                yearOfStudy: values.yearOfStudy,
                             };
                             updated = true;
                         }
                     }
 
                     if (updated) {
-                       batch.update(teamDocRef, { leader: teamData.leader, members: teamData.members });
+                       batch.update(teamDocRef, { leader: teamData.leader, members: teamData.members, institute: teamData.institute });
                     }
                 }
             }
@@ -223,7 +239,7 @@ export default function ProfilePage() {
                         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 border rounded-md bg-secondary/30">
                                 <div><p className="text-sm font-medium">Email</p><p className="text-muted-foreground">{profile.email}</p></div>
-                                <div><p className="text-sm font-medium">Institute</p><p className="text-muted-foreground">{profile.institute}</p></div>
+                                <div><p className="text-sm font-medium">Role</p><p className="text-muted-foreground capitalize">{profile.role}</p></div>
                             </div>
                             <FormField
                                 control={form.control}
@@ -234,6 +250,28 @@ export default function ProfilePage() {
                                         <FormControl>
                                             <Input {...field} disabled={!canEdit || isSubmitting} />
                                         </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                             <FormField
+                                control={form.control}
+                                name="institute"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Institute</FormLabel>
+                                        <Select onValueChange={field.onChange} value={field.value} disabled={!canEdit || isSubmitting}>
+                                            <FormControl>
+                                                <SelectTrigger>
+                                                    <SelectValue placeholder="Select an institute" />
+                                                </SelectTrigger>
+                                            </FormControl>
+                                            <SelectContent>
+                                                {institutes.map(inst => (
+                                                    <SelectItem key={inst.id} value={inst.name}>{inst.name}</SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
                                         <FormMessage />
                                     </FormItem>
                                 )}
@@ -301,4 +339,5 @@ export default function ProfilePage() {
         </div>
     );
 }
+
 
