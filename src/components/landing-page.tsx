@@ -80,58 +80,58 @@ const LiveStatsCounter = () => {
 
     useEffect(() => {
         const teamsQuery = query(collection(db, "teams"));
-        const usersQuery = query(collection(db, "users"));
 
-        let allTeams: Team[] = [];
-        let allUsers: UserProfile[] = [];
+        const unsubscribe = onSnapshot(teamsQuery, (snapshot) => {
+            const allTeams = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Team));
+            
+            if (allTeams.length === 0) {
+                setStats({ registered: 0, pending: 0, participants: 0 });
+                setLoading(false);
+                return;
+            }
 
-        const processStats = () => {
-            if (!allTeams.length || !allUsers.length) return;
-
-            let registeredCount = 0;
-            let pendingCount = 0;
-            let totalParticipants = 0;
-
-            const userMap = new Map(allUsers.map(u => [u.uid, u]));
-
+            const allParticipantUIDs = new Set<string>();
             allTeams.forEach(team => {
-                const memberUIDs = [team.leader.uid, ...team.members.map(m => m.uid)];
-                const teamMemberProfiles = memberUIDs.map(uid => userMap.get(uid)).filter(Boolean) as UserProfile[];
+                allParticipantUIDs.add(team.leader.uid);
+                team.members.forEach(member => {
+                    if(member.uid) allParticipantUIDs.add(member.uid);
+                });
+            });
+
+            const usersQuery = query(collection(db, "users"), where("uid", "in", Array.from(allParticipantUIDs)));
+            
+            const unsubscribeUsers = onSnapshot(usersQuery, (userSnapshot) => {
+                const userMap = new Map(userSnapshot.docs.map(doc => [doc.id, doc.data() as UserProfile]));
+
+                let registeredCount = 0;
+                let pendingCount = 0;
                 
-                totalParticipants += teamMemberProfiles.length;
+                allTeams.forEach(team => {
+                    const memberUIDs = [team.leader.uid, ...team.members.map(m => m.uid)];
+                    const teamMemberProfiles = memberUIDs.map(uid => userMap.get(uid)).filter(Boolean) as UserProfile[];
+                    
+                    const femaleCount = teamMemberProfiles.filter(m => m.gender === 'F').length;
+                    const instituteCount = teamMemberProfiles.filter(m => m.institute === team.institute).length;
 
-                const femaleCount = teamMemberProfiles.filter(m => m.gender === 'F').length;
-                const instituteCount = teamMemberProfiles.filter(m => m.institute === team.institute).length;
+                    if (teamMemberProfiles.length === 6 && femaleCount >= 1 && instituteCount >= 3) {
+                        registeredCount++;
+                    } else {
+                        pendingCount++;
+                    }
+                });
 
-                if (teamMemberProfiles.length === 6 && femaleCount >= 1 && instituteCount >= 3) {
-                    registeredCount++;
-                } else {
-                    pendingCount++;
-                }
+                setStats({
+                    registered: registeredCount,
+                    pending: pendingCount,
+                    participants: allParticipantUIDs.size
+                });
+                setLoading(false);
             });
 
-            setStats({
-                registered: registeredCount,
-                pending: pendingCount,
-                participants: totalParticipants
-            });
-            setLoading(false);
-        };
-
-        const unsubscribeTeams = onSnapshot(teamsQuery, (snapshot) => {
-            allTeams = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Team));
-            processStats();
+            return () => unsubscribeUsers();
         });
 
-        const unsubscribeUsers = onSnapshot(usersQuery, (snapshot) => {
-            allUsers = snapshot.docs.map(doc => ({ uid: doc.id, ...doc.data() } as UserProfile));
-            processStats();
-        });
-
-        return () => {
-            unsubscribeTeams();
-            unsubscribeUsers();
-        };
+        return () => unsubscribe();
     }, []);
 
     return (
@@ -632,3 +632,4 @@ export default function LandingPage({ spocDetails, announcements, problemStateme
     </div>
   );
 }
+
