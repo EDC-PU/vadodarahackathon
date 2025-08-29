@@ -7,7 +7,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Award, Code, Cpu, Mail, MapPin, Phone, Users, Calendar, Trophy, FileText, BarChart, FileQuestion, Loader2, LayoutDashboard, MoveRight, UserCheck, Users2, Venus, User, Workflow } from 'lucide-react';
 import Image from 'next/image';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
-import { useState, useEffect, useRef, MouseEvent } from 'react';
+import { useState, useEffect, useRef, MouseEvent, useCallback } from 'react';
 import {
   Carousel,
   CarouselContent,
@@ -98,12 +98,14 @@ const LiveStatsCounter = () => {
     const [stats, setStats] = useState({ registered: 0, pending: 0, participants: 0 });
     const [loading, setLoading] = useState(true);
 
-    useEffect(() => {
-        const teamsQuery = query(collection(db, "teams"));
-
-        const unsubscribe = onSnapshot(teamsQuery, async (snapshot) => {
+    const fetchStats = useCallback(async () => {
+        console.log("Fetching live stats...");
+        setLoading(true);
+        try {
+            const teamsQuery = query(collection(db, "teams"));
+            const snapshot = await getDocs(teamsQuery);
             const allTeams = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Team));
-            
+
             if (allTeams.length === 0) {
                 setStats({ registered: 0, pending: 0, participants: 0 });
                 setLoading(false);
@@ -114,14 +116,13 @@ const LiveStatsCounter = () => {
             allTeams.forEach(team => {
                 allParticipantUIDs.add(team.leader.uid);
                 team.members.forEach(member => {
-                    if(member.uid) allParticipantUIDs.add(member.uid);
+                    if (member.uid) allParticipantUIDs.add(member.uid);
                 });
             });
 
             const userMap = await getUserProfilesInChunks(Array.from(allParticipantUIDs));
 
             let registeredCount = 0;
-            
             allTeams.forEach(team => {
                 const memberUIDs = [team.leader.uid, ...team.members.map(m => m.uid)];
                 const teamMemberProfiles = memberUIDs.map(uid => userMap.get(uid)).filter(Boolean) as UserProfile[];
@@ -139,12 +140,19 @@ const LiveStatsCounter = () => {
                 pending: allTeams.length - registeredCount,
                 participants: allParticipantUIDs.size
             });
+        } catch (error) {
+            console.error("Error fetching stats:", error);
+        } finally {
             setLoading(false);
-
-        });
-
-        return () => unsubscribe();
+        }
     }, []);
+
+    useEffect(() => {
+        fetchStats(); // Initial fetch
+        const intervalId = setInterval(fetchStats, 30 * 60 * 1000); // Refresh every 30 minutes
+        return () => clearInterval(intervalId); // Cleanup on unmount
+    }, [fetchStats]);
+
 
     return (
         <motion.div 
