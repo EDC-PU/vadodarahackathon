@@ -23,7 +23,7 @@ import Autoplay from "embla-carousel-autoplay"
 import { Announcement, Institute, ProblemStatement, Team, UserProfile } from '@/lib/types';
 import { motion, useAnimation, useInView } from "framer-motion";
 import { CountUp } from './count-up';
-import { collection, onSnapshot, orderBy, query, where } from 'firebase/firestore';
+import { collection, onSnapshot, orderBy, query, where, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { ProblemStatementsSection } from './problem-statements-section';
 
@@ -74,6 +74,26 @@ const SectionTitle = ({ children, className }: { children: React.ReactNode, clas
   );
 };
 
+// Helper to fetch user profiles in chunks to avoid Firestore 30-item 'in' query limit
+async function getUserProfilesInChunks(userIds: string[]): Promise<Map<string, UserProfile>> {
+    const userProfiles = new Map<string, UserProfile>();
+    if (userIds.length === 0) return userProfiles;
+
+    const chunkSize = 30;
+    for (let i = 0; i < userIds.length; i += chunkSize) {
+        const chunk = userIds.slice(i, i + chunkSize);
+        if (chunk.length > 0) {
+            const usersQuery = query(collection(db, 'users'), where('uid', 'in', chunk));
+            const usersSnapshot = await getDocs(usersQuery);
+            usersSnapshot.forEach(doc => {
+                userProfiles.set(doc.id, { uid: doc.id, ...doc.data() } as UserProfile);
+            });
+        }
+    }
+    return userProfiles;
+}
+
+
 const LiveStatsCounter = () => {
     const [stats, setStats] = useState({ registered: 0, pending: 0, participants: 0 });
     const [loading, setLoading] = useState(true);
@@ -81,7 +101,7 @@ const LiveStatsCounter = () => {
     useEffect(() => {
         const teamsQuery = query(collection(db, "teams"));
 
-        const unsubscribe = onSnapshot(teamsQuery, (snapshot) => {
+        const unsubscribe = onSnapshot(teamsQuery, async (snapshot) => {
             const allTeams = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Team));
             
             if (allTeams.length === 0) {
@@ -98,37 +118,29 @@ const LiveStatsCounter = () => {
                 });
             });
 
-            const usersQuery = query(collection(db, "users"), where("uid", "in", Array.from(allParticipantUIDs)));
+            const userMap = await getUserProfilesInChunks(Array.from(allParticipantUIDs));
+
+            let registeredCount = 0;
             
-            const unsubscribeUsers = onSnapshot(usersQuery, (userSnapshot) => {
-                const userMap = new Map(userSnapshot.docs.map(doc => [doc.id, doc.data() as UserProfile]));
-
-                let registeredCount = 0;
-                let pendingCount = 0;
+            allTeams.forEach(team => {
+                const memberUIDs = [team.leader.uid, ...team.members.map(m => m.uid)];
+                const teamMemberProfiles = memberUIDs.map(uid => userMap.get(uid)).filter(Boolean) as UserProfile[];
                 
-                allTeams.forEach(team => {
-                    const memberUIDs = [team.leader.uid, ...team.members.map(m => m.uid)];
-                    const teamMemberProfiles = memberUIDs.map(uid => userMap.get(uid)).filter(Boolean) as UserProfile[];
-                    
-                    const femaleCount = teamMemberProfiles.filter(m => m.gender === 'F').length;
-                    const instituteCount = teamMemberProfiles.filter(m => m.institute === team.institute).length;
+                const femaleCount = teamMemberProfiles.filter(m => m.gender === 'F').length;
+                const instituteCount = teamMemberProfiles.filter(m => m.institute === team.institute).length;
 
-                    if (teamMemberProfiles.length === 6 && femaleCount >= 1 && instituteCount >= 3) {
-                        registeredCount++;
-                    } else {
-                        pendingCount++;
-                    }
-                });
-
-                setStats({
-                    registered: registeredCount,
-                    pending: pendingCount,
-                    participants: allParticipantUIDs.size
-                });
-                setLoading(false);
+                if (teamMemberProfiles.length === 6 && femaleCount >= 1 && instituteCount >= 3) {
+                    registeredCount++;
+                }
             });
 
-            return () => unsubscribeUsers();
+            setStats({
+                registered: registeredCount,
+                pending: allTeams.length - registeredCount,
+                participants: allParticipantUIDs.size
+            });
+            setLoading(false);
+
         });
 
         return () => unsubscribe();
@@ -632,4 +644,3 @@ export default function LandingPage({ spocDetails, announcements, problemStateme
     </div>
   );
 }
-
