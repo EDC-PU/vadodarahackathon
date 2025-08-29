@@ -320,7 +320,7 @@ export default function ProfilePage() {
                                 )}
                             />
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                <FormField control={form.control} name="enrollmentNumber" render={({ field }) => (<FormItem><FormLabel>Enrollment No.</FormLabel><FormControl><Input {...field} disabled={!canEdit || isSubmitting} /></FormControl><FormMessage /></FormItem>)} />
+                                <FormField control={form.control} name="enrollmentNumber" render={({ field }) => (<FormItem><FormLabel>Enrollment No.</FormLabel><FormControl><Input {...field} disabled={true} /></FormControl><FormMessage /></FormItem>)} />
                                 <FormField control={form.control} name="semester" render={({ field }) => (<FormItem><FormLabel>Semester</FormLabel><FormControl><Input type="number" {...field} disabled={!canEdit || isSubmitting} /></FormControl><FormMessage /></FormItem>)} />
                                 <FormField control={form.control} name="yearOfStudy" render={({ field }) => (<FormItem><FormLabel>Year of Study</FormLabel><FormControl><Input type="number" {...field} disabled={!canEdit || isSubmitting} /></FormControl><FormMessage /></FormItem>)} />
                             </div>
@@ -339,5 +339,3 @@ export default function ProfilePage() {
         </div>
     );
 }
-
-
