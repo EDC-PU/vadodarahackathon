@@ -6,7 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Loader2, Trash2, ArrowUpDown, ShieldCheck, Download } from "lucide-react";
 import { useEffect, useState, useMemo } from "react";
 import { db } from "@/lib/firebase";
-import { collection, onSnapshot, query, orderBy, getDocs, where } from "firebase/firestore";
+import { collection, onSnapshot, query, orderBy, getDocs, where, limit } from "firebase/firestore";
 import { Team, UserProfile } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
