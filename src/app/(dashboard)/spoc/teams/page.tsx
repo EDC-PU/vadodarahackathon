@@ -246,10 +246,18 @@ export default function SpocTeamsPage() {
 
   const filteredTeams = useMemo(() => {
     return teams.filter(team => {
+      let isRegistered = false;
+      const allMemberUIDs = [team.leader.uid, ...team.members.map(m => m.uid)];
+      const members = allMemberUIDs.map(uid => users.get(uid)).filter(Boolean) as UserProfile[];
+      const hasFemale = members.some(m => m.gender === 'F');
+      const instituteCount = members.filter(m => m.institute === team.institute).length;
+
+      if (members.length === 6 && hasFemale && instituteCount >= 3) {
+          isRegistered = true;
+      }
+      
       const statusMatch = statusFilter === 'All Statuses' ? true : (
-        statusFilter === 'Registered' 
-          ? ((team.members?.length || 0) + 1 === 6 && (users.get(team.leader.uid)?.gender === 'F' || team.members.some(m => users.get(m.uid)?.gender === 'F')))
-          : !((team.members?.length || 0) + 1 === 6 && (users.get(team.leader.uid)?.gender === 'F' || team.members.some(m => users.get(m.uid)?.gender === 'F')))
+        statusFilter === 'Registered' ? isRegistered : !isRegistered
       );
 
       const psMatch = selectedProblemStatements.length === 0 || (team.problemStatementId && selectedProblemStatements.includes(team.problemStatementId));

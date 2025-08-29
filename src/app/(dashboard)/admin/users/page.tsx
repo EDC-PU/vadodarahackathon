@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -217,7 +218,7 @@ export default function ManageUsersPage() {
     const femaleCount = allMemberProfiles.filter(m => m.gender === 'F').length;
     const instituteCount = allMemberProfiles.filter(m => m.institute === team.institute).length;
 
-    return (memberCount === 6 && femaleCount >= 1 && instituteCount >= 2) ? 'Registered' : 'Pending';
+    return (memberCount === 6 && femaleCount >= 1 && instituteCount >= 3) ? 'Registered' : 'Pending';
   };
   
   const filteredAndSortedUsers = useMemo(() => {
@@ -495,3 +496,4 @@ export default function ManageUsersPage() {
     </div>
   );
 }
+

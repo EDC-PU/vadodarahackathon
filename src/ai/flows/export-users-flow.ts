@@ -98,7 +98,7 @@ const exportUsersFlow = ai.defineFlow(
                     const femaleCount = allMemberProfiles.filter(m => m.gender === 'F').length;
                     const instituteCount = allMemberProfiles.filter(m => m.institute === team.institute).length;
 
-                    const isRegistered = memberCount === 6 && femaleCount >= 1 && instituteCount >= 2;
+                    const isRegistered = memberCount === 6 && femaleCount >= 1 && instituteCount >= 3;
                     return status === 'registered' ? isRegistered : !isRegistered;
                 });
             }
@@ -136,7 +136,7 @@ const exportUsersFlow = ai.defineFlow(
                     const memberCount = allMemberProfiles.length;
                     const femaleCount = allMemberProfiles.filter(m => m.gender === 'F').length;
                     const instituteCount = allMemberProfiles.filter(m => m.institute === team.institute).length;
-                    if (memberCount === 6 && femaleCount >= 1 && instituteCount >= 2) {
+                    if (memberCount === 6 && femaleCount >= 1 && instituteCount >= 3) {
                         userStatus = "Registered";
                     }
                 }

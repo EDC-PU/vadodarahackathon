@@ -199,7 +199,7 @@ function AllTeamsContent() {
         const femaleCount = allMemberProfiles.filter(m => m.gender === 'F').length;
         const instituteCount = allMemberProfiles.filter(m => m.institute === team.institute).length;
 
-        const isRegistered = memberCount === 6 && femaleCount >= 1 && instituteCount >= 2;
+        const isRegistered = memberCount === 6 && femaleCount >= 1 && instituteCount >= 3;
         
         const statusMatch = statusFilter === 'Registered' ? isRegistered : !isRegistered;
         
@@ -739,6 +739,7 @@ export default function AllTeamsPage() {
     
 
     
+
 
 
 

@@ -92,7 +92,7 @@ const exportTeamsFlow = ai.defineFlow(
                     const femaleCount = allMemberProfiles.filter(m => m.gender === 'F').length;
                     const instituteCount = allMemberProfiles.filter(m => m.institute === team.institute).length;
 
-                    const isRegistered = memberCount === 6 && femaleCount >= 1 && instituteCount >= 2;
+                    const isRegistered = memberCount === 6 && femaleCount >= 1 && instituteCount >= 3;
                     return status === 'Registered' ? isRegistered : !isRegistered;
                 });
             }
@@ -178,6 +178,7 @@ const exportTeamsFlow = ai.defineFlow(
                 if (teamSize > 1) {
                     sheet.mergeCells(`A${startRow}:A${endRow}`);
                     sheet.mergeCells(`B${startRow}:B${endRow}`);
+                    sheet.mergeCells(`G${startRow}:G${endRow}`);
                     sheet.mergeCells(`L${startRow}:L${endRow}`);
                     sheet.mergeCells(`M${startRow}:M${endRow}`);
                 }
@@ -196,6 +197,7 @@ const exportTeamsFlow = ai.defineFlow(
 
                 alignAndBorder(`A${startRow}`);
                 alignAndBorder(`B${startRow}`);
+                alignAndBorder(`G${startRow}`);
                 alignAndBorder(`L${startRow}`);
                 alignAndBorder(`M${startRow}`);
 

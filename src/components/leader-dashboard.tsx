@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { Button } from "@/components/ui/button";
@@ -157,7 +158,7 @@ export default function LeaderDashboard() {
         return {
             memberCount: { current: 0, required: 6, isMet: false },
             femaleCount: { current: 0, required: 1, isMet: false },
-            instituteCount: { current: 0, required: 2, isMet: false },
+            instituteCount: { current: 0, required: 3, isMet: false },
             isRegistered: () => false
         };
     }
@@ -181,8 +182,8 @@ export default function LeaderDashboard() {
         },
         instituteCount: {
             current: instituteCount,
-            required: 2,
-            isMet: instituteCount >= 2,
+            required: 3,
+            isMet: instituteCount >= 3,
         },
         isRegistered() {
           return this.memberCount.isMet && this.femaleCount.isMet && this.instituteCount.isMet;
@@ -620,13 +621,13 @@ export default function LeaderDashboard() {
                             <Alert variant="default" className="border-green-500/50 bg-transparent text-foreground">
                                 <CheckCircle className="h-4 w-4 text-green-500"/>
                                 <AlertTitle>Institute Requirement Met</AlertTitle>
-                                <AlertDescription>Your team has at least two members from your institute.</AlertDescription>
+                                <AlertDescription>Your team has at least three members from your institute.</AlertDescription>
                             </Alert>
                         ) : (
                              <Alert variant="destructive" className="bg-transparent text-foreground">
                                 <AlertCircle className="h-4 w-4 text-destructive"/>
                                 <AlertTitle>Institute Representation Required</AlertTitle>
-                                <AlertDescription>Your team must include at least two members (including you) from your institute ({team.institute}).</AlertDescription>
+                                <AlertDescription>Your team must include at least three members (including you) from your institute ({team.institute}).</AlertDescription>
                             </Alert>
                         )}
                     </CardContent>

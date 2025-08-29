@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useEffect, useState } from "react";
@@ -105,8 +106,9 @@ export default function SpocAnalyticsPage() {
        const allMemberUIDs = [team.leader.uid, ...team.members.map(m => m.uid)];
        const members = users.filter(u => allMemberUIDs.includes(u.uid));
        const hasFemale = members.some(m => m.gender === 'F');
+       const instituteCount = members.filter(m => m.institute === team.institute).length;
 
-       if (members.length === 6 && hasFemale) {
+       if (members.length === 6 && hasFemale && instituteCount >= 3) {
          registeredCount++;
        } else {
          pendingCount++;
@@ -121,7 +123,7 @@ export default function SpocAnalyticsPage() {
   const getGenderData = (): GenderChartData[] => {
     const registeredTeams = teams.filter(team => {
       const members = [team.leader, ...team.members].map(m => users.find(u => u.uid === m.uid)).filter(Boolean) as UserProfile[];
-      return members.length === 6 && members.some(m => m.gender === 'F');
+      return members.length === 6 && members.some(m => m.gender === 'F') && members.filter(m => m.institute === team.institute).length >= 3;
     });
 
     const registeredParticipantUids = new Set(registeredTeams.flatMap(t => [t.leader.uid, ...t.members.map(m => m.uid)]));
