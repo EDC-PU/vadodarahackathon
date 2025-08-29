@@ -254,7 +254,7 @@ export function CompleteProfileForm() {
                   render={({ field }) => (
                       <FormItem>
                           <FormLabel>Department</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value} disabled={isLoading || isDeptLoading || !teamInstitute}>
+                          <Select onValueChange={(value) => field.onChange(value === 'Other' ? '' : value)} value={field.value && departments.includes(field.value) ? field.value : (field.value ? "Other" : "")} disabled={isLoading || isDeptLoading || !teamInstitute}>
                               <FormControl>
                                   <SelectTrigger>
                                       <SelectValue placeholder={isDeptLoading ? "Loading..." : "Select your department"} />
@@ -270,14 +270,14 @@ export function CompleteProfileForm() {
                                         {departments.map((dept) => (
                                             <SelectItem key={dept} value={dept}>{dept}</SelectItem>
                                         ))}
-                                        <SelectItem value="Other">Other</SelectItem>
+                                        <SelectItem value="Other">Other (Please specify)</SelectItem>
                                       </>
                                   ) : (
-                                    <SelectItem value="Other">Other</SelectItem>
+                                    <SelectItem value="Other">Other (Please specify)</SelectItem>
                                   )}
                               </SelectContent>
                           </Select>
-                          {selectedDepartment === 'Other' && (
+                          {(selectedDepartment === '' || (field.value && !departments.includes(field.value))) && (
                             <FormControl className="mt-2">
                                 <Input placeholder="Please specify your department" {...field} disabled={isLoading}/>
                             </FormControl>
@@ -394,3 +394,4 @@ export function CompleteProfileForm() {
 }
 
     
+
