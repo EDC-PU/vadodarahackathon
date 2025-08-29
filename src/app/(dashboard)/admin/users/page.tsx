@@ -29,11 +29,15 @@ import { Input } from "@/components/ui/input";
 import Link from "next/link";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { exportUsers } from "@/ai/flows/export-users-flow";
+import { Checkbox } from "@/components/ui/checkbox";
+import { bulkDeleteUsersAndTeams } from "@/ai/flows/bulk-delete-users-flow";
+
 
 type SortKey = 'name' | 'email' | 'role' | 'institute' | 'createdAt' | 'status';
 type SortDirection = 'asc' | 'desc';
 type RoleFilter = "all" | "leader" | "member";
 type StatusFilter = "all" | "registered" | "pending";
+type InstituteFilter = "all" | "missing";
 
 async function getUserProfilesInChunks(userIds: string[]): Promise<Map<string, UserProfile>> {
     const userProfiles = new Map<string, UserProfile>();
@@ -63,7 +67,9 @@ export default function ManageUsersPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [roleFilter, setRoleFilter] = useState<RoleFilter>("all");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+  const [instituteFilter, setInstituteFilter] = useState<InstituteFilter>("all");
   const [sortConfig, setSortConfig] = useState<{ key: SortKey, direction: SortDirection } | null>({ key: 'createdAt', direction: 'desc' });
+  const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -224,6 +230,10 @@ export default function ManageUsersPage() {
     if (statusFilter !== 'all') {
         filteredUsers = filteredUsers.filter(user => user.status.toLowerCase() === statusFilter.toLowerCase());
     }
+    
+    if (instituteFilter === 'missing') {
+        filteredUsers = filteredUsers.filter(user => !user.institute);
+    }
 
     if (searchTerm) {
         filteredUsers = filteredUsers.filter(user => 
@@ -248,7 +258,41 @@ export default function ManageUsersPage() {
     }
     return filteredUsers;
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [users, searchTerm, sortConfig, roleFilter, statusFilter, teams, allTeamMembers]);
+  }, [users, searchTerm, sortConfig, roleFilter, statusFilter, instituteFilter, teams, allTeamMembers]);
+
+  const handleBulkDelete = async () => {
+    setIsProcessing('bulk-delete');
+    try {
+      const result = await bulkDeleteUsersAndTeams({ userIds: selectedUserIds });
+      if (result.success) {
+        toast({ title: "Success", description: result.message });
+        setSelectedUserIds([]);
+      } else {
+        throw new Error(result.message);
+      }
+    } catch (error: any) {
+      toast({ title: "Bulk Deletion Failed", description: error.message, variant: "destructive" });
+    } finally {
+      setIsProcessing(null);
+    }
+  }
+
+  const toggleSelectAll = (checked: boolean) => {
+    if (checked) {
+        setSelectedUserIds(filteredAndSortedUsers.map(u => u.uid));
+    } else {
+        setSelectedUserIds([]);
+    }
+  };
+
+  const handleRowSelect = (userId: string, checked: boolean) => {
+    if (checked) {
+        setSelectedUserIds(prev => [...prev, userId]);
+    } else {
+        setSelectedUserIds(prev => prev.filter(id => id !== userId));
+    }
+  };
+
 
   return (
     <div className="p-4 sm:p-6 lg:p-8">
@@ -266,9 +310,9 @@ export default function ManageUsersPage() {
                 {filteredAndSortedUsers.length} user(s) found.
               </CardDescription>
             </div>
-            <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+            <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto flex-wrap">
                 <Input 
-                    placeholder="Search by name, email, institute..."
+                    placeholder="Search..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     className="w-full sm:max-w-xs"
@@ -293,12 +337,46 @@ export default function ManageUsersPage() {
                         <SelectItem value="pending">Pending Teams</SelectItem>
                     </SelectContent>
                 </Select>
+                <Select value={instituteFilter} onValueChange={(value) => setInstituteFilter(value as InstituteFilter)}>
+                    <SelectTrigger className="w-full sm:w-[180px]">
+                        <SelectValue placeholder="Filter by Institute" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="all">All Institutes</SelectItem>
+                        <SelectItem value="missing">Missing Institute</SelectItem>
+                    </SelectContent>
+                </Select>
                  <Button onClick={handleExport} disabled={isExporting} className="w-full sm:w-auto">
                     {isExporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Download className="mr-2 h-4 w-4"/>}
                     Export
                 </Button>
             </div>
           </div>
+           {selectedUserIds.length > 0 && (
+                <div className="mt-4 flex items-center gap-4 border-t pt-4">
+                    <p className="text-sm font-medium">{selectedUserIds.length} user(s) selected</p>
+                    <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                            <Button variant="destructive" disabled={isProcessing === 'bulk-delete'}>
+                                {isProcessing === 'bulk-delete' ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Trash2 className="mr-2 h-4 w-4"/>}
+                                Delete Selected
+                            </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                            <AlertDialogHeader>
+                            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                                This will permanently delete the selected {selectedUserIds.length} user(s) and any teams they are leaders of. This action cannot be undone.
+                            </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction onClick={handleBulkDelete} className="bg-destructive hover:bg-destructive/90">Yes, delete them</AlertDialogAction>
+                            </AlertDialogFooter>
+                        </AlertDialogContent>
+                    </AlertDialog>
+                </div>
+            )}
         </CardHeader>
         <CardContent>
           {loading ? (
@@ -309,6 +387,13 @@ export default function ManageUsersPage() {
             <Table>
               <TableHeader>
                 <TableRow>
+                    <TableHead className="w-[50px]">
+                        <Checkbox
+                           onCheckedChange={(checked) => toggleSelectAll(!!checked)}
+                           checked={selectedUserIds.length === filteredAndSortedUsers.length && filteredAndSortedUsers.length > 0}
+                           aria-label="Select all"
+                        />
+                    </TableHead>
                   <TableHead><Button variant="ghost" onClick={() => requestSort('name')}>Name {getSortIndicator('name')}</Button></TableHead>
                   <TableHead><Button variant="ghost" onClick={() => requestSort('email')}>Email {getSortIndicator('email')}</Button></TableHead>
                   <TableHead><Button variant="ghost" onClick={() => requestSort('role')}>Role {getSortIndicator('role')}</Button></TableHead>
@@ -320,7 +405,14 @@ export default function ManageUsersPage() {
               </TableHeader>
               <TableBody>
                 {filteredAndSortedUsers.map((user) => (
-                  <TableRow key={user.uid}>
+                  <TableRow key={user.uid} data-state={selectedUserIds.includes(user.uid) && "selected"}>
+                    <TableCell>
+                        <Checkbox
+                            checked={selectedUserIds.includes(user.uid)}
+                            onCheckedChange={(checked) => handleRowSelect(user.uid, !!checked)}
+                            aria-label={`Select user ${user.name}`}
+                        />
+                    </TableCell>
                     <TableCell className="font-medium">
                       {user.enrollmentNumber && user.enrollmentNumber !== 'N/A' ? (
                         <Link href={`/profile/${user.enrollmentNumber}`} className="hover:underline">
