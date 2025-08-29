@@ -1,0 +1,153 @@
+
+'use server';
+
+/**
+ * @fileOverview Flow to export user data to an Excel file with filtering.
+ */
+
+import { ai } from '@/ai/genkit';
+import { z } from 'zod';
+import { getAdminDb } from '@/lib/firebase-admin';
+import { Team, UserProfile } from '@/lib/types';
+import type { Query as AdminQuery } from 'firebase-admin/firestore';
+import ExcelJS from 'exceljs';
+
+const ExportUsersInputSchema = z.object({
+    role: z.enum(['all', 'leader', 'member']).optional(),
+    status: z.enum(['all', 'registered', 'pending']).optional(),
+});
+type ExportUsersInput = z.infer<typeof ExportUsersInputSchema>;
+
+const ExportUsersOutputSchema = z.object({
+    success: z.boolean(),
+    message: z.string().optional(),
+    fileContent: z.string().optional().describe("Base64 encoded content of the Excel file."),
+    fileName: z.string().optional(),
+});
+type ExportUsersOutput = z.infer<typeof ExportUsersOutputSchema>;
+
+export async function exportUsers(input: ExportUsersInput): Promise<ExportUsersOutput> {
+    return exportUsersFlow(input);
+}
+
+const exportUsersFlow = ai.defineFlow(
+    {
+        name: 'exportUsersFlow',
+        inputSchema: ExportUsersInputSchema,
+        outputSchema: ExportUsersOutputSchema,
+    },
+    async ({ role, status }) => {
+        const db = getAdminDb();
+        if (!db) {
+            return { success: false, message: "Database connection failed." };
+        }
+
+        try {
+            // 1. Fetch Data
+            let usersQuery: AdminQuery = db.collection('users');
+            if (role && role !== 'all') {
+                usersQuery = usersQuery.where('role', '==', role);
+            }
+            const usersSnapshot = await usersQuery.get();
+            let usersData = usersSnapshot.docs.map(doc => ({ uid: doc.id, ...doc.data() } as UserProfile));
+
+            // Fetch all teams to check registration status
+            const teamsSnapshot = await db.collection('teams').get();
+            const teamsData = new Map(teamsSnapshot.docs.map(doc => [doc.id, doc.data() as Team]));
+            
+            const allUserIdsFromTeams = new Set<string>();
+             teamsData.forEach(team => {
+                allUserIdsFromTeams.add(team.leader.uid);
+                team.members.forEach(member => {
+                    if (member.uid) allUserIdsFromTeams.add(member.uid);
+                });
+            });
+
+            // This is needed to get gender info for status calculation
+            const allTeamMemberProfilesSnapshot = allUserIdsFromTeams.size > 0 
+                ? await db.collection('users').where('uid', 'in', Array.from(allUserIdsFromTeams)).get()
+                : { docs: [] };
+            const allTeamMemberProfiles = new Map(allTeamMemberProfilesSnapshot.docs.map(doc => [doc.id, doc.data() as UserProfile]));
+
+
+            // 2. Filter by Status (if needed)
+            if (status && status !== 'all') {
+                usersData = usersData.filter(user => {
+                    const team = user.teamId ? teamsData.get(user.teamId) : undefined;
+                    if (!team) return status === 'pending'; // No team = pending
+
+                    const memberCount = (team.members?.length || 0) + 1;
+                    
+                    let femaleCount = 0;
+                    const leaderProfile = allTeamMemberProfiles.get(team.leader.uid);
+                    if (leaderProfile?.gender === 'F') femaleCount++;
+                    
+                    team.members.forEach(m => {
+                        const memberProfile = allTeamMemberProfiles.get(m.uid);
+                        if (memberProfile?.gender === 'F') femaleCount++;
+                    });
+                    
+                    const isRegistered = memberCount === 6 && femaleCount >= 1;
+                    return status === 'registered' ? isRegistered : !isRegistered;
+                });
+            }
+
+            if (usersData.length === 0) {
+                return { success: false, message: "No users found for the selected filters." };
+            }
+
+            // 3. Create Excel Workbook
+            const workbook = new ExcelJS.Workbook();
+            const sheet = workbook.addWorksheet('Users');
+
+            sheet.columns = [
+                { header: 'Name', key: 'name', width: 30 },
+                { header: 'Email', key: 'email', width: 30 },
+                { header: 'Role', key: 'role', width: 15 },
+                { header: 'Institute', key: 'institute', width: 40 },
+                { header: 'Department', key: 'department', width: 30 },
+                { header: 'Enrollment No.', key: 'enrollmentNumber', width: 20 },
+                { header: 'Contact No.', key: 'contactNumber', width: 20 },
+                { header: 'Gender', key: 'gender', width: 10 },
+                { header: 'Year', key: 'yearOfStudy', width: 10 },
+                { header: 'Semester', key: 'semester', width: 10 },
+                { header: 'Team ID', key: 'teamId', width: 30 },
+                { header: 'Team Name', key: 'teamName', width: 30 },
+            ];
+
+            // 4. Populate with data
+            usersData.forEach(user => {
+                const team = user.teamId ? teamsData.get(user.teamId) : undefined;
+                sheet.addRow({
+                    name: user.name,
+                    email: user.email,
+                    role: user.role,
+                    institute: user.institute,
+                    department: user.department,
+                    enrollmentNumber: user.enrollmentNumber,
+                    contactNumber: user.contactNumber,
+                    gender: user.gender,
+                    yearOfStudy: user.yearOfStudy,
+                    semester: user.semester,
+                    teamId: user.teamId,
+                    teamName: team?.name || 'N/A',
+                });
+            });
+
+            // 5. Generate file content
+            const buffer = await workbook.xlsx.writeBuffer();
+            const fileContent = Buffer.from(buffer).toString('base64');
+            const fileName = `Vadodara_Hackathon_Users_${new Date().toISOString().split('T')[0]}.xlsx`;
+
+            return {
+                success: true,
+                fileContent,
+                fileName,
+            };
+
+        } catch (error: any) {
+            console.error("Error during user export:", error);
+            return { success: false, message: `Export failed: ${error.message}` };
+        }
+    }
+);

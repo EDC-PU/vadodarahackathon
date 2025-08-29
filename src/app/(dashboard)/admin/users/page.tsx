@@ -3,11 +3,11 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Loader2, Trash2, ArrowUpDown, ShieldCheck } from "lucide-react";
+import { Loader2, Trash2, ArrowUpDown, ShieldCheck, Download } from "lucide-react";
 import { useEffect, useState, useMemo } from "react";
 import { db } from "@/lib/firebase";
-import { collection, onSnapshot, query, orderBy } from "firebase/firestore";
-import { UserProfile } from "@/lib/types";
+import { collection, onSnapshot, query, orderBy, getDocs, where } from "firebase/firestore";
+import { Team, UserProfile } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import {
@@ -27,36 +27,101 @@ import { makeAdmin } from "@/ai/flows/make-admin-flow";
 import { manageTeamBySpoc } from "@/ai/flows/manage-team-by-spoc-flow";
 import { Input } from "@/components/ui/input";
 import Link from "next/link";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { exportUsers } from "@/ai/flows/export-users-flow";
 
 type SortKey = 'name' | 'email' | 'role' | 'institute' | 'createdAt';
 type SortDirection = 'asc' | 'desc';
+type RoleFilter = "all" | "leader" | "member";
+type StatusFilter = "all" | "registered" | "pending";
 
 export default function ManageUsersPage() {
   const [users, setUsers] = useState<UserProfile[]>([]);
+  const [teams, setTeams] = useState<Map<string, Team>>(new Map());
+  const [allTeamMembers, setAllTeamMembers] = useState<Map<string, UserProfile>>(new Map());
   const [loading, setLoading] = useState(true);
   const [isProcessing, setIsProcessing] = useState<string | null>(null);
+  const [isExporting, setIsExporting] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const [roleFilter, setRoleFilter] = useState<RoleFilter>("all");
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [sortConfig, setSortConfig] = useState<{ key: SortKey, direction: SortDirection } | null>({ key: 'createdAt', direction: 'desc' });
   const { toast } = useToast();
 
   useEffect(() => {
     setLoading(true);
-    const usersCollection = collection(db, 'users');
-    const q = query(usersCollection, orderBy("name")); 
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
+    const usersQuery = query(collection(db, 'users'), orderBy("name"));
+    const unsubscribeUsers = onSnapshot(usersQuery, (snapshot) => {
         const usersData = snapshot.docs.map(doc => ({ ...doc.data(), uid: doc.id } as UserProfile));
         setUsers(usersData);
-        setLoading(false);
     }, (error) => {
         console.error("Error fetching users:", error);
         toast({ title: "Error", description: "Failed to fetch users.", variant: "destructive" });
-        setLoading(false);
     });
 
-    return () => unsubscribe();
+    const teamsQuery = query(collection(db, 'teams'));
+    const unsubscribeTeams = onSnapshot(teamsQuery, (snapshot) => {
+        const teamsData = new Map(snapshot.docs.map(doc => [doc.id, {id: doc.id, ...doc.data()} as Team]));
+        setTeams(teamsData);
+
+        const allUserIdsFromTeams = new Set<string>();
+        teamsData.forEach(team => {
+            allUserIdsFromTeams.add(team.leader.uid);
+            team.members.forEach(member => {
+                if (member.uid) allUserIdsFromTeams.add(member.uid);
+            });
+        });
+
+        if (allUserIdsFromTeams.size > 0) {
+            const teamMembersQuery = query(collection(db, 'users'), where('__name__', 'in', Array.from(allUserIdsFromTeams)));
+            getDocs(teamMembersQuery).then(userDocs => {
+                 const memberProfiles = new Map(userDocs.docs.map(doc => [doc.id, doc.data() as UserProfile]));
+                 setAllTeamMembers(memberProfiles);
+            });
+        }
+    }, (error) => {
+        console.error("Error fetching teams:", error);
+        toast({ title: "Error", description: "Failed to fetch team data for status checks.", variant: "destructive" });
+    });
+
+    Promise.all([
+        getDocs(query(usersQuery, limit(1))),
+        getDocs(query(teamsQuery, limit(1)))
+    ]).finally(() => setLoading(false));
+
+    return () => {
+        unsubscribeUsers();
+        unsubscribeTeams();
+    };
   }, [toast]);
   
+  const handleExport = async () => {
+    setIsExporting(true);
+    try {
+        const result = await exportUsers({ role: roleFilter, status: statusFilter });
+        if (result.success && result.fileContent) {
+            const blob = new Blob([Buffer.from(result.fileContent, 'base64')], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = result.fileName || 'users-export.xlsx';
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            a.remove();
+            toast({ title: "Success", description: "User data has been exported." });
+        } else {
+            toast({ title: "Export Failed", description: result.message || "Could not generate the export file.", variant: "destructive" });
+        }
+    } catch (error) {
+        console.error("Error exporting users:", error);
+        toast({ title: "Error", description: "An unexpected error occurred during export.", variant: "destructive" });
+    } finally {
+        setIsExporting(false);
+    }
+  };
+
   const handleDeleteUser = async (userToDelete: UserProfile) => {
     setIsProcessing(`delete-user-${userToDelete.uid}`);
     try {
@@ -121,20 +186,41 @@ export default function ManageUsersPage() {
   };
   
   const filteredAndSortedUsers = useMemo(() => {
-    let sortableItems = [...users];
+    let filteredUsers = [...users];
     
-    // Filter first
+    if (roleFilter !== 'all') {
+        filteredUsers = filteredUsers.filter(user => user.role === roleFilter);
+    }
+
+    if (statusFilter !== 'all') {
+        filteredUsers = filteredUsers.filter(user => {
+            const team = user.teamId ? teams.get(user.teamId) : undefined;
+            if (!team) return statusFilter === 'pending';
+
+            const memberCount = (team.members?.length || 0) + 1;
+            let femaleCount = 0;
+            const leaderProfile = allTeamMembers.get(team.leader.uid);
+            if (leaderProfile?.gender === 'F') femaleCount++;
+            team.members.forEach(m => {
+                const memberProfile = allTeamMembers.get(m.uid);
+                if (memberProfile?.gender === 'F') femaleCount++;
+            });
+            
+            const isRegistered = memberCount === 6 && femaleCount >= 1;
+            return statusFilter === 'registered' ? isRegistered : !isRegistered;
+        });
+    }
+
     if (searchTerm) {
-        sortableItems = sortableItems.filter(user => 
+        filteredUsers = filteredUsers.filter(user => 
             user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
             user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
             (user.institute && user.institute.toLowerCase().includes(searchTerm.toLowerCase()))
         );
     }
 
-    // Then sort
     if (sortConfig !== null) {
-      sortableItems.sort((a, b) => {
+      filteredUsers.sort((a, b) => {
         const aValue = a[sortConfig.key] ?? '';
         const bValue = b[sortConfig.key] ?? '';
         if (aValue < bValue) {
@@ -146,8 +232,8 @@ export default function ManageUsersPage() {
         return 0;
       });
     }
-    return sortableItems;
-  }, [users, searchTerm, sortConfig]);
+    return filteredUsers;
+  }, [users, searchTerm, sortConfig, roleFilter, statusFilter, teams, allTeamMembers]);
 
   return (
     <div className="p-4 sm:p-6 lg:p-8">
@@ -158,19 +244,45 @@ export default function ManageUsersPage() {
 
       <Card>
         <CardHeader>
-          <div className="flex justify-between items-center">
+          <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
             <div>
               <CardTitle>All Users</CardTitle>
               <CardDescription>
                 {filteredAndSortedUsers.length} user(s) found.
               </CardDescription>
             </div>
-            <Input 
-                placeholder="Search by name, email, institute..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="max-w-sm"
-            />
+            <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+                <Input 
+                    placeholder="Search by name, email, institute..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full sm:max-w-xs"
+                />
+                <Select value={roleFilter} onValueChange={(value) => setRoleFilter(value as RoleFilter)}>
+                    <SelectTrigger className="w-full sm:w-[150px]">
+                        <SelectValue placeholder="Filter by Role" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="all">All Roles</SelectItem>
+                        <SelectItem value="leader">Leaders</SelectItem>
+                        <SelectItem value="member">Members</SelectItem>
+                    </SelectContent>
+                </Select>
+                 <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as StatusFilter)}>
+                    <SelectTrigger className="w-full sm:w-[180px]">
+                        <SelectValue placeholder="Filter by Status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="all">All Statuses</SelectItem>
+                        <SelectItem value="registered">Registered Teams</SelectItem>
+                        <SelectItem value="pending">Pending Teams</SelectItem>
+                    </SelectContent>
+                </Select>
+                 <Button onClick={handleExport} disabled={isExporting} className="w-full sm:w-auto">
+                    {isExporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Download className="mr-2 h-4 w-4"/>}
+                    Export
+                </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
@@ -203,7 +315,7 @@ export default function ManageUsersPage() {
                       )}
                     </TableCell>
                     <TableCell>{user.email}</TableCell>
-                    <TableCell><Badge variant={user.role === 'admin' ? 'destructive' : 'secondary'}>{user.role}</Badge></TableCell>
+                    <TableCell><Badge variant={user.role === 'admin' ? 'destructive' : user.role === 'spoc' ? 'default' : 'secondary'}>{user.role}</Badge></TableCell>
                     <TableCell>{user.institute || 'N/A'}</TableCell>
                     <TableCell className="text-xs">{user.teamId || 'N/A'}</TableCell>
                     <TableCell className="text-right space-x-1">
