@@ -93,18 +93,12 @@ const exportUsersFlow = ai.defineFlow(
                     const team = user.teamId ? teamsData.get(user.teamId) : undefined;
                     if (!team) return status === 'pending'; // No team = pending
 
-                    const memberCount = (team.members?.length || 0) + 1;
-                    
-                    let femaleCount = 0;
-                    const leaderProfile = allTeamMemberProfiles.get(team.leader.uid);
-                    if (leaderProfile?.gender === 'F') femaleCount++;
-                    
-                    team.members.forEach(m => {
-                        const memberProfile = allTeamMemberProfiles.get(m.uid);
-                        if (memberProfile?.gender === 'F') femaleCount++;
-                    });
-                    
-                    const isRegistered = memberCount === 6 && femaleCount >= 1;
+                    const allMemberProfiles = [allTeamMemberProfiles.get(team.leader.uid), ...team.members.map(m => allTeamMemberProfiles.get(m.uid))].filter(Boolean) as UserProfile[];
+                    const memberCount = allMemberProfiles.length;
+                    const femaleCount = allMemberProfiles.filter(m => m.gender === 'F').length;
+                    const instituteCount = allMemberProfiles.filter(m => m.institute === team.institute).length;
+
+                    const isRegistered = memberCount === 6 && femaleCount >= 1 && instituteCount >= 2;
                     return status === 'registered' ? isRegistered : !isRegistered;
                 });
             }
@@ -138,15 +132,11 @@ const exportUsersFlow = ai.defineFlow(
                 const team = user.teamId ? teamsData.get(user.teamId) : undefined;
                 let userStatus = "Pending";
                 if(team) {
-                    const memberCount = (team.members?.length || 0) + 1;
-                    let femaleCount = 0;
-                    const leaderProfile = allTeamMemberProfiles.get(team.leader.uid);
-                    if (leaderProfile?.gender === 'F') femaleCount++;
-                    team.members.forEach(m => {
-                        const memberProfile = allTeamMemberProfiles.get(m.uid);
-                        if (memberProfile?.gender === 'F') femaleCount++;
-                    });
-                    if (memberCount === 6 && femaleCount >= 1) {
+                    const allMemberProfiles = [allTeamMemberProfiles.get(team.leader.uid), ...team.members.map(m => allTeamMemberProfiles.get(m.uid))].filter(Boolean) as UserProfile[];
+                    const memberCount = allMemberProfiles.length;
+                    const femaleCount = allMemberProfiles.filter(m => m.gender === 'F').length;
+                    const instituteCount = allMemberProfiles.filter(m => m.institute === team.institute).length;
+                    if (memberCount === 6 && femaleCount >= 1 && instituteCount >= 2) {
                         userStatus = "Registered";
                     }
                 }

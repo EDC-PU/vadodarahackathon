@@ -193,17 +193,13 @@ function AllTeamsContent() {
         }
 
         const leaderProfile = allUsers.get(team.leader.uid);
-        const membersWithDetails = team.members.map(m => allUsers.get(m.uid));
+        const allMemberProfiles = [leaderProfile, ...team.members.map(m => allUsers.get(m.uid))].filter(Boolean) as UserProfile[];
         
-        const memberCount = (team.members?.length || 0) + 1;
-        
-        let femaleCount = 0;
-        if (leaderProfile?.gender === 'F') femaleCount++;
-        membersWithDetails.forEach(member => {
-            if (member?.gender === 'F') femaleCount++;
-        });
+        const memberCount = allMemberProfiles.length;
+        const femaleCount = allMemberProfiles.filter(m => m.gender === 'F').length;
+        const instituteCount = allMemberProfiles.filter(m => m.institute === team.institute).length;
 
-        const isRegistered = memberCount === 6 && femaleCount >= 1;
+        const isRegistered = memberCount === 6 && femaleCount >= 1 && instituteCount >= 2;
         
         const statusMatch = statusFilter === 'Registered' ? isRegistered : !isRegistered;
         
@@ -743,6 +739,7 @@ export default function AllTeamsPage() {
     
 
     
+
 
 
 

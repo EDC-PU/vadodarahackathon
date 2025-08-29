@@ -87,18 +87,12 @@ const exportTeamsFlow = ai.defineFlow(
             // Status Filter (post-query)
             if (status && status !== 'All Statuses') {
                 teamsData = teamsData.filter(team => {
-                    const memberCount = (team.members?.length || 0) + 1;
-                    let femaleCount = 0;
-                    
-                    const leaderProfile = usersData.get(team.leader.uid);
-                    if (leaderProfile?.gender === 'F') femaleCount++;
-                    
-                    team.members.forEach(m => {
-                        const memberProfile = usersData.get(m.uid);
-                        if (memberProfile?.gender === 'F') femaleCount++;
-                    });
-                    
-                    const isRegistered = memberCount === 6 && femaleCount >= 1;
+                    const allMemberProfiles = [usersData.get(team.leader.uid), ...team.members.map(m => usersData.get(m.uid))].filter(Boolean) as UserProfile[];
+                    const memberCount = allMemberProfiles.length;
+                    const femaleCount = allMemberProfiles.filter(m => m.gender === 'F').length;
+                    const instituteCount = allMemberProfiles.filter(m => m.institute === team.institute).length;
+
+                    const isRegistered = memberCount === 6 && femaleCount >= 1 && instituteCount >= 2;
                     return status === 'Registered' ? isRegistered : !isRegistered;
                 });
             }

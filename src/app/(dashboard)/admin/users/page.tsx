@@ -209,15 +209,15 @@ export default function ManageUsersPage() {
   const getTeamStatus = (user: UserProfile) => {
     const team = user.teamId ? teams.get(user.teamId) : undefined;
     if (!team) return "Pending";
-    const memberCount = (team.members?.length || 0) + 1;
-    let femaleCount = 0;
     const leaderProfile = allTeamMembers.get(team.leader.uid);
-    if (leaderProfile?.gender === 'F') femaleCount++;
-    team.members.forEach(m => {
-        const memberProfile = allTeamMembers.get(m.uid);
-        if (memberProfile?.gender === 'F') femaleCount++;
-    });
-    return (memberCount === 6 && femaleCount >= 1) ? 'Registered' : 'Pending';
+    const memberProfiles = team.members.map(m => allTeamMembers.get(m.uid));
+    const allMemberProfiles = [leaderProfile, ...memberProfiles].filter(Boolean) as UserProfile[];
+    
+    const memberCount = allMemberProfiles.length;
+    const femaleCount = allMemberProfiles.filter(m => m.gender === 'F').length;
+    const instituteCount = allMemberProfiles.filter(m => m.institute === team.institute).length;
+
+    return (memberCount === 6 && femaleCount >= 1 && instituteCount >= 2) ? 'Registered' : 'Pending';
   };
   
   const filteredAndSortedUsers = useMemo(() => {
