@@ -30,7 +30,7 @@ import Link from "next/link";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { exportUsers } from "@/ai/flows/export-users-flow";
 
-type SortKey = 'name' | 'email' | 'role' | 'institute' | 'createdAt';
+type SortKey = 'name' | 'email' | 'role' | 'institute' | 'createdAt' | 'status';
 type SortDirection = 'asc' | 'desc';
 type RoleFilter = "all" | "leader" | "member";
 type StatusFilter = "all" | "registered" | "pending";
@@ -199,31 +199,30 @@ export default function ManageUsersPage() {
     }
     return sortConfig.direction === 'asc' ? '▲' : '▼';
   };
+
+  const getTeamStatus = (user: UserProfile) => {
+    const team = user.teamId ? teams.get(user.teamId) : undefined;
+    if (!team) return "Pending";
+    const memberCount = (team.members?.length || 0) + 1;
+    let femaleCount = 0;
+    const leaderProfile = allTeamMembers.get(team.leader.uid);
+    if (leaderProfile?.gender === 'F') femaleCount++;
+    team.members.forEach(m => {
+        const memberProfile = allTeamMembers.get(m.uid);
+        if (memberProfile?.gender === 'F') femaleCount++;
+    });
+    return (memberCount === 6 && femaleCount >= 1) ? 'Registered' : 'Pending';
+  };
   
   const filteredAndSortedUsers = useMemo(() => {
-    let filteredUsers = [...users];
+    let filteredUsers = [...users].map(u => ({ ...u, status: getTeamStatus(u) }));
     
     if (roleFilter !== 'all') {
         filteredUsers = filteredUsers.filter(user => user.role === roleFilter);
     }
 
     if (statusFilter !== 'all') {
-        filteredUsers = filteredUsers.filter(user => {
-            const team = user.teamId ? teams.get(user.teamId) : undefined;
-            if (!team) return statusFilter === 'pending';
-
-            const memberCount = (team.members?.length || 0) + 1;
-            let femaleCount = 0;
-            const leaderProfile = allTeamMembers.get(team.leader.uid);
-            if (leaderProfile?.gender === 'F') femaleCount++;
-            team.members.forEach(m => {
-                const memberProfile = allTeamMembers.get(m.uid);
-                if (memberProfile?.gender === 'F') femaleCount++;
-            });
-            
-            const isRegistered = memberCount === 6 && femaleCount >= 1;
-            return statusFilter === 'registered' ? isRegistered : !isRegistered;
-        });
+        filteredUsers = filteredUsers.filter(user => user.status.toLowerCase() === statusFilter.toLowerCase());
     }
 
     if (searchTerm) {
@@ -236,8 +235,8 @@ export default function ManageUsersPage() {
 
     if (sortConfig !== null) {
       filteredUsers.sort((a, b) => {
-        const aValue = a[sortConfig.key] ?? '';
-        const bValue = b[sortConfig.key] ?? '';
+        const aValue = a[sortConfig.key as keyof typeof a] ?? '';
+        const bValue = b[sortConfig.key as keyof typeof b] ?? '';
         if (aValue < bValue) {
           return sortConfig.direction === 'asc' ? -1 : 1;
         }
@@ -248,6 +247,7 @@ export default function ManageUsersPage() {
       });
     }
     return filteredUsers;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [users, searchTerm, sortConfig, roleFilter, statusFilter, teams, allTeamMembers]);
 
   return (
@@ -312,6 +312,7 @@ export default function ManageUsersPage() {
                   <TableHead><Button variant="ghost" onClick={() => requestSort('name')}>Name {getSortIndicator('name')}</Button></TableHead>
                   <TableHead><Button variant="ghost" onClick={() => requestSort('email')}>Email {getSortIndicator('email')}</Button></TableHead>
                   <TableHead><Button variant="ghost" onClick={() => requestSort('role')}>Role {getSortIndicator('role')}</Button></TableHead>
+                  <TableHead><Button variant="ghost" onClick={() => requestSort('status')}>Status {getSortIndicator('status')}</Button></TableHead>
                   <TableHead><Button variant="ghost" onClick={() => requestSort('institute')}>Institute {getSortIndicator('institute')}</Button></TableHead>
                   <TableHead>Team ID</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
@@ -331,6 +332,11 @@ export default function ManageUsersPage() {
                     </TableCell>
                     <TableCell>{user.email}</TableCell>
                     <TableCell><Badge variant={user.role === 'admin' ? 'destructive' : user.role === 'spoc' ? 'default' : 'secondary'}>{user.role}</Badge></TableCell>
+                    <TableCell>
+                      <Badge variant={user.status === 'Registered' ? 'default' : 'destructive'} className={user.status === 'Registered' ? 'bg-green-600' : ''}>
+                        {user.status}
+                      </Badge>
+                    </TableCell>
                     <TableCell>{user.institute || 'N/A'}</TableCell>
                     <TableCell className="text-xs">{user.teamId || 'N/A'}</TableCell>
                     <TableCell className="text-right space-x-1">

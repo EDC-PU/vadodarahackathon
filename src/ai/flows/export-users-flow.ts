@@ -121,6 +121,7 @@ const exportUsersFlow = ai.defineFlow(
                 { header: 'Name', key: 'name', width: 30 },
                 { header: 'Email', key: 'email', width: 30 },
                 { header: 'Role', key: 'role', width: 15 },
+                { header: 'Status', key: 'status', width: 15 },
                 { header: 'Institute', key: 'institute', width: 40 },
                 { header: 'Department', key: 'department', width: 30 },
                 { header: 'Enrollment No.', key: 'enrollmentNumber', width: 20 },
@@ -135,10 +136,26 @@ const exportUsersFlow = ai.defineFlow(
             // 4. Populate with data
             usersData.forEach(user => {
                 const team = user.teamId ? teamsData.get(user.teamId) : undefined;
+                let userStatus = "Pending";
+                if(team) {
+                    const memberCount = (team.members?.length || 0) + 1;
+                    let femaleCount = 0;
+                    const leaderProfile = allTeamMemberProfiles.get(team.leader.uid);
+                    if (leaderProfile?.gender === 'F') femaleCount++;
+                    team.members.forEach(m => {
+                        const memberProfile = allTeamMemberProfiles.get(m.uid);
+                        if (memberProfile?.gender === 'F') femaleCount++;
+                    });
+                    if (memberCount === 6 && femaleCount >= 1) {
+                        userStatus = "Registered";
+                    }
+                }
+
                 sheet.addRow({
                     name: user.name,
                     email: user.email,
                     role: user.role,
+                    status: userStatus,
                     institute: user.institute,
                     department: user.department,
                     enrollmentNumber: user.enrollmentNumber,
