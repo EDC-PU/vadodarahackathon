@@ -364,7 +364,7 @@ export default function SpocTeamsPage() {
           await updateDoc(teamDocRef, { name: editingTeam.name });
           toast({ title: "Success", description: "Team name updated." });
           setEditingTeam(null);
-          await fetchAllData(user!.institute!); // Refresh data
+          await fetchInstituteData(); // Refresh data
       } catch (error) {
           console.error("Error updating team name:", error);
           toast({ title: "Error", description: "Could not update team name.", variant: "destructive" });
@@ -386,7 +386,7 @@ export default function SpocTeamsPage() {
          toast({ title: "Error", description: "An unexpected error occurred.", variant: "destructive" });
     } finally {
         setIsProcessing(null);
-        fetchAllData(user!.institute!);
+        fetchInstituteData();
     }
   }
 
@@ -403,7 +403,7 @@ export default function SpocTeamsPage() {
          toast({ title: "Error", description: "An unexpected error occurred.", variant: "destructive" });
     } finally {
         setIsProcessing(null);
-        fetchAllData(user!.institute!);
+        fetchInstituteData();
     }
   }
 
@@ -540,7 +540,7 @@ export default function SpocTeamsPage() {
                             <TableBody>
                             {teamsWithDetails.map((team) => (
                             team.allMembers.map((member, memberIndex) => (
-                                <TableRow key={`${team.id}-${member.uid || memberIndex}`}>
+                                <TableRow key={`${team.id}-${member.uid || memberIndex}-${memberIndex}`}>
                                     {memberIndex === 0 && (
                                         <TableCell rowSpan={team.allMembers.length} className="font-medium align-top">
                                             <div className="flex flex-col gap-2">
