@@ -76,6 +76,12 @@ export default function ProfilePage() {
     
     const selectedInstitute = useWatch({ control: form.control, name: 'institute' });
     const departmentFieldValue = useWatch({ control: form.control, name: 'department' });
+    
+    const showOtherDepartmentInput = useMemo(() => {
+        if (!departmentFieldValue) return false;
+        // If the saved department is not in the fetched list for the institute, show the input field.
+        return !departments.includes(departmentFieldValue);
+    }, [departmentFieldValue, departments]);
 
     const canEdit = authUser?.role === 'admin' || 
                     authUser?.enrollmentNumber === enrollmentId || 
@@ -227,11 +233,6 @@ export default function ProfilePage() {
              </div>
         )
     }
-
-    const showOtherDepartmentInput = useMemo(() => {
-        if (!departmentFieldValue) return false;
-        return !departments.includes(departmentFieldValue);
-    }, [departmentFieldValue, departments]);
 
     return (
         <div className="p-4 sm:p-6 lg:p-8">
