@@ -98,12 +98,12 @@ const LiveStatsCounter = () => {
     const [stats, setStats] = useState({ registered: 0, pending: 0, participants: 0 });
     const [loading, setLoading] = useState(true);
 
-    const fetchStats = useCallback(async () => {
-        console.log("Fetching live stats...");
+    useEffect(() => {
         setLoading(true);
-        try {
-            const teamsQuery = query(collection(db, "teams"));
-            const snapshot = await getDocs(teamsQuery);
+        const teamsQuery = query(collection(db, "teams"));
+
+        const unsubscribe = onSnapshot(teamsQuery, async (snapshot) => {
+            console.log("Live stats snapshot received...");
             const allTeams = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Team));
 
             if (allTeams.length === 0) {
@@ -140,18 +140,14 @@ const LiveStatsCounter = () => {
                 pending: allTeams.length - registeredCount,
                 participants: allParticipantUIDs.size
             });
-        } catch (error) {
-            console.error("Error fetching stats:", error);
-        } finally {
             setLoading(false);
-        }
-    }, []);
+        }, (error) => {
+            console.error("Error fetching stats with onSnapshot:", error);
+            setLoading(false);
+        });
 
-    useEffect(() => {
-        fetchStats(); // Initial fetch
-        const intervalId = setInterval(fetchStats, 30 * 60 * 1000); // Refresh every 30 minutes
-        return () => clearInterval(intervalId); // Cleanup on unmount
-    }, [fetchStats]);
+        return () => unsubscribe(); // Cleanup on unmount
+    }, []);
 
 
     return (
@@ -652,3 +648,4 @@ export default function LandingPage({ spocDetails, announcements, problemStateme
     </div>
   );
 }
+
