@@ -14,9 +14,9 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useEffect, useState, useCallback } from "react";
-import { Loader2 } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { useState, useEffect, useCallback } from "react";
+import { Loader2, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { db } from "@/lib/firebase";
 import { doc, updateDoc, getDoc, collection, query, where, onSnapshot, writeBatch } from "firebase/firestore";
@@ -31,6 +31,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useParams } from "next/navigation";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+
 
 const formSchema = z.object({
   name: z.string().min(2, { message: "Name must be at least 2 characters." }),
@@ -46,7 +48,7 @@ export default function ProfilePage() {
     const { user: authUser, loading: authLoading } = useAuth();
     const [profile, setProfile] = useState<UserProfile | null>(null);
     const [loading, setLoading] = useState(true);
-    const [isLoading, setIsLoading] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
     const [departments, setDepartments] = useState<string[]>([]);
     const [isDeptLoading, setIsDeptLoading] = useState(false);
     const params = useParams();
@@ -56,6 +58,15 @@ export default function ProfilePage() {
 
     const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
+        defaultValues: {
+            name: "",
+            gender: undefined,
+            department: "",
+            enrollmentNumber: "",
+            semester: undefined,
+            yearOfStudy: "",
+            contactNumber: "",
+        }
     });
 
     const selectedDepartment = useWatch({
@@ -63,10 +74,16 @@ export default function ProfilePage() {
         name: 'department'
     });
 
-    const canEdit = authUser?.role === 'admin' || authUser?.enrollmentNumber === enrollmentId;
+    const canEdit = authUser?.role === 'admin' || 
+                    authUser?.enrollmentNumber === enrollmentId || 
+                    (authUser?.role === 'spoc' && authUser.institute === profile?.institute);
 
+    // Fetch User Profile
     useEffect(() => {
-        if (!enrollmentId) return;
+        if (!enrollmentId) {
+            setLoading(false);
+            return;
+        }
         setLoading(true);
         const q = query(collection(db, "users"), where("enrollmentNumber", "==", enrollmentId));
         const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -84,11 +101,13 @@ export default function ProfilePage() {
             setLoading(false);
         }, (error) => {
             console.error("Error fetching profile:", error);
+            toast({title: "Error", description: "Could not fetch profile.", variant: "destructive"});
             setLoading(false);
         });
         return () => unsubscribe();
-    }, [enrollmentId, form]);
+    }, [enrollmentId, form, toast]);
 
+    // Fetch Departments based on Profile's Institute
     useEffect(() => {
         if (!profile?.institute) return;
 
@@ -96,14 +115,22 @@ export default function ProfilePage() {
         const deptDocRef = doc(db, "departments", profile.institute);
         const unsubscribe = onSnapshot(deptDocRef, (docSnap) => {
             if (docSnap.exists()) {
-                setDepartments(docSnap.data().departments?.sort() || []);
+                const departmentsData = docSnap.data().departments?.sort() || [];
+                setDepartments(departmentsData);
+                // Ensure form value is valid, or reset to "" to allow "Other"
+                if (form.getValues('department') && !departmentsData.includes(form.getValues('department'))) {
+                    // This handles when the saved value is an "Other" value
+                }
             } else {
                 setDepartments([]);
             }
             setIsDeptLoading(false);
+        }, (error) => {
+            console.error("Error fetching departments:", error);
+            setIsDeptLoading(false);
         });
         return () => unsubscribe();
-    }, [profile?.institute]);
+    }, [profile?.institute, form]);
 
     async function onSubmit(values: z.infer<typeof formSchema>) {
         if (!profile || !canEdit) {
@@ -111,14 +138,13 @@ export default function ProfilePage() {
             return;
         }
 
-        setIsLoading(true);
+        setIsSubmitting(true);
         const batch = writeBatch(db);
 
         try {
             // 1. Update the user's own profile document
             const userDocRef = doc(db, "users", profile.uid);
             batch.update(userDocRef, values);
-            console.log(`Profile page: Updated user document for ${profile.uid}`);
 
             // 2. If the user is in a team, update their details in the team document
             if (profile.teamId) {
@@ -130,12 +156,9 @@ export default function ProfilePage() {
                     let updated = false;
 
                     if (teamData.leader.uid === profile.uid) {
-                        // Update leader details
                         teamData.leader.name = values.name;
-                        teamData.leader.email = profile.email; // email is not editable on this form
                         updated = true;
                     } else {
-                        // Update member details
                         const memberIndex = teamData.members.findIndex(m => m.uid === profile.uid);
                         if (memberIndex > -1) {
                             teamData.members[memberIndex] = {
@@ -150,7 +173,6 @@ export default function ProfilePage() {
 
                     if (updated) {
                        batch.update(teamDocRef, { leader: teamData.leader, members: teamData.members });
-                       console.log(`Profile page: Updated team document ${profile.teamId} with new details for user ${profile.uid}`);
                     }
                 }
             }
@@ -165,7 +187,7 @@ export default function ProfilePage() {
                 variant: "destructive",
             });
         } finally {
-            setIsLoading(false);
+            setIsSubmitting(false);
         }
     }
     
@@ -180,7 +202,11 @@ export default function ProfilePage() {
     if (!profile) {
         return (
              <div className="p-4 sm:p-6 lg:p-8">
-                <p>Profile not found for enrollment ID: {enrollmentId}</p>
+                <Alert variant="destructive">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertTitle>Profile Not Found</AlertTitle>
+                    <AlertDescription>No user profile could be found for enrollment ID: {enrollmentId}</AlertDescription>
+                </Alert>
              </div>
         )
     }
@@ -190,11 +216,12 @@ export default function ProfilePage() {
             <Card>
                 <CardHeader>
                     <CardTitle>User Profile</CardTitle>
+                    <CardDescription>View and edit the user's profile information. Read-only fields cannot be changed.</CardDescription>
                 </CardHeader>
                 <CardContent>
                     <Form {...form}>
                         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 border rounded-md bg-secondary/30">
                                 <div><p className="text-sm font-medium">Email</p><p className="text-muted-foreground">{profile.email}</p></div>
                                 <div><p className="text-sm font-medium">Institute</p><p className="text-muted-foreground">{profile.institute}</p></div>
                             </div>
@@ -205,7 +232,7 @@ export default function ProfilePage() {
                                     <FormItem>
                                         <FormLabel>Full Name</FormLabel>
                                         <FormControl>
-                                            <Input {...field} disabled={!canEdit || isLoading} />
+                                            <Input {...field} disabled={!canEdit || isSubmitting} />
                                         </FormControl>
                                         <FormMessage />
                                     </FormItem>
@@ -218,7 +245,7 @@ export default function ProfilePage() {
                                     <FormItem>
                                         <FormLabel>Gender</FormLabel>
                                         <FormControl>
-                                            <RadioGroup onValueChange={field.onChange} value={field.value} className="flex items-center space-x-4 pt-2" disabled={!canEdit || isLoading}>
+                                            <RadioGroup onValueChange={field.onChange} value={field.value} className="flex items-center space-x-4 pt-2" disabled={!canEdit || isSubmitting}>
                                                 <FormItem className="flex items-center space-x-2 space-y-0"><FormControl><RadioGroupItem value="M" /></FormControl><FormLabel className="font-normal">Male</FormLabel></FormItem>
                                                 <FormItem className="flex items-center space-x-2 space-y-0"><FormControl><RadioGroupItem value="F" /></FormControl><FormLabel className="font-normal">Female</FormLabel></FormItem>
                                                 <FormItem className="flex items-center space-x-2 space-y-0"><FormControl><RadioGroupItem value="O" /></FormControl><FormLabel className="font-normal">Other</FormLabel></FormItem>
@@ -228,24 +255,26 @@ export default function ProfilePage() {
                                     </FormItem>
                                 )}
                             />
-                            <FormField
+                             <FormField
                                 control={form.control}
                                 name="department"
                                 render={({ field }) => (
                                     <FormItem>
                                         <FormLabel>Department</FormLabel>
-                                         <Select onValueChange={field.onChange} value={field.value} disabled={!canEdit || isLoading || isDeptLoading}>
+                                        <Select onValueChange={(value) => field.onChange(value === 'Other' ? '' : value)} value={field.value && departments.includes(field.value) ? field.value : (field.value ? "Other" : "")} disabled={!canEdit || isSubmitting || isDeptLoading}>
                                             <FormControl>
-                                                <SelectTrigger><SelectValue placeholder={isDeptLoading ? "Loading..." : "Select department"} /></SelectTrigger>
+                                                <SelectTrigger>
+                                                    <SelectValue placeholder={isDeptLoading ? "Loading..." : "Select department"} />
+                                                </SelectTrigger>
                                             </FormControl>
                                             <SelectContent>
                                                 {departments.map((dept) => (<SelectItem key={dept} value={dept}>{dept}</SelectItem>))}
                                                 <SelectItem value="Other">Other</SelectItem>
                                             </SelectContent>
                                         </Select>
-                                        {(selectedDepartment === 'Other' || (field.value && !departments.includes(field.value))) && (
+                                        {(selectedDepartment === '' || (field.value && !departments.includes(field.value))) && (
                                             <FormControl className="mt-2">
-                                                <Input placeholder="Please specify your department" {...field} disabled={!canEdit || isLoading} />
+                                                <Input placeholder="Please specify your department" {...field} disabled={!canEdit || isSubmitting} />
                                             </FormControl>
                                         )}
                                         <FormMessage />
@@ -253,12 +282,18 @@ export default function ProfilePage() {
                                 )}
                             />
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                <FormField control={form.control} name="enrollmentNumber" render={({ field }) => (<FormItem><FormLabel>Enrollment No.</FormLabel><FormControl><Input {...field} disabled={!canEdit || isLoading} /></FormControl><FormMessage /></FormItem>)} />
-                                <FormField control={form.control} name="semester" render={({ field }) => (<FormItem><FormLabel>Semester</FormLabel><FormControl><Input type="number" {...field} disabled={!canEdit || isLoading} /></FormControl><FormMessage /></FormItem>)} />
-                                <FormField control={form.control} name="yearOfStudy" render={({ field }) => (<FormItem><FormLabel>Year of Study</FormLabel><FormControl><Input type="number" {...field} disabled={!canEdit || isLoading} /></FormControl><FormMessage /></FormItem>)} />
+                                <FormField control={form.control} name="enrollmentNumber" render={({ field }) => (<FormItem><FormLabel>Enrollment No.</FormLabel><FormControl><Input {...field} disabled={!canEdit || isSubmitting} /></FormControl><FormMessage /></FormItem>)} />
+                                <FormField control={form.control} name="semester" render={({ field }) => (<FormItem><FormLabel>Semester</FormLabel><FormControl><Input type="number" {...field} disabled={!canEdit || isSubmitting} /></FormControl><FormMessage /></FormItem>)} />
+                                <FormField control={form.control} name="yearOfStudy" render={({ field }) => (<FormItem><FormLabel>Year of Study</FormLabel><FormControl><Input type="number" {...field} disabled={!canEdit || isSubmitting} /></FormControl><FormMessage /></FormItem>)} />
                             </div>
-                            <FormField control={form.control} name="contactNumber" render={({ field }) => (<FormItem><FormLabel>Contact Number</FormLabel><FormControl><Input {...field} disabled={!canEdit || isLoading} /></FormControl><FormMessage /></FormItem>)} />
-                            {canEdit && <Button type="submit" className="w-full" disabled={isLoading}><Loader2 className={cn("mr-2 h-4 w-4", !isLoading && "hidden")} />Save Changes</Button>}
+                            <FormField control={form.control} name="contactNumber" render={({ field }) => (<FormItem><FormLabel>Contact Number</FormLabel><FormControl><Input {...field} disabled={!canEdit || isSubmitting} /></FormControl><FormMessage /></FormItem>)} />
+                            
+                            {canEdit && 
+                                <Button type="submit" className="w-full" disabled={isSubmitting}>
+                                    {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                                    Save Changes
+                                </Button>
+                            }
                         </form>
                     </Form>
                 </CardContent>
@@ -266,3 +301,4 @@ export default function ProfilePage() {
         </div>
     );
 }
+
