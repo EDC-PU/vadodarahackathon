@@ -30,6 +30,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from ".
 import { getTeamInviteLink } from "@/ai/flows/get-team-invite-link-flow";
 import { Badge } from "./ui/badge";
 import { ScrollArea } from "./ui/scroll-area";
+import { RegistrationReminderDialog } from "./registration-reminder-dialog";
 
 type SortKey = 'name' | 'role' | 'email' | 'contactNumber' | 'enrollmentNumber' | 'yearOfStudy' | 'semester';
 type SortDirection = 'asc' | 'desc';
@@ -112,6 +113,7 @@ export default function LeaderDashboard() {
   const [inviteLink, setInviteLink] = useState<string | null>(null);
   const [isLoadingLink, setIsLoadingLink] = useState(true);
   const [deadline, setDeadline] = useState<Date | null>(null);
+  const [showReminder, setShowReminder] = useState(false);
   const appBaseUrl = "https://vadodarahackathon.pierc.org";
 
   useEffect(() => {
@@ -128,6 +130,49 @@ export default function LeaderDashboard() {
     };
     fetchDeadline();
   }, []);
+
+  const teamValidation = useMemo(() => {
+    if (!team || teamMembers.length === 0) {
+        return {
+            memberCount: { current: 0, required: 6, isMet: false },
+            femaleCount: { current: 0, required: 1, isMet: false },
+            isRegistered: () => false
+        };
+    }
+    const leaderProfile = teamMembers.find(m => m.uid === team.leader.uid);
+    const memberProfiles = team.members.map(m => teamMembers.find(user => user.uid === m.uid)).filter(Boolean) as UserProfile[];
+    const allMemberProfiles = leaderProfile ? [leaderProfile, ...memberProfiles] : memberProfiles;
+    
+    const femaleCount = allMemberProfiles.filter(m => m.gender === "F").length;
+
+    return {
+        memberCount: {
+            current: allMemberProfiles.length,
+            required: 6,
+            isMet: allMemberProfiles.length === 6,
+        },
+        femaleCount: {
+            current: femaleCount,
+            required: 1,
+            isMet: femaleCount >= 1,
+        },
+        isRegistered() {
+          return this.memberCount.isMet && this.femaleCount.isMet;
+        }
+    };
+  }, [team, teamMembers]);
+
+
+  useEffect(() => {
+    if (loading || authLoading) return;
+
+    const reminderShown = sessionStorage.getItem('registrationReminderShown');
+    if (team && !teamValidation.isRegistered() && !reminderShown) {
+        setShowReminder(true);
+        sessionStorage.setItem('registrationReminderShown', 'true');
+    }
+  }, [loading, authLoading, team, teamValidation]);
+
 
   useEffect(() => {
     if (!user?.teamId) {
@@ -152,22 +197,18 @@ export default function LeaderDashboard() {
       const memberUIDs = teamData.members.map(m => m.uid).filter(Boolean);
       const allUIDs = [...new Set([teamData.leader.uid, ...memberUIDs])];
       
-      const unsubscribers = allUIDs.map(uid => {
-        const userDocRef = doc(db, 'users', uid);
-        return onSnapshot(userDocRef, (userDoc) => {
-          if (userDoc.exists()) {
-            const userProfile = { uid: userDoc.id, ...userDoc.data() } as UserProfile;
-            setTeamMembers(prevMembers => {
-              const otherMembers = prevMembers.filter(m => m.uid !== uid);
-              return [...otherMembers, userProfile];
-            });
-          }
-        });
-      });
+      if (allUIDs.length > 0) {
+          const usersQuery = query(collection(db, 'users'), where('uid', 'in', allUIDs));
+          const unsubscribeUsers = onSnapshot(usersQuery, (snapshot) => {
+              const membersData = snapshot.docs.map(doc => ({ uid: doc.id, ...doc.data() } as UserProfile));
+              setTeamMembers(membersData);
+              setLoading(false);
+          });
+          return () => unsubscribeUsers();
+      } else {
+         setLoading(false);
+      }
       
-      setLoading(false);
-
-      return () => unsubscribers.forEach(unsub => unsub());
 
     }, (error) => {
       console.error("Error fetching team data:", error);
@@ -304,27 +345,12 @@ export default function LeaderDashboard() {
     );
   }
 
-  const teamValidation = {
-    memberCount: {
-        current: team.members.length + 1,
-        required: 6,
-        isMet: team.members.length + 1 === 6,
-    },
-    femaleCount: {
-        current: team.members.filter(m => m.gender === "F").length + (teamMembers.find(m => m.uid === team.leader.uid)?.gender === 'F' ? 1 : 0),
-        required: 1,
-        isMet: (team.members.filter(m => m.gender === "F").length + (teamMembers.find(m => m.uid === team.leader.uid)?.gender === 'F' ? 1 : 0)) >= 1,
-    },
-    isRegistered() {
-      return this.memberCount.isMet && this.femaleCount.isMet;
-    }
-  };
-
   const canAddMoreMembers = teamValidation.memberCount.current < 6;
   const isDeadlinePassed = deadline ? new Date() > deadline : false;
 
   return (
     <div className="p-4 sm:p-6 lg:p-8">
+        <RegistrationReminderDialog isOpen={showReminder} onClose={() => setShowReminder(false)} />
         <header className="mb-8 flex justify-between items-start">
             <div>
               <h1 className="text-3xl font-bold font-headline">Team Dashboard: {team.name}</h1>

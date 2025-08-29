@@ -44,6 +44,7 @@ import { useToast } from "@/hooks/use-toast"
 import { leaveTeam } from "@/ai/flows/leave-team-flow"
 import { Input } from "./ui/input"
 import { useRouter } from "next/navigation"
+import { RegistrationReminderDialog } from "./registration-reminder-dialog"
 
 type SortKey = "name" | "role" | "email" | "contactNumber" | "enrollmentNumber" | "yearOfStudy" | "semester"
 type SortDirection = "asc" | "desc"
@@ -59,6 +60,28 @@ export default function MemberDashboard() {
   const { toast } = useToast()
   const [inviteLink, setInviteLink] = useState("")
   const router = useRouter()
+  const [showReminder, setShowReminder] = useState(false);
+
+  const teamValidation = useMemo(() => {
+    if (!team || teamMembers.length === 0) {
+        return { isRegistered: () => false };
+    }
+    const femaleCount = teamMembers.filter(m => m.gender === "F").length;
+    return {
+        isRegistered: () => teamMembers.length === 6 && femaleCount >= 1,
+    };
+  }, [team, teamMembers]);
+
+  useEffect(() => {
+    if (loading || authLoading) return;
+
+    const reminderShown = sessionStorage.getItem('registrationReminderShown');
+    if (team && !teamValidation.isRegistered() && !reminderShown) {
+        setShowReminder(true);
+        sessionStorage.setItem('registrationReminderShown', 'true');
+    }
+  }, [loading, authLoading, team, teamValidation]);
+
 
   useEffect(() => {
     const fetchTeamData = async () => {
@@ -70,33 +93,43 @@ export default function MemberDashboard() {
 
       try {
         const teamDocRef = doc(db, "teams", user.teamId);
-        const teamDoc = await getDoc(teamDocRef);
-
-        if (!teamDoc.exists()) {
-          throw new Error("Your team could not be found.");
-        }
-
-        const teamData = { id: teamDoc.id, ...teamDoc.data() } as Team;
-        setTeam(teamData);
-
-        // Fetch SPOC
-        const spocsQuery = query(
-          collection(db, "users"),
-          where("institute", "==", teamData.institute),
-          where("role", "==", "spoc"),
-          where("spocStatus", "==", "approved"),
-        );
-        const spocSnapshot = await getDocs(spocsQuery);
-        setSpoc(spocSnapshot.empty ? null : spocSnapshot.docs[0].data() as UserProfile);
-
-        // Fetch all members
-        const memberUIDs = teamData.members.map(m => m.uid).filter(Boolean);
-        const allUIDs = [...new Set([teamData.leader.uid, ...memberUIDs])];
         
-        const usersQuery = query(collection(db, 'users'), where('uid', 'in', allUIDs));
-        const usersSnapshot = await getDocs(usersQuery);
-        const membersData = usersSnapshot.docs.map(d => ({...d.data(), uid: d.id}) as UserProfile);
-        setTeamMembers(membersData);
+        const unsubscribeTeam = onSnapshot(teamDocRef, async (teamDoc) => {
+            if (!teamDoc.exists()) {
+                setTeam(null);
+                setTeamMembers([]);
+                setSpoc(null);
+                setLoading(false);
+                return;
+            }
+
+            const teamData = { id: teamDoc.id, ...teamDoc.data() } as Team;
+            setTeam(teamData);
+
+            // Fetch SPOC
+            const spocsQuery = query(
+              collection(db, "users"),
+              where("institute", "==", teamData.institute),
+              where("role", "==", "spoc"),
+              where("spocStatus", "==", "approved"),
+            );
+            const spocSnapshot = await getDocs(spocsQuery);
+            setSpoc(spocSnapshot.empty ? null : spocSnapshot.docs[0].data() as UserProfile);
+
+            // Fetch all members
+            const memberUIDs = teamData.members.map(m => m.uid).filter(Boolean);
+            const allUIDs = [...new Set([teamData.leader.uid, ...memberUIDs])];
+            
+            if (allUIDs.length > 0) {
+              const usersQuery = query(collection(db, 'users'), where('uid', 'in', allUIDs));
+              const usersSnapshot = await getDocs(usersQuery);
+              const membersData = usersSnapshot.docs.map(d => ({...d.data(), uid: d.id}) as UserProfile);
+              setTeamMembers(membersData);
+            }
+             setLoading(false);
+        });
+
+        return () => unsubscribeTeam();
 
       } catch (error: any) {
         console.error("Error fetching member dashboard data:", error);
@@ -105,7 +138,6 @@ export default function MemberDashboard() {
           description: error.message || "Could not load your team information.",
           variant: "destructive",
         });
-      } finally {
         setLoading(false);
       }
     };
@@ -211,12 +243,9 @@ export default function MemberDashboard() {
     )
   }
 
-  const teamValidation = {
-    isRegistered: teamMembers.length === 6 && teamMembers.filter((m) => m.gender === "F").length >= 1,
-  }
-
   return (
     <div className="p-4 sm:p-6 lg:p-8">
+       <RegistrationReminderDialog isOpen={showReminder} onClose={() => setShowReminder(false)} />
       <header className="mb-8 flex justify-between items-start">
         <div>
           <h1 className="text-3xl font-bold font-headline">Welcome, {user.name}!</h1>
@@ -225,7 +254,7 @@ export default function MemberDashboard() {
         {team && (
           <div className="flex items-center gap-2">
             <span className="text-sm text-muted-foreground">Status: </span>
-            {teamValidation.isRegistered ? (
+            {teamValidation.isRegistered() ? (
               <Badge variant="default" className="bg-green-600 hover:bg-green-600">
                 Registered
               </Badge>
