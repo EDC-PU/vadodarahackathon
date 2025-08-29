@@ -35,6 +35,27 @@ import { RegistrationReminderDialog } from "./registration-reminder-dialog";
 type SortKey = 'name' | 'role' | 'email' | 'contactNumber' | 'enrollmentNumber' | 'yearOfStudy' | 'semester';
 type SortDirection = 'asc' | 'desc';
 
+function IncompleteProfileAlert({ profile }: { profile: UserProfile }) {
+    const incompleteFields = Object.entries(profile)
+        .filter(([key, value]) => ['name', 'gender', 'department', 'enrollmentNumber', 'semester', 'yearOfStudy', 'contactNumber'].includes(key) && (value === 'N/A' || !value))
+        .map(([key]) => key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase()));
+
+    if (incompleteFields.length === 0) {
+        return null;
+    }
+
+    return (
+        <Alert variant="destructive" className="mb-8">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Your Profile is Incomplete</AlertTitle>
+            <AlertDescription>
+                Please update your profile with the following details: {incompleteFields.join(', ')}. A complete profile is required for participation. 
+                For any queries, write to us at <a href="mailto:programs.pierc@paruluniversity.ac.in" className="underline">programs.pierc@paruluniversity.ac.in</a>.
+            </AlertDescription>
+        </Alert>
+    );
+}
+
 function NotificationsSection() {
     const { user } = useAuth();
     const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -351,6 +372,7 @@ export default function LeaderDashboard() {
   return (
     <div className="p-4 sm:p-6 lg:p-8">
         <RegistrationReminderDialog isOpen={showReminder} onClose={() => setShowReminder(false)} />
+        {user && <IncompleteProfileAlert profile={user} />}
         <header className="mb-8 flex justify-between items-start">
             <div>
               <h1 className="text-3xl font-bold font-headline">Team Dashboard: {team.name}</h1>

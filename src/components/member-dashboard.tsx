@@ -49,6 +49,27 @@ import { RegistrationReminderDialog } from "./registration-reminder-dialog"
 type SortKey = "name" | "role" | "email" | "contactNumber" | "enrollmentNumber" | "yearOfStudy" | "semester"
 type SortDirection = "asc" | "desc"
 
+function IncompleteProfileAlert({ profile }: { profile: UserProfile }) {
+    const incompleteFields = Object.entries(profile)
+        .filter(([key, value]) => ['name', 'gender', 'department', 'enrollmentNumber', 'semester', 'yearOfStudy', 'contactNumber'].includes(key) && (value === 'N/A' || !value))
+        .map(([key]) => key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase()));
+
+    if (incompleteFields.length === 0) {
+        return null;
+    }
+
+    return (
+        <Alert variant="destructive" className="mb-8">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Your Profile is Incomplete</AlertTitle>
+            <AlertDescription>
+                Please update your profile with the following details: {incompleteFields.join(', ')}. A complete profile is required for participation. 
+                For any queries, write to us at <a href="mailto:programs.pierc@paruluniversity.ac.in" className="underline">programs.pierc@paruluniversity.ac.in</a>.
+            </AlertDescription>
+        </Alert>
+    );
+}
+
 export default function MemberDashboard() {
   const { user, loading: authLoading } = useAuth()
   const [team, setTeam] = useState<Team | null>(null)
@@ -84,65 +105,60 @@ export default function MemberDashboard() {
 
 
   useEffect(() => {
-    const fetchTeamData = async () => {
-      if (!user?.teamId) {
+    if (!user?.teamId) {
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
+    const teamDocRef = doc(db, 'teams', user.teamId);
+
+    const unsubscribeTeam = onSnapshot(teamDocRef, async (teamDoc) => {
+      if (!teamDoc.exists()) {
+        setTeam(null);
+        setTeamMembers([]);
+        setSpoc(null);
         setLoading(false);
         return;
       }
-      setLoading(true);
 
-      try {
-        const teamDocRef = doc(db, "teams", user.teamId);
-        
-        const unsubscribeTeam = onSnapshot(teamDocRef, async (teamDoc) => {
-            if (!teamDoc.exists()) {
-                setTeam(null);
-                setTeamMembers([]);
-                setSpoc(null);
-                setLoading(false);
-                return;
-            }
+      const teamData = { id: teamDoc.id, ...teamDoc.data() } as Team;
+      setTeam(teamData);
 
-            const teamData = { id: teamDoc.id, ...teamDoc.data() } as Team;
-            setTeam(teamData);
+      const spocsQuery = query(
+        collection(db, 'users'),
+        where('institute', '==', teamData.institute),
+        where('role', '==', 'spoc'),
+        where('spocStatus', '==', 'approved')
+      );
+      const spocSnapshot = await getDocs(spocsQuery);
+      setSpoc(spocSnapshot.empty ? null : (spocSnapshot.docs[0].data() as UserProfile));
 
-            // Fetch SPOC
-            const spocsQuery = query(
-              collection(db, "users"),
-              where("institute", "==", teamData.institute),
-              where("role", "==", "spoc"),
-              where("spocStatus", "==", "approved"),
-            );
-            const spocSnapshot = await getDocs(spocsQuery);
-            setSpoc(spocSnapshot.empty ? null : spocSnapshot.docs[0].data() as UserProfile);
+      const memberUIDs = teamData.members.map(m => m.uid).filter(Boolean);
+      const allUIDs = [...new Set([teamData.leader.uid, ...memberUIDs])];
 
-            // Fetch all members
-            const memberUIDs = teamData.members.map(m => m.uid).filter(Boolean);
-            const allUIDs = [...new Set([teamData.leader.uid, ...memberUIDs])];
-            
-            if (allUIDs.length > 0) {
-              const usersQuery = query(collection(db, 'users'), where('uid', 'in', allUIDs));
-              const usersSnapshot = await getDocs(usersQuery);
-              const membersData = usersSnapshot.docs.map(d => ({...d.data(), uid: d.id}) as UserProfile);
-              setTeamMembers(membersData);
-            }
-             setLoading(false);
+      if (allUIDs.length > 0) {
+        const usersQuery = query(collection(db, 'users'), where('uid', 'in', allUIDs));
+        const unsubscribeUsers = onSnapshot(usersQuery, (usersSnapshot) => {
+          const membersData = usersSnapshot.docs.map(d => ({ ...d.data(), uid: d.id }) as UserProfile);
+          setTeamMembers(membersData);
+          setLoading(false);
         });
-
-        return () => unsubscribeTeam();
-
-      } catch (error: any) {
-        console.error("Error fetching member dashboard data:", error);
-        toast({
-          title: "Error Loading Data",
-          description: error.message || "Could not load your team information.",
-          variant: "destructive",
-        });
+        return () => unsubscribeUsers();
+      } else {
         setLoading(false);
       }
-    };
+    }, (error) => {
+      console.error("Error fetching member dashboard data:", error);
+      toast({
+        title: "Error Loading Data",
+        description: error.message || "Could not load your team information.",
+        variant: "destructive",
+      });
+      setLoading(false);
+    });
 
-    fetchTeamData();
+    return () => unsubscribeTeam();
   }, [user?.teamId, toast]);
 
   const sortedTeamMembers = useMemo(() => {
@@ -246,6 +262,7 @@ export default function MemberDashboard() {
   return (
     <div className="p-4 sm:p-6 lg:p-8">
        <RegistrationReminderDialog isOpen={showReminder} onClose={() => setShowReminder(false)} />
+       {user && <IncompleteProfileAlert profile={user} />}
       <header className="mb-8 flex justify-between items-start">
         <div>
           <h1 className="text-3xl font-bold font-headline">Welcome, {user.name}!</h1>
