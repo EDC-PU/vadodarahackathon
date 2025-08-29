@@ -551,30 +551,32 @@ export default function LandingPage({ spocDetails, announcements, problemStateme
                 <div className="text-center">
                     <SectionTitle>Gallery</SectionTitle>
                 </div>
-                 <Carousel className="w-[80vw] mx-auto mt-12" opts={{ loop: true }} plugins={[autoplayPlugin.current]}>
-                    <CarouselContent>
-                    {galleryImages.map((src, index) => (
-                        <CarouselItem key={index} className="md:basis-1/2 lg:basis-1/3">
-                            <div className="p-1">
-                                <motion.div
-                                    className="overflow-hidden glass-card rounded-lg"
-                                    whileHover={{ scale: 1.03, boxShadow: "0 0 20px hsl(var(--brand-red))" }}
-                                >
-                                    <Image
-                                        src={src}
-                                        alt={`Photo from a past Vadodara Hackathon event showing participants and mentors.`}
-                                        width={600}
-                                        height={400}
-                                        className="w-full h-full object-cover aspect-video transition-transform"
-                                    />
-                                </motion.div>
-                            </div>
-                        </CarouselItem>
-                    ))}
-                    </CarouselContent>
-                    <CarouselPrevious className="animate-neon-pulse-arrows"/>
-                    <CarouselNext className="animate-neon-pulse-arrows"/>
-                </Carousel>
+                 <div className="flex justify-center mt-12">
+                    <Carousel className="w-full max-w-5xl" opts={{ loop: true }} plugins={[autoplayPlugin.current]}>
+                        <CarouselContent>
+                        {galleryImages.map((src, index) => (
+                            <CarouselItem key={index} className="md:basis-1/2 lg:basis-1/3">
+                                <div className="p-1">
+                                    <motion.div
+                                        className="overflow-hidden glass-card rounded-lg"
+                                        whileHover={{ scale: 1.03, boxShadow: "0 0 20px hsl(var(--brand-red))" }}
+                                    >
+                                        <Image
+                                            src={src}
+                                            alt={`Photo from a past Vadodara Hackathon event showing participants and mentors.`}
+                                            width={600}
+                                            height={400}
+                                            className="w-full h-full object-cover aspect-video transition-transform"
+                                        />
+                                    </motion.div>
+                                </div>
+                            </CarouselItem>
+                        ))}
+                        </CarouselContent>
+                        <CarouselPrevious className="animate-neon-pulse-arrows"/>
+                        <CarouselNext className="animate-neon-pulse-arrows"/>
+                    </Carousel>
+                 </div>
             </div>
         </AnimatedSection>
         
