@@ -108,7 +108,7 @@ const generateNominationFormFlow = ai.defineFlow(
         linebreaks: true,
       });
 
-      const dataToFill = {
+      const dataToFill: Record<string, any> = {
         team_name: team.name,
         date: format(new Date(), 'dd-MM-yyyy'),
         leader_name: leaderProfile.name || '',
@@ -123,14 +123,12 @@ const generateNominationFormFlow = ai.defineFlow(
       for (let i = 0; i < 6; i++) {
         const member = team.members[i];
         const memberProfile = member ? usersData.get(member.uid) : null;
-        Object.assign(dataToFill, {
-          [`member${i + 1}_name`]: memberProfile?.name || 'N/A',
-          [`member${i + 1}_gender`]: memberProfile?.gender || 'N/A',
-          [`member${i + 1}_email`]: memberProfile?.email || 'N/A',
-          [`member${i + 1}_contact`]: memberProfile?.contactNumber || 'N/A',
-          [`member${i + 1}_department`]: memberProfile?.department || 'N/A',
-          [`member${i + 1}_year`]: memberProfile?.yearOfStudy || 'N/A',
-        });
+        dataToFill[`member${i + 1}_name`] = memberProfile?.name || 'N/A';
+        dataToFill[`member${i + 1}_gender`] = memberProfile?.gender || 'N/A';
+        dataToFill[`member${i + 1}_email`] = memberProfile?.email || 'N/A';
+        dataToFill[`member${i + 1}_contact`] = memberProfile?.contactNumber || 'N/A';
+        dataToFill[`member${i + 1}_department`] = memberProfile?.department || 'N/A';
+        dataToFill[`member${i + 1}_year`] = memberProfile?.yearOfStudy || 'N/A';
       }
       
       // Special cases from template

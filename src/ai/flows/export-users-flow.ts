@@ -1,4 +1,5 @@
 
+
 'use server';
 
 /**
@@ -29,6 +30,26 @@ type ExportUsersOutput = z.infer<typeof ExportUsersOutputSchema>;
 export async function exportUsers(input: ExportUsersInput): Promise<ExportUsersOutput> {
     return exportUsersFlow(input);
 }
+
+// Helper to fetch user profiles in chunks to avoid Firestore 30-item 'in' query limit
+async function getUserProfilesInChunks(db: FirebaseFirestore.Firestore, userIds: string[]): Promise<Map<string, UserProfile>> {
+    const userProfiles = new Map<string, UserProfile>();
+    if (userIds.length === 0) return userProfiles;
+
+    const chunkSize = 30;
+    for (let i = 0; i < userIds.length; i += chunkSize) {
+        const chunk = userIds.slice(i, i + chunkSize);
+        if (chunk.length > 0) {
+            const usersQuery = db.collection('users').where('uid', 'in', chunk);
+            const usersSnapshot = await usersQuery.get();
+            usersSnapshot.forEach(doc => {
+                userProfiles.set(doc.id, { uid: doc.id, ...doc.data() } as UserProfile);
+            });
+        }
+    }
+    return userProfiles;
+}
+
 
 const exportUsersFlow = ai.defineFlow(
     {
@@ -64,11 +85,7 @@ const exportUsersFlow = ai.defineFlow(
             });
 
             // This is needed to get gender info for status calculation
-            const allTeamMemberProfilesSnapshot = allUserIdsFromTeams.size > 0 
-                ? await db.collection('users').where('uid', 'in', Array.from(allUserIdsFromTeams)).get()
-                : { docs: [] };
-            const allTeamMemberProfiles = new Map(allTeamMemberProfilesSnapshot.docs.map(doc => [doc.id, doc.data() as UserProfile]));
-
+            const allTeamMemberProfiles = await getUserProfilesInChunks(db, Array.from(allUserIdsFromTeams));
 
             // 2. Filter by Status (if needed)
             if (status && status !== 'all') {

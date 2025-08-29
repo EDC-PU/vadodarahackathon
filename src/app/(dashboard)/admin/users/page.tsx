@@ -35,6 +35,24 @@ type SortDirection = 'asc' | 'desc';
 type RoleFilter = "all" | "leader" | "member";
 type StatusFilter = "all" | "registered" | "pending";
 
+async function getUserProfilesInChunks(userIds: string[]): Promise<Map<string, UserProfile>> {
+    const userProfiles = new Map<string, UserProfile>();
+    if (userIds.length === 0) return userProfiles;
+
+    const chunkSize = 30;
+    for (let i = 0; i < userIds.length; i += chunkSize) {
+        const chunk = userIds.slice(i, i + chunkSize);
+        if (chunk.length > 0) {
+            const usersQuery = query(collection(db, 'users'), where('uid', 'in', chunk));
+            const usersSnapshot = await getDocs(usersQuery);
+            usersSnapshot.forEach(doc => {
+                userProfiles.set(doc.id, { uid: doc.id, ...doc.data() } as UserProfile);
+            });
+        }
+    }
+    return userProfiles;
+}
+
 export default function ManageUsersPage() {
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [teams, setTeams] = useState<Map<string, Team>>(new Map());
@@ -61,7 +79,7 @@ export default function ManageUsersPage() {
     });
 
     const teamsQuery = query(collection(db, 'teams'));
-    const unsubscribeTeams = onSnapshot(teamsQuery, (snapshot) => {
+    const unsubscribeTeams = onSnapshot(teamsQuery, async (snapshot) => {
         const teamsData = new Map(snapshot.docs.map(doc => [doc.id, {id: doc.id, ...doc.data()} as Team]));
         setTeams(teamsData);
 
@@ -74,11 +92,8 @@ export default function ManageUsersPage() {
         });
 
         if (allUserIdsFromTeams.size > 0) {
-            const teamMembersQuery = query(collection(db, 'users'), where('__name__', 'in', Array.from(allUserIdsFromTeams)));
-            getDocs(teamMembersQuery).then(userDocs => {
-                 const memberProfiles = new Map(userDocs.docs.map(doc => [doc.id, doc.data() as UserProfile]));
-                 setAllTeamMembers(memberProfiles);
-            });
+            const memberProfiles = await getUserProfilesInChunks(Array.from(allUserIdsFromTeams));
+            setAllTeamMembers(memberProfiles);
         }
     }, (error) => {
         console.error("Error fetching teams:", error);

@@ -9,7 +9,7 @@ import { Loader2, AlertCircle, Save, Pencil, X, Trash2, Users, User, MinusCircle
 import { Badge } from "@/components/ui/badge";
 import { useEffect, useState, useMemo, useCallback } from "react";
 import { db } from "@/lib/firebase";
-import { doc, onSnapshot, updateDoc, collection, query, where, orderBy, getDoc } from "firebase/firestore";
+import { doc, onSnapshot, updateDoc, collection, query, where, orderBy, getDocs } from "firebase/firestore";
 import { Team, UserProfile, TeamMember, ProblemStatement } from "@/lib/types";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
@@ -49,6 +49,26 @@ type SortKey = 'teamName' | 'teamNumber' | 'name' | 'email' | 'enrollmentNumber'
 type SortDirection = 'asc' | 'desc';
 type StatusFilter = "All Statuses" | "Registered" | "Pending";
 
+// Helper to fetch user profiles in chunks to avoid Firestore 30-item 'in' query limit
+async function getUserProfilesInChunks(userIds: string[]): Promise<Map<string, UserProfile>> {
+    const userProfiles = new Map<string, UserProfile>();
+    if (userIds.length === 0) return userProfiles;
+
+    const chunkSize = 30;
+    for (let i = 0; i < userIds.length; i += chunkSize) {
+        const chunk = userIds.slice(i, i + chunkSize);
+        if (chunk.length > 0) {
+            const usersQuery = query(collection(db, 'users'), where('uid', 'in', chunk));
+            const usersSnapshot = await getDocs(usersQuery);
+            usersSnapshot.forEach(doc => {
+                userProfiles.set(doc.id, { uid: doc.id, ...doc.data() } as UserProfile);
+            });
+        }
+    }
+    return userProfiles;
+}
+
+
 export default function SpocTeamsPage() {
   const { user, loading: authLoading } = useAuth();
   const [teams, setTeams] = useState<Team[]>([]);
@@ -76,7 +96,7 @@ export default function SpocTeamsPage() {
     
     // Fetch Teams
     const teamsQuery = query(collection(db, "teams"), where("institute", "==", institute));
-    const unsubscribeTeams = onSnapshot(teamsQuery, (snapshot) => {
+    const unsubscribeTeams = onSnapshot(teamsQuery, async (snapshot) => {
         const teamsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Team));
         setTeams(teamsData);
 
@@ -87,24 +107,15 @@ export default function SpocTeamsPage() {
                 if (member.uid) allUserIds.add(member.uid);
             });
         });
+        
+        const usersData = await getUserProfilesInChunks(Array.from(allUserIds));
+        setUsers(usersData);
+        setLoading(false);
 
-        // Fetch Users
-        if (allUserIds.size > 0) {
-          const userUnsubscribers: (()=>void)[] = [];
-          Array.from(allUserIds).forEach(uid => {
-              const userDocRef = doc(db, 'users', uid);
-              const unsub = onSnapshot(userDocRef, (userDoc) => {
-                  if (userDoc.exists()) {
-                      const userData = { uid: userDoc.id, ...userDoc.data() } as UserProfile;
-                      setUsers(prevUsers => new Map(prevUsers).set(uid, userData));
-                  }
-              });
-              userUnsubscribers.push(unsub);
-          });
-        }
     }, (error) => {
         console.error("Error listening to team updates:", error);
         toast({ title: "Error", description: "Could not load real-time team data.", variant: "destructive" });
+        setLoading(false);
     });
 
     // Fetch Problem Statements
@@ -121,10 +132,6 @@ export default function SpocTeamsPage() {
         }
     });
 
-    Promise.all([
-        new Promise(res => onSnapshot(teamsQuery, () => res(true))),
-        new Promise(res => onSnapshot(psQuery, () => res(true))),
-    ]).finally(() => setLoading(false));
 
     return () => {
         unsubscribeTeams();
@@ -454,7 +461,7 @@ export default function SpocTeamsPage() {
                 <p className="text-muted-foreground">View and manage all teams from <strong>{user?.institute}</strong></p>
             </div>
              <div className="flex flex-wrap gap-2">
-                 <Select value={statusFilter} onValueChange={setStatusFilter}>
+                 <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as StatusFilter)}>
                     <SelectTrigger className="w-full sm:w-48">
                         <SelectValue placeholder="Filter by Status" />
                     </SelectTrigger>
@@ -709,4 +716,3 @@ export default function SpocTeamsPage() {
     </div>
   );
 }
-

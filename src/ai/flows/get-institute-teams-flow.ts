@@ -74,6 +74,7 @@ const getInstituteTeamsFlow = ai.defineFlow(
       for (let i = 0; i < userIds.length; i += chunkSize) {
           const chunk = userIds.slice(i, i + chunkSize);
           console.log(`Fetching user chunk ${i/chunkSize + 1}...`);
+          if (chunk.length === 0) continue;
           const usersQuery = adminDb.collection('users').where('uid', 'in', chunk);
           const usersSnapshot = await usersQuery.get();
           usersSnapshot.forEach(doc => {

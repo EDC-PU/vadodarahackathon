@@ -592,7 +592,7 @@ function AllTeamsContent() {
                       <TableRow>
                           <TableHead>
                              <Checkbox 
-                                onCheckedChange={toggleSelectAll}
+                                onCheckedChange={(checked) => toggleSelectAll(!!checked)}
                                 checked={selectedTeamIds.length === filteredTeams.length && filteredTeams.length > 0}
                                 aria-label="Select all"
                              />
@@ -743,5 +743,6 @@ export default function AllTeamsPage() {
     
 
     
+
 
 

@@ -98,14 +98,12 @@ async function createDocx(db: FirebaseFirestore.Firestore, teamId: string, templ
     for (let i = 0; i < 6; i++) {
       const member = team.members[i];
       const memberProfile = member ? usersData.get(member.uid) : null;
-      Object.assign(dataToFill, {
-        [`member${i + 1}_name`]: memberProfile?.name || 'N/A',
-        [`member${i + 1}_gender`]: memberProfile?.gender || 'N/A',
-        [`member${i + 1}_email`]: memberProfile?.email || 'N/A',
-        [`member${i + 1}_contact`]: memberProfile?.contactNumber || 'N/A',
-        [`member${i + 1}_department`]: memberProfile?.department || 'N/A',
-        [`member${i + 1}_year`]: memberProfile?.yearOfStudy || 'N/A',
-      });
+      dataToFill[`member${i + 1}_name`] = memberProfile?.name || 'N/A';
+      dataToFill[`member${i + 1}_gender`] = memberProfile?.gender || 'N/A';
+      dataToFill[`member${i + 1}_email`] = memberProfile?.email || 'N/A';
+      dataToFill[`member${i + 1}_contact`] = memberProfile?.contactNumber || 'N/A';
+      dataToFill[`member${i + 1}_department`] = memberProfile?.department || 'N/A';
+      dataToFill[`member${i + 1}_year`] = memberProfile?.yearOfStudy || 'N/A';
     }
 
     Object.assign(dataToFill, {
