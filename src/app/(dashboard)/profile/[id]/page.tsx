@@ -75,7 +75,7 @@ export default function ProfilePage() {
     });
     
     const selectedInstitute = useWatch({ control: form.control, name: 'institute' });
-    const selectedDepartment = useWatch({ control: form.control, name: 'department' });
+    const departmentFieldValue = useWatch({ control: form.control, name: 'department' });
 
     const canEdit = authUser?.role === 'admin' || 
                     authUser?.enrollmentNumber === enrollmentId || 
@@ -228,6 +228,11 @@ export default function ProfilePage() {
         )
     }
 
+    const showOtherDepartmentInput = useMemo(() => {
+        if (!departmentFieldValue) return false;
+        return !departments.includes(departmentFieldValue);
+    }, [departmentFieldValue, departments]);
+
     return (
         <div className="p-4 sm:p-6 lg:p-8">
             <Card>
@@ -300,7 +305,11 @@ export default function ProfilePage() {
                                 render={({ field }) => (
                                     <FormItem>
                                         <FormLabel>Department</FormLabel>
-                                        <Select onValueChange={(value) => field.onChange(value === 'Other' ? '' : value)} value={field.value && departments.includes(field.value) ? field.value : (field.value ? "Other" : "")} disabled={!canEdit || isSubmitting || isDeptLoading}>
+                                        <Select 
+                                            onValueChange={(value) => field.onChange(value === 'Other' ? '' : value)} 
+                                            value={showOtherDepartmentInput ? 'Other' : field.value} 
+                                            disabled={!canEdit || isSubmitting || isDeptLoading}
+                                        >
                                             <FormControl>
                                                 <SelectTrigger>
                                                     <SelectValue placeholder={isDeptLoading ? "Loading..." : "Select department"} />
@@ -311,7 +320,7 @@ export default function ProfilePage() {
                                                 <SelectItem value="Other">Other</SelectItem>
                                             </SelectContent>
                                         </Select>
-                                        {(selectedDepartment === '' || (field.value && !departments.includes(field.value))) && (
+                                        {showOtherDepartmentInput && (
                                             <FormControl className="mt-2">
                                                 <Input placeholder="Please specify your department" {...field} disabled={!canEdit || isSubmitting} />
                                             </FormControl>
