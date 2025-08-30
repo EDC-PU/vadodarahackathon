@@ -48,6 +48,7 @@ import { isAfter } from "date-fns";
 type SortKey = 'teamName' | 'teamNumber' | 'name' | 'email' | 'enrollmentNumber' | 'contactNumber';
 type SortDirection = 'asc' | 'desc';
 type StatusFilter = "All Statuses" | "Registered" | "Pending";
+type RoleFilter = "all" | "leader" | "member";
 
 // Helper to fetch user profiles in chunks to avoid Firestore 30-item 'in' query limit
 async function getUserProfilesInChunks(userIds: string[]): Promise<Map<string, UserProfile>> {
@@ -82,6 +83,7 @@ export default function SpocTeamsPage() {
   const [isExportingEval, setIsExportingEval] = useState(false);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("All Statuses");
   const [memberCountFilter, setMemberCountFilter] = useState<number | "All">("All");
+  const [roleFilter, setRoleFilter] = useState<RoleFilter>("all");
   const [selectedProblemStatements, setSelectedProblemStatements] = useState<string[]>([]);
   const [sortConfig, setSortConfig] = useState<{ key: SortKey, direction: SortDirection } | null>(null);
   const { toast } = useToast();
@@ -152,7 +154,8 @@ export default function SpocTeamsPage() {
             institute: user.institute, 
             category: "All Categories", 
             status: statusFilter, 
-            problemStatementIds: selectedProblemStatements 
+            problemStatementIds: selectedProblemStatements,
+            memberCount: memberCountFilter,
         });
 
         if (result.success && result.fileContent) {
@@ -490,6 +493,16 @@ export default function SpocTeamsPage() {
                         {[1, 2, 3, 4, 5, 6].map(num => <SelectItem key={num} value={String(num)}>{num} Member(s)</SelectItem>)}
                     </SelectContent>
                 </Select>
+                 <Select value={roleFilter} onValueChange={(value) => setRoleFilter(value as RoleFilter)}>
+                    <SelectTrigger className="w-full sm:w-48">
+                        <SelectValue placeholder="Filter by Role" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="all">All Roles</SelectItem>
+                        <SelectItem value="leader">Leaders Only</SelectItem>
+                        <SelectItem value="member">Members Only</SelectItem>
+                    </SelectContent>
+                </Select>
                  <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                         <Button variant="outline" className="w-full sm:w-48 justify-between">
@@ -551,135 +564,143 @@ export default function SpocTeamsPage() {
                             </TableRow>
                             </TableHeader>
                             <TableBody>
-                            {teamsWithDetails.map((team) => (
-                            team.allMembers.map((member, memberIndex) => (
-                                <TableRow key={`${team.id}-${member.uid || memberIndex}-${memberIndex}`}>
-                                    {memberIndex === 0 && (
-                                        <TableCell rowSpan={team.allMembers.length} className="font-medium align-top">
-                                            <div className="flex flex-col gap-2">
-                                                {editingTeam?.id === team.id ? (
-                                                    <div className="flex items-center gap-2">
-                                                        <Input 
-                                                            value={editingTeam.name}
-                                                            onChange={(e) => setEditingTeam({ ...editingTeam, name: e.target.value })}
-                                                            className="w-40 h-8"
-                                                            disabled={isSaving === team.id}
-                                                        />
-                                                        <Button size="icon" className="h-8 w-8" onClick={() => handleSaveTeamName(team.id)} disabled={isSaving === team.id}>
-                                                            {isSaving === team.id ? <Loader2 className="h-4 w-4 animate-spin"/> : <Save className="h-4 w-4"/>}
-                                                        </Button>
-                                                        <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setEditingTeam(null)} disabled={isSaving === team.id}>
-                                                            <X className="h-4 w-4"/>
+                            {teamsWithDetails.map((team) => {
+                                let membersToDisplay = team.allMembers;
+                                if (roleFilter === 'leader') {
+                                    membersToDisplay = team.allMembers.filter(m => m.isLeader);
+                                } else if (roleFilter === 'member') {
+                                    membersToDisplay = team.allMembers.filter(m => !m.isLeader);
+                                }
+                                if (membersToDisplay.length === 0) return null;
+
+                                return membersToDisplay.map((member, memberIndex) => (
+                                    <TableRow key={`${team.id}-${member.uid || memberIndex}-${roleFilter}`}>
+                                        {memberIndex === 0 && (
+                                            <TableCell rowSpan={membersToDisplay.length} className="font-medium align-top">
+                                                <div className="flex flex-col gap-2">
+                                                    {editingTeam?.id === team.id ? (
+                                                        <div className="flex items-center gap-2">
+                                                            <Input 
+                                                                value={editingTeam.name}
+                                                                onChange={(e) => setEditingTeam({ ...editingTeam, name: e.target.value })}
+                                                                className="w-40 h-8"
+                                                                disabled={isSaving === team.id}
+                                                            />
+                                                            <Button size="icon" className="h-8 w-8" onClick={() => handleSaveTeamName(team.id)} disabled={isSaving === team.id}>
+                                                                {isSaving === team.id ? <Loader2 className="h-4 w-4 animate-spin"/> : <Save className="h-4 w-4"/>}
+                                                            </Button>
+                                                            <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setEditingTeam(null)} disabled={isSaving === team.id}>
+                                                                <X className="h-4 w-4"/>
+                                                            </Button>
+                                                        </div>
+                                                    ) : (
+                                                        <div className="flex items-center gap-2 group">
+                                                            <span>{team.name}</span>
+                                                            <Button size="icon" variant="ghost" className="h-7 w-7 opacity-0 group-hover:opacity-100" onClick={() => handleEditTeamName(team.id)}>
+                                                                <Pencil className="h-4 w-4 text-muted-foreground"/>
+                                                            </Button>
+                                                        </div>
+                                                    )}
+                                                    <AlertDialog>
+                                                        <AlertDialogTrigger asChild>
+                                                            <Button variant="destructive" size="sm" className="w-fit" disabled={isProcessing === team.id}>
+                                                                <Trash2 className="mr-2 h-4 w-4"/> Delete Team
+                                                            </Button>
+                                                        </AlertDialogTrigger>
+                                                        <AlertDialogContent>
+                                                            <AlertDialogHeader>
+                                                            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                                            <AlertDialogDescription>
+                                                                This will permanently delete the team "{team.name}" and remove all its members. This action cannot be undone.
+                                                            </AlertDialogDescription>
+                                                            </AlertDialogHeader>
+                                                            <AlertDialogFooter>
+                                                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                            <AlertDialogAction onClick={() => handleDeleteTeam(team.id)} className="bg-destructive hover:bg-destructive/90">Delete Team</AlertDialogAction>
+                                                            </AlertDialogFooter>
+                                                        </AlertDialogContent>
+                                                    </AlertDialog>
+                                                </div>
+                                            </TableCell>
+                                        )}
+                                        {memberIndex === 0 && (
+                                            <TableCell rowSpan={membersToDisplay.length} className="align-top">
+                                                {team.teamNumber ? <Badge variant="outline">{team.teamNumber}</Badge> : <span className="text-muted-foreground text-xs">Not Assigned</span>}
+                                            </TableCell>
+                                        )}
+                                        {memberIndex === 0 && (
+                                            <TableCell rowSpan={membersToDisplay.length} className="align-top">
+                                                {inviteLinks.has(team.id) ? (
+                                                    <div className="flex items-center gap-1">
+                                                        <Input value={inviteLinks.get(team.id)} readOnly className="h-8 text-xs"/>
+                                                        <Button size="icon" variant="ghost" className="h-8 w-8 shrink-0" onClick={() => {
+                                                            navigator.clipboard.writeText(inviteLinks.get(team.id)!);
+                                                            toast({ title: "Copied!" });
+                                                        }}>
+                                                            <Copy className="h-4 w-4" />
                                                         </Button>
                                                     </div>
                                                 ) : (
-                                                    <div className="flex items-center gap-2 group">
-                                                        <span>{team.name}</span>
-                                                        <Button size="icon" variant="ghost" className="h-7 w-7 opacity-0 group-hover:opacity-100" onClick={() => handleEditTeamName(team.id)}>
-                                                            <Pencil className="h-4 w-4 text-muted-foreground"/>
-                                                        </Button>
-                                                    </div>
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        onClick={() => handleGetInviteLink(team.id, team.name)}
+                                                        disabled={loadingLink === team.id}
+                                                    >
+                                                        {loadingLink === team.id ? (
+                                                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                                        ) : (
+                                                            <LinkIcon className="mr-2 h-4 w-4" />
+                                                        )}
+                                                        Get Link
+                                                    </Button>
                                                 )}
+                                            </TableCell>
+                                        )}
+                                        <TableCell>
+                                            {member.enrollmentNumber ? (
+                                                <Link href={`/profile/${member.enrollmentNumber}`} className="hover:underline">
+                                                    {member.name} {member.isLeader && <Badge variant="secondary" className="ml-1">Leader</Badge>}
+                                                </Link>
+                                            ) : (
+                                                `${member.name} ${member.isLeader ? '(Leader)' : ''}`
+                                            )}
+                                        </TableCell>
+                                        <TableCell>{member.email}</TableCell>
+                                        <TableCell>{member.enrollmentNumber || 'N/A'}</TableCell>
+                                        <TableCell>
+                                            {member.contactNumber ? (
+                                                <a href={`https://wa.me/+91${member.contactNumber}`} target="_blank" rel="noopener noreferrer" className="hover:underline">
+                                                    {member.contactNumber}
+                                                </a>
+                                            ) : 'N/A'}
+                                        </TableCell>
+                                        <TableCell className="text-right">
+                                            {!member.isLeader && (
                                                 <AlertDialog>
                                                     <AlertDialogTrigger asChild>
-                                                        <Button variant="destructive" size="sm" className="w-fit" disabled={isProcessing === team.id}>
-                                                            <Trash2 className="mr-2 h-4 w-4"/> Delete Team
+                                                        <Button variant="ghost" size="icon" className="h-8 w-8" disabled={isProcessing === `${team.id}-${member.uid}`}>
+                                                            {isProcessing === `${team.id}-${member.uid}` ? <Loader2 className="h-4 w-4 animate-spin"/> : <MinusCircle className="h-4 w-4 text-destructive"/>}
                                                         </Button>
                                                     </AlertDialogTrigger>
                                                     <AlertDialogContent>
                                                         <AlertDialogHeader>
-                                                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                                        <AlertDialogTitle>Remove {member.name}?</AlertDialogTitle>
                                                         <AlertDialogDescription>
-                                                            This will permanently delete the team "{team.name}" and remove all its members. This action cannot be undone.
+                                                            Are you sure you want to remove {member.name} from this team? Their account will not be deleted, but they will be removed from the team.
                                                         </AlertDialogDescription>
                                                         </AlertDialogHeader>
                                                         <AlertDialogFooter>
                                                         <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                                        <AlertDialogAction onClick={() => handleDeleteTeam(team.id)} className="bg-destructive hover:bg-destructive/90">Delete Team</AlertDialogAction>
+                                                        <AlertDialogAction onClick={() => handleRemoveMember(team.id, member)} className="bg-destructive hover:bg-destructive/90">Remove Member</AlertDialogAction>
                                                         </AlertDialogFooter>
                                                     </AlertDialogContent>
                                                 </AlertDialog>
-                                            </div>
-                                        </TableCell>
-                                    )}
-                                    {memberIndex === 0 && (
-                                        <TableCell rowSpan={team.allMembers.length} className="align-top">
-                                            {team.teamNumber ? <Badge variant="outline">{team.teamNumber}</Badge> : <span className="text-muted-foreground text-xs">Not Assigned</span>}
-                                        </TableCell>
-                                    )}
-                                    {memberIndex === 0 && (
-                                        <TableCell rowSpan={team.allMembers.length} className="align-top">
-                                            {inviteLinks.has(team.id) ? (
-                                                <div className="flex items-center gap-1">
-                                                    <Input value={inviteLinks.get(team.id)} readOnly className="h-8 text-xs"/>
-                                                    <Button size="icon" variant="ghost" className="h-8 w-8 shrink-0" onClick={() => {
-                                                        navigator.clipboard.writeText(inviteLinks.get(team.id)!);
-                                                        toast({ title: "Copied!" });
-                                                    }}>
-                                                        <Copy className="h-4 w-4" />
-                                                    </Button>
-                                                </div>
-                                            ) : (
-                                                <Button
-                                                    variant="outline"
-                                                    size="sm"
-                                                    onClick={() => handleGetInviteLink(team.id, team.name)}
-                                                    disabled={loadingLink === team.id}
-                                                >
-                                                    {loadingLink === team.id ? (
-                                                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                                    ) : (
-                                                        <LinkIcon className="mr-2 h-4 w-4" />
-                                                    )}
-                                                    Get Link
-                                                </Button>
                                             )}
                                         </TableCell>
-                                    )}
-                                    <TableCell>
-                                        {member.enrollmentNumber ? (
-                                            <Link href={`/profile/${member.enrollmentNumber}`} className="hover:underline">
-                                                {member.name} {member.isLeader && <Badge variant="secondary" className="ml-1">Leader</Badge>}
-                                            </Link>
-                                        ) : (
-                                            `${member.name} ${member.isLeader ? '(Leader)' : ''}`
-                                        )}
-                                    </TableCell>
-                                    <TableCell>{member.email}</TableCell>
-                                    <TableCell>{member.enrollmentNumber || 'N/A'}</TableCell>
-                                    <TableCell>
-                                        {member.contactNumber ? (
-                                            <a href={`https://wa.me/+91${member.contactNumber}`} target="_blank" rel="noopener noreferrer" className="hover:underline">
-                                                {member.contactNumber}
-                                            </a>
-                                        ) : 'N/A'}
-                                    </TableCell>
-                                    <TableCell className="text-right">
-                                        {!member.isLeader && (
-                                            <AlertDialog>
-                                                <AlertDialogTrigger asChild>
-                                                    <Button variant="ghost" size="icon" className="h-8 w-8" disabled={isProcessing === `${team.id}-${member.uid}`}>
-                                                        {isProcessing === `${team.id}-${member.uid}` ? <Loader2 className="h-4 w-4 animate-spin"/> : <MinusCircle className="h-4 w-4 text-destructive"/>}
-                                                    </Button>
-                                                </AlertDialogTrigger>
-                                                <AlertDialogContent>
-                                                    <AlertDialogHeader>
-                                                    <AlertDialogTitle>Remove {member.name}?</AlertDialogTitle>
-                                                    <AlertDialogDescription>
-                                                        Are you sure you want to remove {member.name} from this team? Their account will not be deleted, but they will be removed from the team.
-                                                    </AlertDialogDescription>
-                                                    </AlertDialogHeader>
-                                                    <AlertDialogFooter>
-                                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                                    <AlertDialogAction onClick={() => handleRemoveMember(team.id, member)} className="bg-destructive hover:bg-destructive/90">Remove Member</AlertDialogAction>
-                                                    </AlertDialogFooter>
-                                                </AlertDialogContent>
-                                            </AlertDialog>
-                                        )}
-                                    </TableCell>
-                                </TableRow>
-                            ))
-                            ))}
+                                    </TableRow>
+                                ));
+                            })}
                             </TableBody>
                         </Table>
                       </ScrollArea>
@@ -687,48 +708,58 @@ export default function SpocTeamsPage() {
 
                     {/* Mobile Card View */}
                     <div className="md:hidden space-y-4">
-                      {teamsWithDetails.map((team) => (
-                        <Card key={team.id} className="p-4">
-                            <CardHeader className="p-0 mb-4">
-                              <CardTitle className="flex justify-between items-start">
-                                  <span>{team.name}</span>
-                                  {team.teamNumber && <Badge variant="outline">#{team.teamNumber}</Badge>}
-                              </CardTitle>
-                            </CardHeader>
-                            <CardContent className="p-0 space-y-3">
-                              {team.allMembers.map(member => (
-                                <div key={member.uid || member.email} className="text-sm border-t pt-3">
-                                  <div className="flex justify-between items-center">
-                                      <p className="font-semibold">{member.name} {member.isLeader && <span className="text-xs font-normal text-primary">(Leader)</span>}</p>
-                                      {!member.isLeader && (
-                                        <AlertDialog>
-                                            <AlertDialogTrigger asChild>
-                                                <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive" disabled={isProcessing === `${team.id}-${member.uid}`}>
-                                                    {isProcessing === `${team.id}-${member.uid}` ? <Loader2 className="h-4 w-4 animate-spin"/> : <MinusCircle className="h-4 w-4"/>}
-                                                </Button>
-                                            </AlertDialogTrigger>
-                                            <AlertDialogContent>
-                                                <AlertDialogHeader>
-                                                    <AlertDialogTitle>Remove {member.name}?</AlertDialogTitle>
-                                                    <AlertDialogDescription>
-                                                        Are you sure you want to remove {member.name} from this team?
-                                                    </AlertDialogDescription>
-                                                </AlertDialogHeader>
-                                                <AlertDialogFooter>
-                                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                                    <AlertDialogAction onClick={() => handleRemoveMember(team.id, member)} className="bg-destructive hover:bg-destructive/90">Remove</AlertDialogAction>
-                                                </AlertDialogFooter>
-                                            </AlertDialogContent>
-                                        </AlertDialog>
-                                      )}
-                                  </div>
-                                  <p className="text-muted-foreground">{member.email}</p>
-                                  <p className="text-muted-foreground">{member.enrollmentNumber}</p>
-                                </div>
-                              ))}
-                            </CardContent>
-                        </Card>
-                      ))}
+                      {teamsWithDetails.map((team) => {
+                        let membersToDisplay = team.allMembers;
+                        if (roleFilter === 'leader') {
+                            membersToDisplay = team.allMembers.filter(m => m.isLeader);
+                        } else if (roleFilter === 'member') {
+                            membersToDisplay = team.allMembers.filter(m => !m.isLeader);
+                        }
+                        if (membersToDisplay.length === 0) return null;
+
+                        return (
+                            <Card key={team.id} className="p-4">
+                                <CardHeader className="p-0 mb-4">
+                                <CardTitle className="flex justify-between items-start">
+                                    <span>{team.name}</span>
+                                    {team.teamNumber && <Badge variant="outline">#{team.teamNumber}</Badge>}
+                                </CardTitle>
+                                </CardHeader>
+                                <CardContent className="p-0 space-y-3">
+                                {membersToDisplay.map(member => (
+                                    <div key={member.uid || member.email} className="text-sm border-t pt-3">
+                                    <div className="flex justify-between items-center">
+                                        <p className="font-semibold">{member.name} {member.isLeader && <span className="text-xs font-normal text-primary">(Leader)</span>}</p>
+                                        {!member.isLeader && (
+                                            <AlertDialog>
+                                                <AlertDialogTrigger asChild>
+                                                    <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive" disabled={isProcessing === `${team.id}-${member.uid}`}>
+                                                        {isProcessing === `${team.id}-${member.uid}` ? <Loader2 className="h-4 w-4 animate-spin"/> : <MinusCircle className="h-4 w-4"/>}
+                                                    </Button>
+                                                </AlertDialogTrigger>
+                                                <AlertDialogContent>
+                                                    <AlertDialogHeader>
+                                                        <AlertDialogTitle>Remove {member.name}?</AlertDialogTitle>
+                                                        <AlertDialogDescription>
+                                                            Are you sure you want to remove {member.name} from this team?
+                                                        </AlertDialogDescription>
+                                                    </AlertDialogHeader>
+                                                    <AlertDialogFooter>
+                                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                        <AlertDialogAction onClick={() => handleRemoveMember(team.id, member)} className="bg-destructive hover:bg-destructive/90">Remove</AlertDialogAction>
+                                                    </AlertDialogFooter>
+                                                </AlertDialogContent>
+                                            </AlertDialog>
+                                        )}
+                                    </div>
+                                    <p className="text-muted-foreground">{member.email}</p>
+                                    <p className="text-muted-foreground">{member.enrollmentNumber}</p>
+                                    </div>
+                                ))}
+                                </CardContent>
+                            </Card>
+                        )
+                      })}
                     </div>
                   </>
                 )}

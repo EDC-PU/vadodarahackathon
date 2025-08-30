@@ -44,6 +44,7 @@ import { Badge } from "@/components/ui/badge";
 
 type CategoryFilter = ProblemStatementCategory | "All Categories";
 type StatusFilter = "All Statuses" | "Registered" | "Pending";
+type RoleFilter = "all" | "leader" | "member";
 type SortKey = 'teamName' | 'problemStatementId' | 'name' | 'email' | 'enrollmentNumber' | 'contactNumber' | 'yearOfStudy' | 'semester';
 type SortDirection = 'asc' | 'desc';
 
@@ -86,6 +87,7 @@ function AllTeamsContent() {
   const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>("All Categories");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("All Statuses");
   const [memberCountFilter, setMemberCountFilter] = useState<number | "All">("All");
+  const [roleFilter, setRoleFilter] = useState<RoleFilter>("all");
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedProblemStatements, setSelectedProblemStatements] = useState<string[]>([]);
   const [filteredProblemStatements, setFilteredProblemStatements] = useState<ProblemStatement[]>([]);
@@ -423,17 +425,26 @@ function AllTeamsContent() {
     const detailedTeams = getTeamWithFullDetails(filteredTeams);
     
     detailedTeams.forEach(team => {
-        team.allMembers.forEach((member, memberIndex) => {
-            flattenedData.push({
-                ...member,
-                teamName: team.name,
-                teamId: team.id,
-                isNominated: team.isNominated,
-                problemStatementId: team.problemStatementId || 'Not Selected',
-                isFirstRow: memberIndex === 0,
-                rowSpan: team.allMembers.length,
+        let membersToDisplay = team.allMembers;
+        if (roleFilter === 'leader') {
+            membersToDisplay = team.allMembers.filter(m => m.isLeader);
+        } else if (roleFilter === 'member') {
+            membersToDisplay = team.allMembers.filter(m => !m.isLeader);
+        }
+
+        if (membersToDisplay.length > 0) {
+            membersToDisplay.forEach((member, memberIndex) => {
+                flattenedData.push({
+                    ...member,
+                    teamName: team.name,
+                    teamId: team.id,
+                    isNominated: team.isNominated,
+                    problemStatementId: team.problemStatementId || 'Not Selected',
+                    isFirstRow: memberIndex === 0,
+                    rowSpan: membersToDisplay.length,
+                });
             });
-        });
+        }
     });
 
     if (sortConfig !== null) {
@@ -451,8 +462,7 @@ function AllTeamsContent() {
     }
 
     return flattenedData;
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filteredTeams, allUsers, problemStatements, sortConfig]);
+  }, [filteredTeams, allUsers, problemStatements, sortConfig, roleFilter]);
 
   const handleProblemStatementFilterChange = (psId: string) => {
     setSelectedProblemStatements(prev => {
@@ -555,6 +565,16 @@ function AllTeamsContent() {
                     {[1, 2, 3, 4, 5, 6].map(num => <SelectItem key={num} value={String(num)}>{num} Member(s)</SelectItem>)}
                 </SelectContent>
             </Select>
+            <Select value={roleFilter} onValueChange={(value) => setRoleFilter(value as RoleFilter)}>
+                <SelectTrigger className="w-full sm:w-48">
+                    <SelectValue placeholder="Filter by Role" />
+                </SelectTrigger>
+                <SelectContent>
+                    <SelectItem value="all">All Roles</SelectItem>
+                    <SelectItem value="leader">Leaders Only</SelectItem>
+                    <SelectItem value="member">Members Only</SelectItem>
+                </SelectContent>
+            </Select>
              <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                     <Button variant="outline" className="w-full sm:w-48 justify-between">
@@ -636,7 +656,7 @@ function AllTeamsContent() {
                   </TableHeader>
                   <TableBody>
                       {teamsWithDetails.map((row, index) => (
-                          <TableRow key={`${row.teamId}-${row.uid || index}-${memberCountFilter}`}>
+                          <TableRow key={`${row.teamId}-${row.uid || index}-${roleFilter}`}>
                               {row.isFirstRow && (
                                   <TableCell rowSpan={row.rowSpan} className="align-top">
                                       <Checkbox 
@@ -751,14 +771,3 @@ export default function AllTeamsPage() {
     )
 }
     
-
-    
-
-
-
-
-
-
-
-
-
