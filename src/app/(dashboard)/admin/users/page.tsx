@@ -36,7 +36,7 @@ import { bulkDeleteUsersAndTeams } from "@/ai/flows/bulk-delete-users-flow";
 
 type SortKey = 'name' | 'email' | 'role' | 'institute' | 'createdAt' | 'status';
 type SortDirection = 'asc' | 'desc';
-type RoleFilter = "all" | "leader" | "member";
+type RoleFilter = "all" | "leader" | "member" | "spoc";
 type StatusFilter = "all" | "registered" | "pending";
 type InstituteFilter = "all" | "missing";
 
@@ -326,6 +326,7 @@ export default function ManageUsersPage() {
                         <SelectItem value="all">All Roles</SelectItem>
                         <SelectItem value="leader">Leaders</SelectItem>
                         <SelectItem value="member">Members</SelectItem>
+                        <SelectItem value="spoc">SPOCs</SelectItem>
                     </SelectContent>
                 </Select>
                  <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as StatusFilter)}>
@@ -496,4 +497,3 @@ export default function ManageUsersPage() {
     </div>
   );
 }
-

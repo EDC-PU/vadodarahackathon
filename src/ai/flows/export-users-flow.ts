@@ -14,7 +14,7 @@ import type { Query as AdminQuery } from 'firebase-admin/firestore';
 import ExcelJS from 'exceljs';
 
 const ExportUsersInputSchema = z.object({
-    role: z.enum(['all', 'leader', 'member']).optional(),
+    role: z.enum(['all', 'leader', 'member', 'spoc']).optional(),
     status: z.enum(['all', 'registered', 'pending']).optional(),
 });
 type ExportUsersInput = z.infer<typeof ExportUsersInputSchema>;
