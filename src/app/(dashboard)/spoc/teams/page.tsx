@@ -263,8 +263,13 @@ export default function SpocTeamsPage() {
       const statusMatch = statusFilter === 'All Statuses' ? true : (
         statusFilter === 'Registered' ? isRegistered : !isRegistered
       );
+      
+      const showNotSelected = selectedProblemStatements.includes('not-selected');
+      const selectedPsIds = selectedProblemStatements.filter(id => id !== 'not-selected');
 
-      const psMatch = selectedProblemStatements.length === 0 || (team.problemStatementId && selectedProblemStatements.includes(team.problemStatementId));
+      const psMatch = selectedProblemStatements.length === 0 || 
+                      (showNotSelected && !team.problemStatementId) || 
+                      (selectedPsIds.length > 0 && team.problemStatementId && selectedPsIds.includes(team.problemStatementId));
       
       const memberCount = team.members.length + 1;
       const memberCountMatch = memberCountFilter === 'All' || memberCount === memberCountFilter;
@@ -512,6 +517,14 @@ export default function SpocTeamsPage() {
                     </DropdownMenuTrigger>
                     <DropdownMenuContent className="w-56">
                         <DropdownMenuLabel>Problem Statements</DropdownMenuLabel>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuCheckboxItem
+                            key="not-selected"
+                            checked={selectedProblemStatements.includes('not-selected')}
+                            onCheckedChange={() => handleProblemStatementFilterChange('not-selected')}
+                        >
+                            Not Selected
+                        </DropdownMenuCheckboxItem>
                         <DropdownMenuSeparator />
                         {problemStatements.length > 0 ? problemStatements.map((ps) => (
                             <DropdownMenuCheckboxItem

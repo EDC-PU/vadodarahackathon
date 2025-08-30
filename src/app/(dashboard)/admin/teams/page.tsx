@@ -173,7 +173,13 @@ function AllTeamsContent() {
     return allTeams.filter(team => {
         const instituteMatch = instituteFilter === 'All Institutes' || team.institute === instituteFilter;
         const categoryMatch = categoryFilter === 'All Categories' || team.category === categoryFilter;
-        const psMatch = selectedProblemStatements.length === 0 || (team.problemStatementId && selectedProblemStatements.includes(team.problemStatementId));
+        
+        const showNotSelected = selectedProblemStatements.includes('not-selected');
+        const selectedPsIds = selectedProblemStatements.filter(id => id !== 'not-selected');
+        
+        const psMatch = selectedProblemStatements.length === 0 || 
+                        (showNotSelected && !team.problemStatementId) || 
+                        (selectedPsIds.length > 0 && team.problemStatementId && selectedPsIds.includes(team.problemStatementId));
         
         const memberCount = team.members.length + 1; // Leader + members
         const memberCountMatch = memberCountFilter === "All" || memberCount === memberCountFilter;
@@ -585,6 +591,14 @@ function AllTeamsContent() {
                 </DropdownMenuTrigger>
                 <DropdownMenuContent className="w-56">
                     <DropdownMenuLabel>Problem Statements</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuCheckboxItem
+                        key="not-selected"
+                        checked={selectedProblemStatements.includes('not-selected')}
+                        onCheckedChange={() => handleProblemStatementFilterChange('not-selected')}
+                    >
+                        Not Selected
+                    </DropdownMenuCheckboxItem>
                     <DropdownMenuSeparator />
                     {filteredProblemStatements.length > 0 ? filteredProblemStatements.map((ps) => (
                         <DropdownMenuCheckboxItem
