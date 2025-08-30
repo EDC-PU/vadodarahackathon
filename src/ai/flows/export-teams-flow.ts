@@ -48,8 +48,8 @@ const exportTeamsFlow = ai.defineFlow(
         inputSchema: ExportTeamsInputSchema,
         outputSchema: ExportTeamsOutputSchema,
     },
-    async ({ institute, category, status, problemStatementIds }) => {
-        console.log("exportTeamsFlow (merged version) started with filters:", { institute, category, status, problemStatementIds });
+    async ({ institute, category, status, problemStatementIds, memberCount }) => {
+        console.log("exportTeamsFlow (merged version) started with filters:", { institute, category, status, problemStatementIds, memberCount });
         const db = getAdminDb();
         if (!db) {
             return { success: false, message: "Database connection failed." };
@@ -84,18 +84,22 @@ const exportTeamsFlow = ai.defineFlow(
             });
             const usersData = await getAllUserProfiles(db, Array.from(allUserIds));
 
-            // Status Filter (post-query)
-            if (status && status !== 'All Statuses') {
-                teamsData = teamsData.filter(team => {
-                    const allMemberProfiles = [usersData.get(team.leader.uid), ...team.members.map(m => usersData.get(m.uid))].filter(Boolean) as UserProfile[];
-                    const memberCount = allMemberProfiles.length;
-                    const femaleCount = allMemberProfiles.filter(m => m.gender === 'F').length;
-                    const instituteCount = allMemberProfiles.filter(m => m.institute === team.institute).length;
+            // Post-query Filters
+            teamsData = teamsData.filter(team => {
+                const allMemberProfiles = [usersData.get(team.leader.uid), ...team.members.map(m => usersData.get(m.uid))].filter(Boolean) as UserProfile[];
+                const currentMemberCount = allMemberProfiles.length;
+                const femaleCount = allMemberProfiles.filter(m => m.gender === 'F').length;
+                const instituteCount = allMemberProfiles.filter(m => m.institute === team.institute).length;
 
-                    const isRegistered = memberCount === 6 && femaleCount >= 1 && instituteCount >= 3;
-                    return status === 'Registered' ? isRegistered : !isRegistered;
-                });
-            }
+                const statusMatch = status === 'All Statuses' || !status ? true : (
+                    status === 'Registered' ? (currentMemberCount === 6 && femaleCount >= 1 && instituteCount >= 3) :
+                    ! (currentMemberCount === 6 && femaleCount >= 1 && instituteCount >= 3)
+                );
+                
+                const memberCountMatch = memberCount === "All" || !memberCount ? true : currentMemberCount === memberCount;
+                
+                return statusMatch && memberCountMatch;
+            });
 
 
             if (teamsData.length === 0) {

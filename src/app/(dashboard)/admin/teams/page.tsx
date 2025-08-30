@@ -218,7 +218,8 @@ function AllTeamsContent() {
             institute: instituteFilter,
             category: categoryFilter,
             status: statusFilter,
-            problemStatementIds: selectedProblemStatements
+            problemStatementIds: selectedProblemStatements,
+            memberCount: memberCountFilter
         });
         if (result.success && result.fileContent) {
             const blob = new Blob([Buffer.from(result.fileContent, 'base64')], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
@@ -635,7 +636,7 @@ function AllTeamsContent() {
                   </TableHeader>
                   <TableBody>
                       {teamsWithDetails.map((row, index) => (
-                          <TableRow key={`${row.teamId}-${row.uid || index}`}>
+                          <TableRow key={`${row.teamId}-${row.uid || index}-${memberCountFilter}`}>
                               {row.isFirstRow && (
                                   <TableCell rowSpan={row.rowSpan} className="align-top">
                                       <Checkbox 
@@ -752,6 +753,7 @@ export default function AllTeamsPage() {
     
 
     
+
 
 
 

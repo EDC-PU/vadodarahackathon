@@ -262,6 +262,7 @@ export const ExportTeamsInputSchema = z.object({
     category: z.string().optional().describe("Filter teams by category. 'All Categories' for no filter."),
     status: z.string().optional().describe("Filter teams by registration status. 'All Statuses' for no filter."),
     problemStatementIds: z.array(z.string()).optional().describe("Filter teams by selected problem statement IDs."),
+    memberCount: z.union([z.number(), z.literal("All")]).optional().describe("Filter teams by the number of members."),
 });
 export type ExportTeamsInput = z.infer<typeof ExportTeamsInputSchema>;
 
