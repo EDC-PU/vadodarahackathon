@@ -51,7 +51,7 @@ function IncompleteProfileAlert({ profile }: { profile: UserProfile }) {
             <AlertTitle>Your Profile is Incomplete</AlertTitle>
             <AlertDescription>
                 Please update your profile with the following details: {incompleteFields.join(', ')}. A complete profile is required for participation. 
-                For any queries, write to us at <a href="mailto:programs.pierc@paruluniversity.ac.in" className="underline">programs.pierc@paruluniversity.ac.in</a>.
+                For any queries, write to us at <a href="mailto:entrepreneurshipclub@paruluniversity.ac.in" className="underline">entrepreneurshipclub@paruluniversity.ac.in</a>.
             </AlertDescription>
         </Alert>
     );

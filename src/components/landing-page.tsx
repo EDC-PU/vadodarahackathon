@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import Link from 'next/link';
@@ -589,7 +590,7 @@ export default function LandingPage({ spocDetails, announcements, problemStateme
               <motion.div whileHover={{ y: -5, boxShadow: "0 0 20px hsl(var(--brand-yellow))" }} className="glass-card p-6 flex flex-col items-center text-center">
                 <Mail className="h-10 w-10 text-primary mb-4" />
                 <h3 className="text-xl font-semibold">Email Us</h3>
-                <a href="mailto:programs.pierc@paruluniversity.ac.in" className="text-foreground/80 hover:text-primary">programs.pierc@paruluniversity.ac.in</a>
+                <a href="mailto:entrepreneurshipclub@paruluniversity.ac.in" className="text-foreground/80 hover:text-primary">entrepreneurshipclub@paruluniversity.ac.in</a>
               </motion.div>
 
               <motion.div whileHover={{ y: -5, boxShadow: "0 0 20px hsl(var(--brand-red))" }} className="glass-card p-6 flex flex-col items-center text-center">
@@ -650,4 +651,3 @@ export default function LandingPage({ spocDetails, announcements, problemStateme
     </div>
   );
 }
-

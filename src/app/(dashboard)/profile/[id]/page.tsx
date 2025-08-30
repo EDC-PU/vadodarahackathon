@@ -338,7 +338,7 @@ export default function ProfilePage() {
                                         <Input {...field} disabled={true} />
                                     </FormControl>
                                     <FormDescription>
-                                        If you want to change your enrollment number, please contact organisers: <a href="mailto:programs.pierc@paruluniversity.ac.in" className="underline text-primary">programs.pierc@paruluniversity.ac.in</a>.
+                                        If you want to change your enrollment number, please contact organisers: <a href="mailto:entrepreneurshipclub@paruluniversity.ac.in" className="underline text-primary">entrepreneurshipclub@paruluniversity.ac.in</a>.
                                     </FormDescription>
                                     <FormMessage />
                                 </FormItem>)} 
