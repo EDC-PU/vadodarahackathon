@@ -156,6 +156,7 @@ export default function SpocTeamsPage() {
             status: statusFilter, 
             problemStatementIds: selectedProblemStatements,
             memberCount: memberCountFilter,
+            role: roleFilter,
         });
 
         if (result.success && result.fileContent) {

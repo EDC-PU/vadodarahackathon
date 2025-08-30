@@ -48,8 +48,8 @@ const exportTeamsFlow = ai.defineFlow(
         inputSchema: ExportTeamsInputSchema,
         outputSchema: ExportTeamsOutputSchema,
     },
-    async ({ institute, category, status, problemStatementIds, memberCount }) => {
-        console.log("exportTeamsFlow (merged version) started with filters:", { institute, category, status, problemStatementIds, memberCount });
+    async ({ institute, category, status, problemStatementIds, memberCount, role }) => {
+        console.log("exportTeamsFlow (merged version) started with filters:", { institute, category, status, problemStatementIds, memberCount, role });
         const db = getAdminDb();
         if (!db) {
             return { success: false, message: "Database connection failed." };
@@ -150,16 +150,27 @@ const exportTeamsFlow = ai.defineFlow(
             let currentRowIndex = 2; // Start writing data from the second row
 
             for (const team of teamsData) {
-                const teamSize = 1 + team.members.length; // Leader + members
+                const leaderProfile = usersData.get(team.leader.uid);
+                const problemStatement = team.problemStatementId ? problemStatementsData.get(team.problemStatementId) : null;
+                
+                let allMembers = [
+                    { ...(leaderProfile || team.leader), isLeader: true },
+                     ...team.members.map(m => ({ ...(usersData.get(m.uid) || m), isLeader: false }))
+                ];
+
+                if (role === 'leader') {
+                    allMembers = allMembers.filter(m => m.isLeader);
+                } else if (role === 'member') {
+                    allMembers = allMembers.filter(m => !m.isLeader);
+                }
+                
+                const teamSize = allMembers.length;
+                if (teamSize === 0) continue;
+
                 const startRow = currentRowIndex;
                 const endRow = startRow + teamSize - 1;
 
-                const leaderProfile = usersData.get(team.leader.uid);
-                const problemStatement = team.problemStatementId ? problemStatementsData.get(team.problemStatementId) : null;
-
-                const allMembers = [leaderProfile, ...team.members.map(m => m.uid ? usersData.get(m.uid) : m)];
-
-                allMembers.forEach((member, index) => {
+                allMembers.forEach((member) => {
                     const memberProfile = member as UserProfile; // Cast for easier access
                     sheet.addRow([
                         team.name || 'N/A', // A

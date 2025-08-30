@@ -1,3 +1,4 @@
+
 import {z} from 'genkit';
 import type {Query} from 'firebase-admin/firestore';
 
@@ -263,6 +264,7 @@ export const ExportTeamsInputSchema = z.object({
     status: z.string().optional().describe("Filter teams by registration status. 'All Statuses' for no filter."),
     problemStatementIds: z.array(z.string()).optional().describe("Filter teams by selected problem statement IDs."),
     memberCount: z.union([z.number(), z.literal("All")]).optional().describe("Filter teams by the number of members."),
+    role: z.enum(["all", "leader", "member"]).optional().describe("Filter members by their role."),
 });
 export type ExportTeamsInput = z.infer<typeof ExportTeamsInputSchema>;
 
