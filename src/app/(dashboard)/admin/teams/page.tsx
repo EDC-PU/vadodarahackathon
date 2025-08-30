@@ -221,7 +221,8 @@ function AllTeamsContent() {
             category: categoryFilter,
             status: statusFilter,
             problemStatementIds: selectedProblemStatements,
-            memberCount: memberCountFilter
+            memberCount: memberCountFilter,
+            role: roleFilter,
         });
         if (result.success && result.fileContent) {
             const blob = new Blob([Buffer.from(result.fileContent, 'base64')], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
