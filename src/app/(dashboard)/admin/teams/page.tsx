@@ -85,6 +85,7 @@ function AllTeamsContent() {
   const [instituteFilter, setInstituteFilter] = useState<string>("All Institutes");
   const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>("All Categories");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("All Statuses");
+  const [memberCountFilter, setMemberCountFilter] = useState<number | "All">("All");
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedProblemStatements, setSelectedProblemStatements] = useState<string[]>([]);
   const [filteredProblemStatements, setFilteredProblemStatements] = useState<ProblemStatement[]>([]);
@@ -172,6 +173,9 @@ function AllTeamsContent() {
         const categoryMatch = categoryFilter === 'All Categories' || team.category === categoryFilter;
         const psMatch = selectedProblemStatements.length === 0 || (team.problemStatementId && selectedProblemStatements.includes(team.problemStatementId));
         
+        const memberCount = team.members.length + 1; // Leader + members
+        const memberCountMatch = memberCountFilter === "All" || memberCount === memberCountFilter;
+
         let searchMatch = true;
         if (searchTerm) {
             const lowercasedSearch = searchTerm.toLowerCase();
@@ -189,23 +193,23 @@ function AllTeamsContent() {
         }
 
         if (statusFilter === 'All Statuses') {
-          return instituteMatch && categoryMatch && psMatch && searchMatch;
+          return instituteMatch && categoryMatch && psMatch && searchMatch && memberCountMatch;
         }
 
         const leaderProfile = allUsers.get(team.leader.uid);
         const allMemberProfiles = [leaderProfile, ...team.members.map(m => allUsers.get(m.uid))].filter(Boolean) as UserProfile[];
         
-        const memberCount = allMemberProfiles.length;
+        const currentMemberCount = allMemberProfiles.length;
         const femaleCount = allMemberProfiles.filter(m => m.gender === 'F').length;
         const instituteCount = allMemberProfiles.filter(m => m.institute === team.institute).length;
 
-        const isRegistered = memberCount === 6 && femaleCount >= 1 && instituteCount >= 3;
+        const isRegistered = currentMemberCount === 6 && femaleCount >= 1 && instituteCount >= 3;
         
         const statusMatch = statusFilter === 'Registered' ? isRegistered : !isRegistered;
         
-        return instituteMatch && categoryMatch && psMatch && statusMatch && searchMatch;
+        return instituteMatch && categoryMatch && psMatch && statusMatch && searchMatch && memberCountMatch;
     });
-  }, [allTeams, instituteFilter, categoryFilter, selectedProblemStatements, statusFilter, allUsers, searchTerm]);
+  }, [allTeams, instituteFilter, categoryFilter, selectedProblemStatements, statusFilter, allUsers, searchTerm, memberCountFilter]);
   
   const handleExport = async () => {
     setIsExporting(true);
@@ -541,6 +545,15 @@ function AllTeamsContent() {
                     {statuses.map(st => <SelectItem key={st} value={st}>{st}</SelectItem>)}
                 </SelectContent>
             </Select>
+            <Select value={String(memberCountFilter)} onValueChange={(val) => setMemberCountFilter(val === "All" ? "All" : Number(val))}>
+                <SelectTrigger className="w-full sm:w-48">
+                    <SelectValue placeholder="Filter by Members" />
+                </SelectTrigger>
+                <SelectContent>
+                    <SelectItem value="All">All Member Counts</SelectItem>
+                    {[1, 2, 3, 4, 5, 6].map(num => <SelectItem key={num} value={String(num)}>{num} Member(s)</SelectItem>)}
+                </SelectContent>
+            </Select>
              <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                     <Button variant="outline" className="w-full sm:w-48 justify-between">
@@ -739,6 +752,7 @@ export default function AllTeamsPage() {
     
 
     
+
 
 
 

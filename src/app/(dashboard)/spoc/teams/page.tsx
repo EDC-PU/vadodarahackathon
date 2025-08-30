@@ -81,6 +81,7 @@ export default function SpocTeamsPage() {
   const [isExporting, setIsExporting] = useState(false);
   const [isExportingEval, setIsExportingEval] = useState(false);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("All Statuses");
+  const [memberCountFilter, setMemberCountFilter] = useState<number | "All">("All");
   const [selectedProblemStatements, setSelectedProblemStatements] = useState<string[]>([]);
   const [sortConfig, setSortConfig] = useState<{ key: SortKey, direction: SortDirection } | null>(null);
   const { toast } = useToast();
@@ -262,9 +263,12 @@ export default function SpocTeamsPage() {
 
       const psMatch = selectedProblemStatements.length === 0 || (team.problemStatementId && selectedProblemStatements.includes(team.problemStatementId));
       
-      return statusMatch && psMatch;
+      const memberCount = team.members.length + 1;
+      const memberCountMatch = memberCountFilter === 'All' || memberCount === memberCountFilter;
+
+      return statusMatch && psMatch && memberCountMatch;
     });
-  }, [teams, statusFilter, users, selectedProblemStatements]);
+  }, [teams, statusFilter, users, selectedProblemStatements, memberCountFilter]);
   
   const getTeamWithFullDetails = (teamsToProcess: Team[]) => {
     return teamsToProcess.map(team => {
@@ -364,7 +368,7 @@ export default function SpocTeamsPage() {
           await updateDoc(teamDocRef, { name: editingTeam.name });
           toast({ title: "Success", description: "Team name updated." });
           setEditingTeam(null);
-          await fetchInstituteData(); // Refresh data
+          await fetchAllData(user!.institute!); // Refresh data
       } catch (error) {
           console.error("Error updating team name:", error);
           toast({ title: "Error", description: "Could not update team name.", variant: "destructive" });
@@ -386,7 +390,7 @@ export default function SpocTeamsPage() {
          toast({ title: "Error", description: "An unexpected error occurred.", variant: "destructive" });
     } finally {
         setIsProcessing(null);
-        fetchInstituteData();
+        fetchAllData(user!.institute!);
     }
   }
 
@@ -403,7 +407,7 @@ export default function SpocTeamsPage() {
          toast({ title: "Error", description: "An unexpected error occurred.", variant: "destructive" });
     } finally {
         setIsProcessing(null);
-        fetchInstituteData();
+        fetchAllData(user!.institute!);
     }
   }
 
@@ -475,6 +479,15 @@ export default function SpocTeamsPage() {
                     </SelectTrigger>
                     <SelectContent>
                         {statuses.map(st => <SelectItem key={st} value={st}>{st}</SelectItem>)}
+                    </SelectContent>
+                </Select>
+                 <Select value={String(memberCountFilter)} onValueChange={(val) => setMemberCountFilter(val === "All" ? "All" : Number(val))}>
+                    <SelectTrigger className="w-full sm:w-48">
+                        <SelectValue placeholder="Filter by Members" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="All">All Member Counts</SelectItem>
+                        {[1, 2, 3, 4, 5, 6].map(num => <SelectItem key={num} value={String(num)}>{num} Member(s)</SelectItem>)}
                     </SelectContent>
                 </Select>
                  <DropdownMenu>
