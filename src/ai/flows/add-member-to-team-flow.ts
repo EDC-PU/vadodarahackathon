@@ -8,7 +8,7 @@ import { ai } from '@/ai/genkit';
 import { getAdminDb } from '@/lib/firebase-admin';
 import { AddMemberToTeamInput, AddMemberToTeamInputSchema, AddMemberToTeamOutput, AddMemberToTeamOutputSchema, Team, UserProfile } from '@/lib/types';
 import nodemailer from 'nodemailer';
-import { getEmailTemplate } from '@/lib/email-templates';
+import { getEmailTemplate, getTeamRegistrationCompleteEmail } from '@/lib/email-templates';
 import { FieldValue } from 'firebase-admin/firestore';
 
 async function sendNewMemberNotificationEmail(leaderEmail: string, leaderName: string, teamName: string, newMember: { name: string, email: string, contactNumber?: string }) {
@@ -52,6 +52,7 @@ async function sendNewMemberNotificationEmail(leaderEmail: string, leaderName: s
     console.log(`Successfully sent new member notification to ${leaderEmail}.`);
 }
 
+
 export async function addMemberToTeam(input: AddMemberToTeamInput): Promise<AddMemberToTeamOutput> {
   console.log("Executing addMemberToTeam function...");
   return addMemberToTeamFlow(input);
@@ -87,7 +88,6 @@ const addMemberToTeamFlow = ai.defineFlow(
     const teamDocRef = adminDb.collection('teams').doc(teamId);
 
     try {
-      // Check if user is already on a team
       const userDoc = await userDocRef.get();
       if (userDoc.exists) {
           const userData = userDoc.data() as UserProfile;
@@ -133,7 +133,6 @@ const addMemberToTeamFlow = ai.defineFlow(
         teamId: teamId
       });
 
-      // Log this activity
       const logDocRef = adminDb.collection("logs").doc();
       batch.set(logDocRef, {
           id: logDocRef.id,
@@ -144,19 +143,36 @@ const addMemberToTeamFlow = ai.defineFlow(
 
       await batch.commit();
       
-      // Send notification email to the team leader
+      // Post-commit checks and notifications
+      const leaderProfileDoc = await adminDb.collection('users').doc(teamData.leader.uid).get();
+      if (!leaderProfileDoc.exists) {
+        console.warn(`Could not find leader profile for team ${teamId}`);
+        return { success: true, message: `Successfully added ${name} to ${teamData.name}, but could not find leader profile for post-join actions.` };
+      }
+      const leaderProfile = leaderProfileDoc.data() as UserProfile;
+
+      const allMemberProfiles: UserProfile[] = [leaderProfile, ...(await Promise.all(currentMembers.map(async m => (await adminDb.collection('users').doc(m.uid).get()).data() as UserProfile)))];
+      
+      const hasFemale = allMemberProfiles.some(m => m.gender === 'F');
+      const instituteCount = allMemberProfiles.filter(m => m.institute === teamData.institute).length;
+      const isTeamComplete = allMemberProfiles.length === 6 && hasFemale && instituteCount >= 3;
+
       try {
-        await sendNewMemberNotificationEmail(
-            teamData.leader.email, 
-            teamData.leader.name, 
-            teamData.name, 
-            { name: newMember.name, email: newMember.email, contactNumber: newMember.contactNumber }
-        );
+        if (isTeamComplete) {
+            console.log(`Team ${teamData.name} registration is complete. Sending confirmation email.`);
+            await getTeamRegistrationCompleteEmail(teamData.leader.email, teamData.leader.name, teamData.name);
+        } else {
+            console.log(`Team ${teamData.name} not yet complete. Sending new member notification.`);
+            await sendNewMemberNotificationEmail(
+                teamData.leader.email, 
+                teamData.leader.name, 
+                teamData.name, 
+                { name: newMember.name, email: newMember.email, contactNumber: newMember.contactNumber }
+            );
+        }
       } catch (emailError: any) {
         console.warn(`User was added to the team, but failed to send notification email to leader ${teamData.leader.email}. Reason: ${emailError.message}`);
-        // Do not fail the whole flow if email fails, but log it.
       }
-
 
       return {
         success: true,
