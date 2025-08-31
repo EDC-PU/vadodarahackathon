@@ -33,6 +33,7 @@ import { Badge } from "./ui/badge";
 import { ScrollArea } from "./ui/scroll-area";
 import { RegistrationReminderDialog } from "./registration-reminder-dialog";
 import { format } from "date-fns";
+import { ProblemStatementReminderDialog } from "./problem-statement-reminder-dialog";
 
 type SortKey = 'name' | 'role' | 'email' | 'contactNumber' | 'enrollmentNumber' | 'yearOfStudy' | 'semester';
 type SortDirection = 'asc' | 'desc';
@@ -137,6 +138,7 @@ export default function LeaderDashboard() {
   const [isLoadingLink, setIsLoadingLink] = useState(true);
   const [deadline, setDeadline] = useState<Date | null>(null);
   const [showReminder, setShowReminder] = useState(false);
+  const [showPsReminder, setShowPsReminder] = useState(false);
   const [instituteData, setInstituteData] = useState<Institute | null>(null);
   const appBaseUrl = "https://vadodarahackathon.pierc.org";
 
@@ -162,6 +164,7 @@ export default function LeaderDashboard() {
             femaleCount: { current: 0, required: 1, isMet: false },
             instituteCount: { current: 0, required: 3, isMet: false },
             psSelected: { isMet: false },
+            isEligible: false,
             isRegistered: false
         };
     }
@@ -173,27 +176,15 @@ export default function LeaderDashboard() {
     const instituteCount = allMemberProfiles.filter(m => m.institute === team.institute).length;
     const memberCount = allMemberProfiles.length;
     const psSelected = !!team.problemStatementId;
+    const isEligible = memberCount === 6 && femaleCount >= 1 && instituteCount >= 3;
 
     return {
-        memberCount: {
-            current: memberCount,
-            required: 6,
-            isMet: memberCount === 6,
-        },
-        femaleCount: {
-            current: femaleCount,
-            required: 1,
-            isMet: femaleCount >= 1,
-        },
-        instituteCount: {
-            current: instituteCount,
-            required: 3,
-            isMet: instituteCount >= 3,
-        },
-        psSelected: {
-            isMet: psSelected
-        },
-        isRegistered: memberCount === 6 && femaleCount >= 1 && instituteCount >= 3 && psSelected,
+        memberCount: { current: memberCount, required: 6, isMet: memberCount === 6 },
+        femaleCount: { current: femaleCount, required: 1, isMet: femaleCount >= 1 },
+        instituteCount: { current: instituteCount, required: 3, isMet: instituteCount >= 3 },
+        psSelected: { isMet: psSelected },
+        isEligible,
+        isRegistered: isEligible && psSelected,
     };
   }, [team, teamMembers]);
 
@@ -201,10 +192,16 @@ export default function LeaderDashboard() {
   useEffect(() => {
     if (loading || authLoading) return;
 
-    const reminderShown = sessionStorage.getItem('registrationReminderShown');
-    if (team && !teamValidation.isRegistered && !reminderShown) {
+    const registrationReminderShown = sessionStorage.getItem('registrationReminderShown');
+    if (team && !teamValidation.isRegistered && !registrationReminderShown) {
         setShowReminder(true);
         sessionStorage.setItem('registrationReminderShown', 'true');
+    }
+
+    const psReminderShown = sessionStorage.getItem('psReminderShown');
+    if (team && teamValidation.isEligible && !teamValidation.psSelected.isMet && !psReminderShown) {
+        setShowPsReminder(true);
+        sessionStorage.setItem('psReminderShown', 'true');
     }
   }, [loading, authLoading, team, teamValidation]);
 
@@ -401,6 +398,7 @@ export default function LeaderDashboard() {
   return (
     <div className="p-4 sm:p-6 lg:p-8">
         <RegistrationReminderDialog isOpen={showReminder} onClose={() => setShowReminder(false)} />
+        <ProblemStatementReminderDialog isOpen={showPsReminder} onClose={() => setShowPsReminder(false)} isLeader={true} />
         {user && <IncompleteProfileAlert profile={user} />}
         <header className="mb-8 flex justify-between items-start">
             <div>

@@ -48,6 +48,7 @@ import { Input } from "./ui/input"
 import { useRouter } from "next/navigation"
 import { RegistrationReminderDialog } from "./registration-reminder-dialog"
 import { format } from "date-fns"
+import { ProblemStatementReminderDialog } from "./problem-statement-reminder-dialog"
 
 type SortKey = "name" | "role" | "email" | "contactNumber" | "enrollmentNumber" | "yearOfStudy" | "semester"
 type SortDirection = "asc" | "desc"
@@ -85,26 +86,38 @@ export default function MemberDashboard() {
   const [inviteLink, setInviteLink] = useState("")
   const router = useRouter()
   const [showReminder, setShowReminder] = useState(false);
+  const [showPsReminder, setShowPsReminder] = useState(false);
   const [instituteData, setInstituteData] = useState<Institute | null>(null);
 
   const teamValidation = useMemo(() => {
     if (!team || teamMembers.length === 0) {
-        return { isRegistered: () => false };
+        return { isEligible: false, isRegistered: false, psSelected: false };
     }
     const femaleCount = teamMembers.filter(m => m.gender === "F").length;
     const instituteCount = teamMembers.filter(m => m.institute === team.institute).length;
+    const psSelected = !!team.problemStatementId;
+    const isEligible = teamMembers.length === 6 && femaleCount >= 1 && instituteCount >=3;
+    
     return {
-        isRegistered: () => teamMembers.length === 6 && femaleCount >= 1 && instituteCount >=3 && !!team.problemStatementId,
+        isEligible,
+        isRegistered: isEligible && psSelected,
+        psSelected,
     };
   }, [team, teamMembers]);
 
   useEffect(() => {
     if (loading || authLoading) return;
 
-    const reminderShown = sessionStorage.getItem('registrationReminderShown');
-    if (team && !teamValidation.isRegistered() && !reminderShown) {
+    const registrationReminderShown = sessionStorage.getItem('registrationReminderShown');
+    if (team && !teamValidation.isRegistered && !registrationReminderShown) {
         setShowReminder(true);
         sessionStorage.setItem('registrationReminderShown', 'true');
+    }
+    
+    const psReminderShown = sessionStorage.getItem('psReminderShown');
+    if (team && teamValidation.isEligible && !teamValidation.psSelected && !psReminderShown) {
+        setShowPsReminder(true);
+        sessionStorage.setItem('psReminderShown', 'true');
     }
   }, [loading, authLoading, team, teamValidation]);
 
@@ -282,6 +295,7 @@ export default function MemberDashboard() {
   return (
     <div className="p-4 sm:p-6 lg:p-8">
        <RegistrationReminderDialog isOpen={showReminder} onClose={() => setShowReminder(false)} />
+       <ProblemStatementReminderDialog isOpen={showPsReminder} onClose={() => setShowPsReminder(false)} isLeader={false} />
        {user && <IncompleteProfileAlert profile={user} />}
       <header className="mb-8 flex justify-between items-start">
         <div>
@@ -291,7 +305,7 @@ export default function MemberDashboard() {
         {team && (
           <div className="flex items-center gap-2">
             <span className="text-sm text-muted-foreground">Status: </span>
-            {teamValidation.isRegistered() ? (
+            {teamValidation.isRegistered ? (
               <Badge variant="default" className="bg-green-600 hover:bg-green-600">
                 Registered
               </Badge>
@@ -586,7 +600,7 @@ export default function MemberDashboard() {
                   )}
                 </CardContent>
               </Card>
-               {teamValidation.isRegistered() && (
+               {teamValidation.isRegistered && (
                 <Card>
                     <CardHeader>
                         <CardTitle>Download Presentation Format</CardTitle>
