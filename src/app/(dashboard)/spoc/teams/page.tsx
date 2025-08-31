@@ -277,7 +277,7 @@ export default function SpocTeamsPage() {
                       (selectedPsIds.length > 0 && team.problemStatementId && selectedPsIds.includes(team.problemStatementId));
       
       const memberCount = team.members.length + 1;
-      const memberCountMatch = memberCountFilter === 'All' || memberCount === memberCount;
+      const memberCountMatch = memberCountFilter === "All" || memberCount === memberCount;
 
       return statusMatch && psMatch && memberCountMatch;
     });
