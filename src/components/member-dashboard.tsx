@@ -21,7 +21,7 @@ import {
 import { useEffect, useState, useMemo } from "react"
 import { db } from "@/lib/firebase"
 import { doc, getDoc, onSnapshot, collection, query, where, getDocs } from "firebase/firestore"
-import type { Team, UserProfile } from "@/lib/types"
+import type { Team, UserProfile, Institute } from "@/lib/types"
 import { Alert, AlertDescription, AlertTitle } from "./ui/alert"
 import { useAuth } from "@/hooks/use-auth"
 import { AnnouncementsSection } from "./announcements-section"
@@ -47,6 +47,7 @@ import { leaveTeam } from "@/ai/flows/leave-team-flow"
 import { Input } from "./ui/input"
 import { useRouter } from "next/navigation"
 import { RegistrationReminderDialog } from "./registration-reminder-dialog"
+import { format } from "date-fns"
 
 type SortKey = "name" | "role" | "email" | "contactNumber" | "enrollmentNumber" | "yearOfStudy" | "semester"
 type SortDirection = "asc" | "desc"
@@ -84,6 +85,7 @@ export default function MemberDashboard() {
   const [inviteLink, setInviteLink] = useState("")
   const router = useRouter()
   const [showReminder, setShowReminder] = useState(false);
+  const [instituteData, setInstituteData] = useState<Institute | null>(null);
 
   const teamValidation = useMemo(() => {
     if (!team || teamMembers.length === 0) {
@@ -163,6 +165,21 @@ export default function MemberDashboard() {
 
     return () => unsubscribeTeam();
   }, [user?.teamId, toast]);
+
+   useEffect(() => {
+    if (!team?.institute) return;
+
+    const q = query(collection(db, "institutes"), where("name", "==", team.institute));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+        if (!snapshot.empty) {
+            const data = snapshot.docs[0].data() as Institute;
+            setInstituteData(data);
+        }
+    });
+
+    return () => unsubscribe();
+  }, [team?.institute]);
+
 
   const sortedTeamMembers = useMemo(() => {
     const leader = teamMembers.find((m) => m.role === "leader")
@@ -489,6 +506,22 @@ export default function MemberDashboard() {
           <div className="grid gap-8 lg:grid-cols-2">
             <AnnouncementsSection audience="spoc_teams" />
             <div className="space-y-8">
+                <Card>
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-2"><Calendar /> Institute Hackathon Dates</CardTitle>
+                        <CardDescription>Your SPOC has set the following dates for your internal institute hackathon.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        {instituteData?.evaluationDates && instituteData.evaluationDates.length > 0 ? (
+                            <div className="flex items-center gap-2 text-lg font-semibold">
+                                {instituteData.evaluationDates.map((d: any) => d.toDate()).map(date => format(date, 'do MMMM, yyyy')).join(' & ')}
+                            </div>
+                        ) : (
+                            <p className="text-muted-foreground">Your institute SPOC has not set the evaluation dates yet.</p>
+                        )}
+                    </CardContent>
+                </Card>
+
               <Card>
                 <CardHeader>
                   <CardTitle>Problem Statement & Category</CardTitle>

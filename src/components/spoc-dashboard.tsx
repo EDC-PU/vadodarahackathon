@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { Button } from "@/components/ui/button";
@@ -9,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { useEffect, useState, useMemo, useCallback, useRef } from "react";
 import { auth, db } from "@/lib/firebase";
 import { doc, getDoc, collection, query, where, onSnapshot, updateDoc } from "firebase/firestore";
-import { Team, UserProfile, TeamMember } from "@/lib/types";
+import { Team, UserProfile, TeamMember, Institute } from "@/lib/types";
 import { Alert, AlertTitle, AlertDescription } from "./ui/alert";
 import { AnnouncementsSection } from "./announcements-section";
 import { useToast } from "@/hooks/use-toast";
@@ -36,6 +37,7 @@ import { getTeamInviteLink } from "@/ai/flows/get-team-invite-link-flow";
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "./ui/scroll-area";
 import { isAfter, startOfDay } from 'date-fns';
+import Link from "next/link";
 
 type SortKey = 'teamName' | 'teamNumber' | 'name' | 'email' | 'enrollmentNumber' | 'contactNumber';
 type SortDirection = 'asc' | 'desc';
@@ -55,7 +57,22 @@ export default function SpocDashboard() {
   const [inviteLinks, setInviteLinks] = useState<Map<string, string>>(new Map());
   const [loadingLink, setLoadingLink] = useState<string | null>(null);
   const [evaluationExportDate, setEvaluationExportDate] = useState<Date | null>(null);
+  const [instituteData, setInstituteData] = useState<Institute | null>(null);
   const appBaseUrl = "https://vadodarahackathon.pierc.org";
+  
+  useEffect(() => {
+    if (!user?.institute) return;
+
+    const q = query(collection(db, "institutes"), where("name", "==", user.institute));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+        if (!snapshot.empty) {
+            const data = snapshot.docs[0].data() as Institute;
+            setInstituteData(data);
+        }
+    });
+
+    return () => unsubscribe();
+  }, [user?.institute]);
   
   useEffect(() => {
     const fetchConfig = async () => {
@@ -396,6 +413,20 @@ export default function SpocDashboard() {
             )}
         </div>
       </header>
+
+      {instituteData && !instituteData.evaluationDates && (
+        <Alert className="mb-8 border-primary text-primary-foreground">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle className="font-bold">Action Required: Set Your Hackathon Dates</AlertTitle>
+          <AlertDescription>
+            Please go to the "Evaluation & Nomination" page to set the internal hackathon dates for your institute. This is a required step.
+            <Button asChild variant="link" className="p-0 pl-2 h-auto text-primary-foreground font-bold">
+              <Link href="/spoc/evaluation">Set Dates Now</Link>
+            </Button>
+          </AlertDescription>
+        </Alert>
+      )}
+
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-8">
           <Card>
