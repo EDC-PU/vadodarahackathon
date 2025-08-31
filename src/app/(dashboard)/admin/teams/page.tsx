@@ -182,7 +182,7 @@ function AllTeamsContent() {
                         (selectedPsIds.length > 0 && team.problemStatementId && selectedPsIds.includes(team.problemStatementId));
         
         const memberCount = team.members.length + 1; // Leader + members
-        const memberCountMatch = memberCountFilter === "All" || memberCount === memberCountFilter;
+        const memberCountMatch = memberCountFilter === "All" || memberCount === memberCount;
 
         let searchMatch = true;
         if (searchTerm) {
