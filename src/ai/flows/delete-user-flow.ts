@@ -7,34 +7,7 @@
 import { ai } from '@/ai/genkit';
 import { getAdminAuth, getAdminDb } from '@/lib/firebase-admin';
 import { DeleteUserInput, DeleteUserInputSchema, DeleteUserOutput, DeleteUserOutputSchema, Team, UserProfile } from '@/lib/types';
-import nodemailer from 'nodemailer';
-import { sendMemberLeftEmail } from '@/lib/email-templates';
 import { FieldValue } from 'firebase-admin/firestore';
-
-async function sendNotificationEmailToLeader(leaderEmail: string, teamName: string, deletedUserName: string) {
-    if (!process.env.GMAIL_EMAIL || !process.env.GMAIL_PASSWORD) {
-        console.error("GMAIL_EMAIL or GMAIL_PASSWORD environment variables not set.");
-        throw new Error("Missing GMAIL_EMAIL or GMAIL_PASSWORD environment variables. Please set them in your .env file.");
-    }
-    const transporter = nodemailer.createTransport({
-        service: 'gmail',
-        auth: {
-            user: process.env.GMAIL_EMAIL,
-            pass: process.env.GMAIL_PASSWORD,
-        },
-    });
-
-    const emailHtml = sendMemberLeftEmail(leaderEmail, deletedUserName, teamName);
-
-    const mailOptions = {
-        from: `"Vadodara Hackathon 6.0" <${process.env.GMAIL_EMAIL}>`,
-        to: leaderEmail,
-        subject: `Member Update for your team: ${teamName}`,
-        html: emailHtml,
-    };
-
-    await transporter.sendMail(mailOptions);
-}
 
 
 export async function deleteUser(input: DeleteUserInput): Promise<DeleteUserOutput> {
@@ -106,18 +79,11 @@ const deleteUserFlow = ai.defineFlow(
                     createdAt: FieldValue.serverTimestamp(),
                     link: '/leader'
                 });
-                
-                // 3. Send email notification to leader (outside of batch)
-                try {
-                    await sendNotificationEmailToLeader(teamData.leader.email, teamData.name, userProfile.name);
-                } catch (emailError: any) {
-                    console.warn(`User was removed from team, but could not send email to leader ${teamData.leader.email}. Reason: ${emailError.message}`);
-                }
             }
         }
       }
 
-      // 4. Log this activity
+      // 3. Log this activity
       const logDocRef = adminDb.collection("logs").doc();
       batch.set(logDocRef, {
           id: logDocRef.id,
@@ -126,13 +92,13 @@ const deleteUserFlow = ai.defineFlow(
           createdAt: FieldValue.serverTimestamp(),
       });
 
-      // 5. Delete user from Firestore
+      // 4. Delete user from Firestore
       batch.delete(userDocRef);
       console.log(`Successfully scheduled deletion of user document from Firestore for UID: ${uid}`);
 
       await batch.commit();
 
-      // 6. Delete user from Firebase Auth
+      // 5. Delete user from Firebase Auth
       await adminAuth.deleteUser(uid);
       console.log(`Successfully deleted user from Firebase Authentication for UID: ${uid}`);
 

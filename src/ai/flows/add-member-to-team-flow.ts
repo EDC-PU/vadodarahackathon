@@ -11,47 +11,6 @@ import nodemailer from 'nodemailer';
 import { getEmailTemplate, getTeamRegistrationCompleteEmail } from '@/lib/email-templates';
 import { FieldValue } from 'firebase-admin/firestore';
 
-async function sendNewMemberNotificationEmail(leaderEmail: string, leaderName: string, teamName: string, newMember: { name: string, email: string, contactNumber?: string }) {
-  console.log(`Attempting to send new member notification to: ${leaderEmail}`);
-    if (!process.env.GMAIL_EMAIL || !process.env.GMAIL_PASSWORD) {
-        console.error("GMAIL_EMAIL or GMAIL_PASSWORD environment variables not set.");
-        throw new Error("Missing GMAIL_EMAIL or GMAIL_PASSWORD environment variables. Please set them in your .env file.");
-    }
-    const transporter = nodemailer.createTransport({
-        service: 'gmail',
-        auth: {
-            user: process.env.GMAIL_EMAIL,
-            pass: process.env.GMAIL_PASSWORD,
-        },
-    });
-
-    const emailHtml = getEmailTemplate({
-        title: "A New Member Has Joined Your Team!",
-        body: `
-            <p>Hi ${leaderName},</p>
-            <p>Great news! A new member has just joined your team, <strong>${teamName}</strong>. Here are their details:</p>
-            <div class="credentials">
-                <p><strong>Name:</strong> ${newMember.name}</p>
-                <p><strong>Email:</strong> ${newMember.email}</p>
-                <p><strong>Contact:</strong> ${newMember.contactNumber || 'N/A'}</p>
-            </div>
-            <p>You can view your full team roster on your dashboard.</p>
-        `,
-        buttonLink: "https://vadodarahackathon.pierc.org/leader",
-        buttonText: "Go to Your Dashboard"
-    });
-
-    const mailOptions = {
-        from: `"Vadodara Hackathon 6.0" <${process.env.GMAIL_EMAIL}>`,
-        to: leaderEmail,
-        subject: `New Member Alert: ${newMember.name} joined ${teamName}`,
-        html: emailHtml,
-    };
-
-    await transporter.sendMail(mailOptions);
-    console.log(`Successfully sent new member notification to ${leaderEmail}.`);
-}
-
 
 export async function addMemberToTeam(input: AddMemberToTeamInput): Promise<AddMemberToTeamOutput> {
   console.log("Executing addMemberToTeam function...");
@@ -162,13 +121,7 @@ const addMemberToTeamFlow = ai.defineFlow(
             console.log(`Team ${teamData.name} registration is complete. Sending confirmation email.`);
             await getTeamRegistrationCompleteEmail(teamData.leader.email, teamData.leader.name, teamData.name);
         } else {
-            console.log(`Team ${teamData.name} not yet complete. Sending new member notification.`);
-            await sendNewMemberNotificationEmail(
-                teamData.leader.email, 
-                teamData.leader.name, 
-                teamData.name, 
-                { name: newMember.name, email: newMember.email, contactNumber: newMember.contactNumber }
-            );
+            console.log(`Team ${teamData.name} not yet complete. Member joined notification disabled.`);
         }
       } catch (emailError: any) {
         console.warn(`User was added to the team, but failed to send notification email to leader ${teamData.leader.email}. Reason: ${emailError.message}`);
