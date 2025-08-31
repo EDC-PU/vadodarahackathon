@@ -64,7 +64,7 @@ const exportEvaluationFlow = ai.defineFlow(
         for (const team of teams) {
             const row = sheet.getRow(currentRowIndex);
             
-            // Using placeholder keys to set values
+            // Using column letters as keys to set values
             row.getCell('B').value = srNumber++; // sr
             row.getCell('C').value = team.team_name; // team_name
             row.getCell('D').value = team.leader_name; // leader_name
