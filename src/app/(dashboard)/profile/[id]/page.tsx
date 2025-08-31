@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -104,7 +105,8 @@ export default function ProfilePage() {
 
     const canEdit = (authUser?.role === 'admin' || 
                     authUser?.enrollmentNumber === enrollmentId || 
-                    (authUser?.role === 'spoc' && authUser.institute === profile?.institute)) && !isDeadlinePassed;
+                    (authUser?.role === 'spoc' && authUser.institute === profile?.institute)) && 
+                    (!isDeadlinePassed || team?.isLocked === false);
 
     // Fetch Institutes List
     useEffect(() => {
@@ -289,7 +291,7 @@ export default function ProfilePage() {
 
     return (
         <div className="p-4 sm:p-6 lg:p-8 space-y-8">
-            {isDeadlinePassed && (
+            {isDeadlinePassed && team?.isLocked && (
                 <Alert>
                     <AlertCircle className="h-4 w-4" />
                     <AlertTitle>Registration Deadline Passed</AlertTitle>

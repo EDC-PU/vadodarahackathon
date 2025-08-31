@@ -4,7 +4,7 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Loader2, Download, Save, Pencil, X, Trash2, MinusCircle, ChevronDown, ArrowUpDown, FileText, RefreshCw } from "lucide-react";
+import { Loader2, Download, Save, Pencil, X, Trash2, MinusCircle, ChevronDown, ArrowUpDown, FileText, RefreshCw, Lock, Unlock } from "lucide-react";
 import { useEffect, useState, useMemo, useCallback, Suspense } from "react";
 import { db } from "@/lib/firebase";
 import { collection, onSnapshot, doc, updateDoc, query, orderBy, getDocs, where } from "firebase/firestore";
@@ -41,6 +41,9 @@ import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { toggleTeamLock } from "@/ai/flows/toggle-team-lock-flow";
 
 type CategoryFilter = ProblemStatementCategory | "All Categories";
 type StatusFilter = "All Statuses" | "Registered" | "Pending";
@@ -93,13 +96,30 @@ function AllTeamsContent() {
   const [selectedProblemStatements, setSelectedProblemStatements] = useState<string[]>([]);
   const [filteredProblemStatements, setFilteredProblemStatements] = useState<ProblemStatement[]>([]);
   const [sortConfig, setSortConfig] = useState<{ key: SortKey, direction: SortDirection } | null>(null);
-
+  const [deadline, setDeadline] = useState<Date | null>(null);
 
   const { toast } = useToast();
   const searchParams = useSearchParams();
   
   const categories: CategoryFilter[] = ["All Categories", "Software", "Hardware"];
   const statuses: StatusFilter[] = ["All Statuses", "Registered", "Pending"];
+
+  useEffect(() => {
+    const fetchDeadline = async () => {
+        try {
+            const configDocRef = doc(db, "config", "event");
+            const configDoc = await getDoc(configDocRef);
+            if (configDoc.exists() && configDoc.data()?.registrationDeadline) {
+                setDeadline(configDoc.data().registrationDeadline.toDate());
+            }
+        } catch (error) {
+            console.error("Could not fetch registration deadline:", error);
+        }
+    };
+    fetchDeadline();
+  }, []);
+
+  const isDeadlinePassed = deadline ? new Date() > deadline : false;
 
   useEffect(() => {
     const psIdFromQuery = searchParams.get('problemStatementId');
@@ -458,6 +478,7 @@ function AllTeamsContent() {
                     ...member,
                     teamName: team.name,
                     teamId: team.id,
+                    isLocked: team.isLocked ?? true,
                     teamNumber: team.teamNumber,
                     isNominated: team.isNominated,
                     problemStatementId: team.problemStatementId || 'Not Selected',
@@ -527,6 +548,22 @@ function AllTeamsContent() {
         setSelectedTeamIds(prev => prev.filter(id => id !== teamId));
     }
   };
+
+  const handleLockToggle = async (teamId: string, currentLockState: boolean) => {
+      setIsSaving(`lock-${teamId}`);
+      try {
+          const result = await toggleTeamLock({ teamId, isLocked: !currentLockState });
+          if(result.success) {
+              toast({ title: "Success", description: result.message });
+          } else {
+              throw new Error(result.message);
+          }
+      } catch(error: any) {
+           toast({ title: "Error", description: error.message, variant: "destructive" });
+      } finally {
+          setIsSaving(null);
+      }
+  }
 
   return (
     <div className="p-4 sm:p-6 lg:p-8">
@@ -665,6 +702,7 @@ function AllTeamsContent() {
                           <TableHead>
                               <Button variant="ghost" onClick={() => requestSort('problemStatementId')}>Problem Statement {getSortIndicator('problemStatementId')}</Button>
                           </TableHead>
+                           <TableHead>Lock Status</TableHead>
                           <TableHead>
                               <Button variant="ghost" onClick={() => requestSort('name')}>Member Name {getSortIndicator('name')}</Button>
                           </TableHead>
@@ -728,6 +766,22 @@ function AllTeamsContent() {
                                 </TableCell>
                               )}
                               {row.isFirstRow && <TableCell rowSpan={row.rowSpan} className="align-top">{row.problemStatementId}</TableCell>}
+                              {row.isFirstRow && (
+                                <TableCell rowSpan={row.rowSpan} className="align-top">
+                                    <div className="flex items-center space-x-2">
+                                        <Switch
+                                            id={`lock-switch-${row.teamId}`}
+                                            checked={!row.isLocked}
+                                            onCheckedChange={() => handleLockToggle(row.teamId, !row.isLocked)}
+                                            disabled={!isDeadlinePassed || isSaving === `lock-${row.teamId}`}
+                                        />
+                                        <Label htmlFor={`lock-switch-${row.teamId}`} className="flex items-center gap-1.5">
+                                            {!row.isLocked ? <Unlock className="h-4 w-4 text-green-500" /> : <Lock className="h-4 w-4 text-destructive"/>}
+                                            {!row.isLocked ? 'Unlocked' : 'Locked'}
+                                        </Label>
+                                    </div>
+                                </TableCell>
+                              )}
                                <TableCell className="whitespace-normal">
                                   {row.enrollmentNumber && row.enrollmentNumber !== 'N/A' ? (
                                       <Link href={`/profile/${row.enrollmentNumber}`} className="hover:underline">
@@ -770,7 +824,7 @@ function AllTeamsContent() {
                                               </AlertDialogHeader>
                                               <AlertDialogFooter>
                                               <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                              <AlertDialogAction onClick={() => handleDeleteTeam(row.teamId)} className="bg-destructive hover:bg-destructive/90">Delete</AlertDialogAction>
+                                              <AlertDialogAction onClick={() => handleDeleteTeam(row.teamId)} className="bg-destructive hover:bg-destructive/90">Delete Team</AlertDialogAction>
                                               </AlertDialogFooter>
                                           </AlertDialogContent>
                                       </AlertDialog>
@@ -819,4 +873,3 @@ export default function AllTeamsPage() {
     )
 }
     
-

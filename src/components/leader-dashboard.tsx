@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { Button } from "@/components/ui/button";
@@ -157,6 +158,7 @@ export default function LeaderDashboard() {
   }, []);
 
   const isDeadlinePassed = deadline ? new Date() > deadline : false;
+  const canEdit = !isDeadlinePassed || team?.isLocked === false;
 
   const teamValidation = useMemo(() => {
     if (!team || teamMembers.length === 0) {
@@ -297,7 +299,7 @@ export default function LeaderDashboard() {
 
 
   const handleRemoveMember = async (memberToRemove: UserProfile) => {
-    if (!team) return;
+    if (!team || !canEdit) return;
     setIsRemoving(memberToRemove.email);
 
     try {
@@ -491,7 +493,7 @@ export default function LeaderDashboard() {
                                           {!isLeader && (
                                               <AlertDialog>
                                                   <AlertDialogTrigger asChild>
-                                                      <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-destructive" disabled={isRemoving === member.email || isDeadlinePassed}>
+                                                      <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-destructive" disabled={isRemoving === member.email || !canEdit}>
                                                       {isRemoving === member.email ? <Loader2 className="h-4 w-4 animate-spin"/> : <Trash2 className="h-4 w-4"/>}
                                                       </Button>
                                                   </AlertDialogTrigger>
@@ -549,7 +551,7 @@ export default function LeaderDashboard() {
                               <div className="mt-4 pt-4 border-t flex justify-end">
                                   <AlertDialog>
                                       <AlertDialogTrigger asChild>
-                                          <Button variant="destructive" size="sm" disabled={isRemoving === member.email || isDeadlinePassed}>
+                                          <Button variant="destructive" size="sm" disabled={isRemoving === member.email || !canEdit}>
                                           {isRemoving === member.email ? <Loader2 className="h-4 w-4 animate-spin"/> : <Trash2 className="h-4 w-4"/>}
                                           <span className="ml-2">Remove</span>
                                           </Button>
@@ -695,7 +697,7 @@ export default function LeaderDashboard() {
                                 <p className="text-muted-foreground">Your team has selected:</p>
                                 <h3 className="text-lg font-semibold">{team.problemStatementTitle}</h3>
                                 <p className="text-sm">Team Category: <span className="font-semibold">{team.category}</span></p>
-                                 <Button variant="outline" asChild disabled={isDeadlinePassed}>
+                                 <Button variant="outline" asChild disabled={!canEdit}>
                                     <Link href="/leader/select-problem-statement">
                                         <Pencil className="mr-2 h-4 w-4" /> Change Problem Statement
                                     </Link>
@@ -705,7 +707,7 @@ export default function LeaderDashboard() {
                         ) : (
                             <div className="flex flex-col items-start gap-4">
                                 <p>Your team has not selected a problem statement yet.</p>
-                                <Button asChild disabled={isDeadlinePassed}>
+                                <Button asChild disabled={!canEdit}>
                                    <Link href="/leader/select-problem-statement">
                                         <FileText className="mr-2 h-4 w-4" /> Select Problem Statement
                                    </Link>

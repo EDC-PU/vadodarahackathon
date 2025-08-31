@@ -112,6 +112,7 @@ export interface Team {
   isNominated?: boolean;
   sihSelectionStatus?: 'university' | 'institute';
   ssihEnrolled?: boolean;
+  isLocked?: boolean;
 }
 
 export interface Institute {
@@ -199,7 +200,7 @@ export const AddMemberToTeamInputSchema = z.object({
   email: z.string().email().describe("The email of the user."),
   enrollmentNumber: z.string().optional().describe("The enrollment number of the user."),
   contactNumber: z.string().optional().describe("The contact number of the user."),
-  gender: z.enum(["M", "F", "O"]).optional().describe("The gender of the user."),
+  gender: z.enum(["M", "F", "O"]),
   semester: z.number().optional().describe("The semester of the user."),
   yearOfStudy: z.string().optional().describe("The year of study of the user."),
 });
@@ -467,3 +468,17 @@ export const LeaveTeamOutputSchema = z.object({
   message: z.string(),
 });
 export type LeaveTeamOutput = z.infer<typeof LeaveTeamOutputSchema>;
+
+
+// toggle-team-lock-flow
+export const ToggleTeamLockInputSchema = z.object({
+  teamId: z.string().describe("The ID of the team to lock/unlock."),
+  isLocked: z.boolean().describe("The desired lock state."),
+});
+export type ToggleTeamLockInput = z.infer<typeof ToggleTeamLockInputSchema>;
+
+export const ToggleTeamLockOutputSchema = z.object({
+  success: z.boolean(),
+  message: z.string(),
+});
+export type ToggleTeamLockOutput = z.infer<typeof ToggleTeamLockOutputSchema>;

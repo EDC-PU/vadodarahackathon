@@ -27,3 +27,4 @@ import '@/ai/flows/set-evaluation-dates-flow.ts';
 import '@/ai/flows/set-sih-status-flow.ts';
 import '@/ai/flows/enroll-team-in-ssih-flow.ts';
 import '@/ai/flows/bulk-delete-users-flow.ts';
+import '@/ai/flows/toggle-team-lock-flow.ts';
