@@ -59,25 +59,36 @@ const exportEvaluationFlow = ai.defineFlow(
         // 3. Populate Workbook with Data
         console.log("Step 3: Populating workbook with team data...");
         const startRow = 8;
-        
-        teams.forEach((team, index) => {
-            const currentRow = startRow + index;
-            const row = sheet.getRow(currentRow);
-            
-            row.getCell('B').value = index + 1; // sr
-            row.getCell('C').value = team.team_name; // team_name
-            row.getCell('D').value = team.leader_name; // leader_name
-            row.getCell('E').value = team.team_id; // team_id
-            row.getCell('F').value = team.problemstatement_id; // problemstatement_id
-            row.getCell('G').value = team.problemstatement_title; // problemstatement_title
-            
-            // To ensure subsequent rows exist with the same styling, we duplicate the template row
-            // *before* writing the next record, but only if there are more records to write.
-            if (index < teams.length - 1) {
-                sheet.duplicateRow(currentRow, 1, true);
-            }
-        });
+        const templateRow = sheet.getRow(startRow);
 
+        // Remove the placeholder template row if there's actual data to insert.
+        // If there's no data, we'll just return the template as is.
+        if (teams.length > 0) {
+            sheet.spliceRows(startRow, 1);
+        }
+
+        teams.forEach((team, index) => {
+            const newRow = sheet.insertRow(startRow + index, [
+                null, // A is empty
+                index + 1, // B - Sr
+                team.team_name, // C
+                team.leader_name, // D
+                team.team_id, // E
+                team.problemstatement_id, // F
+                team.problemstatement_title, // G
+            ]);
+
+            // Apply styles from template row to the new row
+            newRow.eachCell({ includeEmpty: true }, (cell, colNumber) => {
+                const templateCell = templateRow.getCell(colNumber);
+                cell.style = templateCell.style;
+                cell.font = templateCell.font;
+                cell.alignment = templateCell.alignment;
+                cell.border = templateCell.border;
+                cell.fill = templateCell.fill;
+            });
+        });
+        
         console.log(`Populated ${teams.length} teams.`);
 
 
