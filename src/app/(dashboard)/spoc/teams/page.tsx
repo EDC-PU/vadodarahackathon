@@ -9,9 +9,9 @@ import { Loader2, AlertCircle, Save, Pencil, X, Trash2, Users, User, MinusCircle
 import { Badge } from "@/components/ui/badge";
 import { useEffect, useState, useMemo, useCallback } from "react";
 import { db } from "@/lib/firebase";
-import { doc, onSnapshot, updateDoc, arrayRemove, collection, query, where, getDocs, writeBatch, addDoc, serverTimestamp, limit, deleteDoc, setDoc, orderBy } from "firebase/firestore";
+import { doc, onSnapshot, updateDoc, collection, query, where, getDocs, writeBatch, orderBy, getDoc } from "firebase/firestore";
 import { Team, UserProfile, TeamMember, ProblemStatement } from "@/lib/types";
-import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
+import { Alert, AlertTitle, AlertDescription } from "./ui/alert";
 import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
 import {
@@ -105,8 +105,7 @@ export default function SpocTeamsPage() {
     const teamsQuery = query(collection(db, "teams"), where("institute", "==", institute));
     const unsubscribeTeams = onSnapshot(teamsQuery, async (snapshot) => {
         const teamsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Team));
-        setTeams(teamsData);
-
+        
         const allUserIds = new Set<string>();
         teamsData.forEach(team => {
             allUserIds.add(team.leader.uid);
@@ -116,6 +115,8 @@ export default function SpocTeamsPage() {
         });
         
         const usersData = await getUserProfilesInChunks(Array.from(allUserIds));
+
+        setTeams(teamsData);
         setUsers(usersData);
         setLoading(false);
 
