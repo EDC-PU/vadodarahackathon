@@ -237,8 +237,7 @@ export default function SpocEvaluationPage() {
         <CardHeader>
           <CardTitle>Set Institute Hackathon Dates</CardTitle>
           <CardDescription>
-            Select the two dates your institute will hold its internal hackathon.
-            These must be between September 1st and 4th, 2025.
+            Select the two dates your institute will hold its internal hackathon. These must be between September 1st and 4th, 2025. This date would be shown to all teams from your institutes.
           </CardDescription>
         </CardHeader>
         <CardContent>
