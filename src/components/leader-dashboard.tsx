@@ -5,7 +5,7 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Team, UserProfile, TeamMember, TeamInvite, Notification } from "@/lib/types";
-import { AlertCircle, CheckCircle, PlusCircle, Trash2, User, Loader2, FileText, Pencil, Users2, Badge as BadgeIcon, ArrowUpDown, Link as LinkIcon, Copy, RefreshCw, Bell, X as CloseIcon } from "lucide-react";
+import { AlertCircle, CheckCircle, PlusCircle, Trash2, User, Loader2, FileText, Pencil, Users2, Badge as BadgeIcon, ArrowUpDown, Link as LinkIcon, Copy, RefreshCw, Bell, X as CloseIcon, Download } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "./ui/alert";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
@@ -703,6 +703,23 @@ export default function LeaderDashboard() {
                        )}
                     </CardContent>
                 </Card>
+
+                 {teamValidation.isRegistered() && (
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Download Presentation Format</CardTitle>
+                            <CardDescription>Your team is registered! Download the official presentation template to get started.</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <Button asChild>
+                                <a href="https://docs.google.com/presentation/d/1AbLYu27Ce3etXn1UhA-GXkQAabqgdtRg/edit?rtpof=true&sd=true" target="_blank" rel="noopener noreferrer">
+                                    <Download className="mr-2 h-4 w-4" />
+                                    Download Format
+                                </a>
+                            </Button>
+                        </CardContent>
+                    </Card>
+                )}
             </div>
         </div>
     </div>

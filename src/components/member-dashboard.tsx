@@ -1,4 +1,5 @@
 
+
 "use client"
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -15,6 +16,7 @@ import {
   ArrowUpDown,
   Trash2,
   LinkIcon,
+  Download,
 } from "lucide-react"
 import { useEffect, useState, useMemo } from "react"
 import { db } from "@/lib/firebase"
@@ -64,7 +66,7 @@ function IncompleteProfileAlert({ profile }: { profile: UserProfile }) {
             <AlertTitle>Your Profile is Incomplete</AlertTitle>
             <AlertDescription>
                 Please update your profile with the following details: {incompleteFields.join(', ')}. A complete profile is required for participation. 
-                For any queries, write to us at <a href="mailto:programs.pierc@paruluniversity.ac.in" className="underline">programs.pierc@paruluniversity.ac.in</a>.
+                For any queries, write to us at <a href="mailto:entrepreneurshipclub@paruluniversity.ac.in" className="underline">entrepreneurshipclub@paruluniversity.ac.in</a>.
             </AlertDescription>
         </Alert>
     );
@@ -88,8 +90,9 @@ export default function MemberDashboard() {
         return { isRegistered: () => false };
     }
     const femaleCount = teamMembers.filter(m => m.gender === "F").length;
+    const instituteCount = teamMembers.filter(m => m.institute === team.institute).length;
     return {
-        isRegistered: () => teamMembers.length === 6 && femaleCount >= 1,
+        isRegistered: () => teamMembers.length === 6 && femaleCount >= 1 && instituteCount >=3,
     };
   }, [team, teamMembers]);
 
@@ -550,39 +553,22 @@ export default function MemberDashboard() {
                   )}
                 </CardContent>
               </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>Hackathon Information</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <div className="flex items-start gap-3">
-                    <Calendar className="h-5 w-5 text-primary mt-1" />
-                    <div>
-                      <p>
-                        <strong>Intra-Institute Round:</strong> 3rd, 4th & 5th September, 2025
-                      </p>
-                      <p>
-                        <strong>Grand Finale:</strong> 6th September, 2025
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <Trophy className="h-5 w-5 text-primary" />
-                    <p>
-                      <strong>Rewards:</strong>{" "}
-                      <a
-                        href="https://vadodarahackathon.pierc.org"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-primary hover:underline"
-                      >
-                        Check the homepage for details.
-                      </a>
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
+               {teamValidation.isRegistered() && (
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Download Presentation Format</CardTitle>
+                        <CardDescription>Your team is registered! Download the official presentation template to get started.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <Button asChild>
+                            <a href="https://docs.google.com/presentation/d/1AbLYu27Ce3etXn1UhA-GXkQAabqgdtRg/edit?rtpof=true&sd=true" target="_blank" rel="noopener noreferrer">
+                                <Download className="mr-2 h-4 w-4" />
+                                Download Format
+                            </a>
+                        </Button>
+                    </CardContent>
+                </Card>
+              )}
 
               <Card className="border-destructive">
                 <CardHeader>
