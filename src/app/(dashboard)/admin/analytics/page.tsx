@@ -114,7 +114,7 @@ export default function AnalyticsPage() {
   const getGenderData = (): GenderChartData[] => {
     const registeredTeams = teams.filter(team => {
       const members = [team.leader, ...team.members].map(m => users.find(u => u.uid === m.uid)).filter(Boolean) as UserProfile[];
-      return members.length === 6 && members.some(m => m.gender === 'F');
+      return members.length === 6 && members.some(m => m.gender === 'F') && !!team.problemStatementId;
     });
 
     const registeredParticipantUids = new Set(registeredTeams.flatMap(t => [t.leader.uid, ...t.members.map(m => m.uid)]));
@@ -140,7 +140,7 @@ export default function AnalyticsPage() {
        const members = users.filter(u => allMemberUIDs.includes(u.uid));
        const hasFemale = members.some(m => m.gender === 'F');
        
-       if (members.length === 6 && hasFemale) {
+       if (members.length === 6 && hasFemale && !!team.problemStatementId) {
          registeredCount++;
        } else {
          pendingCount++;

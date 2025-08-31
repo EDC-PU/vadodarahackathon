@@ -108,7 +108,7 @@ export default function SpocAnalyticsPage() {
        const hasFemale = members.some(m => m.gender === 'F');
        const instituteCount = members.filter(m => m.institute === team.institute).length;
 
-       if (members.length === 6 && hasFemale && instituteCount >= 3) {
+       if (members.length === 6 && hasFemale && instituteCount >= 3 && !!team.problemStatementId) {
          registeredCount++;
        } else {
          pendingCount++;
@@ -123,7 +123,7 @@ export default function SpocAnalyticsPage() {
   const getGenderData = (): GenderChartData[] => {
     const registeredTeams = teams.filter(team => {
       const members = [team.leader, ...team.members].map(m => users.find(u => u.uid === m.uid)).filter(Boolean) as UserProfile[];
-      return members.length === 6 && members.some(m => m.gender === 'F') && members.filter(m => m.institute === team.institute).length >= 3;
+      return members.length === 6 && members.some(m => m.gender === 'F') && members.filter(m => m.institute === team.institute).length >= 3 && !!team.problemStatementId;
     });
 
     const registeredParticipantUids = new Set(registeredTeams.flatMap(t => [t.leader.uid, ...t.members.map(m => m.uid)]));

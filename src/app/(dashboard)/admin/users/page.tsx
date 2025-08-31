@@ -218,7 +218,7 @@ export default function ManageUsersPage() {
     const femaleCount = allMemberProfiles.filter(m => m.gender === 'F').length;
     const instituteCount = allMemberProfiles.filter(m => m.institute === team.institute).length;
 
-    return (memberCount === 6 && femaleCount >= 1 && instituteCount >= 3) ? 'Registered' : 'Pending';
+    return (memberCount === 6 && femaleCount >= 1 && instituteCount >= 3 && !!team.problemStatementId) ? 'Registered' : 'Pending';
   };
   
   const filteredAndSortedUsers = useMemo(() => {

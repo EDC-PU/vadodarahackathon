@@ -161,6 +161,7 @@ export default function LeaderDashboard() {
             memberCount: { current: 0, required: 6, isMet: false },
             femaleCount: { current: 0, required: 1, isMet: false },
             instituteCount: { current: 0, required: 3, isMet: false },
+            psSelected: { isMet: false },
             isRegistered: false
         };
     }
@@ -171,6 +172,7 @@ export default function LeaderDashboard() {
     const femaleCount = allMemberProfiles.filter(m => m.gender === "F").length;
     const instituteCount = allMemberProfiles.filter(m => m.institute === team.institute).length;
     const memberCount = allMemberProfiles.length;
+    const psSelected = !!team.problemStatementId;
 
     return {
         memberCount: {
@@ -188,7 +190,10 @@ export default function LeaderDashboard() {
             required: 3,
             isMet: instituteCount >= 3,
         },
-        isRegistered: memberCount === 6 && femaleCount >= 1 && instituteCount >= 3,
+        psSelected: {
+            isMet: psSelected
+        },
+        isRegistered: memberCount === 6 && femaleCount >= 1 && instituteCount >= 3 && psSelected,
     };
   }, [team, teamMembers]);
 
@@ -644,6 +649,19 @@ export default function LeaderDashboard() {
                                 <AlertCircle className="h-4 w-4 text-destructive"/>
                                 <AlertTitle>Institute Representation Required</AlertTitle>
                                 <AlertDescription>Your team must include at least three members (including you) from your institute ({team.institute}).</AlertDescription>
+                            </Alert>
+                        )}
+                        {teamValidation.psSelected.isMet ? (
+                            <Alert variant="default" className="border-green-500/50 bg-transparent text-foreground">
+                                <CheckCircle className="h-4 w-4 text-green-500"/>
+                                <AlertTitle>Problem Statement Selected</AlertTitle>
+                                <AlertDescription>Your team has selected a problem statement.</AlertDescription>
+                            </Alert>
+                        ) : (
+                             <Alert variant="destructive" className="bg-transparent text-foreground">
+                                <AlertCircle className="h-4 w-4 text-destructive"/>
+                                <AlertTitle>Problem Statement Required</AlertTitle>
+                                <AlertDescription>Your team must select a problem statement to be fully registered.</AlertDescription>
                             </Alert>
                         )}
                     </CardContent>

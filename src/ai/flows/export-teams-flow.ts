@@ -88,9 +88,9 @@ const exportTeamsFlow = ai.defineFlow(
                 const femaleCount = allMemberProfiles.filter(m => m.gender === 'F').length;
                 const instituteCount = allMemberProfiles.filter(m => m.institute === team.institute).length;
 
+                const isRegistered = currentMemberCount === 6 && femaleCount >= 1 && instituteCount >= 3 && !!team.problemStatementId;
                 const statusMatch = status === 'All Statuses' || !status ? true : (
-                    status === 'Registered' ? (currentMemberCount === 6 && femaleCount >= 1 && instituteCount >= 3) :
-                    ! (currentMemberCount === 6 && femaleCount >= 1 && instituteCount >= 3)
+                    status === 'Registered' ? isRegistered : !isRegistered
                 );
                 
                 const memberCountMatch = memberCount === "All" || !memberCount ? true : currentMemberCount === memberCount;

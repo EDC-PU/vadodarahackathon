@@ -94,7 +94,7 @@ export default function MemberDashboard() {
     const femaleCount = teamMembers.filter(m => m.gender === "F").length;
     const instituteCount = teamMembers.filter(m => m.institute === team.institute).length;
     return {
-        isRegistered: () => teamMembers.length === 6 && femaleCount >= 1 && instituteCount >=3,
+        isRegistered: () => teamMembers.length === 6 && femaleCount >= 1 && instituteCount >=3 && !!team.problemStatementId,
     };
   }, [team, teamMembers]);
 

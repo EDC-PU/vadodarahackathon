@@ -204,7 +204,7 @@ function AllTeamsContent() {
 
         const femaleCount = allMemberProfiles.filter(m => m.gender === 'F').length;
         const instituteCount = allMemberProfiles.filter(m => m.institute === team.institute).length;
-        const isRegistered = memberCount === 6 && femaleCount >= 1 && instituteCount >= 3;
+        const isRegistered = memberCount === 6 && femaleCount >= 1 && instituteCount >= 3 && !!team.problemStatementId;
         
         const statusMatch = statusFilter === 'All Statuses' ? true : (statusFilter === 'Registered' ? isRegistered : !isRegistered);
         

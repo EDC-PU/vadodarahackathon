@@ -76,7 +76,7 @@ export default function ManageSpocsPage() {
         const hasFemale = teamMemberProfiles.some(m => m.gender === 'F');
         const instituteCount = teamMemberProfiles.filter(m => m.institute === team.institute).length;
 
-        if (teamMemberProfiles.length === 6 && hasFemale && instituteCount >= 3) {
+        if (teamMemberProfiles.length === 6 && hasFemale && instituteCount >= 3 && !!team.problemStatementId) {
             currentStats.registeredTeams += 1;
         }
 
