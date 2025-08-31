@@ -415,12 +415,12 @@ export default function SpocDashboard() {
       </header>
 
       {instituteData && !instituteData.evaluationDates && (
-        <Alert className="mb-8 border-primary text-primary-foreground">
+        <Alert variant="destructive" className="mb-8">
           <AlertCircle className="h-4 w-4" />
           <AlertTitle className="font-bold">Action Required: Set Your Hackathon Dates</AlertTitle>
           <AlertDescription>
             Please go to the "Evaluation & Nomination" page to set the internal hackathon dates for your institute. This is a required step.
-            <Button asChild variant="link" className="p-0 pl-2 h-auto text-primary-foreground font-bold">
+            <Button asChild variant="link" className="p-0 pl-2 h-auto text-destructive-foreground font-bold">
               <Link href="/spoc/evaluation">Set Dates Now</Link>
             </Button>
           </AlertDescription>
