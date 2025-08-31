@@ -65,9 +65,6 @@ const exportTeamsFlow = ai.defineFlow(
             if (category && category !== 'All Categories') {
                 teamsQuery = teamsQuery.where('category', '==', category);
             }
-            if (problemStatementIds && problemStatementIds.length > 0) {
-                teamsQuery = teamsQuery.where('problemStatementId', 'in', problemStatementIds);
-            }
 
             const teamsSnapshot = await teamsQuery.get();
             let teamsData = teamsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Team));
@@ -98,7 +95,14 @@ const exportTeamsFlow = ai.defineFlow(
                 
                 const memberCountMatch = memberCount === "All" || !memberCount ? true : currentMemberCount === memberCount;
                 
-                return statusMatch && memberCountMatch;
+                const showNotSelected = problemStatementIds?.includes('not-selected');
+                const selectedPsIds = problemStatementIds?.filter(id => id !== 'not-selected') || [];
+                
+                const psMatch = !problemStatementIds || problemStatementIds.length === 0 || 
+                                (showNotSelected && !team.problemStatementId) || 
+                                (selectedPsIds.length > 0 && team.problemStatementId && selectedPsIds.includes(team.problemStatementId));
+
+                return statusMatch && memberCountMatch && psMatch;
             });
 
 
