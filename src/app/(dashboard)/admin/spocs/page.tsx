@@ -3,19 +3,26 @@
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, PlusCircle, Calendar } from "lucide-react";
+import { Loader2, PlusCircle, Calendar, Users, CheckCircle } from "lucide-react";
 import { useEffect, useState, useMemo } from "react";
 import { db } from "@/lib/firebase";
 import { collection, query, where, onSnapshot } from "firebase/firestore";
-import { UserProfile, Institute } from "@/lib/types";
+import { UserProfile, Institute, Team } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 import { AddSpocDialog } from "@/components/add-spoc-dialog";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 
+interface InstituteStats {
+    totalTeams: number;
+    registeredTeams: number;
+}
+
 export default function ManageSpocsPage() {
   const [spocs, setSpocs] = useState<UserProfile[]>([]);
   const [institutes, setInstitutes] = useState<Institute[]>([]);
+  const [teams, setTeams] = useState<Team[]>([]);
+  const [users, setUsers] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [isAddSpocOpen, setIsAddSpocOpen] = useState(false);
   const { toast } = useToast();
@@ -23,36 +30,60 @@ export default function ManageSpocsPage() {
   useEffect(() => {
     setLoading(true);
 
-    const usersCollection = collection(db, 'users');
-    const spocsQuery = query(usersCollection, where("role", "==", "spoc"));
-    const unsubscribeSpocs = onSnapshot(spocsQuery, (snapshot) => {
-      const spocsData = snapshot.docs.map(doc => ({ uid: doc.id, ...doc.data() } as UserProfile));
-      setSpocs(spocsData);
-    }, (error) => {
-      console.error("Error fetching SPOCs:", error);
-      toast({ title: "Error", description: "Failed to fetch SPOC data.", variant: "destructive" });
-    });
-
+    const spocsQuery = query(collection(db, 'users'), where("role", "==", "spoc"));
     const institutesQuery = query(collection(db, 'institutes'));
-    const unsubscribeInstitutes = onSnapshot(institutesQuery, (snapshot) => {
-      const institutesData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Institute));
-      setInstitutes(institutesData);
-    }, (error) => {
-      console.error("Error fetching institutes:", error);
-      toast({ title: "Error", description: "Failed to fetch institute data.", variant: "destructive" });
-    });
+    const teamsQuery = query(collection(db, 'teams'));
+    const usersQuery = query(collection(db, 'users'));
 
-    // Combine loading states
+    const unsubSpocs = onSnapshot(spocsQuery, snap => setSpocs(snap.docs.map(d => ({ uid: d.id, ...d.data() } as UserProfile))));
+    const unsubInst = onSnapshot(institutesQuery, snap => setInstitutes(snap.docs.map(d => ({ id: d.id, ...d.data() } as Institute))));
+    const unsubTeams = onSnapshot(teamsQuery, snap => setTeams(snap.docs.map(d => ({ id: d.id, ...d.data() } as Team))));
+    const unsubUsers = onSnapshot(usersQuery, snap => setUsers(snap.docs.map(d => ({ uid: d.id, ...d.data() } as UserProfile))));
+
+    // Set loading to false once all initial data is likely fetched
     Promise.all([
-        new Promise(resolve => onSnapshot(spocsQuery, () => resolve(true))),
-        new Promise(resolve => onSnapshot(institutesQuery, () => resolve(true)))
-    ]).then(() => setLoading(false));
+        getDocs(spocsQuery),
+        getDocs(institutesQuery),
+        getDocs(teamsQuery),
+        getDocs(usersQuery)
+    ]).then(() => setLoading(false)).catch(err => {
+        console.error("Error during initial data fetch:", err);
+        toast({ title: "Error", description: "Failed to fetch initial data.", variant: "destructive" });
+        setLoading(false);
+    });
 
     return () => {
-      unsubscribeSpocs();
-      unsubscribeInstitutes();
+      unsubSpocs();
+      unsubInst();
+      unsubTeams();
+      unsubUsers();
     };
   }, [toast]);
+
+   const instituteStats = useMemo(() => {
+    const stats = new Map<string, InstituteStats>();
+    const userMap = new Map(users.map(u => [u.uid, u]));
+
+    teams.forEach(team => {
+        if (!team.institute) return;
+
+        const currentStats = stats.get(team.institute) || { totalTeams: 0, registeredTeams: 0 };
+        currentStats.totalTeams += 1;
+        
+        const memberUIDs = [team.leader.uid, ...team.members.map(m => m.uid)];
+        const teamMemberProfiles = memberUIDs.map(uid => userMap.get(uid)).filter(Boolean) as UserProfile[];
+        
+        const hasFemale = teamMemberProfiles.some(m => m.gender === 'F');
+        const instituteCount = teamMemberProfiles.filter(m => m.institute === team.institute).length;
+
+        if (teamMemberProfiles.length === 6 && hasFemale && instituteCount >= 3) {
+            currentStats.registeredTeams += 1;
+        }
+
+        stats.set(team.institute, currentStats);
+    });
+    return stats;
+  }, [teams, users]);
   
   const instituteMap = useMemo(() => {
     return institutes.reduce((map, inst) => {
@@ -109,6 +140,7 @@ export default function ManageSpocsPage() {
                     {spocs.map(spoc => {
                        const instituteDetails = spoc.institute ? instituteMap[spoc.institute] : null;
                        const evaluationDates = instituteDetails?.evaluationDates;
+                       const stats = spoc.institute ? instituteStats.get(spoc.institute) : null;
                        return (
                         <li key={spoc.uid} className="p-4 border rounded-md flex justify-between items-start">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-2 flex-1">
@@ -119,10 +151,12 @@ export default function ManageSpocsPage() {
                                     <p className="text-sm text-muted-foreground font-medium">{spoc.institute}</p>
                                 </div>
                                  <div className="space-y-1 text-sm text-muted-foreground">
-                                    <p><strong>AICTE No:</strong> {spoc.aicteApplicationNumber || 'N/A'}</p>
-                                    <p><strong>Principal:</strong> {spoc.principalInitial || ''} {spoc.principalName || 'N/A'}</p>
-                                    <p><strong>Principal Email:</strong> {spoc.principalEmail || 'N/A'}</p>
-                                     <div className="flex items-center gap-2 pt-1">
+                                    <div className="flex items-center gap-2 pt-1">
+                                        <Users className="h-4 w-4" />
+                                        <strong>Registered Teams:</strong>
+                                        <span className="font-medium text-foreground">{stats?.registeredTeams ?? 0} / {stats?.totalTeams ?? 0}</span>
+                                    </div>
+                                    <div className="flex items-center gap-2 pt-1">
                                         <Calendar className="h-4 w-4" />
                                         <strong>Hackathon Dates:</strong>
                                         {evaluationDates && evaluationDates.length > 0 ? (
@@ -131,6 +165,9 @@ export default function ManageSpocsPage() {
                                             <span className="text-destructive">Not Set</span>
                                         )}
                                     </div>
+                                    <p><strong>AICTE No:</strong> {spoc.aicteApplicationNumber || 'N/A'}</p>
+                                    <p><strong>Principal:</strong> {spoc.principalInitial || ''} {spoc.principalName || 'N/A'}</p>
+                                    <p><strong>Principal Email:</strong> {spoc.principalEmail || 'N/A'}</p>
                                 </div>
                             </div>
                             <Badge variant={getStatusVariant(spoc.spocStatus)} className={spoc.spocStatus === 'approved' ? 'bg-green-600' : ''}>
