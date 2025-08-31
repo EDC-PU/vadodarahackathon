@@ -9,7 +9,7 @@ import { Loader2, AlertCircle, Save, Pencil, X, Trash2, Users, User, MinusCircle
 import { Badge } from "@/components/ui/badge";
 import { useEffect, useState, useMemo, useCallback } from "react";
 import { db } from "@/lib/firebase";
-import { doc, onSnapshot, updateDoc, collection, query, where, orderBy, getDocs } from "firebase/firestore";
+import { doc, onSnapshot, updateDoc, arrayRemove, collection, query, where, getDocs, writeBatch, addDoc, serverTimestamp, limit, deleteDoc, setDoc, orderBy } from "firebase/firestore";
 import { Team, UserProfile, TeamMember, ProblemStatement } from "@/lib/types";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
