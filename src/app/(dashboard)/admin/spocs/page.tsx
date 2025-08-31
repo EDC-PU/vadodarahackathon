@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Loader2, PlusCircle, Calendar, Users, CheckCircle } from "lucide-react";
 import { useEffect, useState, useMemo } from "react";
 import { db } from "@/lib/firebase";
-import { collection, query, where, onSnapshot } from "firebase/firestore";
+import { collection, query, where, onSnapshot, getDocs } from "firebase/firestore";
 import { UserProfile, Institute, Team } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 import { AddSpocDialog } from "@/components/add-spoc-dialog";
