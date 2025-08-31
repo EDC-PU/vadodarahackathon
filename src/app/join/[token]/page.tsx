@@ -29,14 +29,25 @@ function JoinPageContent() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [processingJoin, setProcessingJoin] = useState(false);
+    const [joinCompleted, setJoinCompleted] = useState(false);
     
     const { user, loading: authLoading } = useAuth();
     const { toast } = useToast();
     
     useEffect(() => {
         const processJoin = async () => {
-            // Wait until auth is resolved and we have a token
-            if (authLoading || !token) {
+            // Prevent processing if auth is still loading, no token is present, or an error has occurred.
+            if (authLoading || !token || error) {
+                if(!token) setLoading(false);
+                return;
+            }
+
+            // Check if we just completed this join flow to prevent loops
+            const justCompleted = sessionStorage.getItem('justCompletedJoin');
+            if (justCompleted === token) {
+                console.log("Join flow already completed for this token, redirecting to dashboard.");
+                setJoinCompleted(true);
+                // No need to remove item here, as a page refresh would be a new attempt.
                 return;
             }
 
@@ -70,6 +81,7 @@ function JoinPageContent() {
                 // 2. Check if user is already on THIS team
                 if (user.teamId === teamId) {
                     toast({ title: "Already a Member", description: `You are already a member of ${teamName}.` });
+                    sessionStorage.setItem('justCompletedJoin', token); // Set flag to prevent loop on redirect
                     router.push('/member');
                     return;
                 }
@@ -102,6 +114,7 @@ function JoinPageContent() {
                 
                 if (joinResult.success) {
                     toast({ title: "Success!", description: `You have joined ${teamName}.` });
+                    sessionStorage.setItem('justCompletedJoin', token); // Set flag to prevent loop
                     router.push('/member');
                 } else {
                     throw new Error(joinResult.message);
@@ -116,8 +129,16 @@ function JoinPageContent() {
 
         processJoin();
 
-    }, [token, user, authLoading, router, toast]);
+    }, [token, user, authLoading, router, toast, error]);
 
+    if(joinCompleted) {
+        return (
+             <div className="flex flex-col items-center justify-center text-center gap-4 w-full max-w-md">
+                <CheckCircle className="h-12 w-12 text-green-500"/>
+                <p className="text-muted-foreground">Join process complete. Redirecting to your dashboard...</p>
+            </div>
+        )
+    }
 
     if (authLoading || loading || processingJoin) {
         return (

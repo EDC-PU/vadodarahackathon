@@ -166,16 +166,16 @@ export function CompleteProfileForm() {
                     finalTeamId = teamId;
                     toast({ title: "Welcome!", description: `You have successfully joined ${inviteData.teamName}.` });
                     
-                    sessionStorage.setItem('justCompletedJoin', 'true');
-                    sessionStorage.removeItem('inviteToken');
+                    // Set flag BEFORE removing token to prevent race condition on redirect
+                    sessionStorage.setItem('justCompletedJoin', inviteToken);
                 } else {
                     toast({ title: "Could Not Join Team", description: joinResult.message, variant: "destructive" });
-                    sessionStorage.removeItem('inviteToken');
                 }
             } else {
                  toast({ title: "Invite Invalid", description: "The invitation link is no longer valid.", variant: "destructive" });
-                 sessionStorage.removeItem('inviteToken');
             }
+             // Always remove token after attempt
+            sessionStorage.removeItem('inviteToken');
         }
 
         // Update the user's own profile document
@@ -386,6 +386,3 @@ export function CompleteProfileForm() {
 }
 
     
-
-
-
