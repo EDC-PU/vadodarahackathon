@@ -596,7 +596,7 @@ export default function SpocTeamsPage() {
                                 if (membersToDisplay.length === 0) return null;
 
                                 return membersToDisplay.map((member, memberIndex) => (
-                                    <TableRow key={`${team.id}-${member.uid || memberIndex}-${roleFilter}`}>
+                                    <TableRow key={`${team.id}-${member.uid || memberIndex}-${roleFilter}`} className="select-none">
                                         {memberIndex === 0 && (
                                             <TableCell rowSpan={membersToDisplay.length} className="font-medium align-top">
                                                 <div className="flex flex-col gap-2 items-start w-[250px]">
@@ -678,7 +678,7 @@ export default function SpocTeamsPage() {
                                                 `${member.name} ${member.isLeader ? '(Leader)' : ''}`
                                             )}
                                         </TableCell>
-                                        <TableCell>{member.email}</TableCell>
+                                        <TableCell className="select-text">{member.email}</TableCell>
                                         <TableCell>{member.enrollmentNumber || 'N/A'}</TableCell>
                                         <TableCell>
                                             {member.contactNumber ? (
@@ -764,7 +764,7 @@ export default function SpocTeamsPage() {
                                             </AlertDialog>
                                         )}
                                     </div>
-                                    <p className="text-muted-foreground">{member.email}</p>
+                                    <p className="text-muted-foreground select-text">{member.email}</p>
                                     <p className="text-muted-foreground">{member.enrollmentNumber}</p>
                                     </div>
                                 ))}
@@ -780,3 +780,4 @@ export default function SpocTeamsPage() {
     </div>
   );
 }
+
