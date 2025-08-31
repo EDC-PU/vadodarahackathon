@@ -50,16 +50,16 @@ const addMemberToTeamFlow = ai.defineFlow(
     try {
       // Check if registration is still open
       const configDoc = await configDocRef.get();
-      if (configDoc.exists()) {
+      if (configDoc.exists) {
         const deadline = configDoc.data()?.registrationDeadline?.toDate();
         if (deadline && new Date() > deadline) {
           return { success: false, message: "The registration deadline has passed. No new members can be added." };
         }
       }
 
-      const userDoc = await userDocRef.get();
-      if (userDoc.exists) {
-          const userData = userDoc.data() as UserProfile;
+      const userQuery = await adminDb.collection('users').where('uid', '==', userId).limit(1).get();
+      if (!userQuery.empty) {
+          const userData = userQuery.docs[0].data() as UserProfile;
           if (userData.teamId) {
               return { success: false, message: "This user is already a member of another team." };
           }
