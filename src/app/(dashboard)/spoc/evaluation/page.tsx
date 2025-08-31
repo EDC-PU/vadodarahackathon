@@ -41,7 +41,7 @@ import {
   Users,
   Download,
 } from "lucide-react";
-import { format, isAfter, startOfDay } from "date-fns";
+import { format, isAfter } from "date-fns";
 import { cn } from "@/lib/utils";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { setEvaluationDates } from "@/ai/flows/set-evaluation-dates-flow";
@@ -211,9 +211,6 @@ export default function SpocEvaluationPage() {
     ? isAfter(new Date(), (instituteData.evaluationDates[1] as any).toDate())
     : false;
   
-  const dateSelectionDeadline = new Date(2025, 7, 31); // August 31, 2025
-  const isDateDeadlinePassed = isAfter(new Date(), dateSelectionDeadline);
-
   const nominationLimit = instituteData?.nominationLimit ?? 0;
 
   if (loading || authLoading) {
@@ -241,72 +238,61 @@ export default function SpocEvaluationPage() {
           <CardTitle>Set Institute Hackathon Dates</CardTitle>
           <CardDescription>
             Select the two dates your institute will hold its internal hackathon.
-            These must be between September 1st and 4th, 2025. The deadline to set these dates is August 31, 2025.
+            These must be between September 1st and 4th, 2025.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {isDateDeadlinePassed ? (
-            <Alert variant="destructive">
-                <AlertCircle className="h-4 w-4" />
-                <AlertTitle>Deadline Passed</AlertTitle>
-                <AlertDescription>
-                    The deadline for setting or changing the hackathon dates was August 31, 2025.
-                </AlertDescription>
-            </Alert>
-          ) : (
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onDateSubmit)} className="space-y-8">
-                <FormField
-                  control={form.control}
-                  name="evaluationDates"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-col">
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <FormControl>
-                            <Button
-                              disabled={isDateDeadlinePassed}
-                              variant={"outline"}
-                              className={cn(
-                                "w-full justify-start text-left font-normal md:w-auto",
-                                !field.value?.length && "text-muted-foreground"
-                              )}
-                            >
-                              <CalendarIcon className="mr-2 h-4 w-4" />
-                              {field.value?.length > 0 ? (
-                                field.value
-                                  .map((date) => format(date, "PPP"))
-                                  .join(" and ")
-                              ) : (
-                                <span>Pick your two dates</span>
-                              )}
-                            </Button>
-                          </FormControl>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar
-                            mode="multiple"
-                            min={2}
-                            max={2}
-                            selected={field.value}
-                            onSelect={field.onChange}
-                            initialFocus
-                            fromDate={new Date(2025, 8, 1)}
-                            toDate={new Date(2025, 8, 4)}
-                          />
-                        </PopoverContent>
-                      </Popover>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <Button type="submit" disabled={isSaving || isDateDeadlinePassed}>
-                  {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Save Dates
-                </Button>
-              </form>
-            </Form>
-          )}
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onDateSubmit)} className="space-y-8">
+              <FormField
+                control={form.control}
+                name="evaluationDates"
+                render={({ field }) => (
+                  <FormItem className="flex flex-col">
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <FormControl>
+                          <Button
+                            variant={"outline"}
+                            className={cn(
+                              "w-full justify-start text-left font-normal md:w-auto",
+                              !field.value?.length && "text-muted-foreground"
+                            )}
+                          >
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {field.value?.length > 0 ? (
+                              field.value
+                                .map((date) => format(date, "PPP"))
+                                .join(" and ")
+                            ) : (
+                              <span>Pick your two dates</span>
+                            )}
+                          </Button>
+                        </FormControl>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="multiple"
+                          min={2}
+                          max={2}
+                          selected={field.value}
+                          onSelect={field.onChange}
+                          initialFocus
+                          fromDate={new Date(2025, 8, 1)}
+                          toDate={new Date(2025, 8, 4)}
+                        />
+                      </PopoverContent>
+                    </Popover>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <Button type="submit" disabled={isSaving}>
+                {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Save Dates
+              </Button>
+            </form>
+          </Form>
         </CardContent>
       </Card>
 
