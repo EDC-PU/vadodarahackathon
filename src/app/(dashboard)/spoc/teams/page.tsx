@@ -5,7 +5,7 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Loader2, AlertCircle, Save, Pencil, X, Trash2, Users, User, MinusCircle, ArrowUpDown, Link as LinkIcon, Copy, RefreshCw, ChevronDown, FileQuestion } from "lucide-react";
+import { Loader2, AlertCircle, Save, Pencil, X, Trash2, Users, MinusCircle, ArrowUpDown, ChevronDown } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useEffect, useState, useMemo, useCallback } from "react";
 import { db } from "@/lib/firebase";
@@ -38,7 +38,6 @@ import { useAuth } from "@/hooks/use-auth";
 import { exportTeams } from "@/ai/flows/export-teams-flow";
 import { Download, FileSpreadsheet } from "lucide-react";
 import { Buffer } from 'buffer';
-import { getTeamInviteLink } from "@/ai/flows/get-team-invite-link-flow";
 import Link from "next/link";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -87,22 +86,21 @@ export default function SpocTeamsPage() {
   const [selectedProblemStatements, setSelectedProblemStatements] = useState<string[]>([]);
   const [sortConfig, setSortConfig] = useState<{ key: SortKey, direction: SortDirection } | null>(null);
   const { toast } = useToast();
-  const [inviteLinks, setInviteLinks] = useState<Map<string, string>>(new Map());
-  const [loadingLink, setLoadingLink] = useState<string | null>(null);
   const [evaluationExportDate, setEvaluationExportDate] = useState<Date | null>(null);
   const [spocPsSelection, setSpocPsSelection] = useState<Record<string, string>>({});
-  const appBaseUrl = "https://vadodarahackathon.pierc.org";
-
+  
   const psSelectionDeadline = new Date('2025-08-31T23:59:59'); // Aug 31, 2025
   const canSpocSelectPs = isAfter(new Date(), psSelectionDeadline);
 
   const statuses: StatusFilter[] = ["All Statuses", "Registered", "Pending"];
 
-  const fetchAllData = useCallback((institute: string) => {
+  const fetchAllData = useCallback(() => {
+    if (!user?.institute) return;
+
     setLoading(true);
     
     // Fetch Teams
-    const teamsQuery = query(collection(db, "teams"), where("institute", "==", institute));
+    const teamsQuery = query(collection(db, "teams"), where("institute", "==", user.institute));
     const unsubscribeTeams = onSnapshot(teamsQuery, async (snapshot) => {
         const teamsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Team));
         
@@ -146,7 +144,7 @@ export default function SpocTeamsPage() {
         unsubscribePs();
         unsubscribeConfig();
     };
-  }, [toast]);
+  }, [toast, user?.institute]);
 
   const handleExport = async () => {
     setIsExporting(true);
@@ -243,7 +241,7 @@ export default function SpocTeamsPage() {
   useEffect(() => {
     let unsubscribe: (() => void) | undefined;
     if (user && user.institute) {
-      unsubscribe = fetchAllData(user.institute);
+      unsubscribe = fetchAllData();
     } else if (!authLoading) {
       setLoading(false);
     }
@@ -382,7 +380,7 @@ export default function SpocTeamsPage() {
           await updateDoc(teamDocRef, { name: editingTeam.name });
           toast({ title: "Success", description: "Team name updated." });
           setEditingTeam(null);
-          await fetchAllData(user!.institute!); // Refresh data
+          await fetchAllData(); // Refresh data
       } catch (error) {
           console.error("Error updating team name:", error);
           toast({ title: "Error", description: "Could not update team name.", variant: "destructive" });
@@ -404,7 +402,7 @@ export default function SpocTeamsPage() {
          toast({ title: "Error", description: "An unexpected error occurred.", variant: "destructive" });
     } finally {
         setIsProcessing(null);
-        fetchAllData(user!.institute!);
+        fetchAllData();
     }
   }
 
@@ -421,7 +419,7 @@ export default function SpocTeamsPage() {
          toast({ title: "Error", description: "An unexpected error occurred.", variant: "destructive" });
     } finally {
         setIsProcessing(null);
-        fetchAllData(user!.institute!);
+        fetchAllData();
     }
   }
 
@@ -441,7 +439,7 @@ export default function SpocTeamsPage() {
         if (result.success) {
             toast({ title: "Success", description: result.message });
             setSpocPsSelection(prev => ({ ...prev, [teamId]: '' })); // Clear selection
-            await fetchAllData(user!.institute!); // Refresh data
+            await fetchAllData(); // Refresh data
         } else {
             throw new Error(result.message);
         }
@@ -449,26 +447,6 @@ export default function SpocTeamsPage() {
         toast({ title: "Error", description: `Could not assign problem statement: ${error.message}`, variant: "destructive" });
     } finally {
         setIsSaving(null);
-    }
-  };
-
-  const handleGetInviteLink = async (teamId: string, teamName: string) => {
-    setLoadingLink(teamId);
-    try {
-        const result = await getTeamInviteLink({
-            teamId: teamId,
-            teamName: teamName,
-            baseUrl: appBaseUrl,
-        });
-        if (result.success && result.inviteLink) {
-            setInviteLinks(prev => new Map(prev).set(teamId, result.inviteLink!));
-        } else {
-            throw new Error(result.message || "Failed to get invite link.");
-        }
-    } catch (error: any) {
-        toast({ title: "Error", description: error.message, variant: "destructive" });
-    } finally {
-        setLoadingLink(null);
     }
   };
 
@@ -599,9 +577,7 @@ export default function SpocTeamsPage() {
                         <Table>
                             <TableHeader>
                             <TableRow>
-                                <TableHead><Button variant="ghost" onClick={() => requestSort('teamName')}>Team Name {getSortIndicator('teamName')}</Button></TableHead>
-                                <TableHead>Problem Statement</TableHead>
-                                <TableHead>Invite Link</TableHead>
+                                <TableHead><Button variant="ghost" onClick={() => requestSort('teamName')}>Team Name & PS</Button></TableHead>
                                 <TableHead><Button variant="ghost" onClick={() => requestSort('name')}>Member Name {getSortIndicator('name')}</Button></TableHead>
                                 <TableHead><Button variant="ghost" onClick={() => requestSort('email')}>Email {getSortIndicator('email')}</Button></TableHead>
                                 <TableHead><Button variant="ghost" onClick={() => requestSort('enrollmentNumber')}>Enrollment No. {getSortIndicator('enrollmentNumber')}</Button></TableHead>
@@ -623,7 +599,7 @@ export default function SpocTeamsPage() {
                                     <TableRow key={`${team.id}-${member.uid || memberIndex}-${roleFilter}`}>
                                         {memberIndex === 0 && (
                                             <TableCell rowSpan={membersToDisplay.length} className="font-medium align-top">
-                                                <div className="flex flex-col gap-2">
+                                                <div className="flex flex-col gap-2 items-start w-[250px]">
                                                     {editingTeam?.id === team.id ? (
                                                         <div className="flex items-center gap-2">
                                                             <Input 
@@ -647,6 +623,30 @@ export default function SpocTeamsPage() {
                                                             </Button>
                                                         </div>
                                                     )}
+                                                     {team.problemStatementId ? (
+                                                        <Badge variant="secondary" className="whitespace-normal">
+                                                            {problemStatements.find(ps => ps.id === team.problemStatementId)?.problemStatementId || 'N/A'}
+                                                        </Badge>
+                                                    ) : canSpocSelectPs ? (
+                                                        <div className="flex flex-col gap-2 items-start w-full">
+                                                            <Select onValueChange={(psId) => setSpocPsSelection(prev => ({...prev, [team.id]: psId}))}>
+                                                                <SelectTrigger>
+                                                                    <SelectValue placeholder="Select a PS..." />
+                                                                </SelectTrigger>
+                                                                <SelectContent>
+                                                                    {problemStatements.map(ps => (
+                                                                        <SelectItem key={ps.id} value={ps.id}>{ps.problemStatementId} - {ps.title}</SelectItem>
+                                                                    ))}
+                                                                </SelectContent>
+                                                            </Select>
+                                                            <Button size="sm" onClick={() => handleAssignProblemStatement(team.id)} disabled={!spocPsSelection[team.id] || isSaving === `ps-${team.id}`}>
+                                                                {isSaving === `ps-${team.id}` ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Save className="mr-2 h-4 w-4" />}
+                                                                Assign
+                                                            </Button>
+                                                        </div>
+                                                    ) : (
+                                                        <Badge variant="destructive">Not Selected</Badge>
+                                                    )}
                                                     <AlertDialog>
                                                         <AlertDialogTrigger asChild>
                                                             <Button variant="destructive" size="sm" className="w-fit" disabled={isProcessing === team.id}>
@@ -667,63 +667,6 @@ export default function SpocTeamsPage() {
                                                         </AlertDialogContent>
                                                     </AlertDialog>
                                                 </div>
-                                            </TableCell>
-                                        )}
-                                        {memberIndex === 0 && (
-                                            <TableCell rowSpan={membersToDisplay.length} className="align-top whitespace-normal max-w-xs">
-                                                {team.problemStatementId ? (
-                                                    <Badge variant="secondary" className="whitespace-normal">
-                                                        {problemStatements.find(ps => ps.id === team.problemStatementId)?.problemStatementId || 'N/A'}
-                                                    </Badge>
-                                                ) : canSpocSelectPs ? (
-                                                     <div className="flex flex-col gap-2 items-start w-[250px]">
-                                                        <Select onValueChange={(psId) => setSpocPsSelection(prev => ({...prev, [team.id]: psId}))}>
-                                                            <SelectTrigger>
-                                                                <SelectValue placeholder="Select a PS..." />
-                                                            </SelectTrigger>
-                                                            <SelectContent>
-                                                                {problemStatements.map(ps => (
-                                                                    <SelectItem key={ps.id} value={ps.id}>{ps.problemStatementId} - {ps.title}</SelectItem>
-                                                                ))}
-                                                            </SelectContent>
-                                                        </Select>
-                                                        <Button size="sm" onClick={() => handleAssignProblemStatement(team.id)} disabled={!spocPsSelection[team.id] || isSaving === `ps-${team.id}`}>
-                                                            {isSaving === `ps-${team.id}` ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Save className="mr-2 h-4 w-4" />}
-                                                            Assign
-                                                        </Button>
-                                                     </div>
-                                                ) : (
-                                                    <Badge variant="destructive">Not Selected</Badge>
-                                                )}
-                                            </TableCell>
-                                        )}
-                                        {memberIndex === 0 && (
-                                            <TableCell rowSpan={membersToDisplay.length} className="align-top">
-                                                {inviteLinks.has(team.id) ? (
-                                                    <div className="flex items-center gap-1">
-                                                        <Input value={inviteLinks.get(team.id)} readOnly className="h-8 text-xs"/>
-                                                        <Button size="icon" variant="ghost" className="h-8 w-8 shrink-0" onClick={() => {
-                                                            navigator.clipboard.writeText(inviteLinks.get(team.id)!);
-                                                            toast({ title: "Copied!" });
-                                                        }}>
-                                                            <Copy className="h-4 w-4" />
-                                                        </Button>
-                                                    </div>
-                                                ) : (
-                                                    <Button
-                                                        variant="outline"
-                                                        size="sm"
-                                                        onClick={() => handleGetInviteLink(team.id, team.name)}
-                                                        disabled={loadingLink === team.id}
-                                                    >
-                                                        {loadingLink === team.id ? (
-                                                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                                        ) : (
-                                                            <LinkIcon className="mr-2 h-4 w-4" />
-                                                        )}
-                                                        Get Link
-                                                    </Button>
-                                                )}
                                             </TableCell>
                                         )}
                                         <TableCell>
@@ -837,4 +780,3 @@ export default function SpocTeamsPage() {
     </div>
   );
 }
-
