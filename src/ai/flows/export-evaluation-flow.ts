@@ -58,27 +58,26 @@ const exportEvaluationFlow = ai.defineFlow(
 
         // 3. Populate Workbook with Data
         console.log("Step 3: Populating workbook with team data...");
-        let srNumber = 1;
-        let currentRowIndex = 8; // Starting row for data
-
-        for (const team of teams) {
-            const row = sheet.getRow(currentRowIndex);
+        const startRow = 8;
+        
+        teams.forEach((team, index) => {
+            const currentRow = startRow + index;
+            const row = sheet.getRow(currentRow);
             
-            // Using column letters as keys to set values
-            row.getCell('B').value = srNumber++; // sr
+            row.getCell('B').value = index + 1; // sr
             row.getCell('C').value = team.team_name; // team_name
             row.getCell('D').value = team.leader_name; // leader_name
             row.getCell('E').value = team.team_id; // team_id
             row.getCell('F').value = team.problemstatement_id; // problemstatement_id
             row.getCell('G').value = team.problemstatement_title; // problemstatement_title
             
-            // If there are more teams than rows in the template, insert a new row
-            // This preserves formatting from the row above.
-            if (currentRowIndex > 8 && currentRowIndex <= (teams.length + 7)) {
-                sheet.duplicateRow(currentRowIndex - 1, 1, true);
+            // To ensure subsequent rows exist with the same styling, we duplicate the template row
+            // *before* writing the next record, but only if there are more records to write.
+            if (index < teams.length - 1) {
+                sheet.duplicateRow(currentRow, 1, true);
             }
-            currentRowIndex++;
-        }
+        });
+
         console.log(`Populated ${teams.length} teams.`);
 
 
