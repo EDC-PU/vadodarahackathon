@@ -1,11 +1,9 @@
-
-
 "use client";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Loader2, AlertCircle, Save, Pencil, X, Trash2, Users, User, MinusCircle, ArrowUpDown, Link as LinkIcon, Copy, RefreshCw, ChevronDown, FileQuestion } from "lucide-react";
+import { Loader2, AlertCircle, Save, Pencil, X, Trash2, Users, User, MinusCircle, ArrowUpDown, ChevronDown } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useEffect, useState, useMemo, useCallback } from "react";
 import { db } from "@/lib/firebase";
@@ -38,7 +36,6 @@ import { useAuth } from "@/hooks/use-auth";
 import { exportTeams } from "@/ai/flows/export-teams-flow";
 import { Download, FileSpreadsheet } from "lucide-react";
 import { Buffer } from 'buffer';
-import { getTeamInviteLink } from "@/ai/flows/get-team-invite-link-flow";
 import Link from "next/link";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -77,6 +74,7 @@ export default function SpocTeamsPage() {
   const [problemStatements, setProblemStatements] = useState<ProblemStatement[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingTeam, setEditingTeam] = useState<{ id: string, name: string } | null>(null);
+  const [editingTeamNumber, setEditingTeamNumber] = useState<{ [key: string]: string }>({});
   const [isSaving, setIsSaving] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState<string | null>(null);
   const [isExporting, setIsExporting] = useState(false);
@@ -95,11 +93,13 @@ export default function SpocTeamsPage() {
 
   const statuses: StatusFilter[] = ["All Statuses", "Registered", "Pending"];
 
-  const fetchAllData = useCallback((institute: string) => {
+  const fetchAllData = useCallback(() => {
+    if (!user?.institute) return;
+
     setLoading(true);
     
     // Fetch Teams
-    const teamsQuery = query(collection(db, "teams"), where("institute", "==", institute));
+    const teamsQuery = query(collection(db, "teams"), where("institute", "==", user.institute));
     const unsubscribeTeams = onSnapshot(teamsQuery, async (snapshot) => {
         const teamsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Team));
         
@@ -143,7 +143,7 @@ export default function SpocTeamsPage() {
         unsubscribePs();
         unsubscribeConfig();
     };
-  }, [toast]);
+  }, [toast, user?.institute]);
 
   const handleExport = async () => {
     setIsExporting(true);
@@ -208,8 +208,8 @@ export default function SpocTeamsPage() {
               team_id: team.id,
               team_name: team.name,
               leader_name: leader?.name || 'N/A',
-              problemstatement_number: ps?.problemStatementId || 'N/A',
-              problem_title: team.problemStatementTitle || 'N/A',
+              problemstatement_id: ps?.problemStatementId || 'N/A',
+              problemstatement_title: ps?.title || 'N/A',
             };
         });
         
@@ -240,7 +240,7 @@ export default function SpocTeamsPage() {
   useEffect(() => {
     let unsubscribe: (() => void) | undefined;
     if (user && user.institute) {
-      unsubscribe = fetchAllData(user.institute);
+      unsubscribe = fetchAllData();
     } else if (!authLoading) {
       setLoading(false);
     }
@@ -379,10 +379,28 @@ export default function SpocTeamsPage() {
           await updateDoc(teamDocRef, { name: editingTeam.name });
           toast({ title: "Success", description: "Team name updated." });
           setEditingTeam(null);
-          await fetchAllData(user!.institute!); // Refresh data
+          await fetchAllData(); // Refresh data
       } catch (error) {
           console.error("Error updating team name:", error);
           toast({ title: "Error", description: "Could not update team name.", variant: "destructive" });
+      } finally {
+          setIsSaving(null);
+      }
+  };
+
+  const handleSaveTeamNumber = async (teamId: string) => {
+      const teamNumber = editingTeamNumber[teamId];
+      if (typeof teamNumber === 'undefined') return;
+
+      setIsSaving(`number-${teamId}`);
+      try {
+          const teamDocRef = doc(db, "teams", teamId);
+          await updateDoc(teamDocRef, { teamNumber: teamNumber });
+          toast({ title: "Success", description: "Team number updated." });
+          setEditingTeamNumber(prev => ({...prev, [teamId]: ''})); // Clear after save
+      } catch (error) {
+          console.error("Error updating team number:", error);
+          toast({ title: "Error", description: "Could not update team number.", variant: "destructive" });
       } finally {
           setIsSaving(null);
       }
@@ -401,7 +419,7 @@ export default function SpocTeamsPage() {
          toast({ title: "Error", description: "An unexpected error occurred.", variant: "destructive" });
     } finally {
         setIsProcessing(null);
-        fetchAllData(user!.institute!);
+        fetchAllData();
     }
   }
 
@@ -418,7 +436,7 @@ export default function SpocTeamsPage() {
          toast({ title: "Error", description: "An unexpected error occurred.", variant: "destructive" });
     } finally {
         setIsProcessing(null);
-        fetchAllData(user!.institute!);
+        fetchAllData();
     }
   }
 
@@ -438,7 +456,7 @@ export default function SpocTeamsPage() {
         if (result.success) {
             toast({ title: "Success", description: result.message });
             setSpocPsSelection(prev => ({ ...prev, [teamId]: '' })); // Clear selection
-            await fetchAllData(user!.institute!); // Refresh data
+            await fetchAllData(); // Refresh data
         } else {
             throw new Error(result.message);
         }
@@ -576,8 +594,8 @@ export default function SpocTeamsPage() {
                         <Table>
                             <TableHeader>
                             <TableRow>
-                                <TableHead><Button variant="ghost" onClick={() => requestSort('teamName')}>Team Name {getSortIndicator('teamName')}</Button></TableHead>
-                                <TableHead>Problem Statement</TableHead>
+                                <TableHead><Button variant="ghost" onClick={() => requestSort('teamName')}>Team Name & PS</Button></TableHead>
+                                <TableHead><Button variant="ghost" onClick={() => requestSort('teamNumber')}>Team Number</Button></TableHead>
                                 <TableHead><Button variant="ghost" onClick={() => requestSort('name')}>Member Name {getSortIndicator('name')}</Button></TableHead>
                                 <TableHead><Button variant="ghost" onClick={() => requestSort('email')}>Email {getSortIndicator('email')}</Button></TableHead>
                                 <TableHead><Button variant="ghost" onClick={() => requestSort('enrollmentNumber')}>Enrollment No. {getSortIndicator('enrollmentNumber')}</Button></TableHead>
@@ -599,7 +617,7 @@ export default function SpocTeamsPage() {
                                     <TableRow key={`${team.id}-${member.uid || memberIndex}-${roleFilter}`}>
                                         {memberIndex === 0 && (
                                             <TableCell rowSpan={membersToDisplay.length} className="font-medium align-top">
-                                                <div className="flex flex-col gap-2">
+                                                <div className="flex flex-col gap-2 items-start w-[250px]">
                                                     {editingTeam?.id === team.id ? (
                                                         <div className="flex items-center gap-2">
                                                             <Input 
@@ -622,6 +640,30 @@ export default function SpocTeamsPage() {
                                                                 <Pencil className="h-4 w-4 text-muted-foreground"/>
                                                             </Button>
                                                         </div>
+                                                    )}
+                                                     {team.problemStatementId ? (
+                                                        <Badge variant="secondary" className="whitespace-normal">
+                                                            {problemStatements.find(ps => ps.id === team.problemStatementId)?.problemStatementId || 'N/A'}
+                                                        </Badge>
+                                                    ) : canSpocSelectPs ? (
+                                                        <div className="flex flex-col gap-2 items-start w-full">
+                                                            <Select onValueChange={(psId) => setSpocPsSelection(prev => ({...prev, [team.id]: psId}))}>
+                                                                <SelectTrigger>
+                                                                    <SelectValue placeholder="Select a PS..." />
+                                                                </SelectTrigger>
+                                                                <SelectContent>
+                                                                    {problemStatements.map(ps => (
+                                                                        <SelectItem key={ps.id} value={ps.id}>{ps.problemStatementId} - {ps.title}</SelectItem>
+                                                                    ))}
+                                                                </SelectContent>
+                                                            </Select>
+                                                            <Button size="sm" onClick={() => handleAssignProblemStatement(team.id)} disabled={!spocPsSelection[team.id] || isSaving === `ps-${team.id}`}>
+                                                                {isSaving === `ps-${team.id}` ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Save className="mr-2 h-4 w-4" />}
+                                                                Assign
+                                                            </Button>
+                                                        </div>
+                                                    ) : (
+                                                        <Badge variant="destructive">Not Selected</Badge>
                                                     )}
                                                     <AlertDialog>
                                                         <AlertDialogTrigger asChild>
@@ -646,31 +688,19 @@ export default function SpocTeamsPage() {
                                             </TableCell>
                                         )}
                                         {memberIndex === 0 && (
-                                            <TableCell rowSpan={membersToDisplay.length} className="align-top whitespace-normal max-w-xs">
-                                                {team.problemStatementId ? (
-                                                     <Badge variant="secondary" className="whitespace-normal">
-                                                        {problemStatements.find(ps => ps.id === team.problemStatementId)?.problemStatementId || 'N/A'}
-                                                    </Badge>
-                                                ) : canSpocSelectPs ? (
-                                                     <div className="flex flex-col gap-2 items-start w-[250px]">
-                                                        <Select onValueChange={(psId) => setSpocPsSelection(prev => ({...prev, [team.id]: psId}))}>
-                                                            <SelectTrigger>
-                                                                <SelectValue placeholder="Select a PS..." />
-                                                            </SelectTrigger>
-                                                            <SelectContent>
-                                                                {problemStatements.map(ps => (
-                                                                    <SelectItem key={ps.id} value={ps.id}>{ps.problemStatementId} - {ps.title}</SelectItem>
-                                                                ))}
-                                                            </SelectContent>
-                                                        </Select>
-                                                        <Button size="sm" onClick={() => handleAssignProblemStatement(team.id)} disabled={!spocPsSelection[team.id] || isSaving === `ps-${team.id}`}>
-                                                            {isSaving === `ps-${team.id}` ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Save className="mr-2 h-4 w-4" />}
-                                                            Assign
-                                                        </Button>
-                                                     </div>
-                                                ) : (
-                                                    <Badge variant="destructive">Not Selected</Badge>
-                                                )}
+                                            <TableCell rowSpan={membersToDisplay.length} className="align-top">
+                                                <div className="flex items-center gap-2 w-32">
+                                                    <Input
+                                                        value={editingTeamNumber[team.id] ?? team.teamNumber ?? ''}
+                                                        onChange={(e) => setEditingTeamNumber(prev => ({...prev, [team.id]: e.target.value}))}
+                                                        className="h-8"
+                                                        placeholder="Team No."
+                                                        disabled={isSaving === `number-${team.id}`}
+                                                    />
+                                                    <Button size="icon" className="h-8 w-8" onClick={() => handleSaveTeamNumber(team.id)} disabled={isSaving === `number-${team.id}`}>
+                                                        {isSaving === `number-${team.id}` ? <Loader2 className="h-4 w-4 animate-spin"/> : <Save className="h-4 w-4"/>}
+                                                    </Button>
+                                                </div>
                                             </TableCell>
                                         )}
                                         <TableCell>
@@ -682,7 +712,7 @@ export default function SpocTeamsPage() {
                                                 `${member.name} ${member.isLeader ? '(Leader)' : ''}`
                                             )}
                                         </TableCell>
-                                        <TableCell>{member.email}</TableCell>
+                                        <TableCell className="select-text">{member.email}</TableCell>
                                         <TableCell>{member.enrollmentNumber || 'N/A'}</TableCell>
                                         <TableCell>
                                             {member.contactNumber ? (
@@ -768,7 +798,7 @@ export default function SpocTeamsPage() {
                                             </AlertDialog>
                                         )}
                                     </div>
-                                    <p className="text-muted-foreground">{member.email}</p>
+                                    <p className="text-muted-foreground select-text">{member.email}</p>
                                     <p className="text-muted-foreground">{member.enrollmentNumber}</p>
                                     </div>
                                 ))}
@@ -784,4 +814,3 @@ export default function SpocTeamsPage() {
     </div>
   );
 }
-
