@@ -131,7 +131,7 @@ const LiveStatsCounter = () => {
                 const femaleCount = teamMemberProfiles.filter(m => m.gender === 'F').length;
                 const instituteCount = teamMemberProfiles.filter(m => m.institute === team.institute).length;
 
-                if (teamMemberProfiles.length === 6 && femaleCount >= 1 && instituteCount >= 3) {
+                if (teamMemberProfiles.length === 6 && femaleCount >= 1 && instituteCount >= 3 && !!team.problemStatementId) {
                     registeredCount++;
                 }
             });
