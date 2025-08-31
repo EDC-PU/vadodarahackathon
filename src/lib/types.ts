@@ -173,7 +173,7 @@ export const CreateTeamInputSchema = z.object({
     leaderUid: z.string(),
     leaderEmail: z.string().email(),
     name: z.string(),
-    gender: z.enum(["M" | "F" | "O"]),
+    gender: z.enum(["M", "F", "O"]),
     institute: z.string(),
     department: z.string(),
     enrollmentNumber: z.string(),
@@ -199,7 +199,7 @@ export const AddMemberToTeamInputSchema = z.object({
   email: z.string().email().describe("The email of the user."),
   enrollmentNumber: z.string().optional().describe("The enrollment number of the user."),
   contactNumber: z.string().optional().describe("The contact number of the user."),
-  gender: z.enum(["M" | "F" | "O"]).optional().describe("The gender of the user."),
+  gender: z.enum(["M", "F", "O"]).optional().describe("The gender of the user."),
   semester: z.number().optional().describe("The semester of the user."),
   yearOfStudy: z.string().optional().describe("The year of study of the user."),
 });
@@ -246,7 +246,7 @@ export const CreateSpocInputSchema = z.object({
   email: z.string().email().describe('Email address for the SPOC account.'),
   institute: z.string().describe('The institute the SPOC belongs to.'),
   contactNumber: z.string().describe('The contact number of the SPOC.'),
-  gender: z.enum(["M" | "F" | "O"]).describe('The gender of the SPOC.'),
+  gender: z.enum(["M", "F", "O"]).describe('The gender of the SPOC.'),
 });
 export type CreateSpocInput = z.infer<typeof CreateSpocInputSchema>;
 
