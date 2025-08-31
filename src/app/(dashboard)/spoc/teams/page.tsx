@@ -5,7 +5,7 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Loader2, AlertCircle, Save, Pencil, X, Trash2, Users, User, MinusCircle, ArrowUpDown, Link as LinkIcon, Copy, RefreshCw, ChevronDown } from "lucide-react";
+import { Loader2, AlertCircle, Save, Pencil, X, Trash2, Users, User, MinusCircle, ArrowUpDown, Link as LinkIcon, Copy, RefreshCw, ChevronDown, FileQuestion } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useEffect, useState, useMemo, useCallback } from "react";
 import { db } from "@/lib/firebase";
@@ -90,7 +90,11 @@ export default function SpocTeamsPage() {
   const [inviteLinks, setInviteLinks] = useState<Map<string, string>>(new Map());
   const [loadingLink, setLoadingLink] = useState<string | null>(null);
   const [evaluationExportDate, setEvaluationExportDate] = useState<Date | null>(null);
+  const [spocPsSelection, setSpocPsSelection] = useState<Record<string, string>>({});
   const appBaseUrl = "https://vadodarahackathon.pierc.org";
+
+  const psSelectionDeadline = new Date('2025-08-31T23:59:59'); // Aug 31, 2025
+  const canSpocSelectPs = isAfter(new Date(), psSelectionDeadline);
 
   const statuses: StatusFilter[] = ["All Statuses", "Registered", "Pending"];
 
@@ -273,7 +277,7 @@ export default function SpocTeamsPage() {
                       (selectedPsIds.length > 0 && team.problemStatementId && selectedPsIds.includes(team.problemStatementId));
       
       const memberCount = team.members.length + 1;
-      const memberCountMatch = memberCountFilter === 'All' || memberCount === memberCountFilter;
+      const memberCountMatch = memberCountFilter === 'All' || memberCount === memberCount;
 
       return statusMatch && psMatch && memberCountMatch;
     });
@@ -419,6 +423,33 @@ export default function SpocTeamsPage() {
         fetchAllData(user!.institute!);
     }
   }
+
+  const handleAssignProblemStatement = async (teamId: string) => {
+    const problemStatementId = spocPsSelection[teamId];
+    if (!problemStatementId) {
+        toast({ title: "No Selection", description: "Please select a problem statement from the dropdown.", variant: "destructive" });
+        return;
+    }
+    setIsSaving(`ps-${teamId}`);
+    try {
+        const result = await manageTeamBySpoc({
+            teamId,
+            action: 'assign-ps',
+            problemStatementId,
+        });
+        if (result.success) {
+            toast({ title: "Success", description: result.message });
+            setSpocPsSelection(prev => ({ ...prev, [teamId]: '' })); // Clear selection
+            await fetchAllData(user!.institute!); // Refresh data
+        } else {
+            throw new Error(result.message);
+        }
+    } catch (error: any) {
+        toast({ title: "Error", description: `Could not assign problem statement: ${error.message}`, variant: "destructive" });
+    } finally {
+        setIsSaving(null);
+    }
+  };
 
   const handleGetInviteLink = async (teamId: string, teamName: string) => {
     setLoadingLink(teamId);
@@ -568,7 +599,7 @@ export default function SpocTeamsPage() {
                             <TableHeader>
                             <TableRow>
                                 <TableHead><Button variant="ghost" onClick={() => requestSort('teamName')}>Team Name {getSortIndicator('teamName')}</Button></TableHead>
-                                <TableHead><Button variant="ghost" onClick={() => requestSort('teamNumber')}>Team No. {getSortIndicator('teamNumber')}</Button></TableHead>
+                                <TableHead>Problem Statement</TableHead>
                                 <TableHead>Invite Link</TableHead>
                                 <TableHead><Button variant="ghost" onClick={() => requestSort('name')}>Member Name {getSortIndicator('name')}</Button></TableHead>
                                 <TableHead><Button variant="ghost" onClick={() => requestSort('email')}>Email {getSortIndicator('email')}</Button></TableHead>
@@ -639,7 +670,28 @@ export default function SpocTeamsPage() {
                                         )}
                                         {memberIndex === 0 && (
                                             <TableCell rowSpan={membersToDisplay.length} className="align-top">
-                                                {team.teamNumber ? <Badge variant="outline">{team.teamNumber}</Badge> : <span className="text-muted-foreground text-xs">Not Assigned</span>}
+                                                {team.problemStatementTitle ? (
+                                                    <Badge variant="secondary">{team.problemStatementTitle}</Badge>
+                                                ) : canSpocSelectPs ? (
+                                                     <div className="flex flex-col gap-2 items-start w-[250px]">
+                                                        <Select onValueChange={(psId) => setSpocPsSelection(prev => ({...prev, [team.id]: psId}))}>
+                                                            <SelectTrigger>
+                                                                <SelectValue placeholder="Select a PS..." />
+                                                            </SelectTrigger>
+                                                            <SelectContent>
+                                                                {problemStatements.map(ps => (
+                                                                    <SelectItem key={ps.id} value={ps.id}>{ps.problemStatementId} - {ps.title}</SelectItem>
+                                                                ))}
+                                                            </SelectContent>
+                                                        </Select>
+                                                        <Button size="sm" onClick={() => handleAssignProblemStatement(team.id)} disabled={!spocPsSelection[team.id] || isSaving === `ps-${team.id}`}>
+                                                            {isSaving === `ps-${team.id}` ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Save className="mr-2 h-4 w-4" />}
+                                                            Assign
+                                                        </Button>
+                                                     </div>
+                                                ) : (
+                                                    <Badge variant="destructive">Not Selected</Badge>
+                                                )}
                                             </TableCell>
                                         )}
                                         {memberIndex === 0 && (

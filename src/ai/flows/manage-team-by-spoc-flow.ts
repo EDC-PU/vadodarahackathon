@@ -6,7 +6,7 @@
 
 import { ai } from '@/ai/genkit';
 import { getAdminDb, getAdminAuth } from '@/lib/firebase-admin';
-import { Team, ManageTeamBySpocInput, ManageTeamBySpocInputSchema, ManageTeamBySpocOutput, ManageTeamBySpocOutputSchema } from '@/lib/types';
+import { Team, ManageTeamBySpocInput, ManageTeamBySpocInputSchema, ManageTeamBySpocOutput, ManageTeamBySpocOutputSchema, ProblemStatement } from '@/lib/types';
 import { FieldValue } from 'firebase-admin/firestore';
 
 
@@ -22,8 +22,8 @@ const manageTeamBySpocFlow = ai.defineFlow(
     inputSchema: ManageTeamBySpocInputSchema,
     outputSchema: ManageTeamBySpocOutputSchema,
   },
-  async ({ teamId, action, memberEmail }) => {
-    console.log(`manageTeamBySpocFlow started. TeamID: ${teamId}, Action: ${action}, MemberEmail: ${memberEmail}`);
+  async ({ teamId, action, memberEmail, problemStatementId }) => {
+    console.log(`manageTeamBySpocFlow started. TeamID: ${teamId}, Action: ${action}`);
     const adminDb = getAdminDb();
     const adminAuth = getAdminAuth();
 
@@ -105,6 +105,25 @@ const manageTeamBySpocFlow = ai.defineFlow(
 
             console.log("Team deleted and members' teamId cleared successfully.");
             return { success: true, message: `Team "${teamData.name}" has been deleted.` };
+        }
+        
+        if (action === 'assign-ps') {
+            if (!problemStatementId) {
+                return { success: false, message: "Problem statement ID is required." };
+            }
+            const psDoc = await adminDb.collection('problemStatements').doc(problemStatementId).get();
+            if (!psDoc.exists) {
+                return { success: false, message: "Selected problem statement not found." };
+            }
+            const psData = psDoc.data() as ProblemStatement;
+            
+            await teamDocRef.update({
+                problemStatementId: problemStatementId,
+                problemStatementTitle: psData.title,
+                category: psData.category,
+            });
+
+            return { success: true, message: `Successfully assigned "${psData.title}" to the team.` };
         }
         
         console.warn("Invalid action specified in manageTeamBySpocFlow.");
