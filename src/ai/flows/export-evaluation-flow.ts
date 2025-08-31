@@ -53,15 +53,23 @@ const exportEvaluationFlow = ai.defineFlow(
         // 3. Populate Workbook with Data
         console.log("Step 3: Populating workbook with team data...");
         let srNumber = 1;
-        let currentRow = 8; // Starting row for data
+        let currentRowIndex = 8; // Starting row for data
 
         for (const team of teams) {
-            sheet.getCell(`A${currentRow}`).value = srNumber++;
-            sheet.getCell(`B${currentRow}`).value = team.team_id;
-            sheet.getCell(`C${currentRow}`).value = team.team_name;
-            sheet.getCell(`D${currentRow}`).value = team.leader_name;
-            sheet.getCell(`E${currentRow}`).value = `${team.problemstatement_number}, ${team.problem_title}`;
-            currentRow++;
+            const row = sheet.getRow(currentRowIndex);
+            row.values = [
+                srNumber++,
+                team.team_id,
+                team.team_name,
+                team.leader_name,
+                team.problemstatement_id,
+                team.problemstatement_title
+            ];
+            // If there are more teams than rows in the template, insert a new row
+            if (currentRowIndex > 8) {
+                sheet.duplicateRow(currentRowIndex - 1, 1, true);
+            }
+            currentRowIndex++;
         }
         console.log(`Populated ${teams.length} teams.`);
 

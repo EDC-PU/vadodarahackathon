@@ -282,8 +282,8 @@ const TeamForEvaluationSchema = z.object({
     team_id: z.string(),
     team_name: z.string(),
     leader_name: z.string(),
-    problemstatement_number: z.string(),
-    problem_title: z.string(),
+    problemstatement_id: z.string(),
+    problemstatement_title: z.string(),
 });
 export const ExportEvaluationInputSchema = z.object({
     instituteName: z.string(),

@@ -210,8 +210,8 @@ export default function SpocTeamsPage() {
               team_id: team.id,
               team_name: team.name,
               leader_name: leader?.name || 'N/A',
-              problemstatement_number: ps?.problemStatementId || 'N/A',
-              problem_title: team.problemStatementTitle || 'N/A',
+              problemstatement_id: ps?.problemStatementId || 'N/A',
+              problemstatement_title: ps?.title || 'N/A',
             };
         });
         
@@ -616,7 +616,7 @@ export default function SpocTeamsPage() {
                                 if (membersToDisplay.length === 0) return null;
 
                                 return membersToDisplay.map((member, memberIndex) => (
-                                    <TableRow key={`${team.id}-${member.uid || memberIndex}-${roleFilter}`} className="select-none">
+                                    <TableRow key={`${team.id}-${member.uid || memberIndex}-${roleFilter}`}>
                                         {memberIndex === 0 && (
                                             <TableCell rowSpan={membersToDisplay.length} className="font-medium align-top">
                                                 <div className="flex flex-col gap-2 items-start w-[250px]">
@@ -816,4 +816,3 @@ export default function SpocTeamsPage() {
     </div>
   );
 }
-
