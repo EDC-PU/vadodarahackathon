@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import { Button } from "@/components/ui/button";
@@ -156,6 +155,8 @@ export default function LeaderDashboard() {
     };
     fetchDeadline();
   }, []);
+
+  const isDeadlinePassed = deadline ? new Date() > deadline : false;
 
   const teamValidation = useMemo(() => {
     if (!team || teamMembers.length === 0) {
@@ -393,8 +394,7 @@ export default function LeaderDashboard() {
   }
 
   const canAddMoreMembers = teamValidation.memberCount.current < 6;
-  const isDeadlinePassed = deadline ? new Date() > deadline : false;
-
+  
   return (
     <div className="p-4 sm:p-6 lg:p-8">
         <RegistrationReminderDialog isOpen={showReminder} onClose={() => setShowReminder(false)} />
@@ -491,7 +491,7 @@ export default function LeaderDashboard() {
                                           {!isLeader && (
                                               <AlertDialog>
                                                   <AlertDialogTrigger asChild>
-                                                      <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-destructive" disabled={isRemoving === member.email}>
+                                                      <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-destructive" disabled={isRemoving === member.email || isDeadlinePassed}>
                                                       {isRemoving === member.email ? <Loader2 className="h-4 w-4 animate-spin"/> : <Trash2 className="h-4 w-4"/>}
                                                       </Button>
                                                   </AlertDialogTrigger>
@@ -549,7 +549,7 @@ export default function LeaderDashboard() {
                               <div className="mt-4 pt-4 border-t flex justify-end">
                                   <AlertDialog>
                                       <AlertDialogTrigger asChild>
-                                          <Button variant="destructive" size="sm" disabled={isRemoving === member.email}>
+                                          <Button variant="destructive" size="sm" disabled={isRemoving === member.email || isDeadlinePassed}>
                                           {isRemoving === member.email ? <Loader2 className="h-4 w-4 animate-spin"/> : <Trash2 className="h-4 w-4"/>}
                                           <span className="ml-2">Remove</span>
                                           </Button>
@@ -744,6 +744,13 @@ export default function LeaderDashboard() {
                             </div>
                            ) : (
                             <p className="text-sm text-muted-foreground">Could not load the invite link.</p>
+                           )}
+                           {isDeadlinePassed && (
+                                <Alert variant="destructive">
+                                    <AlertCircle className="h-4 w-4" />
+                                    <AlertTitle>Deadline Passed</AlertTitle>
+                                    <AlertDescription>The registration deadline has passed. You can no longer invite new members.</AlertDescription>
+                                </Alert>
                            )}
                         </div>
                        ): (

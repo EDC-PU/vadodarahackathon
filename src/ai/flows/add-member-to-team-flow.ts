@@ -45,8 +45,18 @@ const addMemberToTeamFlow = ai.defineFlow(
 
     const userDocRef = adminDb.collection('users').doc(userId);
     const teamDocRef = adminDb.collection('teams').doc(teamId);
+    const configDocRef = adminDb.collection("config").doc("event");
 
     try {
+      // Check if registration is still open
+      const configDoc = await configDocRef.get();
+      if (configDoc.exists()) {
+        const deadline = configDoc.data()?.registrationDeadline?.toDate();
+        if (deadline && new Date() > deadline) {
+          return { success: false, message: "The registration deadline has passed. No new members can be added." };
+        }
+      }
+
       const userDoc = await userDocRef.get();
       if (userDoc.exists) {
           const userData = userDoc.data() as UserProfile;

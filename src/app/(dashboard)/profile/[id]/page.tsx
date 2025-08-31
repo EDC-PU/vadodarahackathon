@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -57,6 +56,7 @@ export default function ProfilePage() {
     const [institutes, setInstitutes] = useState<Institute[]>([]);
     const [departments, setDepartments] = useState<string[]>([]);
     const [isDeptLoading, setIsDeptLoading] = useState(false);
+    const [deadline, setDeadline] = useState<Date | null>(null);
     const params = useParams();
     const { toast } = useToast();
 
@@ -76,6 +76,23 @@ export default function ProfilePage() {
         }
     });
     
+    useEffect(() => {
+        const fetchDeadline = async () => {
+            try {
+                const configDocRef = doc(db, "config", "event");
+                const configDoc = await getDoc(configDocRef);
+                if (configDoc.exists() && configDoc.data()?.registrationDeadline) {
+                    setDeadline(configDoc.data().registrationDeadline.toDate());
+                }
+            } catch (error) {
+                console.error("Could not fetch registration deadline:", error);
+            }
+        };
+        fetchDeadline();
+    }, []);
+
+    const isDeadlinePassed = deadline ? new Date() > deadline : false;
+
     const selectedInstitute = useWatch({ control: form.control, name: 'institute' });
     const departmentFieldValue = useWatch({ control: form.control, name: 'department' });
     
@@ -85,9 +102,9 @@ export default function ProfilePage() {
         return !departments.includes(departmentFieldValue);
     }, [departmentFieldValue, departments]);
 
-    const canEdit = authUser?.role === 'admin' || 
+    const canEdit = (authUser?.role === 'admin' || 
                     authUser?.enrollmentNumber === enrollmentId || 
-                    (authUser?.role === 'spoc' && authUser.institute === profile?.institute);
+                    (authUser?.role === 'spoc' && authUser.institute === profile?.institute)) && !isDeadlinePassed;
 
     // Fetch Institutes List
     useEffect(() => {
@@ -188,7 +205,7 @@ export default function ProfilePage() {
 
     async function onSubmit(values: z.infer<typeof formSchema>) {
         if (!profile || !canEdit) {
-            toast({ title: "Error", description: "You are not authorized to perform this action.", variant: "destructive" });
+            toast({ title: "Error", description: "You are not authorized to perform this action or the deadline has passed.", variant: "destructive" });
             return;
         }
 
@@ -272,6 +289,15 @@ export default function ProfilePage() {
 
     return (
         <div className="p-4 sm:p-6 lg:p-8 space-y-8">
+            {isDeadlinePassed && (
+                <Alert>
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertTitle>Registration Deadline Passed</AlertTitle>
+                    <AlertDescription>
+                        The deadline for registration and profile updates has passed. All profiles are now read-only.
+                    </AlertDescription>
+                </Alert>
+            )}
             {team && (
                  <Card>
                     <CardHeader>
