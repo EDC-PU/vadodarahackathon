@@ -18,12 +18,12 @@ import {
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useState, useEffect, useCallback, useMemo } from "react";
-import { Loader2, AlertCircle } from "lucide-react";
+import { Loader2, AlertCircle, Users, FileText, User as UserIcon } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { db } from "@/lib/firebase";
 import { doc, updateDoc, getDoc, collection, query, where, onSnapshot, writeBatch, orderBy } from "firebase/firestore";
 import { useAuth } from "@/hooks/use-auth";
-import { UserProfile, Team, Institute } from "@/lib/types";
+import { UserProfile, Team, Institute, ProblemStatement } from "@/lib/types";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import {
   Select,
@@ -50,6 +50,8 @@ const formSchema = z.object({
 export default function ProfilePage() {
     const { user: authUser, loading: authLoading } = useAuth();
     const [profile, setProfile] = useState<UserProfile | null>(null);
+    const [team, setTeam] = useState<Team | null>(null);
+    const [problemStatement, setProblemStatement] = useState<ProblemStatement | null>(null);
     const [loading, setLoading] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [institutes, setInstitutes] = useState<Institute[]>([]);
@@ -125,6 +127,40 @@ export default function ProfilePage() {
         });
         return () => unsubscribe();
     }, [enrollmentId, form, toast]);
+
+    // Fetch Team and Problem Statement details
+    useEffect(() => {
+        if (!profile?.teamId) {
+            setTeam(null);
+            setProblemStatement(null);
+            return;
+        }
+
+        const teamDocRef = doc(db, "teams", profile.teamId);
+        const unsubscribeTeam = onSnapshot(teamDocRef, async (teamDoc) => {
+            if (teamDoc.exists()) {
+                const teamData = { id: teamDoc.id, ...teamDoc.data() } as Team;
+                setTeam(teamData);
+
+                if (teamData.problemStatementId) {
+                    const psDocRef = doc(db, "problemStatements", teamData.problemStatementId);
+                    const psDoc = await getDoc(psDocRef);
+                    if (psDoc.exists()) {
+                        setProblemStatement({ id: psDoc.id, ...psDoc.data() } as ProblemStatement);
+                    } else {
+                        setProblemStatement(null);
+                    }
+                } else {
+                    setProblemStatement(null);
+                }
+            } else {
+                setTeam(null);
+                setProblemStatement(null);
+            }
+        });
+
+        return () => unsubscribeTeam();
+    }, [profile?.teamId]);
 
     // Fetch Departments based on selected Institute
     useEffect(() => {
@@ -235,7 +271,29 @@ export default function ProfilePage() {
     }
 
     return (
-        <div className="p-4 sm:p-6 lg:p-8">
+        <div className="p-4 sm:p-6 lg:p-8 space-y-8">
+            {team && (
+                 <Card>
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-2"><Users /> Team Information</CardTitle>
+                        <CardDescription>Details about the user's team and selected project.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                        <div className="space-y-1">
+                            <p className="text-muted-foreground">Team Name</p>
+                            <p className="font-semibold">{team.name}</p>
+                        </div>
+                        <div className="space-y-1">
+                            <p className="text-muted-foreground">Team Leader</p>
+                            <p className="font-semibold">{team.leader.name}</p>
+                        </div>
+                         <div className="space-y-1">
+                            <p className="text-muted-foreground">Problem Statement</p>
+                            <p className="font-semibold">{problemStatement?.problemStatementId || "Not Selected"}</p>
+                        </div>
+                    </CardContent>
+                </Card>
+            )}
             <Card>
                 <CardHeader>
                     <CardTitle>User Profile</CardTitle>
@@ -361,3 +419,4 @@ export default function ProfilePage() {
         </div>
     );
 }
+
