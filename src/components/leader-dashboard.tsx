@@ -161,7 +161,7 @@ export default function LeaderDashboard() {
             memberCount: { current: 0, required: 6, isMet: false },
             femaleCount: { current: 0, required: 1, isMet: false },
             instituteCount: { current: 0, required: 3, isMet: false },
-            isRegistered: () => false
+            isRegistered: false
         };
     }
     const leaderProfile = teamMembers.find(m => m.uid === team.leader.uid);
@@ -170,12 +170,13 @@ export default function LeaderDashboard() {
     
     const femaleCount = allMemberProfiles.filter(m => m.gender === "F").length;
     const instituteCount = allMemberProfiles.filter(m => m.institute === team.institute).length;
+    const memberCount = allMemberProfiles.length;
 
     return {
         memberCount: {
-            current: allMemberProfiles.length,
+            current: memberCount,
             required: 6,
-            isMet: allMemberProfiles.length === 6,
+            isMet: memberCount === 6,
         },
         femaleCount: {
             current: femaleCount,
@@ -187,9 +188,7 @@ export default function LeaderDashboard() {
             required: 3,
             isMet: instituteCount >= 3,
         },
-        isRegistered() {
-          return this.memberCount.isMet && this.femaleCount.isMet && this.instituteCount.isMet;
-        }
+        isRegistered: memberCount === 6 && femaleCount >= 1 && instituteCount >= 3,
     };
   }, [team, teamMembers]);
 
@@ -198,7 +197,7 @@ export default function LeaderDashboard() {
     if (loading || authLoading) return;
 
     const reminderShown = sessionStorage.getItem('registrationReminderShown');
-    if (team && !teamValidation.isRegistered() && !reminderShown) {
+    if (team && !teamValidation.isRegistered && !reminderShown) {
         setShowReminder(true);
         sessionStorage.setItem('registrationReminderShown', 'true');
     }
@@ -405,7 +404,7 @@ export default function LeaderDashboard() {
             </div>
             <div className="flex items-center gap-2">
                 <span className="text-sm text-muted-foreground">Status: </span>
-                {teamValidation.isRegistered() ? (
+                {teamValidation.isRegistered ? (
                     <Badge variant="default" className="bg-green-600 hover:bg-green-600">Registered</Badge>
                 ) : (
                     <Badge variant="destructive">Registration Pending</Badge>
@@ -579,7 +578,7 @@ export default function LeaderDashboard() {
 
         <div className="grid gap-8 lg:grid-cols-2">
              <div className="space-y-8">
-                <AnnouncementsSection audience="teams_and_all" />
+                <AnnouncementsSection audience="spoc_teams" />
                 <NotificationsSection />
             </div>
             
@@ -590,7 +589,7 @@ export default function LeaderDashboard() {
                         <CardDescription>Check if your team meets the hackathon requirements.</CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-4">
-                        {teamValidation.isRegistered() ? (
+                        {teamValidation.isRegistered ? (
                              <Alert variant="default" className="border-green-500">
                                 <CheckCircle className="h-4 w-4 text-green-500"/>
                                 <AlertTitle>Team is Officially Registered!</AlertTitle>
@@ -737,7 +736,7 @@ export default function LeaderDashboard() {
                     </CardContent>
                 </Card>
 
-                 {teamValidation.isRegistered() && (
+                 {teamValidation.isRegistered && (
                     <Card>
                         <CardHeader>
                             <CardTitle>Download Presentation Format</CardTitle>
