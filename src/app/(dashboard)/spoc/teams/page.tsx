@@ -670,9 +670,11 @@ export default function SpocTeamsPage() {
                                             </TableCell>
                                         )}
                                         {memberIndex === 0 && (
-                                            <TableCell rowSpan={membersToDisplay.length} className="align-top">
-                                                {team.problemStatementTitle ? (
-                                                    <Badge variant="secondary">{team.problemStatementTitle}</Badge>
+                                            <TableCell rowSpan={membersToDisplay.length} className="align-top whitespace-normal max-w-xs">
+                                                {team.problemStatementId ? (
+                                                    <Badge variant="secondary" className="whitespace-normal">
+                                                        {problemStatements.find(ps => ps.id === team.problemStatementId)?.problemStatementId || 'N/A'}
+                                                    </Badge>
                                                 ) : canSpocSelectPs ? (
                                                      <div className="flex flex-col gap-2 items-start w-[250px]">
                                                         <Select onValueChange={(psId) => setSpocPsSelection(prev => ({...prev, [team.id]: psId}))}>
@@ -835,3 +837,4 @@ export default function SpocTeamsPage() {
     </div>
   );
 }
+
