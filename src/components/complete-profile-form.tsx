@@ -41,7 +41,7 @@ const formSchema = z.object({
   department: z.string({ required_error: "Please select or enter a department." }).min(1, "Please select or enter a department."),
   enrollmentNumber: z.string().min(5, { message: "Enrollment number is required." }),
   semester: z.coerce.number({invalid_type_error: "Semester is required."}).min(1, { message: "Semester must be between 1 and 10." }).max(10, { message: "Semester must be between 1 and 10." }),
-  yearOfStudy: z.coerce.number({invalid_type_error: "Year of study is required."}).min(1, "Year must be between 1 and 5.").max(5, "Year must be between 1 and 5.").transform(val => val.toString()),
+  yearOfStudy: z.string().min(1, "Year of study is required."),
   contactNumber: z.string().regex(/^\d{10}$/, { message: "Please enter a valid 10-digit phone number." }),
 });
 
@@ -386,5 +386,6 @@ export function CompleteProfileForm() {
 }
 
     
+
 
 
