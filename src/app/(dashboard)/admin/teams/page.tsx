@@ -181,8 +181,10 @@ function AllTeamsContent() {
                         (showNotSelected && !team.problemStatementId) || 
                         (selectedPsIds.length > 0 && team.problemStatementId && selectedPsIds.includes(team.problemStatementId));
         
-        const memberCount = team.members.length + 1; // Leader + members
-        const memberCountMatch = memberCountFilter === "All" || memberCount === memberCount;
+        const leaderProfile = allUsers.get(team.leader.uid);
+        const allMemberProfiles = [leaderProfile, ...team.members.map(m => allUsers.get(m.uid))].filter(Boolean) as UserProfile[];
+        const memberCount = allMemberProfiles.length;
+        const memberCountMatch = memberCountFilter === "All" || memberCount === memberCountFilter;
 
         let searchMatch = true;
         if (searchTerm) {
@@ -200,20 +202,11 @@ function AllTeamsContent() {
             searchMatch = teamText.includes(lowercasedSearch);
         }
 
-        if (statusFilter === 'All Statuses') {
-          return instituteMatch && categoryMatch && psMatch && searchMatch && memberCountMatch;
-        }
-
-        const leaderProfile = allUsers.get(team.leader.uid);
-        const allMemberProfiles = [leaderProfile, ...team.members.map(m => allUsers.get(m.uid))].filter(Boolean) as UserProfile[];
-        
-        const currentMemberCount = allMemberProfiles.length;
         const femaleCount = allMemberProfiles.filter(m => m.gender === 'F').length;
         const instituteCount = allMemberProfiles.filter(m => m.institute === team.institute).length;
-
-        const isRegistered = currentMemberCount === 6 && femaleCount >= 1 && instituteCount >= 3;
+        const isRegistered = memberCount === 6 && femaleCount >= 1 && instituteCount >= 3;
         
-        const statusMatch = statusFilter === 'Registered' ? isRegistered : !isRegistered;
+        const statusMatch = statusFilter === 'All Statuses' ? true : (statusFilter === 'Registered' ? isRegistered : !isRegistered);
         
         return instituteMatch && categoryMatch && psMatch && statusMatch && searchMatch && memberCountMatch;
     });
@@ -671,7 +664,7 @@ function AllTeamsContent() {
                   </TableHeader>
                   <TableBody>
                       {teamsWithDetails.map((row, index) => (
-                          <TableRow key={`${row.teamId}-${row.uid || index}-${roleFilter}`} data-state={selectedUserIds.includes(row.teamId) && "selected"} className="select-none">
+                          <TableRow key={`${row.teamId}-${row.uid || index}-${roleFilter}`} data-state={selectedTeamIds.includes(row.teamId) && "selected"} className="select-none">
                               {row.isFirstRow && (
                                   <TableCell rowSpan={row.rowSpan} className="align-top">
                                       <Checkbox 
