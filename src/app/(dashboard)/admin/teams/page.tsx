@@ -45,7 +45,7 @@ import { Badge } from "@/components/ui/badge";
 type CategoryFilter = ProblemStatementCategory | "All Categories";
 type StatusFilter = "All Statuses" | "Registered" | "Pending";
 type RoleFilter = "all" | "leader" | "member";
-type SortKey = 'teamName' | 'problemStatementId' | 'name' | 'email' | 'enrollmentNumber' | 'contactNumber' | 'yearOfStudy' | 'semester';
+type SortKey = 'teamName' | 'problemStatementId' | 'name' | 'email' | 'enrollmentNumber' | 'contactNumber' | 'yearOfStudy' | 'semester' | 'teamNumber';
 type SortDirection = 'asc' | 'desc';
 
 // Helper to fetch user profiles in chunks to avoid Firestore 30-item 'in' query limit
@@ -79,6 +79,7 @@ function AllTeamsContent() {
   const [isBulkNominating, setIsBulkNominating] = useState(false);
   
   const [editingTeam, setEditingTeam] = useState<{ id: string, name: string } | null>(null);
+  const [editingTeamNumber, setEditingTeamNumber] = useState<{ id: string, teamNumber: string }>({});
   const [isSaving, setIsSaving] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState<string | null>(null);
 
@@ -338,6 +339,25 @@ function AllTeamsContent() {
       }
   };
 
+  const handleSaveTeamNumber = async (teamId: string) => {
+      const teamNumber = editingTeamNumber[teamId];
+      if (typeof teamNumber === 'undefined') return;
+
+      setIsSaving(`number-${teamId}`);
+      try {
+          const teamDocRef = doc(db, "teams", teamId);
+          await updateDoc(teamDocRef, { teamNumber: teamNumber });
+          toast({ title: "Success", description: "Team number updated." });
+          setEditingTeamNumber(prev => ({...prev, [teamId]: ''})); // Clear after save
+      } catch (error) {
+          console.error("Error updating team number:", error);
+          toast({ title: "Error", description: "Could not update team number.", variant: "destructive" });
+      } finally {
+          setIsSaving(null);
+      }
+  };
+
+
   const handleRemoveMember = async (teamId: string, memberToRemove: TeamMember) => {
     setIsProcessing(`${teamId}-${memberToRemove.uid}`);
     try {
@@ -438,6 +458,7 @@ function AllTeamsContent() {
                     ...member,
                     teamName: team.name,
                     teamId: team.id,
+                    teamNumber: team.teamNumber,
                     isNominated: team.isNominated,
                     problemStatementId: team.problemStatementId || 'Not Selected',
                     isFirstRow: memberIndex === 0,
@@ -638,6 +659,9 @@ function AllTeamsContent() {
                           <TableHead>
                               <Button variant="ghost" onClick={() => requestSort('teamName')}>Team Name {getSortIndicator('teamName')}</Button>
                           </TableHead>
+                           <TableHead>
+                              <Button variant="ghost" onClick={() => requestSort('teamNumber')}>Team Number {getSortIndicator('teamNumber')}</Button>
+                          </TableHead>
                           <TableHead>
                               <Button variant="ghost" onClick={() => requestSort('problemStatementId')}>Problem Statement {getSortIndicator('problemStatementId')}</Button>
                           </TableHead>
@@ -686,6 +710,22 @@ function AllTeamsContent() {
                                         {row.isNominated && <Badge className="bg-green-600 hover:bg-green-700">Nominated</Badge>}
                                       </div>
                                   </TableCell>
+                              )}
+                              {row.isFirstRow && (
+                                <TableCell rowSpan={row.rowSpan} className="align-top">
+                                    <div className="flex items-center gap-2 w-32">
+                                        <Input
+                                            value={editingTeamNumber[row.teamId] ?? row.teamNumber ?? ''}
+                                            onChange={(e) => setEditingTeamNumber(prev => ({...prev, [row.teamId]: e.target.value}))}
+                                            className="h-8"
+                                            placeholder="Team No."
+                                            disabled={isSaving === `number-${row.teamId}`}
+                                        />
+                                        <Button size="icon" className="h-8 w-8" onClick={() => handleSaveTeamNumber(row.teamId)} disabled={isSaving === `number-${row.teamId}`}>
+                                            {isSaving === `number-${row.teamId}` ? <Loader2 className="h-4 w-4 animate-spin"/> : <Save className="h-4 w-4"/>}
+                                        </Button>
+                                    </div>
+                                </TableCell>
                               )}
                               {row.isFirstRow && <TableCell rowSpan={row.rowSpan} className="align-top">{row.problemStatementId}</TableCell>}
                                <TableCell className="whitespace-normal">
@@ -779,3 +819,4 @@ export default function AllTeamsPage() {
     )
 }
     
+

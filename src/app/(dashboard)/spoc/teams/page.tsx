@@ -76,6 +76,7 @@ export default function SpocTeamsPage() {
   const [problemStatements, setProblemStatements] = useState<ProblemStatement[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingTeam, setEditingTeam] = useState<{ id: string, name: string } | null>(null);
+  const [editingTeamNumber, setEditingTeamNumber] = useState<{ [key: string]: string }>({});
   const [isSaving, setIsSaving] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState<string | null>(null);
   const [isExporting, setIsExporting] = useState(false);
@@ -388,6 +389,24 @@ export default function SpocTeamsPage() {
           setIsSaving(null);
       }
   };
+
+  const handleSaveTeamNumber = async (teamId: string) => {
+      const teamNumber = editingTeamNumber[teamId];
+      if (typeof teamNumber === 'undefined') return;
+
+      setIsSaving(`number-${teamId}`);
+      try {
+          const teamDocRef = doc(db, "teams", teamId);
+          await updateDoc(teamDocRef, { teamNumber: teamNumber });
+          toast({ title: "Success", description: "Team number updated." });
+          setEditingTeamNumber(prev => ({...prev, [teamId]: ''})); // Clear after save
+      } catch (error) {
+          console.error("Error updating team number:", error);
+          toast({ title: "Error", description: "Could not update team number.", variant: "destructive" });
+      } finally {
+          setIsSaving(null);
+      }
+  };
   
   const handleRemoveMember = async (teamId: string, memberToRemove: TeamMember) => {
     setIsProcessing(`${teamId}-${memberToRemove.uid}`);
@@ -578,6 +597,7 @@ export default function SpocTeamsPage() {
                             <TableHeader>
                             <TableRow>
                                 <TableHead><Button variant="ghost" onClick={() => requestSort('teamName')}>Team Name & PS</Button></TableHead>
+                                <TableHead><Button variant="ghost" onClick={() => requestSort('teamNumber')}>Team Number</Button></TableHead>
                                 <TableHead><Button variant="ghost" onClick={() => requestSort('name')}>Member Name {getSortIndicator('name')}</Button></TableHead>
                                 <TableHead><Button variant="ghost" onClick={() => requestSort('email')}>Email {getSortIndicator('email')}</Button></TableHead>
                                 <TableHead><Button variant="ghost" onClick={() => requestSort('enrollmentNumber')}>Enrollment No. {getSortIndicator('enrollmentNumber')}</Button></TableHead>
@@ -666,6 +686,22 @@ export default function SpocTeamsPage() {
                                                             </AlertDialogFooter>
                                                         </AlertDialogContent>
                                                     </AlertDialog>
+                                                </div>
+                                            </TableCell>
+                                        )}
+                                        {memberIndex === 0 && (
+                                            <TableCell rowSpan={membersToDisplay.length} className="align-top">
+                                                <div className="flex items-center gap-2 w-32">
+                                                    <Input
+                                                        value={editingTeamNumber[team.id] ?? team.teamNumber ?? ''}
+                                                        onChange={(e) => setEditingTeamNumber(prev => ({...prev, [team.id]: e.target.value}))}
+                                                        className="h-8"
+                                                        placeholder="Team No."
+                                                        disabled={isSaving === `number-${team.id}`}
+                                                    />
+                                                    <Button size="icon" className="h-8 w-8" onClick={() => handleSaveTeamNumber(team.id)} disabled={isSaving === `number-${team.id}`}>
+                                                        {isSaving === `number-${team.id}` ? <Loader2 className="h-4 w-4 animate-spin"/> : <Save className="h-4 w-4"/>}
+                                                    </Button>
                                                 </div>
                                             </TableCell>
                                         )}
