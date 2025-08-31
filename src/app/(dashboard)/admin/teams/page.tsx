@@ -671,7 +671,7 @@ function AllTeamsContent() {
                   </TableHeader>
                   <TableBody>
                       {teamsWithDetails.map((row, index) => (
-                          <TableRow key={`${row.teamId}-${row.uid || index}-${roleFilter}`}>
+                          <TableRow key={`${row.teamId}-${row.uid || index}-${roleFilter}`} data-state={selectedUserIds.includes(row.teamId) && "selected"} className="select-none">
                               {row.isFirstRow && (
                                   <TableCell rowSpan={row.rowSpan} className="align-top">
                                       <Checkbox 
@@ -704,7 +704,7 @@ function AllTeamsContent() {
                                       `${row.name} ${row.isLeader ? '(Leader)' : ''}`
                                   )}
                               </TableCell>
-                              <TableCell className="whitespace-normal">{row.email}</TableCell>
+                              <TableCell className="whitespace-normal select-text">{row.email}</TableCell>
                               <TableCell>{row.enrollmentNumber}</TableCell>
                               <TableCell>
                                   {row.contactNumber && row.contactNumber !== 'N/A' ? (
