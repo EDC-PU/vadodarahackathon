@@ -402,6 +402,15 @@ export default function LeaderDashboard() {
         <RegistrationReminderDialog isOpen={showReminder} onClose={() => setShowReminder(false)} />
         <ProblemStatementReminderDialog isOpen={showPsReminder} onClose={() => setShowPsReminder(false)} isLeader={true} />
         {user && <IncompleteProfileAlert profile={user} />}
+        {isDeadlinePassed && team.isLocked !== false && (
+            <Alert variant="destructive" className="mb-8">
+                <Lock className="h-4 w-4" />
+                <AlertTitle>Portal Locked</AlertTitle>
+                <AlertDescription>
+                    The registration deadline has passed. All editing capabilities for your team have been locked by the administrators. Contact your institute SPOC if you require any changes.
+                </AlertDescription>
+            </Alert>
+        )}
         <header className="mb-8 flex justify-between items-start">
             <div>
               <h1 className="text-3xl font-bold font-headline">Team Dashboard: {team.name}</h1>
