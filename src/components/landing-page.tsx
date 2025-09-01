@@ -639,7 +639,7 @@ export default function LandingPage({ spocDetails, announcements, problemStateme
               <div className="text-center md:text-right text-sm text-foreground/60">
                 <p>&copy; {new Date().getFullYear()} Vadodara Hackathon. All rights reserved.
                 </p>
-                <p>Designed & Developed by Pranav Rathi</p>
+                <p>Designed & Developed by <a href="https://www.linkedin.com/in/pranav-rathi-37920b16b/" target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors">Pranav Rathi</a></p>
                 <div className="flex gap-4 justify-center md:justify-end mt-1">
                     <Link href="/privacy" className="hover:text-primary transition-colors">Privacy Policy</Link>
                     <Link href="/terms" className="hover:text-primary transition-colors">Terms of Service</Link>
