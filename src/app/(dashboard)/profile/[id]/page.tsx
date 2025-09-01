@@ -294,9 +294,9 @@ export default function ProfilePage() {
             {isDeadlinePassed && team?.isLocked && (
                 <Alert>
                     <AlertCircle className="h-4 w-4" />
-                    <AlertTitle>Registration Deadline Passed</AlertTitle>
+                    <AlertTitle>Details Locked</AlertTitle>
                     <AlertDescription>
-                        The deadline for registration and profile updates has passed. All profiles are now read-only.
+                        The registration deadline has passed and this team's portal has been locked by an administrator. All profiles are now read-only.
                     </AlertDescription>
                 </Alert>
             )}
