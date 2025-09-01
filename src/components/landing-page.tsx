@@ -96,68 +96,6 @@ async function getUserProfilesInChunks(userIds: string[]): Promise<Map<string, U
 
 
 const LiveStatsCounter = () => {
-    const [stats, setStats] = useState({ registered: 0, participants: 0 });
-    const [loading, setLoading] = useState(true);
-
-    useEffect(() => {
-        setLoading(true);
-        const teamsQuery = query(collection(db, "teams"));
-
-        const unsubscribe = onSnapshot(teamsQuery, async (snapshot) => {
-            const allTeams = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Team));
-
-            if (allTeams.length === 0) {
-                setStats({ registered: 0, participants: 0 });
-                setLoading(false);
-                return;
-            }
-            
-            const allParticipantUIDs = new Set<string>();
-            allTeams.forEach(team => {
-                allParticipantUIDs.add(team.leader.uid);
-                team.members.forEach(member => {
-                    if (member.uid) allParticipantUIDs.add(member.uid);
-                });
-            });
-
-            const userMap = await getUserProfilesInChunks(Array.from(allParticipantUIDs));
-            
-            let registeredTeams: Team[] = [];
-            
-            allTeams.forEach(team => {
-                const memberUIDs = [team.leader.uid, ...team.members.map(m => m.uid)];
-                const teamMemberProfiles = memberUIDs.map(uid => userMap.get(uid)).filter(Boolean) as UserProfile[];
-                
-                const femaleCount = teamMemberProfiles.filter(m => m.gender === 'F').length;
-                const instituteCount = teamMemberProfiles.filter(m => m.institute === team.institute).length;
-
-                if (teamMemberProfiles.length === 6 && femaleCount >= 1 && instituteCount >= 3 && !!team.problemStatementId) {
-                    registeredTeams.push(team);
-                }
-            });
-
-            const registeredParticipantUIDs = new Set<string>();
-            registeredTeams.forEach(team => {
-                registeredParticipantUIDs.add(team.leader.uid);
-                team.members.forEach(member => {
-                    if (member.uid) registeredParticipantUIDs.add(member.uid);
-                });
-            });
-            
-            setStats({
-                registered: registeredTeams.length,
-                participants: registeredParticipantUIDs.size
-            });
-            setLoading(false);
-        }, (error) => {
-            console.error("Error fetching stats with onSnapshot:", error);
-            setLoading(false);
-        });
-
-        return () => unsubscribe(); // Cleanup on unmount
-    }, []);
-
-
     return (
         <motion.div 
             className="mt-12 w-full max-w-4xl glass-card p-6"
@@ -168,13 +106,13 @@ const LiveStatsCounter = () => {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 text-center">
                 <div className="flex flex-col items-center justify-center">
                     <p className="text-4xl font-bold text-brand-yellow">
-                        {loading ? <Loader2 className="animate-spin h-8 w-8" /> : <CountUp end={stats.registered} />}
+                        <CountUp end={720} />
                     </p>
                     <p className="text-sm font-medium uppercase tracking-widest text-white/70 mt-2">Registered Teams</p>
                 </div>
                 <div className="flex flex-col items-center justify-center">
                     <p className="text-4xl font-bold text-brand-red">
-                        {loading ? <Loader2 className="animate-spin h-8 w-8" /> : <CountUp end={stats.participants} />}
+                        <CountUp end={4320} />
                     </p>
                     <p className="text-sm font-medium uppercase tracking-widest text-white/70 mt-2">Total Participants</p>
                 </div>
@@ -652,4 +590,5 @@ export default function LandingPage({ spocDetails, announcements, problemStateme
     </div>
   );
 }
+
 
