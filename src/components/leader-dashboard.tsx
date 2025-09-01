@@ -131,7 +131,7 @@ function StudentCoordinatorCard({ institute }: { institute: Institute | null }) 
   }
 
   return (
-    <Card className="mb-8 border-primary/40">
+    <Card className="border-primary/40">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <User className="h-5 w-5 text-primary" /> Student Coordinator Details
@@ -158,6 +158,7 @@ export default function LeaderDashboard() {
   const { user, loading: authLoading } = useAuth();
   const [team, setTeam] = useState<Team | null>(null);
   const [teamMembers, setTeamMembers] = useState<UserProfile[]>([]);
+  const [spoc, setSpoc] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [isRemoving, setIsRemoving] = useState<string | null>(null);
   const [sortConfig, setSortConfig] = useState<{ key: SortKey, direction: SortDirection } | null>(null);
@@ -246,7 +247,7 @@ export default function LeaderDashboard() {
     setLoading(true);
     const teamDocRef = doc(db, 'teams', user.teamId);
 
-    const unsubscribeTeam = onSnapshot(teamDocRef, (teamDoc) => {
+    const unsubscribeTeam = onSnapshot(teamDocRef, async (teamDoc) => {
       if (!teamDoc.exists()) {
         setTeam(null);
         setTeamMembers([]);
@@ -256,6 +257,15 @@ export default function LeaderDashboard() {
 
       const teamData = { id: teamDoc.id, ...teamDoc.data() } as Team;
       setTeam(teamData);
+      
+      const spocsQuery = query(
+        collection(db, 'users'),
+        where('institute', '==', teamData.institute),
+        where('role', '==', 'spoc'),
+        where('spocStatus', '==', 'approved')
+      );
+      const spocSnapshot = await getDocs(spocsQuery);
+      setSpoc(spocSnapshot.empty ? null : (spocSnapshot.docs[0].data() as UserProfile));
 
       const memberUIDs = teamData.members.map(m => m.uid).filter(Boolean);
       const allUIDs = [...new Set([teamData.leader.uid, ...memberUIDs])];
@@ -456,7 +466,48 @@ export default function LeaderDashboard() {
             </div>
         </header>
 
-        <StudentCoordinatorCard institute={instituteData} />
+        <div className="grid gap-8 lg:grid-cols-2 mb-8">
+            <StudentCoordinatorCard institute={instituteData} />
+            <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <FileText /> Institute SPOC Details
+                  </CardTitle>
+                  <CardDescription>Your point of contact for any queries.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {spoc ? (
+                    <>
+                      <div className="flex items-center gap-3">
+                        <User className="h-5 w-5 text-primary" />
+                        <span className="font-medium">{spoc.name}</span>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <Mail className="h-5 w-5 text-primary" />
+                        <a href={`mailto:${spoc.email}`} className="text-muted-foreground hover:text-primary">
+                          {spoc.email}
+                        </a>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <Phone className="h-5 w-5 text-primary" />
+                        <a
+                          href={`https://wa.me/+91${spoc.contactNumber}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-muted-foreground hover:text-primary"
+                        >
+                          {spoc.contactNumber}
+                        </a>
+                      </div>
+                    </>
+                  ) : (
+                    <p className="text-muted-foreground">
+                      SPOC details are not available yet. An SPOC for your institute will be assigned soon.
+                    </p>
+                  )}
+                </CardContent>
+            </Card>
+        </div>
 
 
         <Card className="mb-8 w-full">
@@ -824,3 +875,4 @@ export default function LeaderDashboard() {
     </div>
   );
 }
+
