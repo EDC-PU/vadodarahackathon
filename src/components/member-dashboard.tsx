@@ -17,6 +17,7 @@ import {
   Trash2,
   LinkIcon,
   Download,
+  Lock,
 } from "lucide-react"
 import { useEffect, useState, useMemo } from "react"
 import { db } from "@/lib/firebase"
@@ -88,7 +89,25 @@ export default function MemberDashboard() {
   const [showReminder, setShowReminder] = useState(false);
   const [showPsReminder, setShowPsReminder] = useState(false);
   const [instituteData, setInstituteData] = useState<Institute | null>(null);
+  const [deadline, setDeadline] = useState<Date | null>(null);
 
+  useEffect(() => {
+    const fetchDeadline = async () => {
+        try {
+            const configDocRef = doc(db, "config", "event");
+            const configDoc = await getDoc(configDocRef);
+            if (configDoc.exists() && configDoc.data()?.registrationDeadline) {
+                setDeadline(configDoc.data().registrationDeadline.toDate());
+            }
+        } catch (error) {
+            console.error("Could not fetch registration deadline:", error);
+        }
+    };
+    fetchDeadline();
+  }, []);
+
+  const isDeadlinePassed = deadline ? new Date() > deadline : false;
+  
   const teamValidation = useMemo(() => {
     if (!team || teamMembers.length === 0) {
         return { isEligible: false, isRegistered: false, psSelected: false };
@@ -297,6 +316,15 @@ export default function MemberDashboard() {
        <RegistrationReminderDialog isOpen={showReminder} onClose={() => setShowReminder(false)} />
        <ProblemStatementReminderDialog isOpen={showPsReminder} onClose={() => setShowPsReminder(false)} isLeader={false} />
        {user && <IncompleteProfileAlert profile={user} />}
+       {team && isDeadlinePassed && team.isLocked !== false && (
+            <Alert variant="destructive" className="mb-8">
+                <Lock className="h-4 w-4" />
+                <AlertTitle>Portal Locked</AlertTitle>
+                <AlertDescription>
+                    The registration deadline has passed and your team's portal has been locked by an administrator. All profiles are now read-only.
+                </AlertDescription>
+            </Alert>
+        )}
       <header className="mb-8 flex justify-between items-start">
         <div>
           <h1 className="text-3xl font-bold font-headline">Welcome, {user.name}!</h1>
