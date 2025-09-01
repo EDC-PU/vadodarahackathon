@@ -50,6 +50,7 @@ const manageTeamBySpocFlow = ai.defineFlow(
         if (isRosterModification) {
             const configDoc = await adminDb.collection('config').doc('event').get();
             const deadline = configDoc.data()?.registrationDeadline?.toDate();
+            // Team is considered locked if deadline has passed AND isLocked is not explicitly false
             if (deadline && new Date() > deadline && teamData.isLocked !== false) {
                  return { success: false, message: `This team is locked. Unlock it first to perform this action.` };
             }

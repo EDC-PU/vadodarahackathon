@@ -58,6 +58,7 @@ const addMemberToTeamFlow = ai.defineFlow(
       const configDoc = await configDocRef.get();
       if (configDoc.exists) {
         const deadline = configDoc.data()?.registrationDeadline?.toDate();
+        // Team is considered locked if the deadline has passed AND isLocked is not explicitly false.
         if (deadline && new Date() > deadline && teamData.isLocked !== false) {
           return { success: false, message: "The registration deadline has passed and this team is locked. No new members can be added." };
         }
