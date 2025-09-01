@@ -38,8 +38,8 @@ const setEvaluationDatesFlow = ai.defineFlow(
       return { success: false, message: 'Database connection failed.' };
     }
 
-    if (dates.length !== 2) {
-      return { success: false, message: 'Exactly two dates must be provided.' };
+    if (dates.length < 2 || dates.length > 4) {
+        return { success: false, message: 'Please select between two and four dates.' };
     }
 
     try {
