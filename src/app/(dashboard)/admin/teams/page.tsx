@@ -768,7 +768,7 @@ function AllTeamsContent() {
                                         <Switch
                                             id={`lock-switch-${row.teamId}`}
                                             checked={!row.isLocked}
-                                            onCheckedChange={() => handleLockToggle(row.teamId, !row.isLocked)}
+                                            onCheckedChange={(checked) => handleLockToggle(row.teamId, !checked)}
                                             disabled={isSaving === `lock-${row.teamId}`}
                                         />
                                         <Label htmlFor={`lock-switch-${row.teamId}`} className="flex items-center gap-1.5">

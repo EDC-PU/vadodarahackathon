@@ -663,7 +663,7 @@ export default function SpocTeamsPage() {
                                         {memberIndex === 0 && (
                                             <TableCell rowSpan={membersToDisplay.length} className="font-medium align-top">
                                                 <div className="flex flex-col gap-2">
-                                                    {editingTeamName?.id === team.id ? (
+                                                    {(editingTeamName?.id === team.id) ? (
                                                         <div className="flex items-center gap-2">
                                                             <Input 
                                                                 value={editingTeamName.name}
@@ -708,7 +708,7 @@ export default function SpocTeamsPage() {
                                                 </div>
                                             </TableCell>
                                         )}
-                                         {memberIndex === 0 && (
+                                        {memberIndex === 0 && (
                                             <TableCell rowSpan={membersToDisplay.length} className="align-top">
                                                  {(editingTeamNumber?.id === team.id || !team.teamNumber) ? (
                                                     <div className="flex items-center gap-2 w-32">
@@ -764,13 +764,13 @@ export default function SpocTeamsPage() {
                                                 )}
                                             </TableCell>
                                         )}
-                                         {memberIndex === 0 && (
+                                        {memberIndex === 0 && (
                                             <TableCell rowSpan={membersToDisplay.length} className="align-top">
                                                 <div className="flex items-center space-x-2">
                                                     <Switch
                                                         id={`lock-switch-${team.id}`}
                                                         checked={!team.isLocked}
-                                                        onCheckedChange={() => handleLockToggle(team.id, !team.isLocked)}
+                                                        onCheckedChange={(checked) => handleLockToggle(team.id, !checked)}
                                                         disabled={isSaving === `lock-${team.id}`}
                                                     />
                                                     <Label htmlFor={`lock-switch-${team.id}`} className="flex items-center gap-1.5">
