@@ -785,8 +785,8 @@ function AllTeamsContent() {
                                             disabled={isSaving === `lock-${row.teamId}`}
                                         />
                                         <Label htmlFor={`lock-switch-${row.teamId}`} className="flex items-center gap-1.5">
-                                            {!row.isLocked ? <Unlock className="h-4 w-4 text-green-500" /> : <Lock className="h-4 w-4 text-destructive"/>}
-                                            {!row.isLocked ? 'Unlocked' : 'Locked'}
+                                            {row.isLocked ? <Lock className="h-4 w-4 text-destructive"/> : <Unlock className="h-4 w-4 text-green-500" />}
+                                            {row.isLocked ? 'Locked' : 'Unlocked'}
                                         </Label>
                                     </div>
                                 </TableCell>
@@ -881,4 +881,6 @@ export default function AllTeamsPage() {
         </Suspense>
     )
 }
+    
+
     
