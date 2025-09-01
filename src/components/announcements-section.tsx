@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, Megaphone, Link as LinkIcon } from "lucide-react";
 import { db } from "@/lib/firebase";
-import { collection, query, orderBy, onSnapshot, limit, where } from "firebase/firestore";
+import { collection, query, orderBy, onSnapshot, limit, where, or } from "firebase/firestore";
 import { Announcement, AnnouncementAudience } from "@/lib/types";
 import Link from "next/link";
 import { useAuth } from "@/hooks/use-auth";
@@ -35,10 +35,13 @@ export function AnnouncementsSection({ itemCount = 5, audience, initialAnnouncem
     if (audience === 'spoc_teams' && user?.institute) {
         // For team members/leaders, show 'all', 'teams', and their institute-specific announcements
         q = query(
-            announcementsCollection, 
-            where("audience", "in", ["all", "teams", "institute"]),
-            orderBy("createdAt", "desc"), 
-            limit(itemCount)
+            announcementsCollection,
+            or(
+                where("audience", "==", "all"),
+                where("audience", "==", "teams"),
+                where("audience", "==", "institute")
+            ),
+            orderBy("createdAt", "desc")
         );
     } else if (audience === 'spocs_and_all') {
         q = query(
@@ -67,9 +70,14 @@ export function AnnouncementsSection({ itemCount = 5, audience, initialAnnouncem
     const unsubscribe = onSnapshot(q, (snapshot) => {
         let data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Announcement));
         
-        // Manual filter for institute-specific announcements for team members
+        // Manual filter for institute-specific announcements for team members as Firestore doesn't support OR with other fields in a single query efficiently
         if (audience === 'spoc_teams' && user?.institute) {
-            data = data.filter(ann => ann.audience !== 'institute' || ann.institute === user.institute);
+            data = data.filter(ann => {
+                if (ann.audience === 'institute') {
+                    return ann.institute === user.institute;
+                }
+                return ann.audience === 'all' || ann.audience === 'teams';
+            }).slice(0, itemCount);
         }
 
         setAnnouncements(data);
