@@ -68,14 +68,22 @@ const exportEvaluationFlow = ai.defineFlow(
         }
 
         teams.forEach((team, index) => {
+            const problemStatementCombined = team.problemstatement_id && team.problemstatement_title
+                ? `${team.problemstatement_id}, ${team.problemstatement_title}`
+                : 'N/A';
+            
             const newRow = sheet.insertRow(startRow + index, [
                 null, // A is empty
                 index + 1, // B - Sr
-                team.team_name, // C
-                team.leader_name, // D
-                team.team_number, // E
-                team.problemstatement_id, // F
-                team.problemstatement_title, // G
+                team.team_number || 'N/A', // C - Team Number
+                team.team_name, // D - Team Name
+                team.leader_name, // E - Lead
+                problemStatementCombined, // F - Problem Statement (Combined)
+                null, // G - Relevance
+                null, // H - Innovation
+                null, // I - Technical
+                null, // J - Feasibility
+                null, // K - Total
             ]);
 
             // Apply styles from template row to the new row
