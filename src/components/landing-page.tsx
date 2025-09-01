@@ -96,7 +96,7 @@ async function getUserProfilesInChunks(userIds: string[]): Promise<Map<string, U
 
 
 const LiveStatsCounter = () => {
-    const [stats, setStats] = useState({ registered: 0, pending: 0, participants: 0 });
+    const [stats, setStats] = useState({ registered: 0, participants: 0 });
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -104,15 +104,14 @@ const LiveStatsCounter = () => {
         const teamsQuery = query(collection(db, "teams"));
 
         const unsubscribe = onSnapshot(teamsQuery, async (snapshot) => {
-            console.log("Live stats snapshot received...");
             const allTeams = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Team));
 
             if (allTeams.length === 0) {
-                setStats({ registered: 0, pending: 0, participants: 0 });
+                setStats({ registered: 0, participants: 0 });
                 setLoading(false);
                 return;
             }
-
+            
             const allParticipantUIDs = new Set<string>();
             allTeams.forEach(team => {
                 allParticipantUIDs.add(team.leader.uid);
@@ -122,8 +121,9 @@ const LiveStatsCounter = () => {
             });
 
             const userMap = await getUserProfilesInChunks(Array.from(allParticipantUIDs));
-
-            let registeredCount = 0;
+            
+            let registeredTeams: Team[] = [];
+            
             allTeams.forEach(team => {
                 const memberUIDs = [team.leader.uid, ...team.members.map(m => m.uid)];
                 const teamMemberProfiles = memberUIDs.map(uid => userMap.get(uid)).filter(Boolean) as UserProfile[];
@@ -132,14 +132,21 @@ const LiveStatsCounter = () => {
                 const instituteCount = teamMemberProfiles.filter(m => m.institute === team.institute).length;
 
                 if (teamMemberProfiles.length === 6 && femaleCount >= 1 && instituteCount >= 3 && !!team.problemStatementId) {
-                    registeredCount++;
+                    registeredTeams.push(team);
                 }
             });
 
+            const registeredParticipantUIDs = new Set<string>();
+            registeredTeams.forEach(team => {
+                registeredParticipantUIDs.add(team.leader.uid);
+                team.members.forEach(member => {
+                    if (member.uid) registeredParticipantUIDs.add(member.uid);
+                });
+            });
+            
             setStats({
-                registered: registeredCount,
-                pending: allTeams.length - registeredCount,
-                participants: allParticipantUIDs.size
+                registered: registeredTeams.length,
+                participants: registeredParticipantUIDs.size
             });
             setLoading(false);
         }, (error) => {
@@ -158,18 +165,12 @@ const LiveStatsCounter = () => {
             animate={{ y: 0, opacity: 1 }}
             transition={{ delay: 1, duration: 0.5 }}
         >
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 text-center">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 text-center">
                 <div className="flex flex-col items-center justify-center">
                     <p className="text-4xl font-bold text-brand-yellow">
                         {loading ? <Loader2 className="animate-spin h-8 w-8" /> : <CountUp end={stats.registered} />}
                     </p>
                     <p className="text-sm font-medium uppercase tracking-widest text-white/70 mt-2">Registered Teams</p>
-                </div>
-                <div className="flex flex-col items-center justify-center">
-                    <p className="text-4xl font-bold text-brand-orange">
-                        {loading ? <Loader2 className="animate-spin h-8 w-8" /> : <CountUp end={stats.pending} />}
-                    </p>
-                    <p className="text-sm font-medium uppercase tracking-widest text-white/70 mt-2">Ongoing Registrations</p>
                 </div>
                 <div className="flex flex-col items-center justify-center">
                     <p className="text-4xl font-bold text-brand-red">
@@ -651,3 +652,4 @@ export default function LandingPage({ spocDetails, announcements, problemStateme
     </div>
   );
 }
+
