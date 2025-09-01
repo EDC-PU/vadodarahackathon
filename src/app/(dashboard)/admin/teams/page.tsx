@@ -96,30 +96,12 @@ function AllTeamsContent() {
   const [selectedProblemStatements, setSelectedProblemStatements] = useState<string[]>([]);
   const [filteredProblemStatements, setFilteredProblemStatements] = useState<ProblemStatement[]>([]);
   const [sortConfig, setSortConfig] = useState<{ key: SortKey, direction: SortDirection } | null>(null);
-  const [deadline, setDeadline] = useState<Date | null>(null);
 
   const { toast } = useToast();
   const searchParams = useSearchParams();
   
   const categories: CategoryFilter[] = ["All Categories", "Software", "Hardware"];
   const statuses: StatusFilter[] = ["All Statuses", "Registered", "Pending"];
-
-  useEffect(() => {
-    const fetchDeadline = async () => {
-        try {
-            const configDocRef = doc(db, "config", "event");
-            const configDoc = await getDoc(configDocRef);
-            if (configDoc.exists() && configDoc.data()?.registrationDeadline) {
-                setDeadline(configDoc.data().registrationDeadline.toDate());
-            }
-        } catch (error) {
-            console.error("Could not fetch registration deadline:", error);
-        }
-    };
-    fetchDeadline();
-  }, []);
-
-  const isDeadlinePassed = deadline ? new Date() > deadline : false;
 
   useEffect(() => {
     const psIdFromQuery = searchParams.get('problemStatementId');
@@ -205,7 +187,7 @@ function AllTeamsContent() {
         const leaderProfile = allUsers.get(team.leader.uid);
         const allMemberProfiles = [leaderProfile, ...team.members.map(m => allUsers.get(m.uid))].filter(Boolean) as UserProfile[];
         const memberCount = allMemberProfiles.length;
-        const memberCountMatch = memberCountFilter === "All" || memberCount === memberCountFilter;
+        const memberCountMatch = memberCountFilter === "All" || memberCount === memberCount;
 
         let searchMatch = true;
         if (searchTerm) {
@@ -478,7 +460,7 @@ function AllTeamsContent() {
                     ...member,
                     teamName: team.name,
                     teamId: team.id,
-                    isLocked: team.isLocked ?? true,
+                    isLocked: team.isLocked ?? false,
                     teamNumber: team.teamNumber,
                     isNominated: team.isNominated,
                     problemStatementId: team.problemStatementId || 'Not Selected',
@@ -773,7 +755,7 @@ function AllTeamsContent() {
                                             id={`lock-switch-${row.teamId}`}
                                             checked={!row.isLocked}
                                             onCheckedChange={() => handleLockToggle(row.teamId, !row.isLocked)}
-                                            disabled={!isDeadlinePassed || isSaving === `lock-${row.teamId}`}
+                                            disabled={isSaving === `lock-${row.teamId}`}
                                         />
                                         <Label htmlFor={`lock-switch-${row.teamId}`} className="flex items-center gap-1.5">
                                             {!row.isLocked ? <Unlock className="h-4 w-4 text-green-500" /> : <Lock className="h-4 w-4 text-destructive"/>}

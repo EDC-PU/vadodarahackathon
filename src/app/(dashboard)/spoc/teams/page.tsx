@@ -5,7 +5,7 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Loader2, AlertCircle, Save, Pencil, X, Trash2, Users, User, MinusCircle, ArrowUpDown, Link as LinkIcon, Copy, RefreshCw, ChevronDown, FileQuestion } from "lucide-react";
+import { Loader2, AlertCircle, Save, Pencil, X, Trash2, Users, User, MinusCircle, ArrowUpDown, Link as LinkIcon, Copy, RefreshCw, ChevronDown, FileQuestion, Lock, Unlock } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useEffect, useState, useMemo, useCallback } from "react";
 import { db } from "@/lib/firebase";
@@ -44,6 +44,9 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { exportEvaluation } from "@/ai/flows/export-evaluation-flow";
 import { isAfter } from "date-fns";
+import { toggleTeamLock } from "@/ai/flows/toggle-team-lock-flow";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 
 type SortKey = 'teamName' | 'teamNumber' | 'name' | 'email' | 'enrollmentNumber' | 'contactNumber';
 type SortDirection = 'asc' | 'desc';
@@ -503,6 +506,22 @@ export default function SpocTeamsPage() {
     });
   };
 
+  const handleLockToggle = async (teamId: string, currentLockState: boolean) => {
+    setIsSaving(`lock-${teamId}`);
+    try {
+        const result = await toggleTeamLock({ teamId, isLocked: !currentLockState });
+        if(result.success) {
+            toast({ title: "Success", description: result.message });
+        } else {
+            throw new Error(result.message);
+        }
+    } catch(error: any) {
+         toast({ title: "Error", description: error.message, variant: "destructive" });
+    } finally {
+        setIsSaving(null);
+    }
+  }
+
   if (authLoading || loading) {
     return (
       <div className="flex justify-center items-center h-screen">
@@ -618,8 +637,10 @@ export default function SpocTeamsPage() {
                         <Table>
                             <TableHeader>
                             <TableRow>
-                                <TableHead><Button variant="ghost" onClick={() => requestSort('teamName')}>Team Name & PS {getSortIndicator('teamName')}</Button></TableHead>
+                                <TableHead><Button variant="ghost" onClick={() => requestSort('teamName')}>Team Name {getSortIndicator('teamName')}</Button></TableHead>
                                 <TableHead><Button variant="ghost" onClick={() => requestSort('teamNumber')}>Team Number {getSortIndicator('teamNumber')}</Button></TableHead>
+                                <TableHead>Problem Statement</TableHead>
+                                <TableHead>Lock Status</TableHead>
                                 <TableHead><Button variant="ghost" onClick={() => requestSort('name')}>Member Name {getSortIndicator('name')}</Button></TableHead>
                                 <TableHead><Button variant="ghost" onClick={() => requestSort('email')}>Email {getSortIndicator('email')}</Button></TableHead>
                                 <TableHead><Button variant="ghost" onClick={() => requestSort('enrollmentNumber')}>Enrollment No. {getSortIndicator('enrollmentNumber')}</Button></TableHead>
@@ -641,7 +662,7 @@ export default function SpocTeamsPage() {
                                     <TableRow key={`${team.id}-${member.uid || memberIndex}-${roleFilter}`}>
                                         {memberIndex === 0 && (
                                             <TableCell rowSpan={membersToDisplay.length} className="font-medium align-top">
-                                                <div className="flex flex-col gap-2 items-start w-[250px]">
+                                                <div className="flex flex-col gap-2">
                                                     {editingTeam?.id === team.id ? (
                                                         <div className="flex items-center gap-2">
                                                             <Input 
@@ -664,30 +685,6 @@ export default function SpocTeamsPage() {
                                                                 <Pencil className="h-4 w-4 text-muted-foreground"/>
                                                             </Button>
                                                         </div>
-                                                    )}
-                                                     {team.problemStatementId ? (
-                                                        <Badge variant="secondary" className="whitespace-normal">
-                                                            {problemStatements.find(ps => ps.id === team.problemStatementId)?.problemStatementId || 'N/A'}
-                                                        </Badge>
-                                                    ) : canSpocSelectPs ? (
-                                                        <div className="flex flex-col gap-2 items-start w-full">
-                                                            <Select onValueChange={(psId) => setSpocPsSelection(prev => ({...prev, [team.id]: psId}))}>
-                                                                <SelectTrigger>
-                                                                    <SelectValue placeholder="Select a PS..." />
-                                                                </SelectTrigger>
-                                                                <SelectContent>
-                                                                    {problemStatements.map(ps => (
-                                                                        <SelectItem key={ps.id} value={ps.id}>{ps.problemStatementId} - {ps.title}</SelectItem>
-                                                                    ))}
-                                                                </SelectContent>
-                                                            </Select>
-                                                            <Button size="sm" onClick={() => handleAssignProblemStatement(team.id)} disabled={!spocPsSelection[team.id] || isSaving === `ps-${team.id}`}>
-                                                                {isSaving === `ps-${team.id}` ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Save className="mr-2 h-4 w-4" />}
-                                                                Assign
-                                                            </Button>
-                                                        </div>
-                                                    ) : (
-                                                        <Badge variant="destructive">Not Selected</Badge>
                                                     )}
                                                     <AlertDialog>
                                                         <AlertDialogTrigger asChild>
@@ -724,6 +721,48 @@ export default function SpocTeamsPage() {
                                                     <Button size="icon" className="h-8 w-8" onClick={() => handleSaveTeamNumber(team.id)} disabled={isSaving === `number-${team.id}`}>
                                                         {isSaving === `number-${team.id}` ? <Loader2 className="h-4 w-4 animate-spin"/> : <Save className="h-4 w-4"/>}
                                                     </Button>
+                                                </div>
+                                            </TableCell>
+                                        )}
+                                        {memberIndex === 0 && (
+                                            <TableCell rowSpan={membersToDisplay.length} className="align-top whitespace-normal max-w-xs">
+                                                {team.problemStatementTitle ? (
+                                                    <Badge variant="secondary" className="whitespace-normal">{team.problemStatementTitle}</Badge>
+                                                ) : canSpocSelectPs ? (
+                                                     <div className="flex flex-col gap-2 items-start w-[250px]">
+                                                        <Select onValueChange={(psId) => setSpocPsSelection(prev => ({...prev, [team.id]: psId}))}>
+                                                            <SelectTrigger>
+                                                                <SelectValue placeholder="Select a PS..." />
+                                                            </SelectTrigger>
+                                                            <SelectContent>
+                                                                {problemStatements.map(ps => (
+                                                                    <SelectItem key={ps.id} value={ps.id}>{ps.problemStatementId} - {ps.title}</SelectItem>
+                                                                ))}
+                                                            </SelectContent>
+                                                        </Select>
+                                                        <Button size="sm" onClick={() => handleAssignProblemStatement(team.id)} disabled={!spocPsSelection[team.id] || isSaving === `ps-${team.id}`}>
+                                                            {isSaving === `ps-${team.id}` ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Save className="mr-2 h-4 w-4" />}
+                                                            Assign
+                                                        </Button>
+                                                     </div>
+                                                ) : (
+                                                    <Badge variant="destructive">Not Selected</Badge>
+                                                )}
+                                            </TableCell>
+                                        )}
+                                        {memberIndex === 0 && (
+                                            <TableCell rowSpan={membersToDisplay.length} className="align-top">
+                                                <div className="flex items-center space-x-2">
+                                                    <Switch
+                                                        id={`lock-switch-${team.id}`}
+                                                        checked={!team.isLocked}
+                                                        onCheckedChange={() => handleLockToggle(team.id, !team.isLocked)}
+                                                        disabled={isSaving === `lock-${team.id}`}
+                                                    />
+                                                    <Label htmlFor={`lock-switch-${team.id}`} className="flex items-center gap-1.5">
+                                                        {!team.isLocked ? <Unlock className="h-4 w-4 text-green-500" /> : <Lock className="h-4 w-4 text-destructive"/>}
+                                                        {!team.isLocked ? 'Unlocked' : 'Locked'}
+                                                    </Label>
                                                 </div>
                                             </TableCell>
                                         )}
