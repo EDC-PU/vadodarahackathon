@@ -50,8 +50,8 @@ import { generateNominationForm } from "@/ai/flows/generate-nomination-form-flow
 const formSchema = z.object({
   evaluationDates: z
     .array(z.date())
-    .min(2, "Please select exactly two dates.")
-    .max(2, "Please select exactly two dates."),
+    .min(2, "Please select at least two dates.")
+    .max(4, "You can select a maximum of four dates."),
 });
 
 export default function SpocEvaluationPage() {
@@ -63,6 +63,8 @@ export default function SpocEvaluationPage() {
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isGenerating, setIsGenerating] = useState<string | null>(null);
+
+  const isPietSpoc = user?.institute === "Parul Institute of Engineering & Technology";
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -117,6 +119,16 @@ export default function SpocEvaluationPage() {
 
   const onDateSubmit = async (data: z.infer<typeof formSchema>) => {
     if (!instituteData) return;
+
+    if (isPietSpoc && data.evaluationDates.length > 4) {
+      toast({ title: "Error", description: "You can select a maximum of four dates.", variant: "destructive" });
+      return;
+    }
+    if (!isPietSpoc && data.evaluationDates.length > 2) {
+      toast({ title: "Error", description: "You can select a maximum of two dates.", variant: "destructive" });
+      return;
+    }
+
     setIsSaving(true);
     try {
       const result = await setEvaluationDates({
@@ -207,7 +219,7 @@ export default function SpocEvaluationPage() {
   };
 
 
-  const canNominate = instituteData?.evaluationDates && instituteData.evaluationDates.length === 2
+  const canNominate = instituteData?.evaluationDates && instituteData.evaluationDates.length >= 2
     ? isAfter(new Date(), (instituteData.evaluationDates[1] as any).toDate())
     : false;
   
@@ -236,8 +248,10 @@ export default function SpocEvaluationPage() {
       <Card>
         <CardHeader>
           <CardTitle>Set Institute Hackathon Dates</CardTitle>
-          <CardDescription>
-            Select the two dates your institute will hold its internal hackathon. These must be between September 1st and 4th, 2025. This date would be shown to all teams from your institutes.
+           <CardDescription>
+            {isPietSpoc
+              ? "Select four dates your institute will hold its internal hackathon. These must be between September 1st and 10th, 2025."
+              : "Select the two dates your institute will hold its internal hackathon. These must be between September 1st and 4th, 2025."}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -264,7 +278,7 @@ export default function SpocEvaluationPage() {
                                 .map((date) => format(date, "PPP"))
                                 .join(" and ")
                             ) : (
-                              <span>Pick your two dates</span>
+                              <span>Pick your dates</span>
                             )}
                           </Button>
                         </FormControl>
@@ -272,13 +286,13 @@ export default function SpocEvaluationPage() {
                       <PopoverContent className="w-auto p-0" align="start">
                         <Calendar
                           mode="multiple"
-                          min={2}
-                          max={2}
+                          min={isPietSpoc ? 4 : 2}
+                          max={isPietSpoc ? 4 : 2}
                           selected={field.value}
                           onSelect={field.onChange}
                           initialFocus
                           fromDate={new Date(2025, 8, 1)}
-                          toDate={new Date(2025, 8, 4)}
+                          toDate={new Date(2025, 8, isPietSpoc ? 10 : 4)}
                         />
                       </PopoverContent>
                     </Popover>
