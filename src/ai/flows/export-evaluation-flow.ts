@@ -92,7 +92,8 @@ const exportEvaluationFlow = ai.defineFlow(
                 const templateCell = templateRow.getCell(colNumber);
                 cell.style = templateCell.style;
                 cell.font = templateCell.font;
-                cell.alignment = templateCell.alignment;
+                // Vertically center the content in each cell
+                cell.alignment = { ...templateCell.alignment, vertical: 'middle' };
                 cell.border = templateCell.border;
                 cell.fill = templateCell.fill;
             });
