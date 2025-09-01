@@ -373,6 +373,24 @@ export default function SpocTeamsPage() {
         setEditingTeam({ id: teamId, name: team.name });
     }
   };
+  
+  const handleSaveTeamNumber = async (teamId: string) => {
+      const teamNumber = editingTeamNumber[teamId];
+      if (typeof teamNumber === 'undefined') return;
+
+      setIsSaving(`number-${teamId}`);
+      try {
+          const teamDocRef = doc(db, "teams", teamId);
+          await updateDoc(teamDocRef, { teamNumber: teamNumber });
+          toast({ title: "Success", description: "Team number updated." });
+          setEditingTeamNumber(prev => ({...prev, [teamId]: ''})); // Clear after save
+      } catch (error) {
+          console.error("Error updating team number:", error);
+          toast({ title: "Error", description: "Could not update team number.", variant: "destructive" });
+      } finally {
+          setIsSaving(null);
+      }
+  };
 
   const handleSaveTeamName = async (teamId: string) => {
       if (!editingTeam || editingTeam.id !== teamId) return;
@@ -600,8 +618,8 @@ export default function SpocTeamsPage() {
                         <Table>
                             <TableHeader>
                             <TableRow>
-                                <TableHead><Button variant="ghost" onClick={() => requestSort('teamName')}>Team Name & PS</Button></TableHead>
-                                <TableHead>Invite Link</TableHead>
+                                <TableHead><Button variant="ghost" onClick={() => requestSort('teamName')}>Team Name & PS {getSortIndicator('teamName')}</Button></TableHead>
+                                <TableHead><Button variant="ghost" onClick={() => requestSort('teamNumber')}>Team Number {getSortIndicator('teamNumber')}</Button></TableHead>
                                 <TableHead><Button variant="ghost" onClick={() => requestSort('name')}>Member Name {getSortIndicator('name')}</Button></TableHead>
                                 <TableHead><Button variant="ghost" onClick={() => requestSort('email')}>Email {getSortIndicator('email')}</Button></TableHead>
                                 <TableHead><Button variant="ghost" onClick={() => requestSort('enrollmentNumber')}>Enrollment No. {getSortIndicator('enrollmentNumber')}</Button></TableHead>
@@ -695,31 +713,18 @@ export default function SpocTeamsPage() {
                                         )}
                                         {memberIndex === 0 && (
                                             <TableCell rowSpan={membersToDisplay.length} className="align-top">
-                                                {inviteLinks.has(team.id) ? (
-                                                    <div className="flex items-center gap-1">
-                                                        <Input value={inviteLinks.get(team.id)} readOnly className="h-8 text-xs"/>
-                                                        <Button size="icon" variant="ghost" className="h-8 w-8 shrink-0" onClick={() => {
-                                                            navigator.clipboard.writeText(inviteLinks.get(team.id)!);
-                                                            toast({ title: "Copied!" });
-                                                        }}>
-                                                            <Copy className="h-4 w-4" />
-                                                        </Button>
-                                                    </div>
-                                                ) : (
-                                                    <Button
-                                                        variant="outline"
-                                                        size="sm"
-                                                        onClick={() => handleGetInviteLink(team.id, team.name)}
-                                                        disabled={loadingLink === team.id}
-                                                    >
-                                                        {loadingLink === team.id ? (
-                                                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                                        ) : (
-                                                            <LinkIcon className="mr-2 h-4 w-4" />
-                                                        )}
-                                                        Get Link
+                                                <div className="flex items-center gap-2 w-32">
+                                                    <Input
+                                                        value={editingTeamNumber[team.id] ?? team.teamNumber ?? ''}
+                                                        onChange={(e) => setEditingTeamNumber(prev => ({...prev, [team.id]: e.target.value}))}
+                                                        className="h-8"
+                                                        placeholder="Team No."
+                                                        disabled={isSaving === `number-${team.id}`}
+                                                    />
+                                                    <Button size="icon" className="h-8 w-8" onClick={() => handleSaveTeamNumber(team.id)} disabled={isSaving === `number-${team.id}`}>
+                                                        {isSaving === `number-${team.id}` ? <Loader2 className="h-4 w-4 animate-spin"/> : <Save className="h-4 w-4"/>}
                                                     </Button>
-                                                )}
+                                                </div>
                                             </TableCell>
                                         )}
                                         <TableCell>
@@ -731,7 +736,7 @@ export default function SpocTeamsPage() {
                                                 `${member.name} ${member.isLeader ? '(Leader)' : ''}`
                                             )}
                                         </TableCell>
-                                        <TableCell className="select-text">{member.email}</TableCell>
+                                        <TableCell>{member.email}</TableCell>
                                         <TableCell>{member.enrollmentNumber || 'N/A'}</TableCell>
                                         <TableCell>
                                             {member.contactNumber ? (
@@ -833,3 +838,4 @@ export default function SpocTeamsPage() {
     </div>
   );
 }
+
