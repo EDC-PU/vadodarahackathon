@@ -260,15 +260,11 @@ export default function SpocTeamsPage() {
 
   const filteredTeams = useMemo(() => {
     return teams.filter(team => {
-      let isRegistered = false;
       const allMemberUIDs = [team.leader.uid, ...team.members.map(m => m.uid)];
       const members = allMemberUIDs.map(uid => users.get(uid)).filter(Boolean) as UserProfile[];
       const hasFemale = members.some(m => m.gender === 'F');
       const instituteCount = members.filter(m => m.institute === team.institute).length;
-
-      if (members.length === 6 && hasFemale && instituteCount >= 3) {
-          isRegistered = true;
-      }
+      const isRegistered = members.length === 6 && hasFemale && instituteCount >= 3 && !!team.problemStatementId;
       
       const statusMatch = statusFilter === 'All Statuses' ? true : (
         statusFilter === 'Registered' ? isRegistered : !isRegistered
@@ -312,9 +308,16 @@ export default function SpocTeamsPage() {
             },
             ...membersWithDetails.map(m => ({...m, isLeader: false})),
         ];
+
+        const allMemberProfiles = allMembers.map(m => users.get(m.uid)).filter(Boolean) as UserProfile[];
+        const femaleCount = allMemberProfiles.filter(m => m.gender === 'F').length;
+        const instituteCount = allMemberProfiles.filter(m => m.institute === team.institute).length;
+        const isRegistered = allMemberProfiles.length === 6 && femaleCount >= 1 && instituteCount >= 3 && !!team.problemStatementId;
+
         return {
             ...team,
             allMembers,
+            isRegistered,
         };
     });
   };
@@ -710,31 +713,35 @@ export default function SpocTeamsPage() {
                                         )}
                                         {memberIndex === 0 && (
                                             <TableCell rowSpan={membersToDisplay.length} className="align-top">
-                                                 {(editingTeamNumber?.id === team.id || !team.teamNumber) ? (
-                                                    <div className="flex items-center gap-2 w-32">
-                                                        <Input
-                                                            value={editingTeamNumber?.id === team.id ? editingTeamNumber.number : ''}
-                                                            onChange={(e) => setEditingTeamNumber({ id: team.id, number: e.target.value })}
-                                                            className="h-8"
-                                                            placeholder="Team No."
-                                                            disabled={isSaving === `number-${team.id}`}
-                                                        />
-                                                        <Button size="icon" className="h-8 w-8" onClick={() => handleSaveTeamNumber(team.id)} disabled={isSaving === `number-${team.id}`}>
-                                                            {isSaving === `number-${team.id}` ? <Loader2 className="h-4 w-4 animate-spin"/> : <Save className="h-4 w-4"/>}
-                                                        </Button>
-                                                         {editingTeamNumber?.id === team.id && (
-                                                            <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setEditingTeamNumber(null)}>
-                                                                <X className="h-4 w-4"/>
+                                                {team.isRegistered ? (
+                                                    (editingTeamNumber?.id === team.id || !team.teamNumber) ? (
+                                                        <div className="flex items-center gap-2 w-32">
+                                                            <Input
+                                                                value={editingTeamNumber?.id === team.id ? editingTeamNumber.number : ''}
+                                                                onChange={(e) => setEditingTeamNumber({ id: team.id, number: e.target.value })}
+                                                                className="h-8"
+                                                                placeholder="Team No."
+                                                                disabled={isSaving === `number-${team.id}`}
+                                                            />
+                                                            <Button size="icon" className="h-8 w-8" onClick={() => handleSaveTeamNumber(team.id)} disabled={isSaving === `number-${team.id}`}>
+                                                                {isSaving === `number-${team.id}` ? <Loader2 className="h-4 w-4 animate-spin"/> : <Save className="h-4 w-4"/>}
                                                             </Button>
-                                                         )}
-                                                    </div>
+                                                             {editingTeamNumber?.id === team.id && (
+                                                                <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setEditingTeamNumber(null)}>
+                                                                    <X className="h-4 w-4"/>
+                                                                </Button>
+                                                             )}
+                                                        </div>
+                                                    ) : (
+                                                        <div className="flex items-center gap-2 group">
+                                                            <span>{team.teamNumber}</span>
+                                                            <Button size="icon" variant="ghost" className="h-7 w-7 opacity-0 group-hover:opacity-100" onClick={() => handleEditTeamNumber(team)}>
+                                                                <Pencil className="h-4 w-4 text-muted-foreground"/>
+                                                            </Button>
+                                                        </div>
+                                                    )
                                                 ) : (
-                                                    <div className="flex items-center gap-2 group">
-                                                        <span>{team.teamNumber}</span>
-                                                        <Button size="icon" variant="ghost" className="h-7 w-7 opacity-0 group-hover:opacity-100" onClick={() => handleEditTeamNumber(team)}>
-                                                            <Pencil className="h-4 w-4 text-muted-foreground"/>
-                                                        </Button>
-                                                    </div>
+                                                    <Badge variant="outline">Pending Reg.</Badge>
                                                 )}
                                             </TableCell>
                                         )}
