@@ -540,11 +540,10 @@ function AllTeamsContent() {
     }
   };
 
-  const handleLockToggle = async (teamId: string, isLocked: boolean) => {
+  const handleLockToggle = async (teamId: string, currentLockState: boolean) => {
       setIsSaving(`lock-${teamId}`);
       try {
-          // The new desired state is the opposite of the current visual state.
-          const result = await toggleTeamLock({ teamId, isLocked: isLocked });
+          const result = await toggleTeamLock({ teamId, isLocked: !currentLockState });
           if(result.success) {
               toast({ title: "Success", description: result.message });
           } else {
@@ -882,4 +881,6 @@ export default function AllTeamsPage() {
         </Suspense>
     )
 }
+    
+
     
