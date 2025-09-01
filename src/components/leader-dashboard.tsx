@@ -140,12 +140,14 @@ function StudentCoordinatorCard({ institute }: { institute: Institute | null }) 
       </CardHeader>
       <CardContent className="space-y-2">
         <p className="font-semibold">{institute.studentCoordinatorName}</p>
-        <div className="flex items-center gap-3">
-          <Phone className="h-4 w-4 text-muted-foreground" />
-          <a href={`https://wa.me/${institute.studentCoordinatorContact?.replace(/\s/g, '')}`} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary">
-            {institute.studentCoordinatorContact}
-          </a>
-        </div>
+        {institute.studentCoordinatorContact && (
+            <div className="flex items-center gap-3">
+            <Phone className="h-4 w-4 text-muted-foreground" />
+            <a href={`https://wa.me/${institute.studentCoordinatorContact?.replace(/\s/g, '')}`} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary">
+                {institute.studentCoordinatorContact}
+            </a>
+            </div>
+        )}
       </CardContent>
     </Card>
   );
@@ -288,6 +290,8 @@ export default function LeaderDashboard() {
         if (!snapshot.empty) {
             const data = {id: snapshot.docs[0].id, ...snapshot.docs[0].data()} as Institute;
             setInstituteData(data);
+        } else {
+            setInstituteData(null);
         }
     });
 
