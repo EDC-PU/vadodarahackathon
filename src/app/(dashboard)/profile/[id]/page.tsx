@@ -291,7 +291,7 @@ export default function ProfilePage() {
 
     return (
         <div className="p-4 sm:p-6 lg:p-8 space-y-8">
-            {isDeadlinePassed && team?.isLocked && (
+            {isDeadlinePassed && team?.isLocked !== false && (
                 <Alert>
                     <AlertCircle className="h-4 w-4" />
                     <AlertTitle>Details Locked</AlertTitle>
@@ -394,7 +394,7 @@ export default function ProfilePage() {
                                         <FormLabel>Department</FormLabel>
                                         <Select 
                                             onValueChange={(value) => field.onChange(value === 'Other' ? '' : value)} 
-                                            value={showOtherDepartmentInput ? 'Other' : field.value} 
+                                            value={showOtherDepartmentInput ? 'Other' : field.value || ""} 
                                             disabled={!canEdit || isSubmitting || isDeptLoading}
                                         >
                                             <FormControl>
@@ -447,4 +447,3 @@ export default function ProfilePage() {
         </div>
     );
 }
-
