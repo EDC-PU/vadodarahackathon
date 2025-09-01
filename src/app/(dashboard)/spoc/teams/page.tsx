@@ -5,7 +5,7 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Loader2, AlertCircle, Save, Pencil, X, Trash2, Users, User, MinusCircle, ArrowUpDown, ChevronDown } from "lucide-react";
+import { Loader2, AlertCircle, Save, Pencil, X, Trash2, Users, User, MinusCircle, ArrowUpDown, Link as LinkIcon, Copy, RefreshCw, ChevronDown, FileQuestion } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useEffect, useState, useMemo, useCallback } from "react";
 import { db } from "@/lib/firebase";
@@ -38,6 +38,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { exportTeams } from "@/ai/flows/export-teams-flow";
 import { Download, FileSpreadsheet } from "lucide-react";
 import { Buffer } from 'buffer';
+import { getTeamInviteLink } from "@/ai/flows/get-team-invite-link-flow";
 import Link from "next/link";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -87,21 +88,22 @@ export default function SpocTeamsPage() {
   const [selectedProblemStatements, setSelectedProblemStatements] = useState<string[]>([]);
   const [sortConfig, setSortConfig] = useState<{ key: SortKey, direction: SortDirection } | null>(null);
   const { toast } = useToast();
+  const [inviteLinks, setInviteLinks] = useState<Map<string, string>>(new Map());
+  const [loadingLink, setLoadingLink] = useState<string | null>(null);
   const [evaluationExportDate, setEvaluationExportDate] = useState<Date | null>(null);
   const [spocPsSelection, setSpocPsSelection] = useState<Record<string, string>>({});
-  
+  const appBaseUrl = "https://vadodarahackathon.pierc.org";
+
   const psSelectionDeadline = new Date('2025-08-31T23:59:59'); // Aug 31, 2025
   const canSpocSelectPs = isAfter(new Date(), psSelectionDeadline);
 
   const statuses: StatusFilter[] = ["All Statuses", "Registered", "Pending"];
 
-  const fetchAllData = useCallback(() => {
-    if (!user?.institute) return;
-
+  const fetchAllData = useCallback((institute: string) => {
     setLoading(true);
     
     // Fetch Teams
-    const teamsQuery = query(collection(db, "teams"), where("institute", "==", user.institute));
+    const teamsQuery = query(collection(db, "teams"), where("institute", "==", institute));
     const unsubscribeTeams = onSnapshot(teamsQuery, async (snapshot) => {
         const teamsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Team));
         
@@ -145,7 +147,7 @@ export default function SpocTeamsPage() {
         unsubscribePs();
         unsubscribeConfig();
     };
-  }, [toast, user?.institute]);
+  }, [toast]);
 
   const handleExport = async () => {
     setIsExporting(true);
@@ -211,7 +213,7 @@ export default function SpocTeamsPage() {
               team_name: team.name,
               leader_name: leader?.name || 'N/A',
               problemstatement_id: ps?.problemStatementId || 'N/A',
-              problemstatement_title: ps?.title || 'N/A',
+              problemstatement_title: team.problemStatementTitle || 'N/A',
             };
         });
         
@@ -242,7 +244,7 @@ export default function SpocTeamsPage() {
   useEffect(() => {
     let unsubscribe: (() => void) | undefined;
     if (user && user.institute) {
-      unsubscribe = fetchAllData();
+      unsubscribe = fetchAllData(user.institute);
     } else if (!authLoading) {
       setLoading(false);
     }
@@ -381,7 +383,7 @@ export default function SpocTeamsPage() {
           await updateDoc(teamDocRef, { name: editingTeam.name });
           toast({ title: "Success", description: "Team name updated." });
           setEditingTeam(null);
-          await fetchAllData(); // Refresh data
+          await fetchAllData(user!.institute!); // Refresh data
       } catch (error) {
           console.error("Error updating team name:", error);
           toast({ title: "Error", description: "Could not update team name.", variant: "destructive" });
@@ -421,7 +423,7 @@ export default function SpocTeamsPage() {
          toast({ title: "Error", description: "An unexpected error occurred.", variant: "destructive" });
     } finally {
         setIsProcessing(null);
-        fetchAllData();
+        fetchAllData(user!.institute!);
     }
   }
 
@@ -438,7 +440,7 @@ export default function SpocTeamsPage() {
          toast({ title: "Error", description: "An unexpected error occurred.", variant: "destructive" });
     } finally {
         setIsProcessing(null);
-        fetchAllData();
+        fetchAllData(user!.institute!);
     }
   }
 
@@ -458,7 +460,7 @@ export default function SpocTeamsPage() {
         if (result.success) {
             toast({ title: "Success", description: result.message });
             setSpocPsSelection(prev => ({ ...prev, [teamId]: '' })); // Clear selection
-            await fetchAllData(); // Refresh data
+            await fetchAllData(user!.institute!); // Refresh data
         } else {
             throw new Error(result.message);
         }
@@ -466,6 +468,26 @@ export default function SpocTeamsPage() {
         toast({ title: "Error", description: `Could not assign problem statement: ${error.message}`, variant: "destructive" });
     } finally {
         setIsSaving(null);
+    }
+  };
+
+  const handleGetInviteLink = async (teamId: string, teamName: string) => {
+    setLoadingLink(teamId);
+    try {
+        const result = await getTeamInviteLink({
+            teamId: teamId,
+            teamName: teamName,
+            baseUrl: appBaseUrl,
+        });
+        if (result.success && result.inviteLink) {
+            setInviteLinks(prev => new Map(prev).set(teamId, result.inviteLink!));
+        } else {
+            throw new Error(result.message || "Failed to get invite link.");
+        }
+    } catch (error: any) {
+        toast({ title: "Error", description: error.message, variant: "destructive" });
+    } finally {
+        setLoadingLink(null);
     }
   };
 
@@ -597,7 +619,7 @@ export default function SpocTeamsPage() {
                             <TableHeader>
                             <TableRow>
                                 <TableHead><Button variant="ghost" onClick={() => requestSort('teamName')}>Team Name & PS</Button></TableHead>
-                                <TableHead><Button variant="ghost" onClick={() => requestSort('teamNumber')}>Team Number</Button></TableHead>
+                                <TableHead>Invite Link</TableHead>
                                 <TableHead><Button variant="ghost" onClick={() => requestSort('name')}>Member Name {getSortIndicator('name')}</Button></TableHead>
                                 <TableHead><Button variant="ghost" onClick={() => requestSort('email')}>Email {getSortIndicator('email')}</Button></TableHead>
                                 <TableHead><Button variant="ghost" onClick={() => requestSort('enrollmentNumber')}>Enrollment No. {getSortIndicator('enrollmentNumber')}</Button></TableHead>
@@ -691,18 +713,31 @@ export default function SpocTeamsPage() {
                                         )}
                                         {memberIndex === 0 && (
                                             <TableCell rowSpan={membersToDisplay.length} className="align-top">
-                                                <div className="flex items-center gap-2 w-32">
-                                                    <Input
-                                                        value={editingTeamNumber[team.id] ?? team.teamNumber ?? ''}
-                                                        onChange={(e) => setEditingTeamNumber(prev => ({...prev, [team.id]: e.target.value}))}
-                                                        className="h-8"
-                                                        placeholder="Team No."
-                                                        disabled={isSaving === `number-${team.id}`}
-                                                    />
-                                                    <Button size="icon" className="h-8 w-8" onClick={() => handleSaveTeamNumber(team.id)} disabled={isSaving === `number-${team.id}`}>
-                                                        {isSaving === `number-${team.id}` ? <Loader2 className="h-4 w-4 animate-spin"/> : <Save className="h-4 w-4"/>}
+                                                {inviteLinks.has(team.id) ? (
+                                                    <div className="flex items-center gap-1">
+                                                        <Input value={inviteLinks.get(team.id)} readOnly className="h-8 text-xs"/>
+                                                        <Button size="icon" variant="ghost" className="h-8 w-8 shrink-0" onClick={() => {
+                                                            navigator.clipboard.writeText(inviteLinks.get(team.id)!);
+                                                            toast({ title: "Copied!" });
+                                                        }}>
+                                                            <Copy className="h-4 w-4" />
+                                                        </Button>
+                                                    </div>
+                                                ) : (
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        onClick={() => handleGetInviteLink(team.id, team.name)}
+                                                        disabled={loadingLink === team.id}
+                                                    >
+                                                        {loadingLink === team.id ? (
+                                                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                                        ) : (
+                                                            <LinkIcon className="mr-2 h-4 w-4" />
+                                                        )}
+                                                        Get Link
                                                     </Button>
-                                                </div>
+                                                )}
                                             </TableCell>
                                         )}
                                         <TableCell>
@@ -816,4 +851,3 @@ export default function SpocTeamsPage() {
     </div>
   );
 }
-
