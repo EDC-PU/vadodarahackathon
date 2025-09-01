@@ -196,6 +196,7 @@ function AllTeamsContent() {
             const members = team.members.map(m => allUsers.get(m.uid));
             const teamText = [
                 team.name,
+                team.teamNumber,
                 team.institute,
                 leader?.name,
                 leader?.email,
@@ -433,11 +434,18 @@ function AllTeamsContent() {
             },
             ...membersWithDetails.map(m => ({...m, isLeader: false})),
         ];
+
+        const allMemberProfiles = allMembers.map(m => allUsers.get(m.uid)).filter(Boolean) as UserProfile[];
+        const femaleCount = allMemberProfiles.filter(m => m.gender === 'F').length;
+        const instituteCount = allMemberProfiles.filter(m => m.institute === team.institute).length;
+        const isRegistered = allMemberProfiles.length === 6 && femaleCount >= 1 && instituteCount >= 3 && !!team.problemStatementId;
+        
         const problemStatement = problemStatements.find(ps => ps.id === team.problemStatementId);
         return {
             ...team,
             allMembers,
             problemStatementId: problemStatement?.problemStatementId,
+            isRegistered,
         };
     });
   };
@@ -464,6 +472,7 @@ function AllTeamsContent() {
                     teamNumber: team.teamNumber,
                     isNominated: team.isNominated,
                     problemStatementId: team.problemStatementId || 'Not Selected',
+                    isRegistered: team.isRegistered,
                     isFirstRow: memberIndex === 0,
                     rowSpan: membersToDisplay.length,
                 });
@@ -531,10 +540,11 @@ function AllTeamsContent() {
     }
   };
 
-  const handleLockToggle = async (teamId: string, currentLockState: boolean) => {
+  const handleLockToggle = async (teamId: string, isLocked: boolean) => {
       setIsSaving(`lock-${teamId}`);
       try {
-          const result = await toggleTeamLock({ teamId, isLocked: !currentLockState });
+          // The new desired state is the opposite of the current visual state.
+          const result = await toggleTeamLock({ teamId, isLocked: isLocked });
           if(result.success) {
               toast({ title: "Success", description: result.message });
           } else {
@@ -733,31 +743,35 @@ function AllTeamsContent() {
                               )}
                              {row.isFirstRow && (
                                 <TableCell rowSpan={row.rowSpan} className="align-top">
-                                    {(editingTeamNumber?.id === row.teamId || !row.teamNumber) ? (
-                                        <div className="flex items-center gap-2 w-32">
-                                            <Input
-                                                value={editingTeamNumber?.id === row.teamId ? editingTeamNumber.number : ''}
-                                                onChange={(e) => setEditingTeamNumber({ id: row.teamId, number: e.target.value })}
-                                                className="h-8"
-                                                placeholder="Team No."
-                                                disabled={isSaving === `number-${row.teamId}`}
-                                            />
-                                            <Button size="icon" className="h-8 w-8" onClick={() => handleSaveTeamNumber(row.teamId)} disabled={isSaving === `number-${row.teamId}`}>
-                                                {isSaving === `number-${row.teamId}` ? <Loader2 className="h-4 w-4 animate-spin"/> : <Save className="h-4 w-4"/>}
-                                            </Button>
-                                            {editingTeamNumber?.id === row.teamId && (
-                                                <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setEditingTeamNumber(null)}>
-                                                    <X className="h-4 w-4"/>
+                                     {row.isRegistered ? (
+                                        (editingTeamNumber?.id === row.teamId || !row.teamNumber) ? (
+                                            <div className="flex items-center gap-2 w-32">
+                                                <Input
+                                                    value={editingTeamNumber?.id === row.teamId ? editingTeamNumber.number : ''}
+                                                    onChange={(e) => setEditingTeamNumber({ id: row.teamId, number: e.target.value })}
+                                                    className="h-8"
+                                                    placeholder="Team No."
+                                                    disabled={isSaving === `number-${row.teamId}`}
+                                                />
+                                                <Button size="icon" className="h-8 w-8" onClick={() => handleSaveTeamNumber(row.teamId)} disabled={isSaving === `number-${row.teamId}`}>
+                                                    {isSaving === `number-${row.teamId}` ? <Loader2 className="h-4 w-4 animate-spin"/> : <Save className="h-4 w-4"/>}
                                                 </Button>
-                                            )}
-                                        </div>
+                                                {editingTeamNumber?.id === row.teamId && (
+                                                    <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setEditingTeamNumber(null)}>
+                                                        <X className="h-4 w-4"/>
+                                                    </Button>
+                                                )}
+                                            </div>
+                                        ) : (
+                                            <div className="flex items-center gap-2 group">
+                                                <span>{row.teamNumber}</span>
+                                                <Button size="icon" variant="ghost" className="h-7 w-7 opacity-0 group-hover:opacity-100" onClick={() => handleEditTeamNumber(row)}>
+                                                    <Pencil className="h-4 w-4 text-muted-foreground"/>
+                                                </Button>
+                                            </div>
+                                        )
                                     ) : (
-                                        <div className="flex items-center gap-2 group">
-                                            <span>{row.teamNumber}</span>
-                                            <Button size="icon" variant="ghost" className="h-7 w-7 opacity-0 group-hover:opacity-100" onClick={() => handleEditTeamNumber(row)}>
-                                                <Pencil className="h-4 w-4 text-muted-foreground"/>
-                                            </Button>
-                                        </div>
+                                        <Badge variant="outline">Pending</Badge>
                                     )}
                                 </TableCell>
                               )}
@@ -772,8 +786,8 @@ function AllTeamsContent() {
                                             disabled={isSaving === `lock-${row.teamId}`}
                                         />
                                         <Label htmlFor={`lock-switch-${row.teamId}`} className="flex items-center gap-1.5">
-                                            {!row.isLocked ? <Unlock className="h-4 w-4 text-green-500" /> : <Lock className="h-4 w-4 text-destructive"/>}
-                                            {!row.isLocked ? 'Unlocked' : 'Locked'}
+                                            {row.isLocked ? <Lock className="h-4 w-4 text-destructive"/> : <Unlock className="h-4 w-4 text-green-500" />}
+                                            {row.isLocked ? 'Locked' : 'Unlocked'}
                                         </Label>
                                     </div>
                                 </TableCell>

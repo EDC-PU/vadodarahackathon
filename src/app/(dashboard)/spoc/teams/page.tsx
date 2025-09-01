@@ -390,7 +390,6 @@ export default function SpocTeamsPage() {
           await updateDoc(teamDocRef, { name: editingTeamName.name });
           toast({ title: "Success", description: "Team name updated." });
           setEditingTeamName(null);
-          await fetchAllData(user!.institute!); // Refresh data
       } catch (error) {
           console.error("Error updating team name:", error);
           toast({ title: "Error", description: "Could not update team name.", variant: "destructive" });
@@ -429,7 +428,7 @@ export default function SpocTeamsPage() {
          toast({ title: "Error", description: "An unexpected error occurred.", variant: "destructive" });
     } finally {
         setIsProcessing(null);
-        fetchAllData(user!.institute!);
+        fetchInstituteData();
     }
   }
 
@@ -446,7 +445,7 @@ export default function SpocTeamsPage() {
          toast({ title: "Error", description: "An unexpected error occurred.", variant: "destructive" });
     } finally {
         setIsProcessing(null);
-        fetchAllData(user!.institute!);
+        fetchInstituteData();
     }
   }
 
@@ -466,7 +465,7 @@ export default function SpocTeamsPage() {
         if (result.success) {
             toast({ title: "Success", description: result.message });
             setSpocPsSelection(prev => ({ ...prev, [teamId]: '' })); // Clear selection
-            await fetchAllData(user!.institute!); // Refresh data
+            await fetchInstituteData(); // Refresh data
         } else {
             throw new Error(result.message);
         }
@@ -509,10 +508,10 @@ export default function SpocTeamsPage() {
     });
   };
   
-  const handleLockToggle = async (teamId: string, currentLockState: boolean) => {
+  const handleLockToggle = async (teamId: string, isLocked: boolean) => {
     setIsSaving(`lock-${teamId}`);
     try {
-        const result = await toggleTeamLock({ teamId, isLocked: !currentLockState });
+        const result = await toggleTeamLock({ teamId, isLocked: isLocked });
         if(result.success) {
             toast({ title: "Success", description: result.message });
         } else {
@@ -644,6 +643,7 @@ export default function SpocTeamsPage() {
                                 <TableHead><Button variant="ghost" onClick={() => requestSort('teamNumber')}>Team Number {getSortIndicator('teamNumber')}</Button></TableHead>
                                 <TableHead>Problem Statement</TableHead>
                                 <TableHead>Lock Status</TableHead>
+                                <TableHead>Invite Link</TableHead>
                                 <TableHead><Button variant="ghost" onClick={() => requestSort('name')}>Member Name {getSortIndicator('name')}</Button></TableHead>
                                 <TableHead><Button variant="ghost" onClick={() => requestSort('email')}>Email {getSortIndicator('email')}</Button></TableHead>
                                 <TableHead><Button variant="ghost" onClick={() => requestSort('enrollmentNumber')}>Enrollment No. {getSortIndicator('enrollmentNumber')}</Button></TableHead>
@@ -781,10 +781,39 @@ export default function SpocTeamsPage() {
                                                         disabled={isSaving === `lock-${team.id}`}
                                                     />
                                                     <Label htmlFor={`lock-switch-${team.id}`} className="flex items-center gap-1.5">
-                                                        {!team.isLocked ? <Unlock className="h-4 w-4 text-green-500" /> : <Lock className="h-4 w-4 text-destructive"/>}
-                                                        {!team.isLocked ? 'Unlocked' : 'Locked'}
+                                                        {team.isLocked ? <Lock className="h-4 w-4 text-destructive"/> : <Unlock className="h-4 w-4 text-green-500" />}
+                                                        {team.isLocked ? 'Locked' : 'Unlocked'}
                                                     </Label>
                                                 </div>
+                                            </TableCell>
+                                        )}
+                                        {memberIndex === 0 && (
+                                            <TableCell rowSpan={membersToDisplay.length} className="align-top">
+                                                {inviteLinks.has(team.id) ? (
+                                                    <div className="flex items-center gap-1">
+                                                        <Input value={inviteLinks.get(team.id)} readOnly className="h-8 text-xs"/>
+                                                        <Button size="icon" variant="ghost" className="h-8 w-8 shrink-0" onClick={() => {
+                                                            navigator.clipboard.writeText(inviteLinks.get(team.id)!);
+                                                            toast({ title: "Copied!" });
+                                                        }}>
+                                                            <Copy className="h-4 w-4" />
+                                                        </Button>
+                                                    </div>
+                                                ) : (
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        onClick={() => handleGetInviteLink(team.id, team.name)}
+                                                        disabled={loadingLink === team.id}
+                                                    >
+                                                        {loadingLink === team.id ? (
+                                                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                                        ) : (
+                                                            <LinkIcon className="mr-2 h-4 w-4" />
+                                                        )}
+                                                        Get Link
+                                                    </Button>
+                                                )}
                                             </TableCell>
                                         )}
                                         <TableCell>
@@ -898,3 +927,4 @@ export default function SpocTeamsPage() {
     </div>
   );
 }
+
