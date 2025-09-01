@@ -72,28 +72,31 @@ const exportEvaluationFlow = ai.defineFlow(
                 ? `${team.problemstatement_id}, ${team.problemstatement_title}`
                 : 'N/A';
             
-            const newRow = sheet.insertRow(startRow + index, [
-                null, // A is empty
-                index + 1, // B - Sr
-                team.team_number || 'N/A', // C - Team Number
-                team.team_name, // D - Team Name
-                team.leader_name, // E - Lead
-                problemStatementCombined, // F - Problem Statement (Combined)
-                null, // G - Relevance
-                null, // H - Innovation
-                null, // I - Technical
-                null, // J - Feasibility
-                null, // K - Total
-            ]);
+            // Explicitly set cell values to avoid column shift issues.
+            const newRow = sheet.insertRow(startRow + index, []);
+            newRow.getCell('B').value = index + 1; // Sr.
+            newRow.getCell('C').value = team.team_number || 'N/A'; // Team Number
+            newRow.getCell('D').value = team.team_name; // Team Name
+            newRow.getCell('E').value = team.leader_name; // Lead
+            newRow.getCell('F').value = problemStatementCombined; // Problem Statement (Combined)
+            
+            // Set empty values for the scores
+            newRow.getCell('G').value = null; // Relevance
+            newRow.getCell('H').value = null; // Innovation
+            newRow.getCell('I').value = null; // Technical
+            newRow.getCell('J').value = null; // Feasibility
+            newRow.getCell('K').value = null; // Total
 
             // Apply styles from template row to the new row
             newRow.eachCell({ includeEmpty: true }, (cell, colNumber) => {
-                const templateCell = templateRow.getCell(colNumber);
-                cell.style = templateCell.style;
-                cell.font = templateCell.font;
-                cell.alignment = templateCell.alignment;
-                cell.border = templateCell.border;
-                cell.fill = templateCell.fill;
+                if (colNumber > 1) { // Skip styling for column A
+                    const templateCell = templateRow.getCell(colNumber);
+                    cell.style = templateCell.style;
+                    cell.font = templateCell.font;
+                    cell.alignment = templateCell.alignment;
+                    cell.border = templateCell.border;
+                    cell.fill = templateCell.fill;
+                }
             });
         });
         
