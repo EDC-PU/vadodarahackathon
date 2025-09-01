@@ -125,15 +125,8 @@ function NotificationsSection() {
     );
 }
 
-const studentCoordinators: { [key: string]: { name: string; contact: string } } = {
-  "Parul Institute of Technology": { name: "Huzeifa Jujara", contact: "+91 87200 51810" },
-  "Parul Institute of Engineering & Technology": { name: "Karthik Reddy", contact: "+91 75696 34445" }
-};
-
-function StudentCoordinatorCard({ institute }: { institute: string }) {
-  const coordinator = studentCoordinators[institute];
-
-  if (!coordinator) {
+function StudentCoordinatorCard({ institute }: { institute: Institute | null }) {
+  if (!institute || !institute.studentCoordinatorName) {
     return null;
   }
 
@@ -146,11 +139,11 @@ function StudentCoordinatorCard({ institute }: { institute: string }) {
         <CardDescription>Your point of contact for any institute-specific queries.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-2">
-        <p className="font-semibold">{coordinator.name}</p>
+        <p className="font-semibold">{institute.studentCoordinatorName}</p>
         <div className="flex items-center gap-3">
           <Phone className="h-4 w-4 text-muted-foreground" />
-          <a href={`https://wa.me/${coordinator.contact.replace(/\s/g, '')}`} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary">
-            {coordinator.contact}
+          <a href={`https://wa.me/${institute.studentCoordinatorContact?.replace(/\s/g, '')}`} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary">
+            {institute.studentCoordinatorContact}
           </a>
         </div>
       </CardContent>
@@ -293,7 +286,7 @@ export default function LeaderDashboard() {
     const q = query(collection(db, "institutes"), where("name", "==", team.institute));
     const unsubscribe = onSnapshot(q, (snapshot) => {
         if (!snapshot.empty) {
-            const data = snapshot.docs[0].data() as Institute;
+            const data = {id: snapshot.docs[0].id, ...snapshot.docs[0].data()} as Institute;
             setInstituteData(data);
         }
     });
@@ -459,7 +452,7 @@ export default function LeaderDashboard() {
             </div>
         </header>
 
-        {team.institute && <StudentCoordinatorCard institute={team.institute} />}
+        <StudentCoordinatorCard institute={instituteData} />
 
 
         <Card className="mb-8 w-full">

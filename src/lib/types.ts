@@ -124,6 +124,8 @@ export interface Institute {
     nanoseconds: number;
   }[];
   nominationFormUrl?: string;
+  studentCoordinatorName?: string;
+  studentCoordinatorContact?: string;
 }
 
 export interface Spoc extends UserProfile {
@@ -482,3 +484,17 @@ export const ToggleTeamLockOutputSchema = z.object({
   message: z.string(),
 });
 export type ToggleTeamLockOutput = z.infer<typeof ToggleTeamLockOutputSchema>;
+
+// set-student-coordinator
+export const SetStudentCoordinatorInputSchema = z.object({
+  instituteId: z.string().describe("The document ID of the institute."),
+  studentCoordinatorName: z.string().describe("The name of the student coordinator."),
+  studentCoordinatorContact: z.string().describe("The contact number of the student coordinator."),
+});
+export type SetStudentCoordinatorInput = z.infer<typeof SetStudentCoordinatorInputSchema>;
+
+export const SetStudentCoordinatorOutputSchema = z.object({
+  success: z.boolean(),
+  message: z.string(),
+});
+export type SetStudentCoordinatorOutput = z.infer<typeof SetStudentCoordinatorOutputSchema>;

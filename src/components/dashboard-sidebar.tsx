@@ -66,6 +66,7 @@ const navItems = {
     { href: "/spoc/evaluation", icon: <ClipboardCheck />, label: "Evaluation & Nomination" },
     { href: "/spoc/ssih-enrollment", icon: <FileSignature />, label: "SIH Enrollment" },
     { href: "/spoc/departments", icon: <List />, label: "Manage Departments" },
+    { href: "/spoc/settings", icon: <Settings />, label: "Institute Settings" },
     { href: "/spoc/announcements", icon: <Megaphone />, label: "Announcements" },
   ],
   leader: [
