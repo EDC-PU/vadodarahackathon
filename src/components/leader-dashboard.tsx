@@ -5,7 +5,7 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Team, UserProfile, TeamMember, TeamInvite, Notification, Institute } from "@/lib/types";
-import { AlertCircle, CheckCircle, PlusCircle, Trash2, User, Loader2, FileText, Pencil, Users2, Badge as BadgeIcon, ArrowUpDown, Link as LinkIcon, Copy, RefreshCw, Bell, X as CloseIcon, Download, Calendar } from "lucide-react";
+import { AlertCircle, CheckCircle, PlusCircle, Trash2, User, Loader2, FileText, Pencil, Users2, Badge as BadgeIcon, ArrowUpDown, Link as LinkIcon, Copy, RefreshCw, Bell, X as CloseIcon, Download, Calendar, Lock } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "./ui/alert";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
@@ -747,10 +747,10 @@ export default function LeaderDashboard() {
                            ) : (
                             <p className="text-sm text-muted-foreground">Could not load the invite link.</p>
                            )}
-                           {isDeadlinePassed && (
-                                <Alert variant="destructive">
-                                    <AlertCircle className="h-4 w-4" />
-                                    <AlertTitle>Deadline Passed</AlertTitle>
+                           {!canEdit && (
+                                <Alert variant="destructive" className="mt-4">
+                                    <Lock className="h-4 w-4" />
+                                    <AlertTitle>Portal Locked</AlertTitle>
                                     <AlertDescription>The registration deadline has passed. You can no longer invite new members.</AlertDescription>
                                 </Alert>
                            )}
