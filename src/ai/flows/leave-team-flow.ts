@@ -53,6 +53,14 @@ const leaveTeamFlow = ai.defineFlow(
 
         if (teamDoc.exists) {
             const teamData = teamDoc.data() as Team;
+
+            // Check if team is locked
+            const configDoc = await adminDb.collection('config').doc('event').get();
+            const deadline = configDoc.data()?.registrationDeadline?.toDate();
+            if (deadline && new Date() > deadline && teamData.isLocked !== false) {
+                return { success: false, message: 'This team is locked and cannot be modified.' };
+            }
+
             const memberToRemove = teamData.members.find(m => m.uid === userId);
             
             if (memberToRemove) {

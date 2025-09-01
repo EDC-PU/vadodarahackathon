@@ -48,12 +48,18 @@ const addMemberToTeamFlow = ai.defineFlow(
     const configDocRef = adminDb.collection("config").doc("event");
 
     try {
-      // Check if registration is still open
+      const teamDoc = await teamDocRef.get();
+      if (!teamDoc.exists) {
+        throw new Error(`Team with ID ${teamId} not found.`);
+      }
+      const teamData = teamDoc.data() as Team;
+
+      // Check if registration is still open OR if the specific team is unlocked
       const configDoc = await configDocRef.get();
       if (configDoc.exists) {
         const deadline = configDoc.data()?.registrationDeadline?.toDate();
-        if (deadline && new Date() > deadline) {
-          return { success: false, message: "The registration deadline has passed. No new members can be added." };
+        if (deadline && new Date() > deadline && teamData.isLocked !== false) {
+          return { success: false, message: "The registration deadline has passed and this team is locked. No new members can be added." };
         }
       }
 
@@ -64,12 +70,6 @@ const addMemberToTeamFlow = ai.defineFlow(
               return { success: false, message: "This user is already a member of another team." };
           }
       }
-
-      const teamDoc = await teamDocRef.get();
-      if (!teamDoc.exists) {
-        throw new Error(`Team with ID ${teamId} not found.`);
-      }
-      const teamData = teamDoc.data() as Team;
       
       if (!teamData.members) {
         teamData.members = [];

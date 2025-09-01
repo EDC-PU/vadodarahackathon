@@ -47,11 +47,6 @@ const deleteUserFlow = ai.defineFlow(
       }
       
       const userProfile = userDoc.data() as UserProfile;
-
-      // Prevent leader from deleting their own account
-      if (userProfile.role === 'leader' && userProfile.teamId) {
-          return { success: false, message: 'Team leaders cannot delete their own accounts. The team must be deleted by a SPOC or an Admin.' };
-      }
       
       const batch = adminDb.batch();
 
@@ -62,6 +57,14 @@ const deleteUserFlow = ai.defineFlow(
 
         if (teamDoc.exists) {
             const teamData = teamDoc.data() as Team;
+            
+            // Check if team is locked
+            const configDoc = await adminDb.collection('config').doc('event').get();
+            const deadline = configDoc.data()?.registrationDeadline?.toDate();
+            if (deadline && new Date() > deadline && teamData.isLocked !== false) {
+                return { success: false, message: 'This team is locked and cannot be modified.' };
+            }
+
             const memberToRemove = teamData.members.find(m => m.uid === uid);
             
             if (memberToRemove) {
@@ -81,6 +84,8 @@ const deleteUserFlow = ai.defineFlow(
                 });
             }
         }
+      } else if (userProfile.role === 'leader' && userProfile.teamId) {
+          return { success: false, message: 'Team leaders cannot delete their own accounts. The team must be deleted by a SPOC or an Admin.' };
       }
 
       // 3. Log this activity

@@ -44,6 +44,16 @@ const manageTeamBySpocFlow = ai.defineFlow(
         }
         const teamData = teamDoc.data() as Team;
         console.log("Team data fetched successfully.");
+        
+        // Centralized lock check for actions that modify the team roster
+        const isRosterModification = action === 'remove-member' || action === 'delete-team';
+        if (isRosterModification) {
+            const configDoc = await adminDb.collection('config').doc('event').get();
+            const deadline = configDoc.data()?.registrationDeadline?.toDate();
+            if (deadline && new Date() > deadline && teamData.isLocked !== false) {
+                 return { success: false, message: `This team is locked. Unlock it first to perform this action.` };
+            }
+        }
 
         if (action === 'remove-member') {
             if (!memberEmail) {
