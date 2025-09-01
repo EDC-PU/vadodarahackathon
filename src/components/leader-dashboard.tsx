@@ -5,7 +5,7 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Team, UserProfile, TeamMember, TeamInvite, Notification, Institute } from "@/lib/types";
-import { AlertCircle, CheckCircle, PlusCircle, Trash2, User, Loader2, FileText, Pencil, Users2, Badge as BadgeIcon, ArrowUpDown, Link as LinkIcon, Copy, RefreshCw, Bell, X as CloseIcon, Download, Calendar, Lock } from "lucide-react";
+import { AlertCircle, CheckCircle, PlusCircle, Trash2, User, Loader2, FileText, Pencil, Users2, Badge as BadgeIcon, ArrowUpDown, Link as LinkIcon, Copy, RefreshCw, Bell, X as CloseIcon, Download, Calendar, Lock, Phone, Mail } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "./ui/alert";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
@@ -123,6 +123,39 @@ function NotificationsSection() {
             </CardContent>
         </Card>
     );
+}
+
+const studentCoordinators: { [key: string]: { name: string; contact: string } } = {
+  "Parul Institute of Technology": { name: "Huzeifa Jujara", contact: "+91 87200 51810" },
+  "Parul Institute of Engineering & Technology": { name: "Karthik Reddy", contact: "+91 75696 34445" }
+};
+
+function StudentCoordinatorCard({ institute }: { institute: string }) {
+  const coordinator = studentCoordinators[institute];
+
+  if (!coordinator) {
+    return null;
+  }
+
+  return (
+    <Card className="mb-8 border-primary/40">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <User className="h-5 w-5 text-primary" /> Student Coordinator Details
+        </CardTitle>
+        <CardDescription>Your point of contact for any institute-specific queries.</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-2">
+        <p className="font-semibold">{coordinator.name}</p>
+        <div className="flex items-center gap-3">
+          <Phone className="h-4 w-4 text-muted-foreground" />
+          <a href={`https://wa.me/${coordinator.contact.replace(/\s/g, '')}`} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary">
+            {coordinator.contact}
+          </a>
+        </div>
+      </CardContent>
+    </Card>
+  );
 }
 
 
@@ -425,6 +458,9 @@ export default function LeaderDashboard() {
                 )}
             </div>
         </header>
+
+        {team.institute && <StudentCoordinatorCard institute={team.institute} />}
+
 
         <Card className="mb-8 w-full">
             <CardHeader>
