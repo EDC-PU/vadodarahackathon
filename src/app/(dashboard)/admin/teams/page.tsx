@@ -81,8 +81,8 @@ function AllTeamsContent() {
   const [isNominating, setIsNominating] = useState<string | null>(null);
   const [isBulkNominating, setIsBulkNominating] = useState(false);
   
-  const [editingTeam, setEditingTeam] = useState<{ id: string, name: string } | null>(null);
-  const [editingTeamNumber, setEditingTeamNumber] = useState<{ id: string, teamNumber: string }>({});
+  const [editingTeamName, setEditingTeamName] = useState<{ id: string; name: string } | null>(null);
+  const [editingTeamNumber, setEditingTeamNumber] = useState<{ id: string; number: string } | null>(null);
   const [isSaving, setIsSaving] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState<string | null>(null);
 
@@ -317,22 +317,23 @@ function AllTeamsContent() {
     }
   };
   
-  const handleEditTeamName = (teamId: string) => {
-    const team = allTeams.find(t => t.id === teamId);
-    if (team) {
-        setEditingTeam({ id: teamId, name: team.name });
-    }
+  const handleEditTeamName = (team: Team) => {
+    setEditingTeamName({ id: team.id, name: team.name });
+  };
+  
+  const handleEditTeamNumber = (team: Team) => {
+    setEditingTeamNumber({ id: team.id, number: team.teamNumber || '' });
   };
 
   const handleSaveTeamName = async (teamId: string) => {
-      if (!editingTeam || editingTeam.id !== teamId) return;
+      if (!editingTeamName || editingTeamName.id !== teamId) return;
 
-      setIsSaving(teamId);
+      setIsSaving(`name-${teamId}`);
       try {
           const teamDocRef = doc(db, "teams", teamId);
-          await updateDoc(teamDocRef, { name: editingTeam.name });
+          await updateDoc(teamDocRef, { name: editingTeamName.name });
           toast({ title: "Success", description: "Team name updated." });
-          setEditingTeam(null);
+          setEditingTeamName(null);
       } catch (error) {
           console.error("Error updating team name:", error);
           toast({ title: "Error", description: "Could not update team name.", variant: "destructive" });
@@ -342,15 +343,14 @@ function AllTeamsContent() {
   };
 
   const handleSaveTeamNumber = async (teamId: string) => {
-      const teamNumber = editingTeamNumber[teamId];
-      if (typeof teamNumber === 'undefined') return;
+      if (!editingTeamNumber || editingTeamNumber.id !== teamId) return;
 
       setIsSaving(`number-${teamId}`);
       try {
           const teamDocRef = doc(db, "teams", teamId);
-          await updateDoc(teamDocRef, { teamNumber: teamNumber });
+          await updateDoc(teamDocRef, { teamNumber: editingTeamNumber.number });
           toast({ title: "Success", description: "Team number updated." });
-          setEditingTeamNumber(prev => ({...prev, [teamId]: ''})); // Clear after save
+          setEditingTeamNumber(null);
       } catch (error) {
           console.error("Error updating team number:", error);
           toast({ title: "Error", description: "Could not update team number.", variant: "destructive" });
@@ -723,7 +723,7 @@ function AllTeamsContent() {
                                       <div className="flex flex-col gap-1 items-start">
                                         <div className="flex items-center gap-2 group">
                                             <span>{row.teamName}</span>
-                                            <Button size="icon" variant="ghost" className="h-7 w-7 opacity-0 group-hover:opacity-100" onClick={() => handleEditTeamName(row.teamId)}>
+                                            <Button size="icon" variant="ghost" className="h-7 w-7 opacity-0 group-hover:opacity-100" onClick={() => handleEditTeamName(row)}>
                                                 <Pencil className="h-4 w-4 text-muted-foreground"/>
                                             </Button>
                                         </div>
@@ -731,20 +731,32 @@ function AllTeamsContent() {
                                       </div>
                                   </TableCell>
                               )}
-                              {row.isFirstRow && (
+                             {row.isFirstRow && (
                                 <TableCell rowSpan={row.rowSpan} className="align-top">
-                                    <div className="flex items-center gap-2 w-32">
-                                        <Input
-                                            value={editingTeamNumber[row.teamId] ?? row.teamNumber ?? ''}
-                                            onChange={(e) => setEditingTeamNumber(prev => ({...prev, [row.teamId]: e.target.value}))}
-                                            className="h-8"
-                                            placeholder="Team No."
-                                            disabled={isSaving === `number-${row.teamId}`}
-                                        />
-                                        <Button size="icon" className="h-8 w-8" onClick={() => handleSaveTeamNumber(row.teamId)} disabled={isSaving === `number-${row.teamId}`}>
-                                            {isSaving === `number-${row.teamId}` ? <Loader2 className="h-4 w-4 animate-spin"/> : <Save className="h-4 w-4"/>}
-                                        </Button>
-                                    </div>
+                                    {editingTeamNumber?.id === row.teamId ? (
+                                        <div className="flex items-center gap-2 w-32">
+                                            <Input
+                                                value={editingTeamNumber.number}
+                                                onChange={(e) => setEditingTeamNumber({ ...editingTeamNumber, number: e.target.value })}
+                                                className="h-8"
+                                                placeholder="Team No."
+                                                disabled={isSaving === `number-${row.teamId}`}
+                                            />
+                                            <Button size="icon" className="h-8 w-8" onClick={() => handleSaveTeamNumber(row.teamId)} disabled={isSaving === `number-${row.teamId}`}>
+                                                {isSaving === `number-${row.teamId}` ? <Loader2 className="h-4 w-4 animate-spin"/> : <Save className="h-4 w-4"/>}
+                                            </Button>
+                                            <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setEditingTeamNumber(null)}>
+                                                <X className="h-4 w-4"/>
+                                            </Button>
+                                        </div>
+                                    ) : (
+                                        <div className="flex items-center gap-2 group">
+                                            <span>{row.teamNumber || 'Not Set'}</span>
+                                            <Button size="icon" variant="ghost" className="h-7 w-7 opacity-0 group-hover:opacity-100" onClick={() => handleEditTeamNumber(row)}>
+                                                <Pencil className="h-4 w-4 text-muted-foreground"/>
+                                            </Button>
+                                        </div>
+                                    )}
                                 </TableCell>
                               )}
                               {row.isFirstRow && <TableCell rowSpan={row.rowSpan} className="align-top">{row.problemStatementId}</TableCell>}

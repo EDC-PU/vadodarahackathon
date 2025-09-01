@@ -79,8 +79,8 @@ export default function SpocTeamsPage() {
   const [users, setUsers] = useState<Map<string, UserProfile>>(new Map());
   const [problemStatements, setProblemStatements] = useState<ProblemStatement[]>([]);
   const [loading, setLoading] = useState(true);
-  const [editingTeam, setEditingTeam] = useState<{ id: string, name: string } | null>(null);
-  const [editingTeamNumber, setEditingTeamNumber] = useState<{ [key: string]: string }>({});
+  const [editingTeamName, setEditingTeamName] = useState<{ id: string; name: string } | null>(null);
+  const [editingTeamNumber, setEditingTeamNumber] = useState<{ id: string; number: string } | null>(null);
   const [isSaving, setIsSaving] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState<string | null>(null);
   const [isExporting, setIsExporting] = useState(false);
@@ -370,23 +370,23 @@ export default function SpocTeamsPage() {
     return sortConfig.direction === 'asc' ? '▲' : '▼';
   };
 
-  const handleEditTeamName = (teamId: string) => {
-    const team = teams.find(t => t.id === teamId);
-    if (team) {
-        setEditingTeam({ id: teamId, name: team.name });
-    }
+  const handleEditTeamName = (team: Team) => {
+    setEditingTeamName({ id: team.id, name: team.name });
+  };
+
+  const handleEditTeamNumber = (team: Team) => {
+    setEditingTeamNumber({ id: team.id, number: team.teamNumber || '' });
   };
   
   const handleSaveTeamNumber = async (teamId: string) => {
-      const teamNumber = editingTeamNumber[teamId];
-      if (typeof teamNumber === 'undefined') return;
+      if (!editingTeamNumber || editingTeamNumber.id !== teamId) return;
 
       setIsSaving(`number-${teamId}`);
       try {
           const teamDocRef = doc(db, "teams", teamId);
-          await updateDoc(teamDocRef, { teamNumber: teamNumber });
+          await updateDoc(teamDocRef, { teamNumber: editingTeamNumber.number });
           toast({ title: "Success", description: "Team number updated." });
-          setEditingTeamNumber(prev => ({...prev, [teamId]: ''})); // Clear after save
+          setEditingTeamNumber(null);
       } catch (error) {
           console.error("Error updating team number:", error);
           toast({ title: "Error", description: "Could not update team number.", variant: "destructive" });
@@ -396,14 +396,14 @@ export default function SpocTeamsPage() {
   };
 
   const handleSaveTeamName = async (teamId: string) => {
-      if (!editingTeam || editingTeam.id !== teamId) return;
+      if (!editingTeamName || editingTeamName.id !== teamId) return;
 
       setIsSaving(teamId);
       try {
           const teamDocRef = doc(db, "teams", teamId);
-          await updateDoc(teamDocRef, { name: editingTeam.name });
+          await updateDoc(teamDocRef, { name: editingTeamName.name });
           toast({ title: "Success", description: "Team name updated." });
-          setEditingTeam(null);
+          setEditingTeamName(null);
           await fetchAllData(user!.institute!); // Refresh data
       } catch (error) {
           console.error("Error updating team name:", error);
@@ -663,25 +663,25 @@ export default function SpocTeamsPage() {
                                         {memberIndex === 0 && (
                                             <TableCell rowSpan={membersToDisplay.length} className="font-medium align-top">
                                                 <div className="flex flex-col gap-2">
-                                                    {editingTeam?.id === team.id ? (
+                                                    {editingTeamName?.id === team.id ? (
                                                         <div className="flex items-center gap-2">
                                                             <Input 
-                                                                value={editingTeam.name}
-                                                                onChange={(e) => setEditingTeam({ ...editingTeam, name: e.target.value })}
+                                                                value={editingTeamName.name}
+                                                                onChange={(e) => setEditingTeamName({ ...editingTeamName, name: e.target.value })}
                                                                 className="w-40 h-8"
                                                                 disabled={isSaving === team.id}
                                                             />
                                                             <Button size="icon" className="h-8 w-8" onClick={() => handleSaveTeamName(team.id)} disabled={isSaving === team.id}>
                                                                 {isSaving === team.id ? <Loader2 className="h-4 w-4 animate-spin"/> : <Save className="h-4 w-4"/>}
                                                             </Button>
-                                                            <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setEditingTeam(null)} disabled={isSaving === team.id}>
+                                                            <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setEditingTeamName(null)} disabled={isSaving === team.id}>
                                                                 <X className="h-4 w-4"/>
                                                             </Button>
                                                         </div>
                                                     ) : (
                                                         <div className="flex items-center gap-2 group">
                                                             <span>{team.name}</span>
-                                                            <Button size="icon" variant="ghost" className="h-7 w-7 opacity-0 group-hover:opacity-100" onClick={() => handleEditTeamName(team.id)}>
+                                                            <Button size="icon" variant="ghost" className="h-7 w-7 opacity-0 group-hover:opacity-100" onClick={() => handleEditTeamName(team)}>
                                                                 <Pencil className="h-4 w-4 text-muted-foreground"/>
                                                             </Button>
                                                         </div>
@@ -710,18 +710,30 @@ export default function SpocTeamsPage() {
                                         )}
                                         {memberIndex === 0 && (
                                             <TableCell rowSpan={membersToDisplay.length} className="align-top">
-                                                <div className="flex items-center gap-2 w-32">
-                                                    <Input
-                                                        value={editingTeamNumber[team.id] ?? team.teamNumber ?? ''}
-                                                        onChange={(e) => setEditingTeamNumber(prev => ({...prev, [team.id]: e.target.value}))}
-                                                        className="h-8"
-                                                        placeholder="Team No."
-                                                        disabled={isSaving === `number-${team.id}`}
-                                                    />
-                                                    <Button size="icon" className="h-8 w-8" onClick={() => handleSaveTeamNumber(team.id)} disabled={isSaving === `number-${team.id}`}>
-                                                        {isSaving === `number-${team.id}` ? <Loader2 className="h-4 w-4 animate-spin"/> : <Save className="h-4 w-4"/>}
-                                                    </Button>
-                                                </div>
+                                                 {editingTeamNumber?.id === team.id ? (
+                                                    <div className="flex items-center gap-2 w-32">
+                                                        <Input
+                                                            value={editingTeamNumber.number}
+                                                            onChange={(e) => setEditingTeamNumber({ ...editingTeamNumber, number: e.target.value })}
+                                                            className="h-8"
+                                                            placeholder="Team No."
+                                                            disabled={isSaving === `number-${team.id}`}
+                                                        />
+                                                        <Button size="icon" className="h-8 w-8" onClick={() => handleSaveTeamNumber(team.id)} disabled={isSaving === `number-${team.id}`}>
+                                                            {isSaving === `number-${team.id}` ? <Loader2 className="h-4 w-4 animate-spin"/> : <Save className="h-4 w-4"/>}
+                                                        </Button>
+                                                        <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setEditingTeamNumber(null)}>
+                                                            <X className="h-4 w-4"/>
+                                                        </Button>
+                                                    </div>
+                                                ) : (
+                                                    <div className="flex items-center gap-2 group">
+                                                        <span>{team.teamNumber || 'Not Set'}</span>
+                                                        <Button size="icon" variant="ghost" className="h-7 w-7 opacity-0 group-hover:opacity-100" onClick={() => handleEditTeamNumber(team)}>
+                                                            <Pencil className="h-4 w-4 text-muted-foreground"/>
+                                                        </Button>
+                                                    </div>
+                                                )}
                                             </TableCell>
                                         )}
                                         {memberIndex === 0 && (
