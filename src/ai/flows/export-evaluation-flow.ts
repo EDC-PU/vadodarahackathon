@@ -73,7 +73,7 @@ const exportEvaluationFlow = ai.defineFlow(
                 index + 1, // B - Sr
                 team.team_name, // C
                 team.leader_name, // D
-                team.team_id, // E
+                team.team_number, // E
                 team.problemstatement_id, // F
                 team.problemstatement_title, // G
             ]);

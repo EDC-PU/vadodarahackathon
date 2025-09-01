@@ -209,7 +209,7 @@ export default function SpocTeamsPage() {
             const leader = users.get(team.leader.uid);
             const ps = team.problemStatementId ? problemStatementsMap.get(team.problemStatementId) : null;
             return {
-              team_id: team.id,
+              team_number: team.teamNumber || 'N/A',
               team_name: team.name,
               leader_name: leader?.name || 'N/A',
               problemstatement_id: ps?.problemStatementId || 'N/A',
@@ -387,24 +387,6 @@ export default function SpocTeamsPage() {
       } catch (error) {
           console.error("Error updating team name:", error);
           toast({ title: "Error", description: "Could not update team name.", variant: "destructive" });
-      } finally {
-          setIsSaving(null);
-      }
-  };
-
-  const handleSaveTeamNumber = async (teamId: string) => {
-      const teamNumber = editingTeamNumber[teamId];
-      if (typeof teamNumber === 'undefined') return;
-
-      setIsSaving(`number-${teamId}`);
-      try {
-          const teamDocRef = doc(db, "teams", teamId);
-          await updateDoc(teamDocRef, { teamNumber: teamNumber });
-          toast({ title: "Success", description: "Team number updated." });
-          setEditingTeamNumber(prev => ({...prev, [teamId]: ''})); // Clear after save
-      } catch (error) {
-          console.error("Error updating team number:", error);
-          toast({ title: "Error", description: "Could not update team number.", variant: "destructive" });
       } finally {
           setIsSaving(null);
       }
