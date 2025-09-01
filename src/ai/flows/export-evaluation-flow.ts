@@ -87,7 +87,7 @@ const exportEvaluationFlow = ai.defineFlow(
             newRow.getCell('I').value = null; // Feasibility
             newRow.getCell('J').value = null; // Total
 
-            // Apply styles from template row to the new row
+            // Apply styles and set row height
             newRow.eachCell({ includeEmpty: true }, (cell, colNumber) => {
                 const templateCell = templateRow.getCell(colNumber);
                 cell.style = templateCell.style;
@@ -96,6 +96,9 @@ const exportEvaluationFlow = ai.defineFlow(
                 cell.border = templateCell.border;
                 cell.fill = templateCell.fill;
             });
+
+            // Set the row height to 54
+            newRow.height = 54;
         });
         
         console.log(`Populated ${teams.length} teams.`);
