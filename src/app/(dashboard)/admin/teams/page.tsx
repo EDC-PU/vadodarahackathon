@@ -733,11 +733,11 @@ function AllTeamsContent() {
                               )}
                              {row.isFirstRow && (
                                 <TableCell rowSpan={row.rowSpan} className="align-top">
-                                    {editingTeamNumber?.id === row.teamId ? (
+                                    {(editingTeamNumber?.id === row.teamId || !row.teamNumber) ? (
                                         <div className="flex items-center gap-2 w-32">
                                             <Input
-                                                value={editingTeamNumber.number}
-                                                onChange={(e) => setEditingTeamNumber({ ...editingTeamNumber, number: e.target.value })}
+                                                value={editingTeamNumber?.id === row.teamId ? editingTeamNumber.number : ''}
+                                                onChange={(e) => setEditingTeamNumber({ id: row.teamId, number: e.target.value })}
                                                 className="h-8"
                                                 placeholder="Team No."
                                                 disabled={isSaving === `number-${row.teamId}`}
@@ -745,13 +745,15 @@ function AllTeamsContent() {
                                             <Button size="icon" className="h-8 w-8" onClick={() => handleSaveTeamNumber(row.teamId)} disabled={isSaving === `number-${row.teamId}`}>
                                                 {isSaving === `number-${row.teamId}` ? <Loader2 className="h-4 w-4 animate-spin"/> : <Save className="h-4 w-4"/>}
                                             </Button>
-                                            <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setEditingTeamNumber(null)}>
-                                                <X className="h-4 w-4"/>
-                                            </Button>
+                                            {editingTeamNumber?.id === row.teamId && (
+                                                <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setEditingTeamNumber(null)}>
+                                                    <X className="h-4 w-4"/>
+                                                </Button>
+                                            )}
                                         </div>
                                     ) : (
                                         <div className="flex items-center gap-2 group">
-                                            <span>{row.teamNumber || 'Not Set'}</span>
+                                            <span>{row.teamNumber}</span>
                                             <Button size="icon" variant="ghost" className="h-7 w-7 opacity-0 group-hover:opacity-100" onClick={() => handleEditTeamNumber(row)}>
                                                 <Pencil className="h-4 w-4 text-muted-foreground"/>
                                             </Button>

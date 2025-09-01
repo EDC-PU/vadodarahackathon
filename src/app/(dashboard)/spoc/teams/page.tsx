@@ -373,26 +373,9 @@ export default function SpocTeamsPage() {
   const handleEditTeamName = (team: Team) => {
     setEditingTeamName({ id: team.id, name: team.name });
   };
-
+  
   const handleEditTeamNumber = (team: Team) => {
     setEditingTeamNumber({ id: team.id, number: team.teamNumber || '' });
-  };
-  
-  const handleSaveTeamNumber = async (teamId: string) => {
-      if (!editingTeamNumber || editingTeamNumber.id !== teamId) return;
-
-      setIsSaving(`number-${teamId}`);
-      try {
-          const teamDocRef = doc(db, "teams", teamId);
-          await updateDoc(teamDocRef, { teamNumber: editingTeamNumber.number });
-          toast({ title: "Success", description: "Team number updated." });
-          setEditingTeamNumber(null);
-      } catch (error) {
-          console.error("Error updating team number:", error);
-          toast({ title: "Error", description: "Could not update team number.", variant: "destructive" });
-      } finally {
-          setIsSaving(null);
-      }
   };
 
   const handleSaveTeamName = async (teamId: string) => {
@@ -408,6 +391,23 @@ export default function SpocTeamsPage() {
       } catch (error) {
           console.error("Error updating team name:", error);
           toast({ title: "Error", description: "Could not update team name.", variant: "destructive" });
+      } finally {
+          setIsSaving(null);
+      }
+  };
+  
+  const handleSaveTeamNumber = async (teamId: string) => {
+      if (!editingTeamNumber || editingTeamNumber.id !== teamId) return;
+
+      setIsSaving(`number-${teamId}`);
+      try {
+          const teamDocRef = doc(db, "teams", teamId);
+          await updateDoc(teamDocRef, { teamNumber: editingTeamNumber.number });
+          toast({ title: "Success", description: "Team number updated." });
+          setEditingTeamNumber(null);
+      } catch (error) {
+          console.error("Error updating team number:", error);
+          toast({ title: "Error", description: "Could not update team number.", variant: "destructive" });
       } finally {
           setIsSaving(null);
       }
@@ -505,7 +505,7 @@ export default function SpocTeamsPage() {
         return Array.from(newSelection);
     });
   };
-
+  
   const handleLockToggle = async (teamId: string, currentLockState: boolean) => {
     setIsSaving(`lock-${teamId}`);
     try {
@@ -708,13 +708,13 @@ export default function SpocTeamsPage() {
                                                 </div>
                                             </TableCell>
                                         )}
-                                        {memberIndex === 0 && (
+                                         {memberIndex === 0 && (
                                             <TableCell rowSpan={membersToDisplay.length} className="align-top">
-                                                 {editingTeamNumber?.id === team.id ? (
+                                                 {(editingTeamNumber?.id === team.id || !team.teamNumber) ? (
                                                     <div className="flex items-center gap-2 w-32">
                                                         <Input
-                                                            value={editingTeamNumber.number}
-                                                            onChange={(e) => setEditingTeamNumber({ ...editingTeamNumber, number: e.target.value })}
+                                                            value={editingTeamNumber?.id === team.id ? editingTeamNumber.number : ''}
+                                                            onChange={(e) => setEditingTeamNumber({ id: team.id, number: e.target.value })}
                                                             className="h-8"
                                                             placeholder="Team No."
                                                             disabled={isSaving === `number-${team.id}`}
@@ -722,13 +722,15 @@ export default function SpocTeamsPage() {
                                                         <Button size="icon" className="h-8 w-8" onClick={() => handleSaveTeamNumber(team.id)} disabled={isSaving === `number-${team.id}`}>
                                                             {isSaving === `number-${team.id}` ? <Loader2 className="h-4 w-4 animate-spin"/> : <Save className="h-4 w-4"/>}
                                                         </Button>
-                                                        <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setEditingTeamNumber(null)}>
-                                                            <X className="h-4 w-4"/>
-                                                        </Button>
+                                                         {editingTeamNumber?.id === team.id && (
+                                                            <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setEditingTeamNumber(null)}>
+                                                                <X className="h-4 w-4"/>
+                                                            </Button>
+                                                         )}
                                                     </div>
                                                 ) : (
                                                     <div className="flex items-center gap-2 group">
-                                                        <span>{team.teamNumber || 'Not Set'}</span>
+                                                        <span>{team.teamNumber}</span>
                                                         <Button size="icon" variant="ghost" className="h-7 w-7 opacity-0 group-hover:opacity-100" onClick={() => handleEditTeamNumber(team)}>
                                                             <Pencil className="h-4 w-4 text-muted-foreground"/>
                                                         </Button>
@@ -762,7 +764,7 @@ export default function SpocTeamsPage() {
                                                 )}
                                             </TableCell>
                                         )}
-                                        {memberIndex === 0 && (
+                                         {memberIndex === 0 && (
                                             <TableCell rowSpan={membersToDisplay.length} className="align-top">
                                                 <div className="flex items-center space-x-2">
                                                     <Switch
@@ -889,4 +891,3 @@ export default function SpocTeamsPage() {
     </div>
   );
 }
-
