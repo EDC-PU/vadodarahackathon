@@ -30,7 +30,6 @@ import { manageTeamBySpoc } from "@/ai/flows/manage-team-by-spoc-flow";
 import { useAuth } from "@/hooks/use-auth";
 import { getInstituteTeams } from "@/ai/flows/get-institute-teams-flow";
 import { exportTeams } from "@/ai/flows/export-teams-flow";
-import { exportEvaluation } from "@/ai/flows/export-evaluation-flow.ts";
 import { Download, FileSpreadsheet } from "lucide-react";
 import { Buffer } from 'buffer';
 import { getTeamInviteLink } from "@/ai/flows/get-team-invite-link-flow";
@@ -51,7 +50,6 @@ export default function SpocDashboard() {
   const [isSaving, setIsSaving] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState<string | null>(null);
   const [isExporting, setIsExporting] = useState(false);
-  const [isExportingEval, setIsExportingEval] = useState(false);
   const [sortConfig, setSortConfig] = useState<{ key: SortKey, direction: SortDirection } | null>(null);
   const { toast } = useToast();
   const [inviteLinks, setInviteLinks] = useState<Map<string, string>>(new Map());
@@ -137,43 +135,6 @@ export default function SpocDashboard() {
         toast({ title: "Error", description: "An unexpected error occurred during export.", variant: "destructive" });
     } finally {
         setIsExporting(false);
-    }
-  };
-
-  const handleExportEvaluation = async () => {
-    setIsExportingEval(true);
-    try {
-        if (!user?.institute || teams.length === 0) {
-            throw new Error("Institute information or teams not available for export.");
-        }
-        const teamsToExport = getTeamWithFullDetails(teams).map(t => ({
-          team_id: t.id,
-          team_name: t.name,
-          leader_name: t.allMembers.find(m => m.isLeader)?.name || 'N/A',
-          problemstatement_number: t.problemStatementId || 'N/A',
-          problem_title: t.problemStatementTitle || 'N/A',
-        }));
-        
-        const result = await exportEvaluation({ instituteName: user.institute, teams: teamsToExport });
-        if (result.success && result.fileContent) {
-            const blob = new Blob([Buffer.from(result.fileContent, 'base64')], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = result.fileName || `${user.institute}-evaluation.docx`;
-            document.body.appendChild(a);
-            a.click();
-            window.URL.revokeObjectURL(url);
-            a.remove();
-            toast({ title: "Success", description: "Evaluation sheet has been exported." });
-        } else {
-            toast({ title: "Export Failed", description: result.message || "Could not generate the export file.", variant: "destructive" });
-        }
-    } catch (error: any) {
-        console.error("Error exporting evaluation data:", error);
-        toast({ title: "Error", description: `An unexpected error occurred during evaluation export: ${error.message}`, variant: "destructive" });
-    } finally {
-        setIsExportingEval(false);
     }
   };
 
@@ -405,12 +366,6 @@ export default function SpocDashboard() {
               {isExporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
               Export Teams
             </Button>
-            {canExportForEvaluation && (
-              <Button onClick={handleExportEvaluation} disabled={isExportingEval}>
-                {isExportingEval ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileSpreadsheet className="mr-2 h-4 w-4" />}
-                Export for Evaluation
-              </Button>
-            )}
         </div>
       </header>
 
