@@ -80,6 +80,10 @@ const finalizeJuryPanelFlow = ai.defineFlow(
 
     const panelDocRef = adminDb.collection('juryPanels').doc(panelId);
     
+    const newPanelMembers: JuryMember[] = [];
+    const createdUserUids: string[] = [];
+    let problematicEmail = '';
+    
     try {
         const panelDoc = await panelDocRef.get();
         if (!panelDoc.exists) {
@@ -90,9 +94,9 @@ const finalizeJuryPanelFlow = ai.defineFlow(
             return { success: false, message: "This panel has already been finalized." };
         }
 
-        const newPanelMembers: JuryMember[] = [];
         // The members in the draft are of type JuryMemberInput
         for (const member of (panelData.members as any as JuryMemberInput[])) {
+            problematicEmail = member.email;
             const tempPassword = generatePassword();
 
             const userRecord = await adminAuth.createUser({
@@ -102,6 +106,8 @@ const finalizeJuryPanelFlow = ai.defineFlow(
                 displayName: member.name,
                 disabled: false,
             });
+            
+            createdUserUids.push(userRecord.uid);
 
             const uid = userRecord.uid;
 
@@ -142,10 +148,23 @@ const finalizeJuryPanelFlow = ai.defineFlow(
 
     } catch (error: any) {
         console.error("Error finalizing jury panel:", error);
+
+        // Cleanup: If any users were created before the error, delete them.
+        if (createdUserUids.length > 0) {
+            console.log(`Cleaning up ${createdUserUids.length} created user(s) due to an error...`);
+            for (const uid of createdUserUids) {
+                try {
+                    await adminAuth.deleteUser(uid);
+                    await adminDb.collection('users').doc(uid).delete();
+                } catch (cleanupError: any) {
+                    console.error(`Failed to clean up user ${uid}:`, cleanupError.message);
+                }
+            }
+        }
+        
         let errorMessage = error.message || "An unknown error occurred.";
         if (error.code === 'auth/email-already-exists') {
-            const problematicEmail = (error.errorInfo as any)?.email;
-            errorMessage = `A user with email ${problematicEmail || ''} already exists. All jury members must have new accounts.`;
+            errorMessage = `A user with email "${problematicEmail}" already exists. All jury members must have new accounts.`;
         }
         return { success: false, message: `Failed to finalize panel: ${errorMessage}` };
     }

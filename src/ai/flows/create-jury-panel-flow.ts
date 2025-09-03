@@ -98,8 +98,12 @@ const createJuryPanelFlow = ai.defineFlow(
 
     // Full creation process
     const newPanelMembers: JuryMember[] = [];
+    const createdUserUids: string[] = [];
+    let problematicEmail = '';
+
     try {
         for (const member of juryMembers) {
+            problematicEmail = member.email; // Keep track of the current email
             const tempPassword = generatePassword();
 
             const userRecord = await adminAuth.createUser({
@@ -109,6 +113,8 @@ const createJuryPanelFlow = ai.defineFlow(
                 displayName: member.name,
                 disabled: false,
             });
+            
+            createdUserUids.push(userRecord.uid); // Track created user
 
             const uid = userRecord.uid;
 
@@ -153,9 +159,23 @@ const createJuryPanelFlow = ai.defineFlow(
 
     } catch (error: any) {
         console.error("Error creating jury panel:", error);
+
+        // Cleanup: If any users were created before the error, delete them.
+        if (createdUserUids.length > 0) {
+            console.log(`Cleaning up ${createdUserUids.length} created user(s) due to an error...`);
+            for (const uid of createdUserUids) {
+                try {
+                    await adminAuth.deleteUser(uid);
+                    await adminDb.collection('users').doc(uid).delete();
+                } catch (cleanupError: any) {
+                    console.error(`Failed to clean up user ${uid}:`, cleanupError.message);
+                }
+            }
+        }
+        
         let errorMessage = error.message || "An unknown error occurred.";
         if (error.code === 'auth/email-already-exists') {
-            errorMessage = `A user with email ${error.email} already exists. All jury members must have new accounts.`;
+            errorMessage = `A user with email "${problematicEmail}" already exists. All jury members must have new accounts.`;
         }
         return { success: false, message: `Failed to create jury panel: ${errorMessage}` };
     }
