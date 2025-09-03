@@ -3,22 +3,25 @@
 
 import { useEffect, useState } from "react";
 import { db } from "@/lib/firebase";
-import { collection, query, where, onSnapshot, doc, updateDoc } from "firebase/firestore";
-import { Team } from "@/lib/types";
+import { collection, query, where, onSnapshot, doc, updateDoc, getDocs } from "firebase/firestore";
+import { Team, UserProfile } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { Loader2, AlertCircle, Save, Medal } from "lucide-react";
+import { Loader2, AlertCircle, Save, Medal, Download } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { isAfter } from "date-fns";
+import { exportEvaluation } from "@/ai/flows/export-evaluation-flow";
 
 export default function UniversityNominationsPage() {
   const [nominatedTeams, setNominatedTeams] = useState<Team[]>([]);
+  const [allUsers, setAllUsers] = useState<Map<string, UserProfile>>(new Map());
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState<string | null>(null);
+  const [isExporting, setIsExporting] = useState(false);
   const { toast } = useToast();
 
   const canModify = isAfter(new Date(), new Date(2025, 8, 6)); // September 6th, 2025
@@ -27,9 +30,25 @@ export default function UniversityNominationsPage() {
     setLoading(true);
     const teamsQuery = query(collection(db, "teams"), where("isNominated", "==", true));
 
-    const unsubscribe = onSnapshot(teamsQuery, (snapshot) => {
+    const unsubscribe = onSnapshot(teamsQuery, async (snapshot) => {
       const teamsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Team));
       setNominatedTeams(teamsData);
+
+      const allUserIds = new Set<string>();
+      teamsData.forEach(team => {
+          allUserIds.add(team.leader.uid);
+      });
+      
+      if (allUserIds.size > 0) {
+        const usersQuery = query(collection(db, 'users'), where('uid', 'in', Array.from(allUserIds)));
+        const usersSnapshot = await getDocs(usersQuery);
+        const usersData = new Map<string, UserProfile>();
+        usersSnapshot.forEach(doc => {
+            usersData.set(doc.id, { uid: doc.id, ...doc.data() } as UserProfile);
+        });
+        setAllUsers(usersData);
+      }
+
       setLoading(false);
     }, (error) => {
       console.error("Error fetching nominated teams:", error);
@@ -54,6 +73,51 @@ export default function UniversityNominationsPage() {
     }
   };
   
+  const handleExport = async () => {
+    if (nominatedTeams.length === 0) {
+      toast({ title: "No Teams", description: "There are no nominated teams to export.", variant: "destructive" });
+      return;
+    }
+    setIsExporting(true);
+    try {
+      const problemStatementsSnapshot = await getDocs(collection(db, 'problemStatements'));
+      const problemStatementsMap = new Map(problemStatementsSnapshot.docs.map(doc => [doc.id, doc.data() as any]));
+
+      const teamsToExport = nominatedTeams.map(team => {
+        const leader = allUsers.get(team.leader.uid);
+        const ps = team.problemStatementId ? problemStatementsMap.get(team.problemStatementId) : null;
+        return {
+          team_number: team.teamNumber || 'N/A',
+          team_name: team.name,
+          leader_name: leader?.name || 'N/A',
+          problemstatement_id: ps?.problemStatementId || 'N/A',
+          problemstatement_title: team.problemStatementTitle || 'N/A',
+        };
+      });
+
+      const result = await exportEvaluation({ instituteName: 'University_Level_Nominations', teams: teamsToExport });
+      
+      if (result.success && result.fileContent) {
+        const blob = new Blob([Buffer.from(result.fileContent, 'base64')], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = result.fileName || 'university-evaluation.xlsx';
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        a.remove();
+        toast({ title: "Success", description: "Evaluation sheet exported." });
+      } else {
+        throw new Error(result.message || "Failed to export.");
+      }
+    } catch (error: any) {
+      toast({ title: "Export Failed", description: error.message, variant: "destructive" });
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   const getStatusVariant = (status?: string) => {
     if (status === 'university') return 'default';
     if (status === 'institute') return 'secondary';
@@ -62,9 +126,15 @@ export default function UniversityNominationsPage() {
 
   return (
     <div className="p-4 sm:p-6 lg:p-8">
-      <header className="mb-8">
-        <h1 className="text-3xl font-bold font-headline flex items-center gap-2"><Medal/> University Level Nominations</h1>
-        <p className="text-muted-foreground">Manage teams nominated by institute SPOCs for the university-level round.</p>
+      <header className="mb-8 flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+        <div>
+          <h1 className="text-3xl font-bold font-headline flex items-center gap-2"><Medal/> University Level Nominations</h1>
+          <p className="text-muted-foreground">Manage teams nominated by institute SPOCs for the university-level round.</p>
+        </div>
+        <Button onClick={handleExport} disabled={isExporting}>
+          {isExporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Download className="mr-2 h-4 w-4"/>}
+          Export for Evaluation
+        </Button>
       </header>
 
       {!canModify && (
