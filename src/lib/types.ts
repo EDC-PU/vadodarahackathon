@@ -498,3 +498,27 @@ export const SetStudentCoordinatorOutputSchema = z.object({
   message: z.string(),
 });
 export type SetStudentCoordinatorOutput = z.infer<typeof SetStudentCoordinatorOutputSchema>;
+
+// export-institute-analytics-flow
+const InstituteAnalyticsDataSchema = z.object({
+  institute: z.string(),
+  totalRegistered: z.number(),
+  shortlistedSoftware: z.number(),
+  registeredSoftware: z.number(),
+  shortlistedHardware: z.number(),
+  registeredHardware: z.number(),
+  totalShortlisted: z.number(),
+});
+
+export const ExportInstituteAnalyticsInputSchema = z.object({
+  analyticsData: z.array(InstituteAnalyticsDataSchema),
+});
+export type ExportInstituteAnalyticsInput = z.infer<typeof ExportInstituteAnalyticsInputSchema>;
+
+export const ExportInstituteAnalyticsOutputSchema = z.object({
+  success: z.boolean(),
+  message: z.string().optional(),
+  fileContent: z.string().optional().describe("Base64 encoded content of the Excel file."),
+  fileName: z.string().optional(),
+});
+export type ExportInstituteAnalyticsOutput = z.infer<typeof ExportInstituteAnalyticsOutputSchema>;

@@ -10,8 +10,10 @@ import { Team, UserProfile, ProblemStatement, Institute } from "@/lib/types";
 import { collection, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2 } from "lucide-react";
+import { Loader2, Download } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { exportInstituteAnalytics } from "@/ai/flows/export-institute-analytics-flow";
 
 interface InstituteChartData {
   institute: string;
@@ -56,6 +58,7 @@ export default function AnalyticsPage() {
   const [problemStatements, setProblemStatements] = useState<ProblemStatement[]>([]);
   const [institutes, setInstitutes] = useState<Institute[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isExporting, setIsExporting] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -210,6 +213,35 @@ export default function AnalyticsPage() {
     return Array.from(instituteMap.values()).sort((a, b) => b.totalRegistered - a.totalRegistered);
   }, [teams, institutes]);
 
+  const handleExport = async () => {
+    if (instituteAnalyticsData.length === 0) {
+      toast({ title: "No Data", description: "There is no analytics data to export.", variant: "destructive" });
+      return;
+    }
+    setIsExporting(true);
+    try {
+      const result = await exportInstituteAnalytics({ analyticsData: instituteAnalyticsData });
+      if (result.success && result.fileContent) {
+        const blob = new Blob([Buffer.from(result.fileContent, 'base64')], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = result.fileName || 'institute-analytics.xlsx';
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        a.remove();
+        toast({ title: "Success", description: "Analytics data exported." });
+      } else {
+        throw new Error(result.message || "Failed to export analytics.");
+      }
+    } catch (error: any) {
+      toast({ title: "Export Failed", description: error.message, variant: "destructive" });
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   const instituteChartData = getInstituteData();
   const categoryChartData = getCategoryData();
   const genderChartData = getGenderData();
@@ -241,9 +273,15 @@ export default function AnalyticsPage() {
 
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
         <Card className="col-span-1 md:col-span-2 xl:col-span-3">
-           <CardHeader>
-            <CardTitle>Institute-wise Team Statistics</CardTitle>
-            <CardDescription>A detailed breakdown of team registrations and shortlisting by institute.</CardDescription>
+           <CardHeader className="flex flex-row items-center justify-between">
+            <div>
+                <CardTitle>Institute-wise Team Statistics</CardTitle>
+                <CardDescription>A detailed breakdown of team registrations and shortlisting by institute.</CardDescription>
+            </div>
+            <Button onClick={handleExport} disabled={isExporting}>
+                {isExporting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Download className="h-4 w-4 mr-2" />}
+                Export
+            </Button>
           </CardHeader>
           <CardContent>
             <Table>
