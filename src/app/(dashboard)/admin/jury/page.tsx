@@ -233,66 +233,66 @@ export default function ManageJuryPage() {
                     const isDraft = panel.status === 'draft';
                     return (
                         <AccordionItem value={panel.id} key={panel.id}>
-                            <AccordionTrigger className="hover:no-underline">
-                                <div className="flex justify-between items-center w-full pr-4">
+                           <div className="flex items-center w-full py-4">
+                                <AccordionTrigger className="flex-1 hover:no-underline p-0">
                                     <div className="flex items-center gap-3">
                                       <span className="text-lg font-semibold">{panel.name}</span>
                                       {isDraft && <Badge variant="secondary">Draft</Badge>}
-                                    </div>
-                                    <div className="flex items-center gap-4">
                                       <Badge variant="outline">{assignedTeams.length} Team(s) Assigned</Badge>
-                                      {isDraft ? (
-                                        <AlertDialog>
-                                          <AlertDialogTrigger asChild>
-                                            <Button size="sm" onClick={(e) => e.stopPropagation()} disabled={isProcessing === `finalize-${panel.id}`}>
-                                              {isProcessing === `finalize-${panel.id}` ? <Loader2 className="h-4 w-4 animate-spin"/> : <Send className="h-4 w-4" />}
-                                              <span className="ml-2 hidden sm:inline">Finalize Panel</span>
-                                            </Button>
-                                          </AlertDialogTrigger>
-                                           <AlertDialogContent>
-                                            <AlertDialogHeader>
-                                              <AlertDialogTitle>Finalize this Panel?</AlertDialogTitle>
-                                              <AlertDialogDescription>
-                                                This will create user accounts for all jury members and email them their login credentials. This action cannot be undone.
-                                              </AlertDialogDescription>
-                                            </AlertDialogHeader>
-                                            <AlertDialogFooter>
-                                              <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                              <AlertDialogAction onClick={() => handleFinalize(panel.id)}>Yes, Finalize</AlertDialogAction>
-                                            </AlertDialogFooter>
-                                          </AlertDialogContent>
-                                        </AlertDialog>
-                                      ) : (
-                                        <Button variant="outline" size="sm" disabled={isExporting === panel.id} onClick={(e) => { e.stopPropagation(); handleExportEvaluation(panel); }}>
-                                          {isExporting === panel.id ? <Loader2 className="h-4 w-4 animate-spin"/> : <Download className="h-4 w-4" />}
-                                          <span className="ml-2 hidden sm:inline">Download Sheet</span>
-                                        </Button>
-                                      )}
-                                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); handleEdit(panel); }}>
-                                        <Pencil className="h-4 w-4" />
-                                      </Button>
-                                      <AlertDialog>
-                                        <AlertDialogTrigger asChild>
-                                          <Button variant="destructive" size="icon" className="h-8 w-8" onClick={(e) => e.stopPropagation()} disabled={isProcessing === `delete-${panel.id}`}>
-                                            {isProcessing === `delete-${panel.id}` ? <Loader2 className="h-4 w-4 animate-spin"/> : <Trash2 className="h-4 w-4" />}
-                                          </Button>
-                                        </AlertDialogTrigger>
-                                        <AlertDialogContent>
-                                          <AlertDialogHeader>
-                                            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                                            <AlertDialogDescription>
-                                              This action will permanently delete the panel "{panel.name}" { !isDraft && "and delete all its jury member accounts."} This cannot be undone.
-                                            </AlertDialogDescription>
-                                          </AlertDialogHeader>
-                                          <AlertDialogFooter>
-                                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                            <AlertDialogAction onClick={() => handleDelete(panel.id)} className="bg-destructive hover:bg-destructive/90">Delete Panel</AlertDialogAction>
-                                          </AlertDialogFooter>
-                                        </AlertDialogContent>
-                                      </AlertDialog>
                                     </div>
+                                </AccordionTrigger>
+                                <div className="flex items-center gap-4 ml-4">
+                                  {isDraft ? (
+                                    <AlertDialog>
+                                      <AlertDialogTrigger asChild>
+                                        <Button size="sm" disabled={isProcessing === `finalize-${panel.id}`}>
+                                          {isProcessing === `finalize-${panel.id}` ? <Loader2 className="h-4 w-4 animate-spin"/> : <Send className="h-4 w-4" />}
+                                          <span className="ml-2 hidden sm:inline">Finalize Panel</span>
+                                        </Button>
+                                      </AlertDialogTrigger>
+                                       <AlertDialogContent>
+                                        <AlertDialogHeader>
+                                          <AlertDialogTitle>Finalize this Panel?</AlertDialogTitle>
+                                          <AlertDialogDescription>
+                                            This will create user accounts for all jury members and email them their login credentials. This action cannot be undone.
+                                          </AlertDialogDescription>
+                                        </AlertDialogHeader>
+                                        <AlertDialogFooter>
+                                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                          <AlertDialogAction onClick={() => handleFinalize(panel.id)}>Yes, Finalize</AlertDialogAction>
+                                        </AlertDialogFooter>
+                                      </AlertDialogContent>
+                                    </AlertDialog>
+                                  ) : (
+                                    <Button variant="outline" size="sm" disabled={isExporting === panel.id} onClick={() => handleExportEvaluation(panel)}>
+                                      {isExporting === panel.id ? <Loader2 className="h-4 w-4 animate-spin"/> : <Download className="h-4 w-4" />}
+                                      <span className="ml-2 hidden sm:inline">Download Sheet</span>
+                                    </Button>
+                                  )}
+                                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleEdit(panel)}>
+                                    <Pencil className="h-4 w-4" />
+                                  </Button>
+                                  <AlertDialog>
+                                    <AlertDialogTrigger asChild>
+                                      <Button variant="destructive" size="icon" className="h-8 w-8" disabled={isProcessing === `delete-${panel.id}`}>
+                                        {isProcessing === `delete-${panel.id}` ? <Loader2 className="h-4 w-4 animate-spin"/> : <Trash2 className="h-4 w-4" />}
+                                      </Button>
+                                    </AlertDialogTrigger>
+                                    <AlertDialogContent>
+                                      <AlertDialogHeader>
+                                        <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                        <AlertDialogDescription>
+                                          This action will permanently delete the panel "{panel.name}" { !isDraft && "and delete all its jury member accounts."} This cannot be undone.
+                                        </AlertDialogDescription>
+                                      </AlertDialogHeader>
+                                      <AlertDialogFooter>
+                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                        <AlertDialogAction onClick={() => handleDelete(panel.id)} className="bg-destructive hover:bg-destructive/90">Delete Panel</AlertDialogAction>
+                                      </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                  </AlertDialog>
                                 </div>
-                            </AccordionTrigger>
+                            </div>
                             <AccordionContent className="p-4 bg-secondary/30 rounded-md">
                                 <div className="grid md:grid-cols-2 gap-6">
                                     <div>
