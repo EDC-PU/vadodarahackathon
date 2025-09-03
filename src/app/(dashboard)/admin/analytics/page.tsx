@@ -317,10 +317,10 @@ export default function AnalyticsPage() {
                 <TableRow>
                   <TableHead className="font-bold">Institute</TableHead>
                   <TableHead className="text-center">Total Registered</TableHead>
-                  <TableHead className="text-center">Shortlisted Software</TableHead>
                   <TableHead className="text-center">Registered Software</TableHead>
-                  <TableHead className="text-center">Shortlisted Hardware</TableHead>
                   <TableHead className="text-center">Registered Hardware</TableHead>
+                  <TableHead className="text-center">Shortlisted Software</TableHead>
+                  <TableHead className="text-center">Shortlisted Hardware</TableHead>
                   <TableHead className="text-center font-bold">Total Shortlisted</TableHead>
                 </TableRow>
               </TableHeader>
@@ -329,10 +329,10 @@ export default function AnalyticsPage() {
                   <TableRow key={data.institute}>
                     <TableCell className="font-medium">{data.institute}</TableCell>
                     <TableCell className="text-center">{data.totalRegistered}</TableCell>
-                    <TableCell className="text-center">{data.shortlistedSoftware}</TableCell>
                     <TableCell className="text-center">{data.registeredSoftware}</TableCell>
-                    <TableCell className="text-center">{data.shortlistedHardware}</TableCell>
                     <TableCell className="text-center">{data.registeredHardware}</TableCell>
+                    <TableCell className="text-center">{data.shortlistedSoftware}</TableCell>
+                    <TableCell className="text-center">{data.shortlistedHardware}</TableCell>
                     <TableCell className="text-center font-bold">{data.totalShortlisted}</TableCell>
                   </TableRow>
                 ))}
