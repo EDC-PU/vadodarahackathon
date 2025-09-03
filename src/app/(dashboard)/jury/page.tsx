@@ -4,7 +4,7 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { db } from "@/lib/firebase";
-import { collection, query, where, onSnapshot, doc, getDoc } from "firebase/firestore";
+import { collection, query, where, onSnapshot, doc, getDoc, getDocs } from "firebase/firestore";
 import { Team, UserProfile, JuryPanel } from "@/lib/types";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -28,7 +28,7 @@ export default function JuryDashboardPage() {
 
         setLoading(true);
 
-        // Fetch Panel Details
+        // 1. Fetch Panel Details
         const panelDocRef = doc(db, 'juryPanels', user.panelId);
         const unsubscribePanel = onSnapshot(panelDocRef, async (panelDoc) => {
             if (panelDoc.exists()) {
@@ -42,23 +42,25 @@ export default function JuryDashboardPage() {
                     const memberDocs = await getDocs(membersQuery);
                     setPanelMembers(memberDocs.docs.map(d => d.data() as UserProfile));
                 }
+                 // 2. Fetch Assigned Teams after panel is loaded
+                const teamsQuery = query(collection(db, 'teams'), where('panelId', '==', user.panelId));
+                const unsubscribeTeams = onSnapshot(teamsQuery, (snapshot) => {
+                    const teamsData = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Team));
+                    setAssignedTeams(teamsData);
+                    setLoading(false); // Set loading false only after teams are also loaded
+                });
+                return () => unsubscribeTeams(); // Nested unsubscribe
+
             } else {
                 setPanel(null);
                 setPanelMembers([]);
+                setAssignedTeams([]);
+                setLoading(false);
             }
-        });
-
-        // Fetch Assigned Teams
-        const teamsQuery = query(collection(db, 'teams'), where('panelId', '==', user.panelId));
-        const unsubscribeTeams = onSnapshot(teamsQuery, (snapshot) => {
-            const teamsData = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Team));
-            setAssignedTeams(teamsData);
-            setLoading(false);
         });
 
         return () => {
             unsubscribePanel();
-            unsubscribeTeams();
         };
 
     }, [user, authLoading]);

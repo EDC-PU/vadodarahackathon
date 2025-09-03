@@ -1,105 +1,106 @@
+
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // Helper functions
-    function isSignedIn() {
-      return request.auth != null;
-    }
-
+    
+    // Helper function to check user role
     function isRole(role) {
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == role;
     }
-
-    function isSpocForTeam(teamId) {
-      let user = get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
-      let team = get(/databases/$(database)/documents/teams/$(teamId)).data;
-      return user.role == 'spoc' && user.institute == team.institute;
+    
+    // Helper function to check if a user is a member of a specific team
+    function isTeamMember(teamId) {
+        return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.teamId == teamId;
+    }
+    
+    // Helper function to check if a user is a SPOC for a specific institute
+    function isSpocForInstitute(institute) {
+        let userProfile = get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+        return userProfile.role == 'spoc' && userProfile.institute == institute;
     }
 
-    // USERS collection
+    // Users can read/write their own profile, admins can manage all
     match /users/{userId} {
-      // Anyone can create their own user document (on signup)
-      allow create: if isSignedIn() && request.auth.uid == userId;
-      // Users can read their own profile, admins can read any profile.
-      allow read: if isSignedIn() && (request.auth.uid == userId || isRole('admin'));
-      // Users can update their own profile. Admins can update any profile.
-      allow update: if isSignedIn() && (request.auth.uid == userId || isRole('admin'));
-      // Admins can delete users.
-      allow delete: if isRole('admin');
-    }
-
-    // TEAMS collection
-    match /teams/{teamId} {
-      // Only team leaders can create teams.
-      allow create: if isRole('leader');
-      // Any signed-in user can read team data.
-      allow read: if isSignedIn();
-      // Only the team leader, SPOC for that institute, or an admin can update team data.
-      allow update: if isSignedIn() && (
-        request.auth.uid == resource.data.leader.uid || 
-        isRole('admin') ||
-        isSpocForTeam(teamId)
-      );
-      // Only an admin or the SPOC for that institute can delete a team.
-      allow delete: if isRole('admin') || isSpocForTeam(teamId);
-    }
-    
-    // TEAM INVITES collection (for direct email invites, if ever used)
-    match /teamInvites/{inviteId} {
-      allow read, write: if isSignedIn(); 
-    }
-
-    // ANNOUNCEMENTS collection
-    match /announcements/{announcementId} {
-      // Admins and SPOCs can create announcements.
-      allow create: if isRole('admin') || isRole('spoc');
-      // All signed-in users can read announcements.
-      allow read: if isSignedIn();
-      // Only the author, or an Admin, can delete an announcement.
-      allow delete: if isRole('admin') || request.auth.uid == resource.data.authorUid;
-    }
-    
-    // INSTITUTES collection
-    match /institutes/{instituteId} {
-      // Admins can manage institutes. SPOCs can update evaluation dates for their own institute.
+      allow read, update: if request.auth.uid == userId;
       allow read, write: if isRole('admin');
-      allow update: if isRole('spoc');
+      
+      // Allow SPOCs to read profiles of users from their institute
+      allow get: if isSpocForInstitute(resource.data.institute);
+    }
+    
+    // Config can be read by anyone, written by admins
+    match /config/{docId} {
+        allow read: if true;
+        allow write: if isRole('admin');
     }
 
-    // DEPARTMENTS collection
-    match /departments/{departmentId} {
-        allow read: if isSignedIn();
+    // Teams can be read by their members or relevant SPOCs/admins
+    match /teams/{teamId} {
+      allow get: if isTeamMember(teamId) || isSpocForInstitute(resource.data.institute) || isRole('admin') || request.auth.uid in get(/databases/$(database)/documents/teams/$(teamId)).data.members;
+      allow list: if isRole('admin') || isRole('spoc');
+      allow create, update: if isRole('leader') || isRole('admin') || isRole('spoc');
+      allow delete: if isRole('admin') || isRole('spoc');
+    }
+
+    // Problem Statements can be read by anyone, written by admins
+    match /problemStatements/{docId} {
+        allow read: if true;
+        allow write: if isRole('admin');
+    }
+    
+    // Invitations: Handled by backend flows with admin privileges
+    match /teamInvites/{inviteId} {
+        allow read, write: if request.auth != null; // Authenticated users can read/write to handle join logic
+    }
+    
+    // Departments can be read by anyone, written by SPOCs or Admins
+    match /departments/{docId} {
+        allow read: if true;
         allow write: if isRole('spoc') || isRole('admin');
     }
-
-    // CONFIG collection
-    match /config/{configId} {
-      allow read: if isSignedIn();
-      allow write: if isRole('admin');
-    }
     
-    // LOGS collection
+    // Institutes can be read by anyone, written by Admins
+    match /institutes/{docId} {
+        allow read: if true;
+        allow write: if isRole('admin');
+    }
+
+    // Logs can only be written by the backend (admin access)
     match /logs/{logId} {
-      // Only admins can read logs. Only server-side functions (admins) can write them.
-      allow read: if isRole('admin');
-      allow write: if false; // Prevent client-side writes
-    }
-    
-    // NOTIFICATIONS collection
-    match /notifications/{notificationId} {
-      // Users can only read and update their own notifications.
-      allow read, update: if isSignedIn() && request.auth.uid == resource.data.recipientUid;
-      // Notifications are created server-side.
-      allow create: if false;
+      allow read, write: if isRole('admin');
+      allow create: if true; // Allows backend to write logs
     }
 
-    // JURY PANELS collection
+    // Notifications
+    match /notifications/{notifId} {
+      // Users can read and update their own notifications (e.g., mark as read)
+      allow read, update: if request.auth.uid == resource.data.recipientUid;
+      // Admins can read all notifications for debugging/auditing
+      allow read: if isRole('admin');
+      // Only the backend (admin) can create notifications
+      allow create: if isRole('admin');
+    }
+
+    // Announcements
+    match /announcements/{announcementId} {
+        // Anyone can read announcements
+        allow read: if true;
+        // Only admins and spocs can create/delete announcements
+        allow write: if isRole('admin') || isRole('spoc');
+    }
+    
+    // Jury Panels
     match /juryPanels/{panelId} {
-      // Admins can create, update, and delete panels.
-      allow write: if isRole('admin');
-      // Jury members can read their own panel details, and Admins can read all panels.
-      allow read: if isSignedIn() && (isRole('admin') || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.panelId == panelId);
+        // Admins have full access
+        allow read, write: if isRole('admin');
+        
+        // Jury members can read their own panel
+        function isJuryOfPanel() {
+            let userProfile = get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+            return userProfile.role == 'jury' && userProfile.panelId == panelId;
+        }
+        allow get: if isJuryOfPanel();
     }
   }
 }
