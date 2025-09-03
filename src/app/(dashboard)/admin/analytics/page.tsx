@@ -50,6 +50,7 @@ interface InstituteAnalyticsData {
     shortlistedHardware: number;
     registeredHardware: number;
     totalShortlisted: number;
+    nominationLimit: number;
 }
 
 export default function AnalyticsPage() {
@@ -198,6 +199,7 @@ export default function AnalyticsPage() {
         shortlistedHardware: 0,
         registeredHardware: 0,
         totalShortlisted: 0,
+        nominationLimit: inst.nominationLimit || 0
       });
     });
     
@@ -333,7 +335,7 @@ export default function AnalyticsPage() {
                     <TableCell className="text-center">{data.registeredHardware}</TableCell>
                     <TableCell className="text-center">{data.shortlistedSoftware}</TableCell>
                     <TableCell className="text-center">{data.shortlistedHardware}</TableCell>
-                    <TableCell className="text-center font-bold">{data.totalShortlisted}</TableCell>
+                    <TableCell className="text-center font-bold">{data.totalShortlisted} / {data.nominationLimit}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>

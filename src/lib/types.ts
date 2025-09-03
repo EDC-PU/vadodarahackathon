@@ -508,6 +508,7 @@ const InstituteAnalyticsDataSchema = z.object({
   shortlistedHardware: z.number(),
   registeredHardware: z.number(),
   totalShortlisted: z.number(),
+  nominationLimit: z.number(),
 });
 
 export const ExportInstituteAnalyticsInputSchema = z.object({

@@ -35,10 +35,10 @@ const exportInstituteAnalyticsFlow = ai.defineFlow(
         sheet.columns = [
             { header: 'Institute', key: 'institute', width: 40 },
             { header: 'Total Registered', key: 'totalRegistered', width: 20, style: { alignment: { horizontal: 'center' } } },
-            { header: 'Shortlisted Software', key: 'shortlistedSoftware', width: 20, style: { alignment: { horizontal: 'center' } } },
             { header: 'Registered Software', key: 'registeredSoftware', width: 20, style: { alignment: { horizontal: 'center' } } },
-            { header: 'Shortlisted Hardware', key: 'shortlistedHardware', width: 20, style: { alignment: { horizontal: 'center' } } },
             { header: 'Registered Hardware', key: 'registeredHardware', width: 20, style: { alignment: { horizontal: 'center' } } },
+            { header: 'Shortlisted Software', key: 'shortlistedSoftware', width: 20, style: { alignment: { horizontal: 'center' } } },
+            { header: 'Shortlisted Hardware', key: 'shortlistedHardware', width: 20, style: { alignment: { horizontal: 'center' } } },
             { header: 'Total Shortlisted', key: 'totalShortlisted', width: 20, style: { alignment: { horizontal: 'center' } } },
         ];
         
@@ -46,8 +46,13 @@ const exportInstituteAnalyticsFlow = ai.defineFlow(
         sheet.getRow(1).font = { bold: true };
         sheet.getRow(1).alignment = { horizontal: 'center' };
 
-        // Add data rows
-        sheet.addRows(analyticsData);
+        // Add data rows, formatting the total shortlisted column
+        const rowsToAdd = analyticsData.map(data => ({
+            ...data,
+            totalShortlisted: `${data.totalShortlisted} / ${data.nominationLimit}`
+        }));
+
+        sheet.addRows(rowsToAdd);
         
         console.log(`Populated ${analyticsData.length} rows of analytics data.`);
 
