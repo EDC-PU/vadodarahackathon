@@ -259,4 +259,3 @@ export function AddJuryPanelDialog({ isOpen, onOpenChange, onPanelAdded }: AddJu
     </Dialog>
   );
 }
-
