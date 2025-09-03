@@ -468,7 +468,7 @@ function AllTeamsContent() {
                     ...member,
                     teamName: team.name,
                     teamId: team.id,
-                    isLocked: team.isLocked ?? false,
+                    isLocked: team.isLocked,
                     teamNumber: team.teamNumber,
                     isNominated: team.isNominated,
                     problemStatementId: team.problemStatementId || 'Not Selected',
@@ -540,10 +540,10 @@ function AllTeamsContent() {
     }
   };
 
-  const handleLockToggle = async (teamId: string, currentLockState: boolean) => {
+  const handleLockToggle = async (teamId: string, isLocked: boolean) => {
       setIsSaving(`lock-${teamId}`);
       try {
-          const result = await toggleTeamLock({ teamId, isLocked: !currentLockState });
+          const result = await toggleTeamLock({ teamId, isLocked });
           if(result.success) {
               toast({ title: "Success", description: result.message });
           } else {
@@ -589,7 +589,7 @@ function AllTeamsContent() {
                     {institutes.map(inst => <SelectItem key={inst.id} value={inst.name}>{inst.name}</SelectItem>)}
                 </SelectContent>
             </Select>
-            <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+            <Select value={categoryFilter} onValueChange={(value) => setCategoryFilter(value as CategoryFilter)}>
                 <SelectTrigger className="w-full sm:w-48">
                     <SelectValue placeholder="Filter by Category" />
                 </SelectTrigger>

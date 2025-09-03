@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { useEffect, useState, useMemo, useCallback } from "react";
 import { db } from "@/lib/firebase";
 import { doc, onSnapshot, updateDoc, collection, query, where, getDocs, writeBatch, orderBy, getDoc } from "firebase/firestore";
-import { Team, UserProfile, TeamMember, ProblemStatement } from "@/lib/types";
+import { Team, UserProfile, TeamMember, ProblemStatement, ProblemStatementCategory } from "@/lib/types";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
@@ -52,6 +52,7 @@ type SortKey = 'teamName' | 'teamNumber' | 'name' | 'email' | 'enrollmentNumber'
 type SortDirection = 'asc' | 'desc';
 type StatusFilter = "All Statuses" | "Registered" | "Pending";
 type RoleFilter = "all" | "leader" | "member";
+type CategoryFilter = ProblemStatementCategory | "All Categories";
 
 // Helper to fetch user profiles in chunks to avoid Firestore 30-item 'in' query limit
 async function getUserProfilesInChunks(userIds: string[]): Promise<Map<string, UserProfile>> {
@@ -86,6 +87,7 @@ export default function SpocTeamsPage() {
   const [isExporting, setIsExporting] = useState(false);
   const [isExportingEval, setIsExportingEval] = useState(false);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("All Statuses");
+  const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>("All Categories");
   const [memberCountFilter, setMemberCountFilter] = useState<number | "All">("All");
   const [roleFilter, setRoleFilter] = useState<RoleFilter>("all");
   const [selectedProblemStatements, setSelectedProblemStatements] = useState<string[]>([]);
@@ -101,6 +103,7 @@ export default function SpocTeamsPage() {
   const canSpocSelectPs = isAfter(new Date(), psSelectionDeadline);
 
   const statuses: StatusFilter[] = ["All Statuses", "Registered", "Pending"];
+  const categories: CategoryFilter[] = ["All Categories", "Software", "Hardware"];
 
   const fetchAllData = useCallback((institute: string) => {
     setLoading(true);
@@ -161,7 +164,7 @@ export default function SpocTeamsPage() {
         
         const result = await exportTeams({ 
             institute: user.institute, 
-            category: "All Categories", 
+            category: categoryFilter, 
             status: statusFilter, 
             problemStatementIds: selectedProblemStatements,
             memberCount: memberCountFilter,
@@ -279,10 +282,11 @@ export default function SpocTeamsPage() {
       
       const memberCount = team.members.length + 1;
       const memberCountMatch = memberCountFilter === "All" || memberCount === memberCount;
+      const categoryMatch = categoryFilter === 'All Categories' || team.category === categoryFilter;
 
-      return statusMatch && psMatch && memberCountMatch;
+      return statusMatch && psMatch && memberCountMatch && categoryMatch;
     });
-  }, [teams, statusFilter, users, selectedProblemStatements, memberCountFilter]);
+  }, [teams, statusFilter, users, selectedProblemStatements, memberCountFilter, categoryFilter]);
   
   const getTeamWithFullDetails = (teamsToProcess: Team[]) => {
     return teamsToProcess.map(team => {
@@ -511,7 +515,7 @@ export default function SpocTeamsPage() {
   const handleLockToggle = async (teamId: string, isLocked: boolean) => {
     setIsSaving(`lock-${teamId}`);
     try {
-        const result = await toggleTeamLock({ teamId, isLocked: isLocked });
+        const result = await toggleTeamLock({ teamId, isLocked });
         if(result.success) {
             toast({ title: "Success", description: result.message });
         } else {
@@ -560,6 +564,14 @@ export default function SpocTeamsPage() {
                     </SelectTrigger>
                     <SelectContent>
                         {statuses.map(st => <SelectItem key={st} value={st}>{st}</SelectItem>)}
+                    </SelectContent>
+                </Select>
+                 <Select value={categoryFilter} onValueChange={(value) => setCategoryFilter(value as CategoryFilter)}>
+                    <SelectTrigger className="w-full sm:w-48">
+                        <SelectValue placeholder="Filter by Category" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        {categories.map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}
                     </SelectContent>
                 </Select>
                  <Select value={String(memberCountFilter)} onValueChange={(val) => setMemberCountFilter(val === "All" ? "All" : Number(val))}>
@@ -927,4 +939,5 @@ export default function SpocTeamsPage() {
     </div>
   );
 }
+
 
