@@ -1,10 +1,9 @@
 
-
 "use client";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Loader2, Download, Save, Pencil, X, Trash2, MinusCircle, ChevronDown, ArrowUpDown, FileText, RefreshCw, Lock, Unlock } from "lucide-react";
+import { Loader2, Download, Save, Pencil, X, Trash2, MinusCircle, ChevronDown, ArrowUpDown, RefreshCw, Lock, Unlock } from "lucide-react";
 import { useEffect, useState, useMemo, useCallback, Suspense } from "react";
 import { db } from "@/lib/firebase";
 import { collection, onSnapshot, doc, updateDoc, query, orderBy, getDocs, where } from "firebase/firestore";
@@ -798,6 +797,8 @@ export default function AllTeamsPage() {
         </Suspense>
     )
 }
+    
+
     
 
     
