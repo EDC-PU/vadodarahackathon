@@ -32,7 +32,18 @@ const createTeamFlow = ai.defineFlow(
       return { success: false, message: errorMessage };
     }
 
+    const configDocRef = adminDb.collection("config").doc("event");
+
     try {
+        // Check if registration is still open
+        const configDoc = await configDocRef.get();
+        if (configDoc.exists) {
+            const deadline = configDoc.data()?.registrationDeadline?.toDate();
+            if (deadline && new Date() > deadline) {
+                return { success: false, message: "The registration deadline has passed. No new teams can be created." };
+            }
+        }
+
         // Check for team name uniqueness
         const teamsRef = adminDb.collection('teams');
         const q = teamsRef.where("name", "==", input.teamName);
