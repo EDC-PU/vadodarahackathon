@@ -175,6 +175,19 @@ export interface Announcement {
 
 // Schemas for Genkit Flows
 
+// finalize-jury-panel-flow
+export const FinalizeJuryPanelInputSchema = z.object({
+  panelId: z.string().describe("The document ID of the draft jury panel to finalize."),
+});
+export type FinalizeJuryPanelInput = z.infer<typeof FinalizeJuryPanelInputSchema>;
+
+export const FinalizeJuryPanelOutputSchema = z.object({
+  success: z.boolean(),
+  message: z.string(),
+});
+export type FinalizeJuryPanelOutput = z.infer<typeof FinalizeJuryPanelOutputSchema>;
+
+
 // delete-jury-panel-flow
 export const DeleteJuryPanelInputSchema = z.object({
   panelId: z.string().describe("The document ID of the jury panel to delete."),

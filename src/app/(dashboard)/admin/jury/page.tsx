@@ -9,7 +9,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Loader2, PlusCircle, Users, ClipboardList, Trash2, Pencil, Download } from "lucide-react";
+import { Loader2, PlusCircle, Users, ClipboardList, Trash2, Pencil, Download, Send } from "lucide-react";
 import { useEffect, useState, useMemo } from "react";
 import { db } from "@/lib/firebase";
 import { collection, onSnapshot, query, where, getDocs, orderBy } from "firebase/firestore";
@@ -32,11 +32,11 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { deleteJuryPanel } from "@/ai/flows/delete-jury-panel-flow";
 import { EditJuryPanelDialog } from "@/components/edit-jury-panel-dialog";
 import { exportEvaluation } from "@/ai/flows/export-evaluation-flow";
+import { finalizeJuryPanel } from "@/ai/flows/finalize-jury-panel-flow";
 
 export default function ManageJuryPage() {
   const [panels, setPanels] = useState<JuryPanel[]>([]);
@@ -46,7 +46,7 @@ export default function ManageJuryPage() {
   const [isAddPanelOpen, setIsAddPanelOpen] = useState(false);
   const [isEditPanelOpen, setIsEditPanelOpen] = useState(false);
   const [selectedPanel, setSelectedPanel] = useState<JuryPanel | null>(null);
-  const [isDeleting, setIsDeleting] = useState<string | null>(null);
+  const [isProcessing, setIsProcessing] = useState<string | null>(null);
   const [isExporting, setIsExporting] = useState<string | null>(null);
   const { toast } = useToast();
 
@@ -102,7 +102,7 @@ export default function ManageJuryPage() {
   };
 
   const handleDelete = async (panelId: string) => {
-    setIsDeleting(panelId);
+    setIsProcessing(`delete-${panelId}`);
     try {
       const result = await deleteJuryPanel({ panelId });
       if(result.success) {
@@ -113,9 +113,25 @@ export default function ManageJuryPage() {
     } catch(error: any) {
        toast({ title: "Error", description: `Failed to delete panel: ${error.message}`, variant: "destructive" });
     } finally {
-      setIsDeleting(null);
+      setIsProcessing(null);
     }
   }
+
+  const handleFinalize = async (panelId: string) => {
+    setIsProcessing(`finalize-${panelId}`);
+    try {
+      const result = await finalizeJuryPanel({ panelId });
+      if (result.success) {
+        toast({ title: "Success!", description: result.message, duration: 8000 });
+      } else {
+        throw new Error(result.message);
+      }
+    } catch (error: any) {
+       toast({ title: "Error", description: `Failed to finalize panel: ${error.message}`, variant: "destructive" });
+    } finally {
+      setIsProcessing(null);
+    }
+  };
   
   const handleExportEvaluation = async (panel: JuryPanel) => {
     setIsExporting(panel.id);
@@ -213,31 +229,58 @@ export default function ManageJuryPage() {
               <Accordion type="single" collapsible className="w-full">
                 {panels.map((panel) => {
                     const assignedTeams = teamsByPanel.get(panel.id) || [];
+                    const isDraft = panel.status === 'draft';
                     return (
                         <AccordionItem value={panel.id} key={panel.id}>
                             <AccordionTrigger className="hover:no-underline">
                                 <div className="flex justify-between items-center w-full pr-4">
-                                    <span className="text-lg font-semibold">{panel.name}</span>
+                                    <div className="flex items-center gap-3">
+                                      <span className="text-lg font-semibold">{panel.name}</span>
+                                      {isDraft && <Badge variant="secondary">Draft</Badge>}
+                                    </div>
                                     <div className="flex items-center gap-4">
                                       <Badge variant="outline">{assignedTeams.length} Team(s) Assigned</Badge>
-                                       <Button variant="outline" size="sm" disabled={isExporting === panel.id} onClick={(e) => { e.stopPropagation(); handleExportEvaluation(panel); }}>
-                                        {isExporting === panel.id ? <Loader2 className="h-4 w-4 animate-spin"/> : <Download className="h-4 w-4" />}
-                                         <span className="ml-2 hidden sm:inline">Download Sheet</span>
-                                      </Button>
+                                      {isDraft ? (
+                                        <AlertDialog>
+                                          <AlertDialogTrigger asChild>
+                                            <Button size="sm" onClick={(e) => e.stopPropagation()} disabled={isProcessing === `finalize-${panel.id}`}>
+                                              {isProcessing === `finalize-${panel.id}` ? <Loader2 className="h-4 w-4 animate-spin"/> : <Send className="h-4 w-4" />}
+                                              <span className="ml-2 hidden sm:inline">Finalize Panel</span>
+                                            </Button>
+                                          </AlertDialogTrigger>
+                                           <AlertDialogContent>
+                                            <AlertDialogHeader>
+                                              <AlertDialogTitle>Finalize this Panel?</AlertDialogTitle>
+                                              <AlertDialogDescription>
+                                                This will create user accounts for all jury members and email them their login credentials. This action cannot be undone.
+                                              </AlertDialogDescription>
+                                            </AlertDialogHeader>
+                                            <AlertDialogFooter>
+                                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                              <AlertDialogAction onClick={() => handleFinalize(panel.id)}>Yes, Finalize</AlertDialogAction>
+                                            </AlertDialogFooter>
+                                          </AlertDialogContent>
+                                        </AlertDialog>
+                                      ) : (
+                                        <Button variant="outline" size="sm" disabled={isExporting === panel.id} onClick={(e) => { e.stopPropagation(); handleExportEvaluation(panel); }}>
+                                          {isExporting === panel.id ? <Loader2 className="h-4 w-4 animate-spin"/> : <Download className="h-4 w-4" />}
+                                          <span className="ml-2 hidden sm:inline">Download Sheet</span>
+                                        </Button>
+                                      )}
                                       <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); handleEdit(panel); }}>
                                         <Pencil className="h-4 w-4" />
                                       </Button>
                                       <AlertDialog>
                                         <AlertDialogTrigger asChild>
-                                          <Button variant="destructive" size="icon" className="h-8 w-8" onClick={(e) => e.stopPropagation()}>
-                                            {isDeleting === panel.id ? <Loader2 className="h-4 w-4 animate-spin"/> : <Trash2 className="h-4 w-4" />}
+                                          <Button variant="destructive" size="icon" className="h-8 w-8" onClick={(e) => e.stopPropagation()} disabled={isProcessing === `delete-${panel.id}`}>
+                                            {isProcessing === `delete-${panel.id}` ? <Loader2 className="h-4 w-4 animate-spin"/> : <Trash2 className="h-4 w-4" />}
                                           </Button>
                                         </AlertDialogTrigger>
                                         <AlertDialogContent>
                                           <AlertDialogHeader>
                                             <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
                                             <AlertDialogDescription>
-                                              This action will permanently delete the panel "{panel.name}" and delete all its jury member accounts. This cannot be undone.
+                                              This action will permanently delete the panel "{panel.name}" { !isDraft && "and delete all its jury member accounts."} This cannot be undone.
                                             </AlertDialogDescription>
                                           </AlertDialogHeader>
                                           <AlertDialogFooter>
@@ -255,7 +298,7 @@ export default function ManageJuryPage() {
                                         <h4 className="font-semibold mb-2 flex items-center gap-2"><Users/> Jury Members</h4>
                                         <ul className="space-y-2">
                                             {panel.members.map(member => (
-                                                <li key={member.uid} className="text-sm">
+                                                <li key={member.uid || member.email} className="text-sm">
                                                     <p className="font-medium">{member.name}</p>
                                                     <p className="text-xs text-muted-foreground">{member.email}</p>
                                                 </li>
