@@ -32,6 +32,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
+  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { deleteJuryPanel } from "@/ai/flows/delete-jury-panel-flow";
 import { EditJuryPanelDialog } from "@/components/edit-jury-panel-dialog";
