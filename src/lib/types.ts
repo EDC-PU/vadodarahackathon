@@ -3,7 +3,7 @@
 import {z} from 'genkit';
 import type {Query} from 'firebase-admin/firestore';
 
-export type UserRole = "leader" | "member" | "spoc" | "admin";
+export type UserRole = "leader" | "member" | "spoc" | "admin" | "jury";
 export type SpocStatus = "pending" | "approved" | "rejected";
 export type InvitationStatus = "pending" | "accepted" | "rejected";
 
@@ -32,6 +32,10 @@ export interface UserProfile {
   principalName?: string;
   principalInitial?: "Dr." | "Prof.";
   principalEmail?: string;
+  // Jury-specific fields
+  highestQualification?: string;
+  experience?: string;
+  panelId?: string;
 }
 
 export interface Invitation {
@@ -114,6 +118,7 @@ export interface Team {
   sihSelectionStatus?: 'university' | 'institute';
   ssihEnrolled?: boolean;
   isLocked?: boolean;
+  panelId?: string;
 }
 
 export interface Institute {
@@ -134,12 +139,19 @@ export interface Spoc extends UserProfile {
   institute: string;
 }
 
-export interface EventInfo {
-  dates: string;
-  rewards: string[];
-  brochureUrl: string;
-  problemStatementsUrl: string;
+export interface JuryMember {
+    uid: string;
+    name: string;
+    email: string;
 }
+
+export interface JuryPanel {
+    id: string;
+    name: string;
+    members: JuryMember[];
+    createdAt: any;
+}
+
 
 export type AnnouncementAudience = "all" | "teams" | "spocs" | "institute" | "nominated_teams";
 
@@ -161,6 +173,32 @@ export interface Announcement {
 
 
 // Schemas for Genkit Flows
+
+// create-jury-panel-flow
+export const JuryMemberInputSchema = z.object({
+  name: z.string().min(2, "Name is required."),
+  email: z.string().email(),
+  institute: z.string().min(1, "Institute is required."),
+  contactNumber: z.string().regex(/^\d{10}$/, "A valid 10-digit contact number is required."),
+  department: z.string().min(2, "Department is required."),
+  highestQualification: z.string().min(2, "Highest qualification is required."),
+  experience: z.string().min(1, "Experience is required."),
+});
+export type JuryMemberInput = z.infer<typeof JuryMemberInputSchema>;
+
+export const CreateJuryPanelInputSchema = z.object({
+  panelName: z.string().min(3, "Panel name must be at least 3 characters."),
+  juryMembers: z.array(JuryMemberInputSchema).length(3, "A panel must have exactly 3 jury members."),
+});
+export type CreateJuryPanelInput = z.infer<typeof CreateJuryPanelInputSchema>;
+
+export const CreateJuryPanelOutputSchema = z.object({
+  success: z.boolean(),
+  message: z.string(),
+  panelId: z.string().optional(),
+});
+export type CreateJuryPanelOutput = z.infer<typeof CreateJuryPanelOutputSchema>;
+
 
 // create-announcement-flow
 export const CreateAnnouncementInputSchema = z.object({

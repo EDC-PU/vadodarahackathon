@@ -1,8 +1,9 @@
 
+
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Users, User, Shield, UserPlus, FileText, Download, Loader2, List, CaseSensitive, Bell } from "lucide-react";
+import { Users, User, Shield, UserPlus, FileText, Download, Loader2, List, CaseSensitive, Bell, Landmark } from "lucide-react";
 import { useEffect, useState, useRef } from "react";
 import { db } from "@/lib/firebase";
 import { collection, getDocs, query, where, onSnapshot, orderBy, limit } from "firebase/firestore";
@@ -17,7 +18,7 @@ import { formatDistanceToNow } from "date-fns";
 
 
 export default function AdminDashboard() {
-  const [stats, setStats] = useState({ teams: 0, participants: 0, spocs: 0, admins: 0 });
+  const [stats, setStats] = useState({ teams: 0, participants: 0, spocs: 0, admins: 0, jury: 0 });
   const [loading, setLoading] = useState(true);
   const [isExporting, setIsExporting] = useState(false);
   const [recentActivity, setRecentActivity] = useState<Notification[]>([]);
@@ -85,12 +86,14 @@ export default function AdminDashboard() {
     const unsubscribeUsers = onSnapshot(usersQuery, (userSnapshot) => {
         let spocCount = 0;
         let adminCount = 0;
+        let juryCount = 0;
         userSnapshot.forEach(doc => {
             const user = doc.data() as UserProfile;
             if (user.role === 'spoc') spocCount++;
             if (user.role === 'admin') adminCount++;
+            if (user.role === 'jury') juryCount++;
         });
-        setStats(prev => ({ ...prev, spocs: spocCount, admins: adminCount }));
+        setStats(prev => ({ ...prev, spocs: spocCount, admins: adminCount, jury: juryCount }));
     }, (error) => {
         console.error("Error fetching users data:", error);
         toast({ title: "Error", description: "Failed to fetch real-time user data.", variant: "destructive" });
@@ -132,7 +135,7 @@ export default function AdminDashboard() {
         </div>
       </header>
       
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
           <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">Total Teams</CardTitle>
@@ -159,6 +162,15 @@ export default function AdminDashboard() {
               </CardHeader>
               <CardContent>
                   <div className="text-2xl font-bold">{stats.spocs}</div>
+              </CardContent>
+          </Card>
+          <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Jury Members</CardTitle>
+                  <Landmark className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                  <div className="text-2xl font-bold">{stats.jury}</div>
               </CardContent>
           </Card>
            <Card>

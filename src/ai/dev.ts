@@ -31,3 +31,4 @@ import '@/ai/flows/toggle-team-lock-flow.ts';
 import '@/ai/flows/set-student-coordinator-flow.ts';
 import '@/ai/flows/export-institute-analytics-flow.ts';
 import '@/ai/flows/create-announcement-flow.ts';
+import '@/ai/flows/create-jury-panel-flow.ts';

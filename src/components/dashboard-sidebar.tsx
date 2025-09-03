@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import {
@@ -35,6 +36,7 @@ import {
   ClipboardCheck,
   Medal,
   FileSignature,
+  Landmark,
 } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { Button } from "./ui/button";
@@ -50,6 +52,7 @@ const navItems = {
     { href: "/admin/problem-statements", icon: <FileQuestion />, label: "Problem Statements" },
     { href: "/admin/teams", icon: <Users />, label: "All Teams" },
     { href: "/admin/university-nominations", icon: <Medal />, label: "University Nominations" },
+    { href: "/admin/jury", icon: <Landmark />, label: "Jury Panels" },
     { href: "/admin/users", icon: <Users2 />, label: "Manage Users" },
     { href: "/admin/institutes", icon: <Library />, label: "Manage Institutes" },
     { href: "/admin/departments", icon: <List />, label: "Manage Departments" },
@@ -75,6 +78,9 @@ const navItems = {
   member: [
     { href: "/member", icon: <LayoutDashboard />, label: "Dashboard" },
   ],
+  jury: [
+    { href: "/jury", icon: <LayoutDashboard />, label: "Jury Dashboard" },
+  ],
 };
 
 const getProfileLink = (user: any) => {
@@ -92,6 +98,7 @@ const RoleIcon = ({ role }: { role: string }) => {
     case "admin": return <Shield className="w-4 h-4" />;
     case "spoc": return <UserCheck className="w-4 h-4" />;
     case "leader": return <Users className="w-4 h-4" />;
+    case "jury": return <Landmark className="w-4 h-4" />;
     default: return <UserIcon className="w-4 h-4" />;
   }
 };
