@@ -9,11 +9,11 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Loader2, PlusCircle, Users, ClipboardList, Trash2, Pencil } from "lucide-react";
+import { Loader2, PlusCircle, Users, ClipboardList, Trash2, Pencil, Download } from "lucide-react";
 import { useEffect, useState, useMemo } from "react";
 import { db } from "@/lib/firebase";
 import { collection, onSnapshot, query, where, getDocs, orderBy } from "firebase/firestore";
-import { JuryPanel, Team } from "@/lib/types";
+import { JuryPanel, Team, ProblemStatement } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 import { AddJuryPanelDialog } from "@/components/add-jury-panel-dialog";
 import {
@@ -36,15 +36,18 @@ import {
 } from "@/components/ui/alert-dialog"
 import { deleteJuryPanel } from "@/ai/flows/delete-jury-panel-flow";
 import { EditJuryPanelDialog } from "@/components/edit-jury-panel-dialog";
+import { exportEvaluation } from "@/ai/flows/export-evaluation-flow";
 
 export default function ManageJuryPage() {
   const [panels, setPanels] = useState<JuryPanel[]>([]);
   const [teams, setTeams] = useState<Team[]>([]);
+  const [problemStatements, setProblemStatements] = useState<ProblemStatement[]>([]);
   const [loading, setLoading] = useState(true);
   const [isAddPanelOpen, setIsAddPanelOpen] = useState(false);
   const [isEditPanelOpen, setIsEditPanelOpen] = useState(false);
   const [selectedPanel, setSelectedPanel] = useState<JuryPanel | null>(null);
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
+  const [isExporting, setIsExporting] = useState<string | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -52,6 +55,7 @@ export default function ManageJuryPage() {
 
     const panelsQuery = query(collection(db, "juryPanels"), orderBy("createdAt", "desc"));
     const teamsQuery = query(collection(db, "teams"));
+    const psQuery = query(collection(db, "problemStatements"));
 
     const unsubPanels = onSnapshot(panelsQuery, (snapshot) => {
       setPanels(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as JuryPanel)));
@@ -64,14 +68,20 @@ export default function ManageJuryPage() {
         setTeams(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Team)));
     });
 
+     const unsubPs = onSnapshot(psQuery, (snapshot) => {
+        setProblemStatements(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ProblemStatement)));
+    });
+
     Promise.all([
         getDocs(panelsQuery),
-        getDocs(teamsQuery)
+        getDocs(teamsQuery),
+        getDocs(psQuery),
     ]).then(() => setLoading(false));
 
     return () => {
         unsubPanels();
         unsubTeams();
+        unsubPs();
     };
   }, [toast]);
   
@@ -106,6 +116,53 @@ export default function ManageJuryPage() {
       setIsDeleting(null);
     }
   }
+  
+  const handleExportEvaluation = async (panel: JuryPanel) => {
+    setIsExporting(panel.id);
+    try {
+        const teamsForPanel = teamsByPanel.get(panel.id) || [];
+        if (teamsForPanel.length === 0) {
+            toast({ title: "No Teams", description: "This panel has no teams assigned to it.", variant: "destructive" });
+            return;
+        }
+
+        const problemStatementsMap = new Map(problemStatements.map(ps => [ps.id, ps]));
+        
+        const teamsToExport = teamsForPanel.map(team => {
+            const ps = team.problemStatementId ? problemStatementsMap.get(team.problemStatementId) : null;
+            return {
+              team_number: team.teamNumber || 'N/A',
+              team_name: team.name,
+              leader_name: team.leader.name,
+              problemstatement_id: ps?.problemStatementId || 'N/A',
+              problemstatement_title: team.problemStatementTitle || 'N/A',
+            };
+        });
+
+        const result = await exportEvaluation({
+            instituteName: `Jury_Panel_${panel.name.replace(/\s+/g, '_')}`,
+            teams: teamsToExport
+        });
+
+        if (result.success && result.fileContent) {
+            const blob = new Blob([Buffer.from(result.fileContent, 'base64')], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = result.fileName || `${panel.name}_Evaluation.xlsx`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            a.remove();
+        } else {
+            throw new Error(result.message || "Failed to export evaluation sheet.");
+        }
+    } catch (error: any) {
+        toast({ title: "Export Failed", description: error.message, variant: "destructive" });
+    } finally {
+        setIsExporting(null);
+    }
+  };
 
 
   return (
@@ -163,6 +220,10 @@ export default function ManageJuryPage() {
                                     <span className="text-lg font-semibold">{panel.name}</span>
                                     <div className="flex items-center gap-4">
                                       <Badge variant="outline">{assignedTeams.length} Team(s) Assigned</Badge>
+                                       <Button variant="outline" size="sm" disabled={isExporting === panel.id} onClick={(e) => { e.stopPropagation(); handleExportEvaluation(panel); }}>
+                                        {isExporting === panel.id ? <Loader2 className="h-4 w-4 animate-spin"/> : <Download className="h-4 w-4" />}
+                                         <span className="ml-2 hidden sm:inline">Download Sheet</span>
+                                      </Button>
                                       <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); handleEdit(panel); }}>
                                         <Pencil className="h-4 w-4" />
                                       </Button>
