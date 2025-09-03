@@ -515,7 +515,10 @@ export default function LeaderDashboard() {
                 <CardTitle className="flex items-center gap-2">
                     <Users2 />
                     Team Members ({teamValidation.memberCount.current} / 6)
-                    {team.teamNumber && <Badge variant="secondary" className="ml-auto">{`Team Number: ${team.teamNumber}`}</Badge>}
+                    <div className="ml-auto flex items-center gap-4">
+                        {team.universityTeamId && <Badge variant="secondary" className="text-base">{`Univ. ID: ${team.universityTeamId}`}</Badge>}
+                        {team.teamNumber && <Badge variant="secondary" className="text-base">{`Team No: ${team.teamNumber}`}</Badge>}
+                    </div>
                 </CardTitle>
                 <CardDescription>Your current team roster. Invite members using the link below.</CardDescription>
             </CardHeader>

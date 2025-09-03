@@ -11,10 +11,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { Loader2, AlertCircle, Save, Medal, Download } from "lucide-react";
+import { Loader2, AlertCircle, Save, Medal, Download, KeyRound } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { isAfter } from "date-fns";
 import { exportEvaluation } from "@/ai/flows/export-evaluation-flow";
+import { Input } from "@/components/ui/input";
 
 export default function UniversityNominationsPage() {
   const [nominatedTeams, setNominatedTeams] = useState<Team[]>([]);
@@ -22,6 +23,7 @@ export default function UniversityNominationsPage() {
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState<string | null>(null);
   const [isExporting, setIsExporting] = useState(false);
+  const [universityTeamIds, setUniversityTeamIds] = useState<Record<string, string>>({});
   const { toast } = useToast();
 
   const canModify = isAfter(new Date(), new Date(2025, 8, 6)); // September 6th, 2025
@@ -33,6 +35,14 @@ export default function UniversityNominationsPage() {
     const unsubscribe = onSnapshot(teamsQuery, async (snapshot) => {
       const teamsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Team));
       setNominatedTeams(teamsData);
+
+      const currentIds: Record<string, string> = {};
+      teamsData.forEach(team => {
+        if(team.universityTeamId) {
+            currentIds[team.id] = team.universityTeamId;
+        }
+      });
+      setUniversityTeamIds(currentIds);
 
       const allUserIds = new Set<string>();
       teamsData.forEach(team => {
@@ -60,7 +70,7 @@ export default function UniversityNominationsPage() {
   }, [toast]);
 
   const handleStatusChange = async (teamId: string, status: 'university' | 'institute') => {
-    setIsSaving(teamId);
+    setIsSaving(`status-${teamId}`);
     try {
       const teamRef = doc(db, "teams", teamId);
       await updateDoc(teamRef, { sihSelectionStatus: status });
@@ -72,6 +82,25 @@ export default function UniversityNominationsPage() {
       setIsSaving(null);
     }
   };
+
+  const handleSaveUniversityId = async (teamId: string) => {
+    const universityId = universityTeamIds[teamId];
+    if (!universityId) {
+      toast({ title: "Input Required", description: "Please enter a University Team ID.", variant: "destructive"});
+      return;
+    }
+    setIsSaving(`id-${teamId}`);
+    try {
+      const teamRef = doc(db, "teams", teamId);
+      await updateDoc(teamRef, { universityTeamId: universityId });
+      toast({ title: "Success", description: "University Team ID has been saved." });
+    } catch (error) {
+      console.error("Error saving University Team ID:", error);
+      toast({ title: "Error", description: "Could not save the ID.", variant: "destructive" });
+    } finally {
+      setIsSaving(null);
+    }
+  }
   
   const handleExport = async () => {
     if (nominatedTeams.length === 0) {
@@ -176,6 +205,7 @@ export default function UniversityNominationsPage() {
                     <TableHead>Institute</TableHead>
                     <TableHead>Problem Statement</TableHead>
                     <TableHead>Category</TableHead>
+                    <TableHead className="w-[200px]">University Team ID</TableHead>
                     <TableHead className="w-[300px]">SIH 2025 Selection Status</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -190,12 +220,26 @@ export default function UniversityNominationsPage() {
                               {team.category}
                           </Badge>
                       </TableCell>
+                       <TableCell>
+                         <div className="flex items-center gap-2">
+                           <KeyRound className="h-4 w-4 text-muted-foreground" />
+                            <Input
+                              value={universityTeamIds[team.id] || ''}
+                              onChange={(e) => setUniversityTeamIds(prev => ({...prev, [team.id]: e.target.value}))}
+                              placeholder="e.g., PU-123"
+                              className="h-9 w-32"
+                            />
+                            <Button size="sm" onClick={() => handleSaveUniversityId(team.id)} disabled={isSaving === `id-${team.id}`}>
+                                {isSaving === `id-${team.id}` ? <Loader2 className="h-4 w-4 animate-spin"/> : <Save className="h-4 w-4" />}
+                            </Button>
+                         </div>
+                      </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
                            <Select
                              defaultValue={team.sihSelectionStatus}
                              onValueChange={(value) => handleStatusChange(team.id, value as 'university' | 'institute')}
-                             disabled={!canModify || isSaving === team.id}
+                             disabled={!canModify || isSaving === `status-${team.id}`}
                            >
                               <SelectTrigger>
                                 <SelectValue placeholder="Set Status..." />
@@ -205,7 +249,7 @@ export default function UniversityNominationsPage() {
                                   <SelectItem value="institute">Selected for SIH (Institute Level)</SelectItem>
                               </SelectContent>
                            </Select>
-                           {isSaving === team.id && <Loader2 className="h-4 w-4 animate-spin" />}
+                           {isSaving === `status-${team.id}` && <Loader2 className="h-4 w-4 animate-spin" />}
                         </div>
                       </TableCell>
                     </TableRow>
