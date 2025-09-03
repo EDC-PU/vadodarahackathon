@@ -1,108 +1,112 @@
-
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Helper function to check if a user has an admin role
-    function isAdmin() {
-      return exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    // Helper functions to keep rules DRY
+    function isSignedIn(request) {
+      return request.auth != null;
+    }
+
+    function isUser(request, userId) {
+      return isSignedIn(request) && request.auth.uid == userId;
+    }
+
+    function getUserData(userId) {
+        return get(/databases/$(database)/documents/users/$(userId)).data;
+    }
+
+    function isAdmin(userId) {
+        return getUserData(userId).role == 'admin';
+    }
+
+    function isSpoc(userId) {
+        return getUserData(userId).role == 'spoc';
+    }
+
+    function isLeader(userId) {
+        return getUserData(userId).role == 'leader';
     }
     
-    // Helper function to check if a user is the SPOC for a given institute
-    function isSpocForInstitute(instituteName) {
-      return exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'spoc' &&
-             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.institute == instituteName;
+    function isJury(userId) {
+        return getUserData(userId).role == 'jury';
     }
-    
-    // Helper function to check if a user is the leader of a given team
-    function isLeaderOfTeam(teamId) {
-        return exists(/databases/$(database)/documents/teams/$(teamId)) &&
-               get(/databases/$(database)/documents/teams/$(teamId)).data.leader.uid == request.auth.uid;
+
+    function isTeamMember(request, teamId) {
+      let userData = getUserData(request.auth.uid);
+      return isSignedIn(request) && userData.teamId == teamId;
     }
-    
-    // Helper function to check if a user is a member of a given team
-    function isMemberOfTeam(teamId) {
-       return exists(/databases/$(database)/documents/teams/$(teamId)) &&
-              (
-                get(/databases/$(database)/documents/teams/$(teamId)).data.leader.uid == request.auth.uid ||
-                request.auth.uid in get(/databases/$(database)/documents/teams/$(teamId)).data.members.map(m => m.uid)
-              );
-    }
-    
-    // Users can be read by anyone, but only the user themselves or an admin can write.
+
+    // Users Collection
     match /users/{userId} {
-      allow read; // Allow public read for profiles
-      allow create: if request.auth.uid == userId; // Allow user to create their own profile
-      allow update: if request.auth.uid == userId || isAdmin();
-      allow delete: if isAdmin();
+      allow read: if isSignedIn(request);
+      allow create: if !isSignedIn(request); // Allow user creation during signup
+      allow update: if isUser(request, userId) || isAdmin(request.auth.uid);
+      allow delete: if isAdmin(request.auth.uid);
     }
-    
-    // Teams can be read by anyone, but writes are restricted.
+
+    // Teams Collection
     match /teams/{teamId} {
-      allow read; // Allow public read for stats
-      allow create: if request.auth != null; // Any authenticated user can create a team initially
-      allow update: if isAdmin() || isSpocForInstitute(resource.data.institute) || isLeaderOfTeam(teamId);
-      allow delete: if isAdmin() || isSpocForInstitute(resource.data.institute);
+      allow read: if isSignedIn(request);
+      allow create: if isLeader(request.auth.uid);
+      allow update: if isLeader(request.auth.uid) && isTeamMember(request, teamId) || isSpoc(request.auth.uid) || isAdmin(request.auth.uid);
+      allow delete: if (isSpoc(request.auth.uid) || isAdmin(request.auth.uid));
     }
     
-    // Announcements: Can be read by anyone, written only by admin/spoc
-    match /announcements/{docId} {
-      allow read;
-      allow create: if isAdmin() || isSpocForInstitute(request.resource.data.institute);
-      allow update, delete: if isAdmin() || isSpocForInstitute(resource.data.institute);
-    }
-    
-    // Problem Statements: Can be read by anyone, written only by admin.
-    match /problemStatements/{docId} {
-      allow read;
-      allow create, update, delete: if isAdmin();
-    }
-
-    // Team Invites: Read-only for lookup, writable by leader/spoc/admin
+    // Team Invites (for joining teams)
     match /teamInvites/{inviteId} {
-      allow read;
-      allow create: if request.auth != null; // Anyone can trigger creation through a flow
-      allow update, delete: if isAdmin();
+      allow read: if true; // Publicly readable to allow fetching details
+      allow create: if isLeader(request.auth.uid) || isSpoc(request.auth.uid) || isAdmin(request.auth.uid);
+      allow delete: if isSpoc(request.auth.uid) || isAdmin(request.auth.uid);
     }
     
-    // Institutes list can be read by anyone, only managed by admin
-    match /institutes/{docId} {
-      allow read;
-      allow create, update, delete: if isAdmin();
-    }
-    
-    // Departments list can be read by anyone, only managed by spoc/admin
+    // Departments managed by SPOCs
     match /departments/{docId} {
-        allow read;
-        allow create, update, delete: if isAdmin() || isSpocForInstitute(resource.data.name);
+        allow read: if isSignedIn(request);
+        allow create, update: if isSpoc(request.auth.uid) || isAdmin(request.auth.uid);
     }
-
-    // Config can be read by anyone, only managed by admin
+    
+    // Problem Statements
+    match /problemStatements/{psId} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin(request.auth.uid);
+    }
+    
+    // General Config
     match /config/{docId} {
-        allow read;
-        allow create, update, delete: if isAdmin();
+      allow read: if true;
+      allow write: if isAdmin(request.auth.uid);
     }
     
-     // Notifications are private to the recipient or an admin
-    match /notifications/{docId} {
-      allow read: if request.auth.uid == resource.data.recipientUid || isAdmin();
-      allow create: if request.auth != null; // Any authenticated user can trigger a notification via a flow
-      allow update: if request.auth.uid == resource.data.recipientUid || isAdmin();
-      allow delete: if isAdmin();
-    }
-    
-    // Logs are write-only for authenticated users (via flows), and read-only for admins.
-    match /logs/{docId} {
-        allow read: if isAdmin();
-        allow write: if request.auth != null;
+    // Notifications
+    match /notifications/{notifId} {
+      allow read: if isSignedIn(request) && request.auth.uid == resource.data.recipientUid;
+      allow create: if isLeader(request.auth.uid) || isSpoc(request.auth.uid) || isAdmin(request.auth.uid);
+      allow update: if isUser(request, resource.data.recipientUid); // for marking as read
     }
 
-    // Healthchecks collection for system health flow
-    match /healthchecks/{docId} {
-        allow read, write: if isAdmin();
+    // Announcements
+    match /announcements/{announcementId} {
+      allow read: if true; // Publicly readable
+      allow create, delete: if isSpoc(request.auth.uid) || isAdmin(request.auth.uid);
     }
+    
+    // Logs
+    match /logs/{logId} {
+        allow read, write: if isAdmin(request.auth.uid); // Only admins can read/write logs
+    }
+    
+    // Institutes
+    match /institutes/{instituteId} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin(request.auth.uid);
+    }
+    
+    // Jury Panels
+    match /juryPanels/{panelId} {
+        allow read: if isJury(request.auth.uid) && getUserData(request.auth.uid).panelId == panelId || isAdmin(request.auth.uid);
+        allow create, update, delete: if isAdmin(request.auth.uid);
+    }
+    
   }
 }
