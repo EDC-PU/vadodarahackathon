@@ -45,6 +45,7 @@ const juryMemberSchema = z.object({
 const panelSchema = z.object({
   panelName: z.string().min(3, "Panel name must be at least 3 characters."),
   juryMembers: z.array(juryMemberSchema).length(3, "A panel must have exactly 3 jury members."),
+  isDraft: z.boolean().optional(),
 });
 
 export function AddJuryPanelDialog({ isOpen, onOpenChange, onPanelAdded }: AddJuryPanelDialogProps) {
@@ -61,6 +62,7 @@ export function AddJuryPanelDialog({ isOpen, onOpenChange, onPanelAdded }: AddJu
         { name: "", email: "", institute: "", contactNumber: "", department: "", highestQualification: "", experience: "" },
         { name: "", email: "", institute: "", contactNumber: "", department: "", highestQualification: "", experience: "" },
       ],
+      isDraft: false,
     },
   });
 
@@ -77,7 +79,7 @@ export function AddJuryPanelDialog({ isOpen, onOpenChange, onPanelAdded }: AddJu
     return () => unsubscribe();
   }, []);
 
-  const onSubmit = async (values: z.infer<typeof panelSchema>) => {
+  const handleFormSubmit = async (values: z.infer<typeof panelSchema>) => {
     setIsLoading(true);
     try {
       const result = await createJuryPanel(values);
@@ -103,7 +105,7 @@ export function AddJuryPanelDialog({ isOpen, onOpenChange, onPanelAdded }: AddJu
     } finally {
       setIsLoading(false);
     }
-  };
+  }
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -115,7 +117,7 @@ export function AddJuryPanelDialog({ isOpen, onOpenChange, onPanelAdded }: AddJu
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-6">
             <ScrollArea className="h-[65vh] pr-6">
               <div className="space-y-6">
                 <FormField
@@ -247,7 +249,10 @@ export function AddJuryPanelDialog({ isOpen, onOpenChange, onPanelAdded }: AddJu
               </div>
             </ScrollArea>
             <DialogFooter className="pt-8">
-              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+              <Button type="button" variant="secondary" onClick={form.handleSubmit(values => handleFormSubmit({...values, isDraft: true}))} disabled={isLoading}>
+                {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Save as Draft
+              </Button>
               <Button type="submit" disabled={isLoading}>
                 {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Create Panel & Send Invites

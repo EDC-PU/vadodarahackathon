@@ -150,6 +150,7 @@ export interface JuryPanel {
     name: string;
     members: JuryMember[];
     createdAt: any;
+    status?: 'draft' | 'active';
 }
 
 
@@ -214,6 +215,7 @@ export type JuryMemberInput = z.infer<typeof JuryMemberInputSchema>;
 export const CreateJuryPanelInputSchema = z.object({
   panelName: z.string().min(3, "Panel name must be at least 3 characters."),
   juryMembers: z.array(JuryMemberInputSchema).length(3, "A panel must have exactly 3 jury members."),
+  isDraft: z.boolean().optional().describe("If true, saves the panel as a draft without creating users."),
 });
 export type CreateJuryPanelInput = z.infer<typeof CreateJuryPanelInputSchema>;
 

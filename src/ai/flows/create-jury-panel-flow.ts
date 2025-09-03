@@ -70,7 +70,7 @@ const createJuryPanelFlow = ai.defineFlow(
     inputSchema: CreateJuryPanelInputSchema,
     outputSchema: CreateJuryPanelOutputSchema,
   },
-  async ({ panelName, juryMembers }) => {
+  async ({ panelName, juryMembers, isDraft }) => {
     const adminAuth = getAdminAuth();
     const adminDb = getAdminDb();
 
@@ -79,14 +79,29 @@ const createJuryPanelFlow = ai.defineFlow(
     }
 
     const panelDocRef = adminDb.collection('juryPanels').doc();
-    const newPanelMembers: JuryMember[] = [];
+    
+    if (isDraft) {
+        // Save as draft without creating users or sending emails
+        await panelDocRef.set({
+            id: panelDocRef.id,
+            name: panelName,
+            members: juryMembers, // Save details, but no UIDs yet
+            status: 'draft',
+            createdAt: FieldValue.serverTimestamp(),
+        });
+        return {
+            success: true,
+            message: `Draft panel "${panelName}" saved successfully.`,
+            panelId: panelDocRef.id,
+        };
+    }
 
+    // Full creation process
+    const newPanelMembers: JuryMember[] = [];
     try {
-        // Step 1: Create user accounts and profiles for each jury member in a transaction/batch
         for (const member of juryMembers) {
             const tempPassword = generatePassword();
 
-            // Create Firebase Auth user
             const userRecord = await adminAuth.createUser({
                 email: member.email,
                 emailVerified: true,
@@ -97,7 +112,6 @@ const createJuryPanelFlow = ai.defineFlow(
 
             const uid = userRecord.uid;
 
-            // Create user profile in Firestore
             const userDocRef = adminDb.collection('users').doc(uid);
             await userDocRef.set({
                 uid: uid,
@@ -114,22 +128,20 @@ const createJuryPanelFlow = ai.defineFlow(
                 createdAt: FieldValue.serverTimestamp(),
             });
             
-            // Add to the list for the panel document
             newPanelMembers.push({
                 uid: uid,
                 name: member.name,
                 email: member.email,
             });
 
-            // Send email with credentials
             await sendJuryCredentialsEmail(member.name, member.email, tempPassword, panelName);
         }
 
-        // Step 2: Create the panel document
         await panelDocRef.set({
             id: panelDocRef.id,
             name: panelName,
             members: newPanelMembers,
+            status: 'active',
             createdAt: FieldValue.serverTimestamp(),
         });
         
