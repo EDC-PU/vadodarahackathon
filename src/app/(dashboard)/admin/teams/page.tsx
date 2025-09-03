@@ -12,7 +12,6 @@ import { Team, UserProfile, ProblemStatementCategory, TeamMember, ProblemStateme
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { exportTeams } from "@/ai/flows/export-teams-flow";
-import { generateNominationForm } from "@/ai/flows/generate-nomination-form-flow";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -77,7 +76,6 @@ function AllTeamsContent() {
   const [institutes, setInstitutes] = useState<{ id: string; name: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [isExporting, setIsExporting] = useState(false);
-  const [isNominating, setIsNominating] = useState<string | null>(null);
   
   const [editingTeamName, setEditingTeamName] = useState<{ id: string; name: string } | null>(null);
   const [editingTeamNumber, setEditingTeamNumber] = useState<{ id: string; number: string } | null>(null);
@@ -244,32 +242,6 @@ function AllTeamsContent() {
         toast({ title: "Error", description: "An unexpected error occurred during export.", variant: "destructive" });
     } finally {
         setIsExporting(false);
-    }
-  };
-
-  const handleGenerateNomination = async (teamId: string) => {
-    setIsNominating(teamId);
-    try {
-        const result = await generateNominationForm({ teamId, generatorRole: 'admin' });
-        if (result.success && result.fileContent) {
-            const blob = new Blob([Buffer.from(result.fileContent, 'base64')], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = result.fileName || 'nomination-form.docx';
-            document.body.appendChild(a);
-            a.click();
-            window.URL.revokeObjectURL(url);
-            a.remove();
-            toast({ title: "Success", description: "Nomination form generated." });
-        } else {
-            toast({ title: "Generation Failed", description: result.message || "Could not generate the nomination form.", variant: "destructive" });
-        }
-    } catch (error) {
-        console.error("Error generating nomination form:", error);
-        toast({ title: "Error", description: "An unexpected error occurred during nomination form generation.", variant: "destructive" });
-    } finally {
-        setIsNominating(null);
     }
   };
   
@@ -763,10 +735,6 @@ function AllTeamsContent() {
                               <TableCell className="text-right">
                                   {row.isFirstRow ? (
                                     <div className="flex gap-1 justify-end">
-                                      <Button variant="outline" size="sm" onClick={() => handleGenerateNomination(row.teamId)} disabled={isNominating === row.teamId || !row.isNominated}>
-                                          {isNominating === row.teamId ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <FileText className="mr-2 h-4 w-4"/>}
-                                          Nomination
-                                      </Button>
                                       <AlertDialog>
                                           <AlertDialogTrigger asChild>
                                               <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" disabled={isProcessing === row.teamId}>

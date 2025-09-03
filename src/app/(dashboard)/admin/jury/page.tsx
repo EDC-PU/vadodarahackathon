@@ -314,7 +314,7 @@ export default function ManageJuryPage() {
                                                 ))}
                                              </ul>
                                         ) : (
-                                            <p className="text-sm text-muted-foreground">No teams assigned to this panel yet. Assign teams from the "All Teams" page.</p>
+                                            <p className="text-sm text-muted-foreground">No teams assigned to this panel yet. Assign teams from the "University Level Nominations" page.</p>
                                         )}
                                     </div>
                                 </div>

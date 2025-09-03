@@ -4,7 +4,7 @@
 import { useEffect, useState } from "react";
 import { db } from "@/lib/firebase";
 import { collection, query, where, onSnapshot, doc, updateDoc, getDocs } from "firebase/firestore";
-import { Team, UserProfile } from "@/lib/types";
+import { Team, UserProfile, JuryPanel } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -22,6 +22,7 @@ import { generateBulkNomination } from "@/ai/flows/generate-bulk-nomination-flow
 export default function UniversityNominationsPage() {
   const [nominatedTeams, setNominatedTeams] = useState<Team[]>([]);
   const [allUsers, setAllUsers] = useState<Map<string, UserProfile>>(new Map());
+  const [juryPanels, setJuryPanels] = useState<JuryPanel[]>([]);
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState<string | null>(null);
   const [isExporting, setIsExporting] = useState(false);
@@ -35,6 +36,11 @@ export default function UniversityNominationsPage() {
   useEffect(() => {
     setLoading(true);
     const teamsQuery = query(collection(db, "teams"), where("isNominated", "==", true));
+    const panelsQuery = query(collection(db, "juryPanels"), where("status", "==", "active"));
+    
+    const unsubPanels = onSnapshot(panelsQuery, (snapshot) => {
+        setJuryPanels(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as JuryPanel)));
+    });
 
     const unsubscribe = onSnapshot(teamsQuery, async (snapshot) => {
       const teamsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Team));
@@ -70,8 +76,25 @@ export default function UniversityNominationsPage() {
       setLoading(false);
     });
 
-    return () => unsubscribe();
+    return () => {
+        unsubscribe();
+        unsubPanels();
+    };
   }, [toast]);
+  
+  const handlePanelAssignment = async (teamId: string, panelId: string) => {
+    setIsSaving(`panel-${teamId}`);
+    try {
+        const teamRef = doc(db, 'teams', teamId);
+        await updateDoc(teamRef, { panelId: panelId });
+        toast({title: "Success", description: "Team assigned to panel."});
+    } catch(error: any) {
+        console.error("Error assigning panel:", error);
+        toast({title: "Error", description: "Could not assign team to panel.", variant: "destructive"});
+    } finally {
+        setIsSaving(null);
+    }
+  }
 
   const handleStatusChange = async (teamId: string, status: 'university' | 'institute') => {
     setIsSaving(`status-${teamId}`);
@@ -275,8 +298,7 @@ export default function UniversityNominationsPage() {
                     </TableHead>
                     <TableHead>Team Name</TableHead>
                     <TableHead>Institute</TableHead>
-                    <TableHead>Problem Statement</TableHead>
-                    <TableHead>Category</TableHead>
+                    <TableHead>Assign Panel</TableHead>
                     <TableHead className="w-[200px]">University Team ID</TableHead>
                     <TableHead className="w-[300px]">SIH 2025 Selection Status</TableHead>
                   </TableRow>
@@ -293,11 +315,21 @@ export default function UniversityNominationsPage() {
                         </TableCell>
                       <TableCell className="font-medium">{team.name}</TableCell>
                       <TableCell>{team.institute}</TableCell>
-                      <TableCell>{team.problemStatementTitle}</TableCell>
                       <TableCell>
-                          <Badge variant={team.category === 'Software' ? 'default' : 'secondary'}>
-                              {team.category}
-                          </Badge>
+                          <Select
+                            value={team.panelId || ""}
+                            onValueChange={(panelId) => handlePanelAssignment(team.id, panelId)}
+                            disabled={isSaving === `panel-${team.id}`}
+                          >
+                              <SelectTrigger className="w-[200px]">
+                                <SelectValue placeholder="Assign a Panel..." />
+                              </SelectTrigger>
+                              <SelectContent>
+                                  {juryPanels.map(panel => (
+                                      <SelectItem key={panel.id} value={panel.id}>{panel.name}</SelectItem>
+                                  ))}
+                              </SelectContent>
+                          </Select>
                       </TableCell>
                        <TableCell>
                          <div className="flex items-center gap-2">
