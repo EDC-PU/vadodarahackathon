@@ -6,7 +6,7 @@
 
 import { ai } from '@/ai/genkit';
 import { getAdminAuth, getAdminDb } from '@/lib/firebase-admin';
-import { FinalizeJuryPanelInput, FinalizeJuryPanelInputSchema, FinalizeJuryPanelOutput, FinalizeJuryPanelOutputSchema, JuryPanel, JuryMember } from '@/lib/types';
+import { FinalizeJuryPanelInput, FinalizeJuryPanelInputSchema, FinalizeJuryPanelOutput, FinalizeJuryPanelOutputSchema, JuryPanel, JuryMember, JuryMemberInput } from '@/lib/types';
 import nodemailer from 'nodemailer';
 import { getEmailTemplate } from '@/lib/email-templates';
 import { FieldValue } from 'firebase-admin/firestore';
@@ -91,7 +91,8 @@ const finalizeJuryPanelFlow = ai.defineFlow(
         }
 
         const newPanelMembers: JuryMember[] = [];
-        for (const member of panelData.members) {
+        // The members in the draft are of type JuryMemberInput
+        for (const member of (panelData.members as any as JuryMemberInput[])) {
             const tempPassword = generatePassword();
 
             const userRecord = await adminAuth.createUser({
@@ -103,20 +104,17 @@ const finalizeJuryPanelFlow = ai.defineFlow(
             });
 
             const uid = userRecord.uid;
-            
-            const memberProfile = await adminDb.collection('users').doc(uid).get();
-            const userData = memberProfile.data() as any;
 
             const userDocRef = adminDb.collection('users').doc(uid);
             await userDocRef.set({
                 uid: uid,
                 name: member.name,
                 email: member.email,
-                institute: userData.institute,
-                contactNumber: userData.contactNumber,
-                department: userData.department,
-                highestQualification: userData.highestQualification,
-                experience: userData.experience,
+                institute: member.institute,
+                contactNumber: member.contactNumber,
+                department: member.department,
+                highestQualification: member.highestQualification,
+                experience: member.experience,
                 role: 'jury',
                 panelId: panelDocRef.id,
                 passwordChanged: false,
@@ -146,7 +144,8 @@ const finalizeJuryPanelFlow = ai.defineFlow(
         console.error("Error finalizing jury panel:", error);
         let errorMessage = error.message || "An unknown error occurred.";
         if (error.code === 'auth/email-already-exists') {
-            errorMessage = `A user with email ${error.email} already exists. All jury members must have new accounts.`;
+            const problematicEmail = (error.errorInfo as any)?.email;
+            errorMessage = `A user with email ${problematicEmail || ''} already exists. All jury members must have new accounts.`;
         }
         return { success: false, message: `Failed to finalize panel: ${errorMessage}` };
     }
