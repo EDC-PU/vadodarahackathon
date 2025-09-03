@@ -174,6 +174,31 @@ export interface Announcement {
 
 // Schemas for Genkit Flows
 
+// delete-jury-panel-flow
+export const DeleteJuryPanelInputSchema = z.object({
+  panelId: z.string().describe("The document ID of the jury panel to delete."),
+});
+export type DeleteJuryPanelInput = z.infer<typeof DeleteJuryPanelInputSchema>;
+
+export const DeleteJuryPanelOutputSchema = z.object({
+  success: z.boolean(),
+  message: z.string(),
+});
+export type DeleteJuryPanelOutput = z.infer<typeof DeleteJuryPanelOutputSchema>;
+
+// update-jury-panel-flow
+export const UpdateJuryPanelInputSchema = z.object({
+  panelId: z.string().describe("The document ID of the jury panel to update."),
+  panelName: z.string().min(3, "Panel name must be at least 3 characters."),
+});
+export type UpdateJuryPanelInput = z.infer<typeof UpdateJuryPanelInputSchema>;
+
+export const UpdateJuryPanelOutputSchema = z.object({
+  success: z.boolean(),
+  message: z.string(),
+});
+export type UpdateJuryPanelOutput = z.infer<typeof UpdateJuryPanelOutputSchema>;
+
 // create-jury-panel-flow
 export const JuryMemberInputSchema = z.object({
   name: z.string().min(2, "Name is required."),

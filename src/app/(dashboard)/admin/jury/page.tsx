@@ -9,7 +9,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Loader2, PlusCircle, Users, ClipboardList } from "lucide-react";
+import { Loader2, PlusCircle, Users, ClipboardList, Trash2, Pencil } from "lucide-react";
 import { useEffect, useState, useMemo } from "react";
 import { db } from "@/lib/firebase";
 import { collection, onSnapshot, query, where, getDocs, orderBy } from "firebase/firestore";
@@ -23,12 +23,28 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { Badge } from "@/components/ui/badge";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
+import { deleteJuryPanel } from "@/ai/flows/delete-jury-panel-flow";
+import { EditJuryPanelDialog } from "@/components/edit-jury-panel-dialog";
 
 export default function ManageJuryPage() {
   const [panels, setPanels] = useState<JuryPanel[]>([]);
   const [teams, setTeams] = useState<Team[]>([]);
   const [loading, setLoading] = useState(true);
   const [isAddPanelOpen, setIsAddPanelOpen] = useState(false);
+  const [isEditPanelOpen, setIsEditPanelOpen] = useState(false);
+  const [selectedPanel, setSelectedPanel] = useState<JuryPanel | null>(null);
+  const [isDeleting, setIsDeleting] = useState<string | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -70,6 +86,27 @@ export default function ManageJuryPage() {
     return map;
   }, [teams]);
 
+  const handleEdit = (panel: JuryPanel) => {
+    setSelectedPanel(panel);
+    setIsEditPanelOpen(true);
+  };
+
+  const handleDelete = async (panelId: string) => {
+    setIsDeleting(panelId);
+    try {
+      const result = await deleteJuryPanel({ panelId });
+      if(result.success) {
+        toast({ title: "Success", description: result.message });
+      } else {
+        throw new Error(result.message);
+      }
+    } catch(error: any) {
+       toast({ title: "Error", description: `Failed to delete panel: ${error.message}`, variant: "destructive" });
+    } finally {
+      setIsDeleting(null);
+    }
+  }
+
 
   return (
     <>
@@ -80,6 +117,16 @@ export default function ManageJuryPage() {
           /* onSnapshot handles UI update */
         }}
       />
+      {selectedPanel && (
+        <EditJuryPanelDialog
+          isOpen={isEditPanelOpen}
+          onOpenChange={setIsEditPanelOpen}
+          panel={selectedPanel}
+          onPanelUpdated={() => {
+            /* onSnapshot handles UI update */
+          }}
+        />
+      )}
       <div className="p-4 sm:p-6 lg:p-8">
         <header className="mb-8 flex justify-between items-center">
           <div>
@@ -114,7 +161,31 @@ export default function ManageJuryPage() {
                             <AccordionTrigger className="hover:no-underline">
                                 <div className="flex justify-between items-center w-full pr-4">
                                     <span className="text-lg font-semibold">{panel.name}</span>
-                                    <Badge variant="outline">{assignedTeams.length} Team(s) Assigned</Badge>
+                                    <div className="flex items-center gap-4">
+                                      <Badge variant="outline">{assignedTeams.length} Team(s) Assigned</Badge>
+                                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); handleEdit(panel); }}>
+                                        <Pencil className="h-4 w-4" />
+                                      </Button>
+                                      <AlertDialog>
+                                        <AlertDialogTrigger asChild>
+                                          <Button variant="destructive" size="icon" className="h-8 w-8" onClick={(e) => e.stopPropagation()}>
+                                            {isDeleting === panel.id ? <Loader2 className="h-4 w-4 animate-spin"/> : <Trash2 className="h-4 w-4" />}
+                                          </Button>
+                                        </AlertDialogTrigger>
+                                        <AlertDialogContent>
+                                          <AlertDialogHeader>
+                                            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                            <AlertDialogDescription>
+                                              This action will permanently delete the panel "{panel.name}" and delete all its jury member accounts. This cannot be undone.
+                                            </AlertDialogDescription>
+                                          </AlertDialogHeader>
+                                          <AlertDialogFooter>
+                                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                            <AlertDialogAction onClick={() => handleDelete(panel.id)} className="bg-destructive hover:bg-destructive/90">Delete Panel</AlertDialogAction>
+                                          </AlertDialogFooter>
+                                        </AlertDialogContent>
+                                      </AlertDialog>
+                                    </div>
                                 </div>
                             </AccordionTrigger>
                             <AccordionContent className="p-4 bg-secondary/30 rounded-md">
