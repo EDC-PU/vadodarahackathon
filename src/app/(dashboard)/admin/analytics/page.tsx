@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { Team, UserProfile, ProblemStatement, Institute } from "@/lib/types";
-import { collection, onSnapshot } from "firebase/firestore";
+import { collection, onSnapshot, getDoc, doc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Download } from "lucide-react";
@@ -59,7 +59,23 @@ export default function AnalyticsPage() {
   const [institutes, setInstitutes] = useState<Institute[]>([]);
   const [loading, setLoading] = useState(true);
   const [isExporting, setIsExporting] = useState(false);
+  const [deadline, setDeadline] = useState<Date | null>(null);
   const { toast } = useToast();
+
+  useEffect(() => {
+    const fetchDeadline = async () => {
+        try {
+            const configDocRef = doc(db, "config", "event");
+            const configDoc = await getDoc(configDocRef);
+            if (configDoc.exists() && configDoc.data()?.registrationDeadline) {
+                setDeadline(configDoc.data().registrationDeadline.toDate());
+            }
+        } catch (error) {
+            console.error("Could not fetch registration deadline:", error);
+        }
+    };
+    fetchDeadline();
+  }, []);
 
   useEffect(() => {
     setLoading(true);
@@ -184,12 +200,24 @@ export default function AnalyticsPage() {
         totalShortlisted: 0,
       });
     });
+    
+    const userMap = new Map(users.map(u => [u.uid, u]));
 
     teams.forEach(team => {
       const instData = instituteMap.get(team.institute);
       if (!instData) return;
 
-      instData.totalRegistered += 1;
+      const memberUIDs = [team.leader.uid, ...team.members.map(m => m.uid)];
+      const teamMemberProfiles = memberUIDs.map(uid => userMap.get(uid)).filter(Boolean) as UserProfile[];
+      
+      const hasFemale = teamMemberProfiles.some(m => m.gender === 'F');
+      const instituteCount = teamMemberProfiles.filter(m => m.institute === team.institute).length;
+
+      const isRegistered = teamMemberProfiles.length === 6 && hasFemale && instituteCount >= 3 && !!team.problemStatementId;
+      
+      if(isRegistered) {
+          instData.totalRegistered += 1;
+      }
       
       const isNominated = team.isNominated === true;
       
@@ -198,12 +226,12 @@ export default function AnalyticsPage() {
       }
       
       if (team.category === 'Software') {
-        instData.registeredSoftware += 1;
+        if(isRegistered) instData.registeredSoftware += 1;
         if (isNominated) {
           instData.shortlistedSoftware += 1;
         }
       } else if (team.category === 'Hardware') {
-        instData.registeredHardware += 1;
+        if(isRegistered) instData.registeredHardware += 1;
         if (isNominated) {
           instData.shortlistedHardware += 1;
         }
@@ -211,7 +239,7 @@ export default function AnalyticsPage() {
     });
 
     return Array.from(instituteMap.values()).sort((a, b) => b.totalRegistered - a.totalRegistered);
-  }, [teams, institutes]);
+  }, [teams, institutes, users]);
 
   const handleExport = async () => {
     if (instituteAnalyticsData.length === 0) {
