@@ -1,11 +1,12 @@
 
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis, ResponsiveContainer, Tooltip, Legend, Pie, PieChart, Cell, Label } from "recharts";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
-import { Team, UserProfile, ProblemStatement } from "@/lib/types";
+import { Team, UserProfile, ProblemStatement, Institute } from "@/lib/types";
 import { collection, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useToast } from "@/hooks/use-toast";
@@ -39,51 +40,48 @@ interface ProblemStatementChartData {
     count: number;
 }
 
+interface InstituteAnalyticsData {
+    institute: string;
+    totalRegistered: number;
+    shortlistedSoftware: number;
+    registeredSoftware: number;
+    shortlistedHardware: number;
+    registeredHardware: number;
+    totalShortlisted: number;
+}
+
 export default function AnalyticsPage() {
   const [teams, setTeams] = useState<Team[]>([]);
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [problemStatements, setProblemStatements] = useState<ProblemStatement[]>([]);
+  const [institutes, setInstitutes] = useState<Institute[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
   useEffect(() => {
     setLoading(true);
 
-    const teamsCollection = collection(db, 'teams');
-    const unsubscribeTeams = onSnapshot(teamsCollection, (snapshot) => {
-      const teamsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Team));
-      setTeams(teamsData);
-    }, (error) => {
-      console.error("Error fetching teams:", error);
-      toast({ title: "Error", description: "Failed to fetch team data for analytics.", variant: "destructive" });
-    });
+    const teamsUnsub = onSnapshot(collection(db, 'teams'), (snap) => setTeams(snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Team))));
+    const usersUnsub = onSnapshot(collection(db, 'users'), (snap) => setUsers(snap.docs.map(doc => ({ uid: doc.id, ...doc.data() } as UserProfile))));
+    const psUnsub = onSnapshot(collection(db, 'problemStatements'), (snap) => setProblemStatements(snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as ProblemStatement))));
+    const institutesUnsub = onSnapshot(collection(db, 'institutes'), (snap) => setInstitutes(snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Institute))));
 
-    const usersCollection = collection(db, 'users');
-    const unsubscribeUsers = onSnapshot(usersCollection, (snapshot) => {
-        const usersData = snapshot.docs.map(doc => ({ uid: doc.id, ...doc.data() } as UserProfile));
-        setUsers(usersData);
-    }, (error) => {
-        console.error("Error fetching users:", error);
-        toast({ title: "Error", description: "Failed to fetch user data for analytics.", variant: "destructive" });
-    });
-
-    const psCollection = collection(db, 'problemStatements');
-    const unsubscribePs = onSnapshot(psCollection, (snapshot) => {
-        const psData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ProblemStatement));
-        setProblemStatements(psData);
-    });
-    
-    // Use a promise to wait for the initial fetch of all collections
     Promise.all([
-        new Promise(resolve => onSnapshot(teamsCollection, () => resolve(true), () => resolve(false))),
-        new Promise(resolve => onSnapshot(usersCollection, () => resolve(true), () => resolve(false))),
-        new Promise(resolve => onSnapshot(psCollection, () => resolve(true), () => resolve(false))),
-    ]).finally(() => setLoading(false));
+      new Promise(res => onSnapshot(collection(db, 'teams'), () => res(true), () => res(false))),
+      new Promise(res => onSnapshot(collection(db, 'users'), () => res(true), () => res(false))),
+      new Promise(res => onSnapshot(collection(db, 'problemStatements'), () => res(true), () => res(false))),
+      new Promise(res => onSnapshot(collection(db, 'institutes'), () => res(true), () => res(false))),
+    ]).then(() => setLoading(false)).catch(err => {
+      console.error("Error on initial data load:", err);
+      toast({ title: "Error", description: "Could not load all data for analytics.", variant: "destructive" });
+      setLoading(false);
+    });
 
     return () => {
-      unsubscribeTeams();
-      unsubscribeUsers();
-      unsubscribePs();
+      teamsUnsub();
+      usersUnsub();
+      psUnsub();
+      institutesUnsub();
     };
   }, [toast]);
   
@@ -168,6 +166,49 @@ export default function AnalyticsPage() {
         .sort((a, b) => b.count - a.count)
         .slice(0, 10); // Get top 10
   };
+  
+  const instituteAnalyticsData: InstituteAnalyticsData[] = useMemo(() => {
+    const instituteMap = new Map<string, InstituteAnalyticsData>();
+
+    institutes.forEach(inst => {
+      instituteMap.set(inst.name, {
+        institute: inst.name,
+        totalRegistered: 0,
+        shortlistedSoftware: 0,
+        registeredSoftware: 0,
+        shortlistedHardware: 0,
+        registeredHardware: 0,
+        totalShortlisted: 0,
+      });
+    });
+
+    teams.forEach(team => {
+      const instData = instituteMap.get(team.institute);
+      if (!instData) return;
+
+      instData.totalRegistered += 1;
+      
+      const isNominated = team.isNominated === true;
+      
+      if (isNominated) {
+          instData.totalShortlisted += 1;
+      }
+      
+      if (team.category === 'Software') {
+        instData.registeredSoftware += 1;
+        if (isNominated) {
+          instData.shortlistedSoftware += 1;
+        }
+      } else if (team.category === 'Hardware') {
+        instData.registeredHardware += 1;
+        if (isNominated) {
+          instData.shortlistedHardware += 1;
+        }
+      }
+    });
+
+    return Array.from(instituteMap.values()).sort((a, b) => b.totalRegistered - a.totalRegistered);
+  }, [teams, institutes]);
 
   const instituteChartData = getInstituteData();
   const categoryChartData = getCategoryData();
@@ -199,6 +240,41 @@ export default function AnalyticsPage() {
       </header>
 
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
+        <Card className="col-span-1 md:col-span-2 xl:col-span-3">
+           <CardHeader>
+            <CardTitle>Institute-wise Team Statistics</CardTitle>
+            <CardDescription>A detailed breakdown of team registrations and shortlisting by institute.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="font-bold">Institute</TableHead>
+                  <TableHead className="text-center">Total Registered</TableHead>
+                  <TableHead className="text-center">Shortlisted Software</TableHead>
+                  <TableHead className="text-center">Registered Software</TableHead>
+                  <TableHead className="text-center">Shortlisted Hardware</TableHead>
+                  <TableHead className="text-center">Registered Hardware</TableHead>
+                  <TableHead className="text-center font-bold">Total Shortlisted</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {instituteAnalyticsData.map(data => (
+                  <TableRow key={data.institute}>
+                    <TableCell className="font-medium">{data.institute}</TableCell>
+                    <TableCell className="text-center">{data.totalRegistered}</TableCell>
+                    <TableCell className="text-center">{data.shortlistedSoftware}</TableCell>
+                    <TableCell className="text-center">{data.registeredSoftware}</TableCell>
+                    <TableCell className="text-center">{data.shortlistedHardware}</TableCell>
+                    <TableCell className="text-center">{data.registeredHardware}</TableCell>
+                    <TableCell className="text-center font-bold">{data.totalShortlisted}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+        
         <Card className="md:col-span-2 xl:col-span-3">
           <CardHeader>
             <CardTitle>Teams per Institute</CardTitle>
