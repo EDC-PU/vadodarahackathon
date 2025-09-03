@@ -13,7 +13,6 @@ import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { exportTeams } from "@/ai/flows/export-teams-flow";
 import { generateNominationForm } from "@/ai/flows/generate-nomination-form-flow";
-import { generateBulkNomination } from "@/ai/flows/generate-bulk-nomination-flow";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -79,7 +78,6 @@ function AllTeamsContent() {
   const [loading, setLoading] = useState(true);
   const [isExporting, setIsExporting] = useState(false);
   const [isNominating, setIsNominating] = useState<string | null>(null);
-  const [isBulkNominating, setIsBulkNominating] = useState(false);
   
   const [editingTeamName, setEditingTeamName] = useState<{ id: string; name: string } | null>(null);
   const [editingTeamNumber, setEditingTeamNumber] = useState<{ id: string; number: string } | null>(null);
@@ -272,49 +270,6 @@ function AllTeamsContent() {
         toast({ title: "Error", description: "An unexpected error occurred during nomination form generation.", variant: "destructive" });
     } finally {
         setIsNominating(null);
-    }
-  };
-
-  const handleBulkGenerateNomination = async () => {
-    if (selectedTeamIds.length === 0) return;
-    
-    const nominatedSelectedTeams = selectedTeamIds.filter(teamId => {
-        const team = allTeams.find(t => t.id === teamId);
-        return team?.isNominated;
-    });
-
-    if (nominatedSelectedTeams.length === 0) {
-        toast({
-            title: "No Nominated Teams Selected",
-            description: "You can only generate forms for teams that have been nominated by their SPOC.",
-            variant: "destructive"
-        });
-        return;
-    }
-
-    setIsBulkNominating(true);
-    try {
-        const result = await generateBulkNomination({ teamIds: nominatedSelectedTeams, generatorRole: 'admin' });
-        if (result.success && result.fileContent) {
-            const blob = new Blob([Buffer.from(result.fileContent, 'base64')], { type: 'application/zip' });
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = result.fileName || 'nomination-forms.zip';
-            document.body.appendChild(a);
-            a.click();
-            window.URL.revokeObjectURL(url);
-            a.remove();
-            toast({ title: "Success", description: `${result.message} Included ${nominatedSelectedTeams.length} nominated team(s).` });
-            setSelectedTeamIds([]);
-        } else {
-            toast({ title: "Generation Failed", description: result.message || "Could not generate the zip file.", variant: "destructive" });
-        }
-    } catch (error) {
-        console.error("Error generating bulk nomination forms:", error);
-        toast({ title: "Error", description: "An unexpected error occurred during bulk generation.", variant: "destructive" });
-    } finally {
-        setIsBulkNominating(false);
     }
   };
   
@@ -568,12 +523,6 @@ function AllTeamsContent() {
               {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
               Refresh
             </Button>
-            {selectedTeamIds.length > 0 && (
-                <Button variant="outline" onClick={handleBulkGenerateNomination} disabled={isBulkNominating}>
-                    {isBulkNominating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
-                    Download Nominations ({selectedTeamIds.length})
-                </Button>
-            )}
             <Input
               placeholder="Search..."
               value={searchTerm}

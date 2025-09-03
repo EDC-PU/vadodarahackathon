@@ -16,6 +16,8 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { isAfter } from "date-fns";
 import { exportEvaluation } from "@/ai/flows/export-evaluation-flow";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
+import { generateBulkNomination } from "@/ai/flows/generate-bulk-nomination-flow";
 
 export default function UniversityNominationsPage() {
   const [nominatedTeams, setNominatedTeams] = useState<Team[]>([]);
@@ -23,6 +25,8 @@ export default function UniversityNominationsPage() {
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState<string | null>(null);
   const [isExporting, setIsExporting] = useState(false);
+  const [isBulkNominating, setIsBulkNominating] = useState(false);
+  const [selectedTeamIds, setSelectedTeamIds] = useState<string[]>([]);
   const [universityTeamIds, setUniversityTeamIds] = useState<Record<string, string>>({});
   const { toast } = useToast();
 
@@ -147,11 +151,64 @@ export default function UniversityNominationsPage() {
     }
   };
 
+  const handleBulkGenerateNomination = async () => {
+    if (selectedTeamIds.length === 0) {
+      toast({
+            title: "No Teams Selected",
+            description: "Please select at least one team to download nomination forms.",
+            variant: "destructive"
+        });
+      return;
+    }
+
+    setIsBulkNominating(true);
+    try {
+        const result = await generateBulkNomination({ teamIds: selectedTeamIds, generatorRole: 'admin' });
+        if (result.success && result.fileContent) {
+            const blob = new Blob([Buffer.from(result.fileContent, 'base64')], { type: 'application/zip' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = result.fileName || 'nomination-forms.zip';
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            a.remove();
+            toast({ title: "Success", description: `${result.message} Included ${selectedTeamIds.length} nominated team(s).` });
+            setSelectedTeamIds([]);
+        } else {
+            toast({ title: "Generation Failed", description: result.message || "Could not generate the zip file.", variant: "destructive" });
+        }
+    } catch (error) {
+        console.error("Error generating bulk nomination forms:", error);
+        toast({ title: "Error", description: "An unexpected error occurred during bulk generation.", variant: "destructive" });
+    } finally {
+        setIsBulkNominating(false);
+    }
+  };
+
   const getStatusVariant = (status?: string) => {
     if (status === 'university') return 'default';
     if (status === 'institute') return 'secondary';
     return 'outline';
   }
+
+  const toggleSelectAll = (checked: boolean) => {
+    if (checked) {
+        setSelectedTeamIds(nominatedTeams.map(t => t.id));
+    } else {
+        setSelectedTeamIds([]);
+    }
+  };
+
+  const handleRowSelect = (teamId: string, checked: boolean) => {
+    if (checked) {
+        setSelectedTeamIds(prev => [...prev, teamId]);
+    } else {
+        setSelectedTeamIds(prev => prev.filter(id => id !== teamId));
+    }
+  };
+
 
   return (
     <div className="p-4 sm:p-6 lg:p-8">
@@ -160,10 +217,18 @@ export default function UniversityNominationsPage() {
           <h1 className="text-3xl font-bold font-headline flex items-center gap-2"><Medal/> University Level Nominations</h1>
           <p className="text-muted-foreground">Manage teams nominated by institute SPOCs for the university-level round.</p>
         </div>
-        <Button onClick={handleExport} disabled={isExporting}>
-          {isExporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Download className="mr-2 h-4 w-4"/>}
-          Export for Evaluation
-        </Button>
+        <div className="flex items-center gap-2">
+            {selectedTeamIds.length > 0 && (
+                <Button variant="outline" onClick={handleBulkGenerateNomination} disabled={isBulkNominating}>
+                    {isBulkNominating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
+                    Download Forms ({selectedTeamIds.length})
+                </Button>
+            )}
+            <Button onClick={handleExport} disabled={isExporting}>
+              {isExporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Download className="mr-2 h-4 w-4"/>}
+              Export for Evaluation
+            </Button>
+        </div>
       </header>
 
       {!canModify && (
@@ -201,6 +266,13 @@ export default function UniversityNominationsPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
+                     <TableHead className="w-[50px]">
+                        <Checkbox
+                           onCheckedChange={(checked) => toggleSelectAll(!!checked)}
+                           checked={selectedTeamIds.length === nominatedTeams.length && nominatedTeams.length > 0}
+                           aria-label="Select all"
+                        />
+                    </TableHead>
                     <TableHead>Team Name</TableHead>
                     <TableHead>Institute</TableHead>
                     <TableHead>Problem Statement</TableHead>
@@ -211,7 +283,14 @@ export default function UniversityNominationsPage() {
                 </TableHeader>
                 <TableBody>
                   {nominatedTeams.map((team) => (
-                    <TableRow key={team.id}>
+                    <TableRow key={team.id} data-state={selectedTeamIds.includes(team.id) && "selected"}>
+                        <TableCell>
+                            <Checkbox
+                                checked={selectedTeamIds.includes(team.id)}
+                                onCheckedChange={(checked) => handleRowSelect(team.id, !!checked)}
+                                aria-label={`Select team ${team.name}`}
+                            />
+                        </TableCell>
                       <TableCell className="font-medium">{team.name}</TableCell>
                       <TableCell>{team.institute}</TableCell>
                       <TableCell>{team.problemStatementTitle}</TableCell>
