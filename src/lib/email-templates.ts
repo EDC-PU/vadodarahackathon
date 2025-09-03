@@ -1,9 +1,11 @@
 
+
 interface EmailTemplateProps {
     title: string;
     body: string; // This will be the main HTML content of the email
     buttonLink: string;
     buttonText: string;
+    theme?: 'dark' | 'light';
   }
   
   function getContrastColor(hex: string): string {
@@ -20,16 +22,19 @@ interface EmailTemplateProps {
     return luminance > 0.5 ? '#000000' : '#FFFFFF';
   }
   
-  export function getEmailTemplate({ title, body, buttonLink, buttonText }: EmailTemplateProps): string {
+  export function getEmailTemplate({ title, body, buttonLink, buttonText, theme = 'dark' }: EmailTemplateProps): string {
+    const isLightTheme = theme === 'light';
+
+    // Theme colors
     const brandYellow = '#FFD700';
     const brandOrange = '#FF8C00';
     const brandRed = '#FF4500';
-    const bgColor = '#121212';
-    const cardColor = '#1E1E1E';
-  
-    // Auto text color
-    const textColor = getContrastColor(cardColor);
-    const mutedColor = getContrastColor(bgColor) === '#A0A0A0' ? '#FFFFFF' : '#555555';
+
+    const bgColor = isLightTheme ? '#F8F9FA' : '#121212';
+    const cardColor = isLightTheme ? '#FFFFFF' : '#1E1E1E';
+    const textColor = isLightTheme ? '#212529' : '#FFFFFF';
+    const mutedColor = isLightTheme ? '#6C757D' : '#A0A0A0';
+    const borderColor = isLightTheme ? '#DEE2E6' : '#333333';
   
     return `
       <!DOCTYPE html>
@@ -93,13 +98,13 @@ interface EmailTemplateProps {
               }
               .footer {
                   padding-top: 20px;
-                  border-top: 1px solid #333;
+                  border-top: 1px solid ${borderColor};
                   text-align: center;
                   font-size: 12px;
                   color: ${mutedColor};
               }
               .credentials {
-                  background-color: #2a2a2a;
+                  background-color: ${isLightTheme ? '#F1F3F5' : '#2a2a2a'};
                   border-left: 4px solid ${brandOrange};
                   padding: 15px;
                   margin: 20px 0;

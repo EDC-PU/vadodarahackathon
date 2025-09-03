@@ -141,7 +141,7 @@ export interface EventInfo {
   problemStatementsUrl: string;
 }
 
-export type AnnouncementAudience = "all" | "teams" | "spocs" | "institute";
+export type AnnouncementAudience = "all" | "teams" | "spocs" | "institute" | "nominated_teams";
 
 export interface Announcement {
   id: string;
@@ -161,6 +161,23 @@ export interface Announcement {
 
 
 // Schemas for Genkit Flows
+
+// create-announcement-flow
+export const CreateAnnouncementInputSchema = z.object({
+  title: z.string(),
+  content: z.string(),
+  url: z.string().optional(),
+  audience: z.enum(["all", "teams", "spocs", "nominated_teams"]),
+  authorName: z.string(),
+});
+export type CreateAnnouncementInput = z.infer<typeof CreateAnnouncementInputSchema>;
+
+export const CreateAnnouncementOutputSchema = z.object({
+    success: z.boolean(),
+    message: z.string(),
+});
+export type CreateAnnouncementOutput = z.infer<typeof CreateAnnouncementOutputSchema>;
+
 
 // suggest-team-name-flow
 export const SuggestTeamNameOutputSchema = z.object({

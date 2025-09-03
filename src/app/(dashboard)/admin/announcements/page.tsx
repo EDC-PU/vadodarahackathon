@@ -7,7 +7,7 @@ import { PlusCircle, Loader2, Trash2, Link as LinkIcon } from "lucide-react";
 import { useEffect, useState, useRef } from "react";
 import { db } from "@/lib/firebase";
 import { collection, onSnapshot, query, orderBy, addDoc, serverTimestamp, deleteDoc, doc } from "firebase/firestore";
-import { Announcement, AnnouncementAudience } from "@/lib/types";
+import { Announcement, AnnouncementAudience, CreateAnnouncementInput } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
@@ -26,6 +26,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import Link from "next/link";
+import { createAnnouncement } from "@/ai/flows/create-announcement-flow";
 
 export default function AnnouncementsPage() {
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
@@ -64,28 +65,32 @@ export default function AnnouncementsPage() {
     const title = formData.get('title') as string;
     const content = formData.get('content') as string;
     const url = formData.get('url') as string;
-    const audience = formData.get('audience') as AnnouncementAudience;
+    const audience = formData.get('audience') as CreateAnnouncementInput['audience'];
 
     if (!audience) {
         toast({ title: "Error", description: "Please select an audience for the announcement.", variant: "destructive" });
         setIsCreating(false);
         return;
     }
-
+    
     try {
-        await addDoc(collection(db, "announcements"), {
-            title,
-            content,
-            url,
-            audience,
-            authorName: user.name,
-            createdAt: serverTimestamp(),
-        });
-        toast({ title: "Success", description: "Announcement has been posted."});
+      const result = await createAnnouncement({
+        title,
+        content,
+        url,
+        audience,
+        authorName: user.name,
+      });
+
+      if (result.success) {
+        toast({ title: "Success", description: result.message });
         (event.target as HTMLFormElement).reset();
-    } catch (error) {
+      } else {
+        throw new Error(result.message);
+      }
+    } catch (error: any) {
         console.error("Error creating announcement:", error);
-        toast({ title: "Error", description: "Could not post the announcement.", variant: "destructive" });
+        toast({ title: "Error", description: error.message || "Could not post the announcement.", variant: "destructive" });
     } finally {
         setIsCreating(false);
     }
@@ -138,6 +143,7 @@ export default function AnnouncementsPage() {
                                     <SelectItem value="all">All Users</SelectItem>
                                     <SelectItem value="teams">Teams (Leaders & Members)</SelectItem>
                                     <SelectItem value="spocs">SPOCs</SelectItem>
+                                    <SelectItem value="nominated_teams">University Nominated Teams</SelectItem>
                                 </SelectContent>
                             </Select>
                         </div>
@@ -169,7 +175,7 @@ export default function AnnouncementsPage() {
                                 </Link>
                             )}
                             <p className="text-xs text-muted-foreground mt-2">
-                                Posted for <span className="font-medium capitalize">{announcement.audience}</span> by {announcement.authorName} on {announcement.createdAt ? new Date(announcement.createdAt.seconds * 1000).toLocaleDateString() : '...'}
+                                Posted for <span className="font-medium capitalize">{announcement.audience.replace('_', ' ')}</span> by {announcement.authorName} on {announcement.createdAt ? new Date(announcement.createdAt.seconds * 1000).toLocaleDateString() : '...'}
                             </p>
                             <AlertDialog>
                               <AlertDialogTrigger asChild>
