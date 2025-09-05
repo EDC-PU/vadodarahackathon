@@ -31,7 +31,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { db } from "@/lib/firebase";
 import { doc, getDoc, updateDoc, writeBatch, collection, query, where, getDocs, Timestamp } from "firebase/firestore";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { Institute, Team } from "@/lib/types";
 import {
   Loader2,
@@ -40,12 +40,15 @@ import {
   Trophy,
   Users,
   Download,
+  Cpu,
+  Code,
 } from "lucide-react";
 import { format, isAfter } from "date-fns";
 import { cn } from "@/lib/utils";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { setEvaluationDates } from "@/ai/flows/set-evaluation-dates-flow";
 import { generateNominationForm } from "@/ai/flows/generate-nomination-form-flow";
+import { Badge } from "@/components/ui/badge";
 
 const formSchema = z.object({
   evaluationDates: z
@@ -154,16 +157,32 @@ export default function SpocEvaluationPage() {
       setIsSaving(false);
     }
   };
+
+  const nominationCounts = useMemo(() => {
+    let software = 0;
+    let hardware = 0;
+    nominatedTeamIds.forEach(id => {
+        const team = teams.find(t => t.id === id);
+        if (team?.category === 'Software') software++;
+        if (team?.category === 'Hardware') hardware++;
+    });
+    return { software, hardware };
+  }, [nominatedTeamIds, teams]);
   
-  const handleNominationChange = (teamId: string, checked: boolean | 'indeterminate') => {
-    const limit = instituteData?.nominationLimit ?? 0;
+  const handleNominationChange = (teamId: string, teamCategory: "Software" | "Hardware" | undefined, checked: boolean | 'indeterminate') => {
+    const softwareLimit = instituteData?.nominationLimitSoftware ?? 0;
+    const hardwareLimit = instituteData?.nominationLimitHardware ?? 0;
     
     setNominatedTeamIds(currentIds => {
       const newIds = new Set(currentIds);
       if(checked) {
-        if (newIds.size >= limit) {
-           toast({ title: "Limit Reached", description: `You can only nominate up to ${limit} teams.`, variant: "destructive" });
-           return Array.from(newIds);
+        if (teamCategory === 'Software' && nominationCounts.software >= softwareLimit) {
+            toast({ title: "Limit Reached", description: `You can only nominate up to ${softwareLimit} software teams.`, variant: "destructive" });
+            return Array.from(newIds);
+        }
+        if (teamCategory === 'Hardware' && nominationCounts.hardware >= hardwareLimit) {
+            toast({ title: "Limit Reached", description: `You can only nominate up to ${hardwareLimit} hardware teams.`, variant: "destructive" });
+            return Array.from(newIds);
         }
         newIds.add(teamId);
       } else {
@@ -218,13 +237,10 @@ export default function SpocEvaluationPage() {
     }
   };
 
-
   const canNominate = instituteData?.evaluationDates && instituteData.evaluationDates.length >= 2
     ? isAfter(new Date(), (instituteData.evaluationDates[1] as any).toDate())
     : false;
   
-  const nominationLimit = instituteData?.nominationLimit ?? 0;
-
   if (loading || authLoading) {
     return (
       <div className="flex justify-center items-center h-screen">
@@ -315,8 +331,7 @@ export default function SpocEvaluationPage() {
             <Trophy /> Team Nominations
           </CardTitle>
           <CardDescription>
-            Select teams from your institute to nominate for the University Level Hackathon. 
-            You can nominate up to <span className="font-bold text-primary">{nominationLimit}</span> team(s).
+             Select teams from your institute to nominate for the University Level Hackathon. 
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -332,9 +347,16 @@ export default function SpocEvaluationPage() {
           ) : (
             <div className="space-y-4">
               <div className="flex justify-between items-center flex-wrap gap-4">
-                 <p className="text-sm font-medium">
-                    Selected: {nominatedTeamIds.length} / {nominationLimit}
-                </p>
+                 <div className="flex flex-wrap items-center gap-4 text-sm font-medium">
+                    <p className="flex items-center gap-2">
+                        <Code className="h-4 w-4 text-primary" />
+                        Software: {nominationCounts.software} / {instituteData?.nominationLimitSoftware ?? 0}
+                    </p>
+                    <p className="flex items-center gap-2">
+                        <Cpu className="h-4 w-4 text-accent" />
+                        Hardware: {nominationCounts.hardware} / {instituteData?.nominationLimitHardware ?? 0}
+                    </p>
+                 </div>
                  <Button onClick={handleSaveNominations} disabled={isSaving}>
                     {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                     Save Nominations
@@ -345,12 +367,19 @@ export default function SpocEvaluationPage() {
                   <div key={team.id} className="flex items-center p-4 border-b last:border-b-0 gap-4">
                      <Checkbox 
                         id={`team-${team.id}`} 
-                        onCheckedChange={(checked) => handleNominationChange(team.id, checked)}
+                        onCheckedChange={(checked) => handleNominationChange(team.id, team.category, checked)}
                         checked={nominatedTeamIds.includes(team.id)}
-                        disabled={!nominatedTeamIds.includes(team.id) && nominatedTeamIds.length >= nominationLimit}
+                        disabled={
+                            (!nominatedTeamIds.includes(team.id) && team.category === 'Software' && nominationCounts.software >= (instituteData?.nominationLimitSoftware ?? 0)) ||
+                            (!nominatedTeamIds.includes(team.id) && team.category === 'Hardware' && nominationCounts.hardware >= (instituteData?.nominationLimitHardware ?? 0)) ||
+                            !team.category
+                        }
                     />
                     <label htmlFor={`team-${team.id}`} className="flex-1">
-                      <p className="font-semibold">{team.name}</p>
+                      <div className="flex items-center gap-2">
+                         <p className="font-semibold">{team.name}</p>
+                         {team.category && <Badge variant={team.category === 'Software' ? 'default' : 'secondary'}>{team.category}</Badge>}
+                      </div>
                       <p className="text-sm text-muted-foreground flex items-center gap-2">
                         <Users className="h-3 w-3" /> {team.members.length + 1} members
                       </p>

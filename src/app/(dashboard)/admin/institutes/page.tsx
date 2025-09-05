@@ -31,7 +31,8 @@ export default function ManageInstitutesPage() {
     const [loading, setLoading] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [newInstitute, setNewInstitute] = useState("");
-    const [nominationLimits, setNominationLimits] = useState<Record<string, number | string>>({});
+    const [nominationLimitsSoftware, setNominationLimitsSoftware] = useState<Record<string, number | string>>({});
+    const [nominationLimitsHardware, setNominationLimitsHardware] = useState<Record<string, number | string>>({});
     const [nominationFormUrls, setNominationFormUrls] = useState<Record<string, string>>({});
     const { toast } = useToast();
 
@@ -42,17 +43,22 @@ export default function ManageInstitutesPage() {
             const institutesData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Institute));
             setInstitutes(institutesData);
             
-            const limits: Record<string, number> = {};
+            const softwareLimits: Record<string, number> = {};
+            const hardwareLimits: Record<string, number> = {};
             const urls: Record<string, string> = {};
             institutesData.forEach(inst => {
-                if (inst.nominationLimit) {
-                    limits[inst.id] = inst.nominationLimit;
+                if (inst.nominationLimitSoftware) {
+                    softwareLimits[inst.id] = inst.nominationLimitSoftware;
+                }
+                 if (inst.nominationLimitHardware) {
+                    hardwareLimits[inst.id] = inst.nominationLimitHardware;
                 }
                 if (inst.nominationFormUrl) {
                     urls[inst.id] = inst.nominationFormUrl;
                 }
             });
-            setNominationLimits(limits);
+            setNominationLimitsSoftware(softwareLimits);
+            setNominationLimitsHardware(hardwareLimits);
             setNominationFormUrls(urls);
 
             setLoading(false);
@@ -72,8 +78,9 @@ export default function ManageInstitutesPage() {
         try {
             await addDoc(collection(db, "institutes"), {
                 name: newInstitute.trim(),
-                nominationLimit: 5, // Default limit
-                nominationFormUrl: "", // Default empty URL
+                nominationLimitSoftware: 0,
+                nominationLimitHardware: 0,
+                nominationFormUrl: "",
             });
             toast({ title: "Success", description: "Institute added successfully." });
             setNewInstitute("");
@@ -98,8 +105,9 @@ export default function ManageInstitutesPage() {
         }
     };
 
-    const handleLimitChange = (id: string, value: string) => {
-        setNominationLimits(prev => ({ ...prev, [id]: value }));
+    const handleLimitChange = (id: string, value: string, category: 'software' | 'hardware') => {
+        const setter = category === 'software' ? setNominationLimitsSoftware : setNominationLimitsHardware;
+        setter(prev => ({ ...prev, [id]: value }));
     };
 
     const handleUrlChange = (id: string, value: string) => {
@@ -107,12 +115,15 @@ export default function ManageInstitutesPage() {
     }
 
     const handleSaveInstituteData = async (id: string) => {
-        const limit = nominationLimits[id];
+        const softwareLimit = nominationLimitsSoftware[id];
+        const hardwareLimit = nominationLimitsHardware[id];
         const url = nominationFormUrls[id];
-        const numericLimit = Number(limit);
+        
+        const numericSoftwareLimit = Number(softwareLimit);
+        const numericHardwareLimit = Number(hardwareLimit);
 
-        if (isNaN(numericLimit) || numericLimit < 0) {
-            toast({ title: "Invalid Input", description: "Please enter a valid non-negative number for the limit.", variant: "destructive" });
+        if (isNaN(numericSoftwareLimit) || numericSoftwareLimit < 0 || isNaN(numericHardwareLimit) || numericHardwareLimit < 0) {
+            toast({ title: "Invalid Input", description: "Please enter a valid non-negative number for the limits.", variant: "destructive" });
             return;
         }
 
@@ -125,7 +136,8 @@ export default function ManageInstitutesPage() {
         try {
             const instituteRef = doc(db, 'institutes', id);
             await updateDoc(instituteRef, { 
-                nominationLimit: numericLimit,
+                nominationLimitSoftware: numericSoftwareLimit,
+                nominationLimitHardware: numericHardwareLimit,
                 nominationFormUrl: url || ""
             });
             toast({ title: "Success", description: "Institute data updated." });
@@ -214,14 +226,26 @@ export default function ManageInstitutesPage() {
                                     </div>
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
                                         <div>
-                                            <Label htmlFor={`limit-${inst.id}`} className="text-xs text-muted-foreground">Nomination Limit</Label>
+                                            <Label htmlFor={`limit-software-${inst.id}`} className="text-xs text-muted-foreground">Software Nomination Limit</Label>
                                             <Input
-                                                id={`limit-${inst.id}`}
+                                                id={`limit-software-${inst.id}`}
                                                 type="number"
-                                                value={nominationLimits[inst.id] ?? ''}
-                                                onChange={(e) => handleLimitChange(inst.id, e.target.value)}
+                                                value={nominationLimitsSoftware[inst.id] ?? ''}
+                                                onChange={(e) => handleLimitChange(inst.id, e.target.value, 'software')}
                                                 className="h-9"
-                                                placeholder="e.g., 5"
+                                                placeholder="e.g., 3"
+                                                disabled={isSubmitting}
+                                            />
+                                        </div>
+                                         <div>
+                                            <Label htmlFor={`limit-hardware-${inst.id}`} className="text-xs text-muted-foreground">Hardware Nomination Limit</Label>
+                                            <Input
+                                                id={`limit-hardware-${inst.id}`}
+                                                type="number"
+                                                value={nominationLimitsHardware[inst.id] ?? ''}
+                                                onChange={(e) => handleLimitChange(inst.id, e.target.value, 'hardware')}
+                                                className="h-9"
+                                                placeholder="e.g., 2"
                                                 disabled={isSubmitting}
                                             />
                                         </div>

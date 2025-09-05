@@ -124,7 +124,8 @@ export interface Team {
 export interface Institute {
   id: string;
   name: string;
-  nominationLimit?: number;
+  nominationLimitSoftware?: number;
+  nominationLimitHardware?: number;
   evaluationDates?: {
     seconds: number;
     nanoseconds: number;
