@@ -32,7 +32,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { db } from "@/lib/firebase";
 import { doc, getDoc, updateDoc, writeBatch, collection, query, where, getDocs, Timestamp } from "firebase/firestore";
 import { useEffect, useState, useMemo } from "react";
-import { Institute, Team } from "@/lib/types";
+import { Institute, Team, UserProfile } from "@/lib/types";
 import {
   Loader2,
   CalendarIcon,
@@ -42,6 +42,7 @@ import {
   Download,
   Cpu,
   Code,
+  Search,
 } from "lucide-react";
 import { format, isAfter } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -49,6 +50,8 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { setEvaluationDates } from "@/ai/flows/set-evaluation-dates-flow";
 import { generateNominationForm } from "@/ai/flows/generate-nomination-form-flow";
 import { Badge } from "@/components/ui/badge";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Input } from "@/components/ui/input";
 
 const formSchema = z.object({
   evaluationDates: z
@@ -57,15 +60,37 @@ const formSchema = z.object({
     .max(4, "You can select a maximum of four dates."),
 });
 
+// Helper to fetch user profiles in chunks to avoid Firestore 30-item 'in' query limit
+async function getUserProfilesInChunks(userIds: string[]): Promise<Map<string, UserProfile>> {
+    const userProfiles = new Map<string, UserProfile>();
+    if (userIds.length === 0) return userProfiles;
+
+    const chunkSize = 30;
+    for (let i = 0; i < userIds.length; i += chunkSize) {
+        const chunk = userIds.slice(i, i + chunkSize);
+        if (chunk.length > 0) {
+            const usersQuery = query(collection(db, 'users'), where('uid', 'in', chunk));
+            const usersSnapshot = await getDocs(usersQuery);
+            usersSnapshot.forEach(doc => {
+                userProfiles.set(doc.id, { uid: doc.id, ...doc.data() } as UserProfile);
+            });
+        }
+    }
+    return userProfiles;
+}
+
+
 export default function SpocEvaluationPage() {
   const { user, loading: authLoading } = useAuth();
   const { toast } = useToast();
   const [instituteData, setInstituteData] = useState<Institute | null>(null);
-  const [teams, setTeams] = useState<Team[]>([]);
+  const [allTeams, setAllTeams] = useState<Team[]>([]);
+  const [allUsers, setAllUsers] = useState<Map<string, UserProfile>>(new Map());
   const [nominatedTeamIds, setNominatedTeamIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isGenerating, setIsGenerating] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState("");
 
   const isPietSpoc = user?.institute === "Parul Institute of Engineering & Technology";
 
@@ -99,12 +124,22 @@ export default function SpocEvaluationPage() {
           }
         }
         
-        // Fetch teams for nomination
         const teamsQuery = query(collection(db, "teams"), where("institute", "==", user.institute));
         const teamsSnapshot = await getDocs(teamsQuery);
         const teamsData = teamsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Team));
-        setTeams(teamsData);
+        setAllTeams(teamsData);
         setNominatedTeamIds(teamsData.filter(t => t.isNominated).map(t => t.id));
+
+        const allUserIds = new Set<string>();
+        teamsData.forEach(team => {
+            allUserIds.add(team.leader.uid);
+            team.members.forEach(member => member.uid && allUserIds.add(member.uid));
+        });
+        
+        if(allUserIds.size > 0) {
+            const usersData = await getUserProfilesInChunks(Array.from(allUserIds));
+            setAllUsers(usersData);
+        }
 
       } catch (error) {
         console.error("Error fetching institute data:", error);
@@ -141,7 +176,6 @@ export default function SpocEvaluationPage() {
 
       if (result.success) {
         toast({ title: "Success", description: "Evaluation dates saved." });
-        // Manually update local state to reflect change immediately
         setInstituteData(prev => prev ? { ...prev, evaluationDates: data.evaluationDates.map(date => Timestamp.fromDate(date)) as any } : null);
       } else {
         throw new Error(result.message);
@@ -158,16 +192,35 @@ export default function SpocEvaluationPage() {
     }
   };
 
+  const registeredTeams = useMemo(() => {
+    return allTeams.filter(team => {
+        const teamMemberProfiles = [team.leader, ...team.members].map(m => allUsers.get(m.uid)).filter(Boolean) as UserProfile[];
+        const hasFemale = teamMemberProfiles.some(m => m.gender === 'F');
+        const instituteCount = teamMemberProfiles.filter(m => m.institute === team.institute).length;
+
+        const isRegistered = teamMemberProfiles.length === 6 && hasFemale && instituteCount >= 3 && !!team.problemStatementId;
+        
+        if (!isRegistered) return false;
+        
+        if (searchTerm) {
+          const lowerSearch = searchTerm.toLowerCase();
+          return team.name.toLowerCase().includes(lowerSearch) || team.leader.name.toLowerCase().includes(lowerSearch) || team.teamNumber?.toLowerCase().includes(lowerSearch);
+        }
+        return true;
+    });
+  }, [allTeams, allUsers, searchTerm]);
+  
+
   const nominationCounts = useMemo(() => {
     let software = 0;
     let hardware = 0;
     nominatedTeamIds.forEach(id => {
-        const team = teams.find(t => t.id === id);
+        const team = allTeams.find(t => t.id === id);
         if (team?.category === 'Software') software++;
         if (team?.category === 'Hardware') hardware++;
     });
     return { software, hardware };
-  }, [nominatedTeamIds, teams]);
+  }, [nominatedTeamIds, allTeams]);
   
   const handleNominationChange = (teamId: string, teamCategory: "Software" | "Hardware" | undefined, checked: boolean | 'indeterminate') => {
     const softwareLimit = instituteData?.nominationLimitSoftware ?? 0;
@@ -196,7 +249,7 @@ export default function SpocEvaluationPage() {
     setIsSaving(true);
     try {
       const batch = writeBatch(db);
-      teams.forEach(team => {
+      allTeams.forEach(team => {
         const teamRef = doc(db, 'teams', team.id);
         const shouldBeNominated = nominatedTeamIds.includes(team.id);
         if (team.isNominated !== shouldBeNominated) {
@@ -331,7 +384,7 @@ export default function SpocEvaluationPage() {
             <Trophy /> Team Nominations
           </CardTitle>
           <CardDescription>
-             Select teams from your institute to nominate for the University Level Hackathon. 
+             Select from your registered teams to nominate for the University Level Hackathon. 
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -362,41 +415,73 @@ export default function SpocEvaluationPage() {
                     Save Nominations
                 </Button>
               </div>
+
+               <div className="relative">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                    placeholder="Search by team name or number..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-8 w-full max-w-sm"
+                />
+              </div>
+              
               <div className="border rounded-md">
-                {teams.map(team => (
-                  <div key={team.id} className="flex items-center p-4 border-b last:border-b-0 gap-4">
-                     <Checkbox 
-                        id={`team-${team.id}`} 
-                        onCheckedChange={(checked) => handleNominationChange(team.id, team.category, checked)}
-                        checked={nominatedTeamIds.includes(team.id)}
-                        disabled={
-                            (!nominatedTeamIds.includes(team.id) && team.category === 'Software' && nominationCounts.software >= (instituteData?.nominationLimitSoftware ?? 0)) ||
-                            (!nominatedTeamIds.includes(team.id) && team.category === 'Hardware' && nominationCounts.hardware >= (instituteData?.nominationLimitHardware ?? 0)) ||
-                            !team.category
-                        }
-                    />
-                    <label htmlFor={`team-${team.id}`} className="flex-1">
-                      <div className="flex items-center gap-2">
-                         <p className="font-semibold">{team.name}</p>
-                         {team.category && <Badge variant={team.category === 'Software' ? 'default' : 'secondary'}>{team.category}</Badge>}
-                      </div>
-                      <p className="text-sm text-muted-foreground flex items-center gap-2">
-                        <Users className="h-3 w-3" /> {team.members.length + 1} members
-                      </p>
-                    </label>
-                    {nominatedTeamIds.includes(team.id) && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleGenerateForm(team.id)}
-                        disabled={isGenerating === team.id}
-                      >
-                        {isGenerating === team.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
-                        Generate Form
-                      </Button>
-                    )}
-                  </div>
-                ))}
+                <Table>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead className="w-[50px]"></TableHead>
+                            <TableHead>Team</TableHead>
+                            <TableHead>Team Number</TableHead>
+                            <TableHead>Leader</TableHead>
+                            <TableHead>Category</TableHead>
+                            <TableHead className="text-right">Form</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {registeredTeams.length > 0 ? registeredTeams.map(team => (
+                        <TableRow key={team.id}>
+                            <TableCell>
+                                <Checkbox 
+                                    id={`team-${team.id}`} 
+                                    onCheckedChange={(checked) => handleNominationChange(team.id, team.category, checked)}
+                                    checked={nominatedTeamIds.includes(team.id)}
+                                    disabled={
+                                        (!nominatedTeamIds.includes(team.id) && team.category === 'Software' && nominationCounts.software >= (instituteData?.nominationLimitSoftware ?? 0)) ||
+                                        (!nominatedTeamIds.includes(team.id) && team.category === 'Hardware' && nominationCounts.hardware >= (instituteData?.nominationLimitHardware ?? 0)) ||
+                                        !team.category
+                                    }
+                                />
+                            </TableCell>
+                            <TableCell className="font-medium">{team.name}</TableCell>
+                            <TableCell>{team.teamNumber || "N/A"}</TableCell>
+                            <TableCell>{team.leader.name}</TableCell>
+                            <TableCell>
+                                {team.category && <Badge variant={team.category === 'Software' ? 'default' : 'secondary'}>{team.category}</Badge>}
+                            </TableCell>
+                            <TableCell className="text-right">
+                                {nominatedTeamIds.includes(team.id) && (
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => handleGenerateForm(team.id)}
+                                    disabled={isGenerating === team.id}
+                                >
+                                    {isGenerating === team.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
+                                    Generate
+                                </Button>
+                                )}
+                            </TableCell>
+                        </TableRow>
+                        )) : (
+                           <TableRow>
+                               <TableCell colSpan={6} className="h-24 text-center">
+                                   No registered teams found matching your search.
+                               </TableCell>
+                           </TableRow>
+                        )}
+                    </TableBody>
+                </Table>
               </div>
             </div>
           )}
