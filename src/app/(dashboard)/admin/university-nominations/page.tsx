@@ -148,6 +148,7 @@ export default function UniversityNominationsPage() {
           leader_name: leader?.name || 'N/A',
           problemstatement_id: ps?.problemStatementId || 'N/A',
           problemstatement_title: team.problemStatementTitle || 'N/A',
+          category: team.category || 'N/A',
         };
       });
 

@@ -153,6 +153,7 @@ export default function ManageJuryPage() {
               leader_name: team.leader.name,
               problemstatement_id: ps?.problemStatementId || 'N/A',
               problemstatement_title: team.problemStatementTitle || 'N/A',
+              category: team.category || 'N/A',
             };
         });
 
@@ -245,7 +246,7 @@ export default function ManageJuryPage() {
                                   {isDraft ? (
                                     <AlertDialog>
                                       <AlertDialogTrigger asChild>
-                                        <Button size="sm" disabled={isProcessing === `finalize-${panel.id}`}>
+                                        <Button size="sm" onClick={(e) => e.stopPropagation()} disabled={isProcessing === `finalize-${panel.id}`}>
                                           {isProcessing === `finalize-${panel.id}` ? <Loader2 className="h-4 w-4 animate-spin"/> : <Send className="h-4 w-4" />}
                                           <span className="ml-2 hidden sm:inline">Finalize Panel</span>
                                         </Button>
@@ -264,17 +265,17 @@ export default function ManageJuryPage() {
                                       </AlertDialogContent>
                                     </AlertDialog>
                                   ) : (
-                                    <Button variant="outline" size="sm" disabled={isExporting === panel.id} onClick={() => handleExportEvaluation(panel)}>
+                                    <Button variant="outline" size="sm" disabled={isExporting === panel.id} onClick={(e) => { e.stopPropagation(); handleExportEvaluation(panel); }}>
                                       {isExporting === panel.id ? <Loader2 className="h-4 w-4 animate-spin"/> : <Download className="h-4 w-4" />}
                                       <span className="ml-2 hidden sm:inline">Download Sheet</span>
                                     </Button>
                                   )}
-                                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleEdit(panel)}>
+                                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); handleEdit(panel); }}>
                                     <Pencil className="h-4 w-4" />
                                   </Button>
                                   <AlertDialog>
                                     <AlertDialogTrigger asChild>
-                                      <Button variant="destructive" size="icon" className="h-8 w-8" disabled={isProcessing === `delete-${panel.id}`}>
+                                      <Button variant="destructive" size="icon" className="h-8 w-8" onClick={(e) => e.stopPropagation()} disabled={isProcessing === `delete-${panel.id}`}>
                                         {isProcessing === `delete-${panel.id}` ? <Loader2 className="h-4 w-4 animate-spin"/> : <Trash2 className="h-4 w-4" />}
                                       </Button>
                                     </AlertDialogTrigger>
