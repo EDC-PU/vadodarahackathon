@@ -32,7 +32,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { db } from "@/lib/firebase";
 import { doc, getDoc, updateDoc, writeBatch, collection, query, where, getDocs, Timestamp } from "firebase/firestore";
 import { useEffect, useState, useMemo } from "react";
-import { Institute, Team, UserProfile } from "@/lib/types";
+import { Institute, Team, UserProfile, ProblemStatementCategory } from "@/lib/types";
 import {
   Loader2,
   CalendarIcon,
@@ -222,28 +222,28 @@ export default function SpocEvaluationPage() {
     return { software, hardware };
   }, [nominatedTeamIds, allTeams]);
   
-  const handleNominationChange = (teamId: string, teamCategory: "Software" | "Hardware" | undefined, checked: boolean | 'indeterminate') => {
+ const handleNominationChange = (teamId: string, teamCategory: ProblemStatementCategory | undefined, checked: boolean) => {
     const softwareLimit = instituteData?.nominationLimitSoftware ?? 0;
     const hardwareLimit = instituteData?.nominationLimitHardware ?? 0;
-    
+
     setNominatedTeamIds(currentIds => {
-      const newIds = new Set(currentIds);
-      if(checked) {
-        if (teamCategory === 'Software' && nominationCounts.software >= softwareLimit) {
-            toast({ title: "Limit Reached", description: `You can only nominate up to ${softwareLimit} software teams.`, variant: "destructive" });
-            return Array.from(newIds);
+        const newIds = new Set(currentIds);
+        if (checked) {
+            if (teamCategory === 'Software' && nominationCounts.software >= softwareLimit) {
+                toast({ title: "Limit Reached", description: `You can only nominate up to ${softwareLimit} software teams.`, variant: "destructive" });
+                return Array.from(newIds);
+            }
+            if (teamCategory === 'Hardware' && nominationCounts.hardware >= hardwareLimit) {
+                toast({ title: "Limit Reached", description: `You can only nominate up to ${hardwareLimit} hardware teams.`, variant: "destructive" });
+                return Array.from(newIds);
+            }
+            newIds.add(teamId);
+        } else {
+            newIds.delete(teamId);
         }
-        if (teamCategory === 'Hardware' && nominationCounts.hardware >= hardwareLimit) {
-            toast({ title: "Limit Reached", description: `You can only nominate up to ${hardwareLimit} hardware teams.`, variant: "destructive" });
-            return Array.from(newIds);
-        }
-        newIds.add(teamId);
-      } else {
-        newIds.delete(teamId);
-      }
-      return Array.from(newIds);
+        return Array.from(newIds);
     });
-  }
+};
 
   const handleSaveNominations = async () => {
     setIsSaving(true);
@@ -444,7 +444,7 @@ export default function SpocEvaluationPage() {
                             <TableCell>
                                 <Checkbox 
                                     id={`team-${team.id}`} 
-                                    onCheckedChange={(checked) => handleNominationChange(team.id, team.category, checked)}
+                                    onCheckedChange={(checked) => handleNominationChange(team.id, team.category, !!checked)}
                                     checked={nominatedTeamIds.includes(team.id)}
                                     disabled={
                                         (!nominatedTeamIds.includes(team.id) && team.category === 'Software' && nominationCounts.software >= (instituteData?.nominationLimitSoftware ?? 0)) ||
