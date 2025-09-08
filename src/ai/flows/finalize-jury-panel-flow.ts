@@ -8,7 +8,6 @@ import { ai } from '@/ai/genkit';
 import { getAdminAuth, getAdminDb } from '@/lib/firebase-admin';
 import { FinalizeJuryPanelInput, FinalizeJuryPanelInputSchema, FinalizeJuryPanelOutput, FinalizeJuryPanelOutputSchema, JuryPanel, JuryMember, JuryMemberInput } from '@/lib/types';
 import nodemailer from 'nodemailer';
-import { getEmailTemplate } from '@/lib/email-templates';
 import { FieldValue } from 'firebase-admin/firestore';
 
 // Helper to generate a random password
@@ -34,27 +33,28 @@ async function sendJuryCredentialsEmail(name: string, email: string, password: s
         },
     });
 
-    const emailHtml = getEmailTemplate({
-        title: "You've been Invited as a Jury Member!",
-        body: `
-            <p>Hi ${name},</p>
-            <p>You have been invited to be a jury member for the Vadodara Hackathon 6.0 as part of <strong>Panel: ${panelName}</strong>.</p>
-            <p>An account has been created for you on the portal. Please use the following credentials to log in:</p>
-            <div class="credentials">
-                <p><strong>Email:</strong> ${email}</p>
-                <p><strong>Password:</strong> ${password}</p>
-            </div>
-            <p><strong>Important:</strong> You will be required to change this temporary password upon your first login.</p>
-        `,
-        buttonLink: "https://vadodarahackathon.pierc.org/login",
-        buttonText: "Login to Your Dashboard"
-    });
+    const emailText = `
+Hi ${name},
+
+You have been invited to be a jury member for the Vadodara Hackathon 6.0 as part of Panel: ${panelName}.
+
+An account has been created for you on the portal. Please use the following credentials to log in:
+- Email: ${email}
+- Password: ${password}
+
+Portal Link: https://vadodarahackathon.pierc.org/login
+
+Important: You will be required to change this temporary password upon your first login.
+
+Regards,
+Vadodara Hackathon Team
+    `;
 
     const mailOptions = {
         from: `"Vadodara Hackathon 6.0" <${process.env.GMAIL_EMAIL}>`,
         to: email,
         subject: `[Invitation] You are invited as a Jury Member for Vadodara Hackathon 6.0`,
-        html: emailHtml,
+        text: emailText,
     };
 
     await transporter.sendMail(mailOptions);
