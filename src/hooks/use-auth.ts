@@ -138,7 +138,7 @@ export function useAuth() {
      }
      
      // 2. Profile completion checks for various roles
-     if (user.role === 'spoc' && (!user.institute || !user.misId || !user.contactNumber)) {
+     if (user.role === 'spoc' && (!user.institute || !user.contactNumber)) {
         console.log("Redirect Check: SPOC profile is incomplete.");
         performRedirect('/complete-spoc-profile');
         return;

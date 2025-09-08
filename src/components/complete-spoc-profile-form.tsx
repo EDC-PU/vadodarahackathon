@@ -35,7 +35,6 @@ import { RadioGroup, RadioGroupItem } from "./ui/radio-group";
 
 const formSchema = z.object({
   name: z.string().min(2, { message: "Name must be at least 2 characters." }),
-  misId: z.string().min(1, { message: "MIS ID is required." }),
   gender: z.enum(["M", "F", "O"], { required_error: "Please select a gender." }),
   institute: z.string({ required_error: "Please select an institute." }).min(1, "Please select an institute."),
   department: z.string().min(2, { message: "Department is required." }),
@@ -59,7 +58,6 @@ export function CompleteSpocProfileForm() {
       name: "",
       institute: "",
       contactNumber: "",
-      misId: "",
       department: "",
       gender: undefined,
       aicteApplicationNumber: "",
@@ -82,14 +80,13 @@ export function CompleteSpocProfileForm() {
   useEffect(() => {
       if (user) {
           // If the user's profile already shows they are pending, immediately show the message.
-          if (user.spocStatus === 'pending' && user.institute && user.misId) {
+          if (user.spocStatus === 'pending' && user.institute) {
             setIsSubmitted(true);
           }
           form.reset({
               name: user.name || "",
               institute: user.institute || "",
               contactNumber: user.contactNumber || "",
-              misId: user.misId || "",
               department: user.department || "",
               gender: user.gender || undefined,
               aicteApplicationNumber: user.aicteApplicationNumber || "",
@@ -132,7 +129,6 @@ export function CompleteSpocProfileForm() {
         const userDocRef = doc(db, "users", user.uid);
         const updatedProfileData: Partial<UserProfile> = {
             name: values.name,
-            misId: values.misId,
             gender: values.gender,
             institute: values.institute,
             department: values.department,
@@ -220,14 +216,14 @@ export function CompleteSpocProfileForm() {
                         </FormItem>
                     )}
                 />
-                    <FormField
+                 <FormField
                     control={form.control}
-                    name="misId"
+                    name="contactNumber"
                     render={({ field }) => (
                         <FormItem>
-                        <FormLabel>MIS ID</FormLabel>
+                        <FormLabel>Contact Number</FormLabel>
                         <FormControl>
-                            <Input placeholder="Enter your MIS ID" {...field} disabled={isLoading}/>
+                            <Input placeholder="9876543210" {...field} disabled={isLoading}/>
                         </FormControl>
                         <FormMessage />
                         </FormItem>
@@ -370,19 +366,6 @@ export function CompleteSpocProfileForm() {
                         </FormItem>
                     )}
                 />
-            <FormField
-            control={form.control}
-            name="contactNumber"
-            render={({ field }) => (
-                <FormItem>
-                <FormLabel>Contact Number</FormLabel>
-                <FormControl>
-                    <Input placeholder="9876543210" {...field} disabled={isLoading}/>
-                </FormControl>
-                <FormMessage />
-                </FormItem>
-            )}
-            />
             
             <Button type="submit" className="w-full" disabled={isLoading || authLoading}>
             {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
