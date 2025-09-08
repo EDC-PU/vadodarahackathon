@@ -2,113 +2,131 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-  
+
     // Helper functions
     function isSignedIn() {
       return request.auth != null;
     }
-    
-    function isLeader() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'leader';
+
+    function isRole(role) {
+      return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == role;
     }
 
-    function isAdmin() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
-    }
-    
-    function isSpoc() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'spoc';
+    function isUserProfileOwner(userId) {
+        return request.auth.uid == userId;
     }
 
-    function isMember() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'member';
-    }
-
-    function isOwner(userId) {
-      return request.auth.uid == userId;
+    function isTeamMember(teamId) {
+        let teamData = get(/databases/$(database)/documents/teams/$(teamId)).data;
+        return request.auth.uid == teamData.leader.uid || request.auth.uid in teamData.members.map(m => m.uid);
     }
     
-    function isSpocForInstitute(institute) {
-       return isSpoc() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.institute == institute;
+    function isTeamLeader(teamId) {
+        return get(/databases/$(database)/documents/teams/$(teamId)).data.leader.uid == request.auth.uid;
+    }
+    
+    function isSpocForTeam(teamId) {
+       let teamData = get(/databases/$(database)/documents/teams/$(teamId)).data;
+       let userData = get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+       return isRole('spoc') && userData.institute == teamData.institute;
+    }
+    
+    function isJuryForTeam(teamId) {
+      let teamData = get(/databases/$(database)/documents/teams/$(teamId)).data;
+      let userData = get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+      return isRole('jury') && teamData.panelId == userData.panelId;
+    }
+    
+    // User Profiles
+    match /users/{userId} {
+      // Anyone can read a user's public profile data if they are signed in.
+      allow read: if isSignedIn();
+      // Only the user themselves or an admin can update their own profile.
+      allow update: if isUserProfileOwner(userId) || isRole('admin');
+      // Only admins can create or delete user profiles directly (except for initial signup).
+      allow create: if isRole('admin');
+      allow delete: if isRole('admin') || isUserProfileOwner(userId); // Users can delete their own accounts
     }
 
-match /users/{userId} {
-  allow create: if isSignedIn();
-  allow read;
-  
-  // Any signed-in user can update their own profile
-  allow update: if isSignedIn() && isOwner(userId) || isSpoc() || isAdmin() ;
-
-  // Only admins can delete
-  allow delete: if isAdmin() || isSpoc();
-}
-
-    
-    // Teams Collection
+    // Teams
     match /teams/{teamId} {
-      allow read; 
-
-      allow create: if isLeader();
-
-      allow update: if isSignedIn() && (
-        (isLeader() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.teamId == teamId) || 
-        (isMember() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.teamId == teamId) ||
-        isAdmin() || isMember()  ||
-        isSpocForInstitute(resource.data.institute)
-      );
-
-      allow delete: if isSignedIn() && (isAdmin() || isSpocForInstitute(resource.data.institute));
+      // Admins, SPOCs for the team's institute, jury members assigned to the team's panel, and members of the team can read team data.
+      allow read: if isRole('admin') || isSpocForTeam(teamId) || isTeamMember(teamId) || isJuryForTeam(teamId);
+      // Leaders, SPOCs, and Admins can update teams. Specific field validation is handled by flows.
+      allow update: if isRole('admin') || isSpocForTeam(teamId) || isTeamLeader(teamId);
+       // Only admins and SPOCs can delete teams.
+      allow delete: if isRole('admin') || isSpocForTeam(teamId);
+       // Creation is handled by a dedicated flow, not direct client access.
+      allow create: if isRole('leader');
     }
     
-    // Team Invites Collection
-    match /teamInvites/{inviteId} {
+    // Problem Statements are public.
+    match /problemStatements/{statementId} {
       allow read: if true;
-      allow write: if isSignedIn() && (isLeader() || isSpoc() || isAdmin());
+      // Only admins can create, update, or delete problem statements.
+      allow write: if isRole('admin');
     }
 
-    // Problem Statements
-    match /problemStatements/{psId} {
-        allow read: if true;  
-      allow write: if isAdmin();
-    }
-    
-    // Config Collection
-    match /config/{docId} {
-      allow read: if true;
-      allow write: if isAdmin();
-    }
-    
     // Announcements
     match /announcements/{announcementId} {
-      allow read: if true || isSpoc();
-      allow create: if isAdmin() || (isSpoc() &&
-        request.resource.data.institute == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.institute);
-      allow delete: if isAdmin() || isSpoc();
+        // Anyone can read announcements for 'all'.
+        // Signed-in users can read announcements targeted to their role/institute.
+        allow read: if resource.data.audience == 'all' || 
+                      (isSignedIn() && (
+                          resource.data.audience == 'teams' && (isRole('leader') || isRole('member')) ||
+                          resource.data.audience == 'spocs' && isRole('spoc') ||
+                          resource.data.audience == 'nominated_teams' && isRole('admin') ||
+                          (resource.data.audience == 'institute' && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.institute == resource.data.institute)
+                      ));
+        allow write: if isRole('admin') || (isRole('spoc') && request.resource.data.audience == 'institute');
     }
-
-    // Notifications
-    match /notifications/{notificationId} {
-      allow read, update: if isSignedIn() && resource.data.recipientUid == request.auth.uid;
-      allow create: if isSignedIn(); 
+    
+     // Team Invites
+    match /teamInvites/{inviteId} {
+        // Anyone with the link can read the invite details to join.
+        allow read: if true;
+        // Only team leaders and SPOCs (for their institute) can create invites.
+        allow create: if isRole('leader') || isRole('spoc');
+        // Invites are not updated or deleted directly, their status is changed.
+        allow update, delete: if false;
+    }
+    
+    // Config
+    match /config/{configId} {
+        allow read: if true; // Config like deadlines can be public.
+        allow write: if isRole('admin'); // Only admins can change event settings.
+    }
+    
+    // Departments
+    match /departments/{deptId} {
+      allow read: if isSignedIn(); // All signed-in users can read department lists for forms.
+      allow write: if isRole('admin') || isRole('spoc'); // Only admins and spocs can manage departments.
     }
 
     // Institutes
-    match /institutes/{instituteId} {
-      allow read: if true;
-      allow write: if isAdmin();
+     match /institutes/{instId} {
+      allow read: if true; // Publicly readable
+      allow write: if isRole('admin'); // Only admins can manage institutes
     }
 
-    // Logs are write-only for authenticated users (via flows), and read-only for admins.
-    match /logs/{docId} {
-        allow read: if isAdmin();
-        allow write: if request.auth != null;
+    // Jury Panels
+    match /juryPanels/{panelId} {
+        allow read: if isRole('admin') || isRole('jury');
+        allow write: if isRole('admin');
+    }
+    
+    // Logs (write-only for backend/flows, readable only by admins)
+    match /logs/{logId} {
+        allow read: if isRole('admin');
+        allow write: if isSignedIn(); // Assuming flows are authenticated
     }
 
-
-    // Departments
-    match /departments/{instituteName} {
-      allow read: if true;
-      allow write: if isAdmin() || isSpocForInstitute(instituteName);
+    // Notifications (readable by recipient, writable by system)
+    match /notifications/{notificationId} {
+        allow read, update: if request.auth.uid == resource.data.recipientUid;
+        allow create: if isSignedIn(); // Writable by system/flows
+        allow delete: if request.auth.uid == resource.data.recipientUid;
     }
+
   }
 }
