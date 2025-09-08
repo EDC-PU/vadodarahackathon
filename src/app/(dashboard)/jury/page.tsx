@@ -18,6 +18,7 @@ import { exportEvaluation } from "@/ai/flows/export-evaluation-flow";
 export default function JuryDashboardPage() {
     const { user, loading: authLoading } = useAuth();
     const [assignedTeams, setAssignedTeams] = useState<Team[]>([]);
+    const [teamLeaders, setTeamLeaders] = useState<Map<string, UserProfile>>(new Map());
     const [panel, setPanel] = useState<JuryPanel | null>(null);
     const [panelMembers, setPanelMembers] = useState<UserProfile[]>([]);
     const [problemStatements, setProblemStatements] = useState<ProblemStatement[]>([]);
@@ -43,19 +44,29 @@ export default function JuryDashboardPage() {
                 const panelData = { id: panelDoc.id, ...panelDoc.data() } as JuryPanel;
                 setPanel(panelData);
 
-                // Fetch full profiles for panel members
                 const memberUids = panelData.members.map(m => m.uid).filter(Boolean);
                 if (memberUids.length > 0) {
                     const membersQuery = query(collection(db, 'users'), where('uid', 'in', memberUids));
                     const memberDocs = await getDocs(membersQuery);
                     setPanelMembers(memberDocs.docs.map(d => d.data() as UserProfile));
                 }
-                 // 2. Fetch Assigned Teams after panel is loaded
+                 
                 const teamsQuery = query(collection(db, 'teams'), where('panelId', '==', user.panelId));
-                const unsubTeams = onSnapshot(teamsQuery, (snapshot) => {
+                const unsubTeams = onSnapshot(teamsQuery, async (snapshot) => {
                     const teamsData = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Team));
                     setAssignedTeams(teamsData);
-                    setLoading(false); // Set loading false only after teams are also loaded
+
+                    // Fetch leader profiles for these teams
+                    const leaderUids = teamsData.map(t => t.leader.uid);
+                    if (leaderUids.length > 0) {
+                      const leadersQuery = query(collection(db, 'users'), where('uid', 'in', leaderUids));
+                      const leaderDocs = await getDocs(leadersQuery);
+                      const leaderMap = new Map<string, UserProfile>();
+                      leaderDocs.forEach(d => leaderMap.set(d.id, d.data() as UserProfile));
+                      setTeamLeaders(leaderMap);
+                    }
+
+                    setLoading(false);
                 }, (err) => {
                     console.error("Error fetching teams for jury:", err);
                     setLoading(false);
@@ -74,7 +85,6 @@ export default function JuryDashboardPage() {
         });
         unsubscribes.push(unsubPanel);
         
-        // Fetch All Problem Statements
         const psQuery = query(collection(db, "problemStatements"));
         const unsubPs = onSnapshot(psQuery, (snapshot) => {
           setProblemStatements(snapshot.docs.map(d => ({ id: d.id, ...d.data() } as ProblemStatement)));
@@ -163,29 +173,34 @@ export default function JuryDashboardPage() {
                         </Button>
                     </CardHeader>
                     <CardContent>
-                        <ScrollArea className="h-[60vh] border rounded-md">
+                        <ScrollArea className="h-auto border rounded-md">
                             <Table>
                                 <TableHeader>
                                     <TableRow>
                                         <TableHead>Team Name</TableHead>
-                                        <TableHead>Institute</TableHead>
+                                        <TableHead>Leader</TableHead>
+                                        <TableHead>Year of Study</TableHead>
                                         <TableHead>Problem Statement</TableHead>
                                         <TableHead>Category</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
                                     {assignedTeams.length > 0 ? (
-                                        assignedTeams.map(team => (
+                                        assignedTeams.map(team => {
+                                            const leader = teamLeaders.get(team.leader.uid);
+                                            return (
                                             <TableRow key={team.id}>
                                                 <TableCell className="font-medium">{team.name}</TableCell>
-                                                <TableCell>{team.institute}</TableCell>
+                                                <TableCell>{leader?.name || 'N/A'}</TableCell>
+                                                <TableCell>{leader?.yearOfStudy || 'N/A'}</TableCell>
                                                 <TableCell>{team.problemStatementTitle}</TableCell>
                                                 <TableCell><Badge variant={team.category === 'Software' ? 'default' : 'secondary'}>{team.category}</Badge></TableCell>
                                             </TableRow>
-                                        ))
+                                            )
+                                        })
                                     ) : (
                                         <TableRow>
-                                            <TableCell colSpan={4} className="text-center h-24">
+                                            <TableCell colSpan={5} className="text-center h-24">
                                                 You have not been assigned any teams for evaluation yet.
                                             </TableCell>
                                         </TableRow>
@@ -224,3 +239,4 @@ export default function JuryDashboardPage() {
         </div>
     );
 }
+
