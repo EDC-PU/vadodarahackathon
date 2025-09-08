@@ -240,7 +240,7 @@ export default function UniversityNominationsPage() {
         } else {
             toast({ title: "Export Failed", description: result.message || "Could not generate the export file.", variant: "destructive" });
         }
-    } catch (error) {
+    } catch (error: any) {
         console.error("Error exporting data:", error);
         toast({ title: "Error", description: "An unexpected error occurred during export.", variant: "destructive" });
     } finally {
@@ -434,6 +434,7 @@ export default function UniversityNominationsPage() {
                     <TableHead>Leader Email</TableHead>
                     <TableHead>Institute</TableHead>
                     <TableHead>Problem Statement</TableHead>
+                    <TableHead>Category</TableHead>
                     {showAssignPanel && <TableHead>Assign Panel</TableHead>}
                     {showSihStatus && <TableHead className="w-[300px]">SIH 2025 Selection Status</TableHead>}
                   </TableRow>
@@ -471,7 +472,12 @@ export default function UniversityNominationsPage() {
                       </TableCell>
                       <TableCell>{leader?.email || 'N/A'}</TableCell>
                       <TableCell>{team.institute}</TableCell>
-                      <TableCell className="max-w-xs whitespace-normal">{ps?.title || 'N/A'}</TableCell>
+                      <TableCell className="max-w-xs whitespace-normal">
+                          {ps ? `${ps.problemStatementId}: ${ps.title}` : 'N/A'}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={team.category === 'Software' ? 'default' : 'secondary'}>{team.category || 'N/A'}</Badge>
+                      </TableCell>
                       {showAssignPanel && (
                         <TableCell>
                             <Select
