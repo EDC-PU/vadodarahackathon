@@ -38,7 +38,7 @@ type SortKey = 'name' | 'email' | 'role' | 'institute' | 'createdAt' | 'status';
 type SortDirection = 'asc' | 'desc';
 type RoleFilter = "all" | "leader" | "member" | "spoc";
 type StatusFilter = "all" | "registered" | "pending";
-type InstituteFilter = "all" | "missing";
+type TeamIdFilter = "all" | "missing";
 
 async function getUserProfilesInChunks(userIds: string[]): Promise<Map<string, UserProfile>> {
     const userProfiles = new Map<string, UserProfile>();
@@ -68,7 +68,7 @@ export default function ManageUsersPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [roleFilter, setRoleFilter] = useState<RoleFilter>("all");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
-  const [instituteFilter, setInstituteFilter] = useState<InstituteFilter>("all");
+  const [teamIdFilter, setTeamIdFilter] = useState<TeamIdFilter>("all");
   const [sortConfig, setSortConfig] = useState<{ key: SortKey, direction: SortDirection } | null>({ key: 'createdAt', direction: 'desc' });
   const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
   const { toast } = useToast();
@@ -232,8 +232,8 @@ export default function ManageUsersPage() {
         filteredUsers = filteredUsers.filter(user => user.status.toLowerCase() === statusFilter.toLowerCase());
     }
     
-    if (instituteFilter === 'missing') {
-        filteredUsers = filteredUsers.filter(user => !user.institute);
+    if (teamIdFilter === 'missing') {
+        filteredUsers = filteredUsers.filter(user => !user.teamId);
     }
 
     if (searchTerm) {
@@ -259,7 +259,7 @@ export default function ManageUsersPage() {
     }
     return filteredUsers;
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [users, searchTerm, sortConfig, roleFilter, statusFilter, instituteFilter, teams, allTeamMembers]);
+  }, [users, searchTerm, sortConfig, roleFilter, statusFilter, teamIdFilter, teams, allTeamMembers]);
 
   const handleBulkDelete = async () => {
     setIsProcessing('bulk-delete');
@@ -339,13 +339,13 @@ export default function ManageUsersPage() {
                         <SelectItem value="pending">Pending Teams</SelectItem>
                     </SelectContent>
                 </Select>
-                <Select value={instituteFilter} onValueChange={(value) => setInstituteFilter(value as InstituteFilter)}>
+                <Select value={teamIdFilter} onValueChange={(value) => setTeamIdFilter(value as TeamIdFilter)}>
                     <SelectTrigger className="w-full sm:w-[180px]">
-                        <SelectValue placeholder="Filter by Institute" />
+                        <SelectValue placeholder="Filter by Team" />
                     </SelectTrigger>
                     <SelectContent>
-                        <SelectItem value="all">All Institutes</SelectItem>
-                        <SelectItem value="missing">Missing Institute</SelectItem>
+                        <SelectItem value="all">All Team Statuses</SelectItem>
+                        <SelectItem value="missing">Missing Team ID</SelectItem>
                     </SelectContent>
                 </Select>
                  <Button onClick={handleExport} disabled={isExporting} className="w-full sm:w-auto">
