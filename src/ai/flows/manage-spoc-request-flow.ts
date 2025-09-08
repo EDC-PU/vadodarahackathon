@@ -130,8 +130,8 @@ const manageSpocRequestFlow = ai.defineFlow(
         await batch.commit();
 
         // 3. Send an approval email to the SPOC. (Outside of batch)
-        console.log("Sending approval email...");
-        await sendApprovalEmail(spocProfile);
+        // console.log("Sending approval email...");
+        // await sendApprovalEmail(spocProfile);
         
         return { success: true, message: 'SPOC request approved and account enabled. An email has been sent.' };
 
