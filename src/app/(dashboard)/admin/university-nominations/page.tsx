@@ -319,7 +319,10 @@ export default function UniversityNominationsPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Nominated Teams</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            Nominated Teams
+            <Badge variant="secondary">{nominatedTeams.length} nominations received</Badge>
+          </CardTitle>
           <CardDescription>
             The following teams have been nominated by their respective institutes.
           </CardDescription>
@@ -432,3 +435,4 @@ export default function UniversityNominationsPage() {
     </div>
   );
 }
+
