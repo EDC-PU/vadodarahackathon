@@ -36,35 +36,27 @@ import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Checkbox } from "./ui/checkbox";
 
-interface SignupFormProps {
-    inviteToken?: string;
+interface SpocSignupFormProps {
     deadlineMillis?: number | null;
 }
 
 const formSchema = z.object({
-  email: z.string().email({ message: "Invalid email address." }),
+  email: z.string().email({ message: "Invalid email address." }).refine(
+    (email) => email.endsWith('@paruluniversity.ac.in'),
+    { message: "SPOC email must end with @paruluniversity.ac.in" }
+  ),
   password: z.string().min(6, { message: "Password must be at least 6 characters." }),
   confirmPassword: z.string().min(6, { message: "Password must be at least 6 characters." }),
-  role: z.enum(["leader", "member"], { required_error: "Please select a role." }),
-  leaderConfirmation: z.boolean().optional(),
   terms: z.boolean().refine((val) => val === true, {
     message: "You must accept the terms and policy.",
   }),
 }).refine((data) => data.password === data.confirmPassword, {
     message: "Passwords don't match",
     path: ["confirmPassword"],
-}).refine((data) => {
-    if (data.role === 'leader' && !data.leaderConfirmation) {
-        return false;
-    }
-    return true;
-}, {
-    message: "You must confirm you are the team leader.",
-    path: ["leaderConfirmation"],
 });
 
 
-export function SignupForm({ inviteToken, deadlineMillis }: SignupFormProps) {
+export function SpocSignupForm({ deadlineMillis }: SpocSignupFormProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -84,29 +76,19 @@ export function SignupForm({ inviteToken, deadlineMillis }: SignupFormProps) {
       email: "",
       password: "",
       confirmPassword: "",
-      role: inviteToken ? 'member' : 'leader',
-      leaderConfirmation: false,
       terms: false,
     },
   });
-  
-  const roleValue = useWatch({ control: form.control, name: 'role' });
-
-  useEffect(() => {
-    if (inviteToken) {
-        form.setValue('role', 'member');
-    }
-  }, [inviteToken, form]);
 
   const isRegistrationClosed = deadline ? new Date() > deadline : false;
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
-    sessionStorage.setItem('sign-up-role', values.role);
+    sessionStorage.setItem('sign-up-role', 'spoc');
     
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
-      await handleLogin(userCredential.user, inviteToken);
+      await handleLogin(userCredential.user);
     } catch (error: any) {
       console.error("Sign-up Error:", error);
       let errorMessage = "An unexpected error occurred.";
@@ -127,34 +109,36 @@ export function SignupForm({ inviteToken, deadlineMillis }: SignupFormProps) {
 
   async function handleGoogleSignIn() {
     setIsGoogleLoading(true);
-    const selectedRole = form.getValues("role");
     const termsAccepted = form.getValues("terms");
-    const leaderConfirmed = form.getValues("leaderConfirmation");
-
-    if (!selectedRole) {
-        toast({ title: "Role Required", description: "Please select your role before signing in with Google.", variant: "destructive" });
-        setIsGoogleLoading(false);
-        return;
-    }
-     if (selectedRole === 'leader' && !leaderConfirmed) {
-        toast({ title: "Confirmation Required", description: "Please confirm you are the team leader before signing in.", variant: "destructive" });
-        form.setError("leaderConfirmation", { type: "manual", message: "You must confirm you are the team leader." });
-        setIsGoogleLoading(false);
-        return;
-    }
     if (!termsAccepted) {
         toast({ title: "Terms Required", description: "You must accept the terms and privacy policy before signing in.", variant: "destructive" });
         setIsGoogleLoading(false);
         return;
     }
     
-    sessionStorage.setItem('sign-up-role', selectedRole);
+    sessionStorage.setItem('sign-up-role', 'spoc');
     
     const provider = new GoogleAuthProvider();
+    provider.setCustomParameters({
+      'login_hint': 'user@paruluniversity.ac.in'
+    });
+
     try {
       const result = await signInWithPopup(auth, provider);
+      
+      if (!result.user.email?.endsWith('@paruluniversity.ac.in')) {
+        await signOut(auth); // Sign out the user
+        toast({
+          title: "Invalid Email Domain",
+          description: "SPOC registration requires an @paruluniversity.ac.in email address. Please sign in with your official university account.",
+          variant: "destructive",
+          duration: 8000,
+        });
+        setIsGoogleLoading(false);
+        return;
+      }
 
-      await handleLogin(result.user, inviteToken);
+      await handleLogin(result.user);
     } catch (error: any)
        {
       console.error("Google Sign-In Error:", error);
@@ -194,68 +178,14 @@ export function SignupForm({ inviteToken, deadlineMillis }: SignupFormProps) {
       <CardContent className="p-6">
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-             <FormField
-              control={form.control}
-              name="role"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>I am registering as a...</FormLabel>
-                  <Select 
-                    onValueChange={field.onChange} 
-                    value={field.value} 
-                    defaultValue={field.value}
-                    disabled={!!inviteToken}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select your role" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="leader">Team Leader</SelectItem>
-                      {inviteToken && <SelectItem value="member">Team Member (Invited)</SelectItem>}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            {roleValue === 'leader' && (
-                 <FormField
-                    control={form.control}
-                    name="leaderConfirmation"
-                    render={({ field }) => (
-                        <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4 shadow-sm bg-secondary/30">
-                        <FormControl>
-                            <Checkbox
-                            checked={field.value}
-                            onCheckedChange={field.onChange}
-                            disabled={isLoading || isGoogleLoading}
-                            />
-                        </FormControl>
-                        <div className="space-y-1 leading-none">
-                            <FormLabel>
-                                I confirm that I am the Team Leader.
-                            </FormLabel>
-                             <AlertDescription className="text-xs">
-                                If you are a team member, do not register here. Ask your team leader to share the Team Invite Link from their dashboard.
-                            </AlertDescription>
-                            <FormMessage />
-                        </div>
-                        </FormItem>
-                    )}
-                />
-            )}
-            
             <FormField
               control={form.control}
               name="email"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Email</FormLabel>
+                  <FormLabel>University Email</FormLabel>
                   <FormControl>
-                    <Input placeholder="name@example.com" {...field} disabled={isLoading || isGoogleLoading} />
+                    <Input placeholder="name@paruluniversity.ac.in" {...field} disabled={isLoading || isGoogleLoading} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

@@ -14,12 +14,20 @@ export default function LoginPage() {
         <p className="text-muted-foreground">Enter your credentials to access your dashboard.</p>
       </div>
       <LoginForm />
-      <p className="mt-4 text-center text-sm text-muted-foreground">
-        Don&apos;t have an account yet?{" "}
-        <Link href="/register" className="font-medium text-primary hover:underline">
-          Register here
-        </Link>
-      </p>
+      <div className="mt-4 text-center text-sm text-muted-foreground space-y-1">
+        <p>
+            Don&apos;t have an account yet?{" "}
+            <Link href="/register" className="font-medium text-primary hover:underline">
+            Register here
+            </Link>
+        </p>
+         <p>
+            Are you an Institute SPOC?{" "}
+            <Link href="/register-spoc" className="font-medium text-primary hover:underline">
+            Register here
+            </Link>
+        </p>
+      </div>
     </div>
   );
 }
