@@ -18,7 +18,7 @@ const updateJuryPanelFlow = ai.defineFlow(
     inputSchema: UpdateJuryPanelInputSchema,
     outputSchema: UpdateJuryPanelOutputSchema,
   },
-  async ({ panelId, panelName }) => {
+  async ({ panelId, panelName, studentCoordinatorName, studentCoordinatorContact }) => {
     const adminDb = getAdminDb();
     if (!adminDb) {
       return { success: false, message: "Firebase Admin SDK not initialized." };
@@ -28,11 +28,13 @@ const updateJuryPanelFlow = ai.defineFlow(
       const panelRef = adminDb.collection('juryPanels').doc(panelId);
       await panelRef.update({
         name: panelName,
+        studentCoordinatorName: studentCoordinatorName || "",
+        studentCoordinatorContact: studentCoordinatorContact || "",
       });
 
       return {
         success: true,
-        message: 'Panel name updated successfully.',
+        message: 'Panel details updated successfully.',
       };
     } catch (error: any) {
       console.error("Error updating jury panel:", error);

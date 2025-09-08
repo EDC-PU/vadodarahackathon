@@ -70,7 +70,7 @@ const createJuryPanelFlow = ai.defineFlow(
     inputSchema: CreateJuryPanelInputSchema,
     outputSchema: CreateJuryPanelOutputSchema,
   },
-  async ({ panelName, juryMembers, isDraft }) => {
+  async ({ panelName, juryMembers, isDraft, studentCoordinatorName, studentCoordinatorContact }) => {
     const adminAuth = getAdminAuth();
     const adminDb = getAdminDb();
 
@@ -85,6 +85,8 @@ const createJuryPanelFlow = ai.defineFlow(
         await panelDocRef.set({
             id: panelDocRef.id,
             name: panelName,
+            studentCoordinatorName: studentCoordinatorName || "",
+            studentCoordinatorContact: studentCoordinatorContact || "",
             members: juryMembers, // Save details, but no UIDs yet
             status: 'draft',
             createdAt: FieldValue.serverTimestamp(),
@@ -146,6 +148,8 @@ const createJuryPanelFlow = ai.defineFlow(
         await panelDocRef.set({
             id: panelDocRef.id,
             name: panelName,
+            studentCoordinatorName: studentCoordinatorName || "",
+            studentCoordinatorContact: studentCoordinatorContact || "",
             members: newPanelMembers,
             status: 'active',
             createdAt: FieldValue.serverTimestamp(),

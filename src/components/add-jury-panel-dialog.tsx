@@ -44,6 +44,8 @@ const juryMemberSchema = z.object({
 
 const panelSchema = z.object({
   panelName: z.string().min(3, "Panel name must be at least 3 characters."),
+  studentCoordinatorName: z.string().min(2, "Coordinator name is required.").optional().or(z.literal('')),
+  studentCoordinatorContact: z.string().regex(/^\d{10}$/, "A valid 10-digit contact number is required.").optional().or(z.literal('')),
   juryMembers: z.array(juryMemberSchema).length(3, "A panel must have exactly 3 jury members."),
   isDraft: z.boolean().optional(),
 });
@@ -57,6 +59,8 @@ export function AddJuryPanelDialog({ isOpen, onOpenChange, onPanelAdded }: AddJu
     resolver: zodResolver(panelSchema),
     defaultValues: {
       panelName: "",
+      studentCoordinatorName: "",
+      studentCoordinatorContact: "",
       juryMembers: [
         { name: "", email: "", institute: "", contactNumber: "", department: "", highestQualification: "", experience: "" },
         { name: "", email: "", institute: "", contactNumber: "", department: "", highestQualification: "", experience: "" },
@@ -133,6 +137,39 @@ export function AddJuryPanelDialog({ isOpen, onOpenChange, onPanelAdded }: AddJu
                     </FormItem>
                   )}
                 />
+
+                <Separator />
+                <h3 className="font-semibold text-lg">Student Coordinator Details</h3>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                    control={form.control}
+                    name="studentCoordinatorName"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>Coordinator Name (Optional)</FormLabel>
+                        <FormControl>
+                            <Input placeholder="Enter coordinator's name" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                    />
+                    <FormField
+                    control={form.control}
+                    name="studentCoordinatorContact"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>Coordinator Contact (Optional)</FormLabel>
+                        <FormControl>
+                            <Input placeholder="9876543210" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                    />
+                </div>
+
 
                 {fields.map((field, index) => (
                   <div key={field.id} className="space-y-4 border p-4 rounded-md">

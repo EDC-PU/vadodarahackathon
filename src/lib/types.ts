@@ -152,6 +152,8 @@ export interface JuryPanel {
     members: JuryMember[];
     createdAt: any;
     status?: 'draft' | 'active';
+    studentCoordinatorName?: string;
+    studentCoordinatorContact?: string;
 }
 
 
@@ -205,6 +207,8 @@ export type DeleteJuryPanelOutput = z.infer<typeof DeleteJuryPanelOutputSchema>;
 export const UpdateJuryPanelInputSchema = z.object({
   panelId: z.string().describe("The document ID of the jury panel to update."),
   panelName: z.string().min(3, "Panel name must be at least 3 characters."),
+  studentCoordinatorName: z.string().optional(),
+  studentCoordinatorContact: z.string().optional(),
 });
 export type UpdateJuryPanelInput = z.infer<typeof UpdateJuryPanelInputSchema>;
 
@@ -228,6 +232,8 @@ export type JuryMemberInput = z.infer<typeof JuryMemberInputSchema>;
 
 export const CreateJuryPanelInputSchema = z.object({
   panelName: z.string().min(3, "Panel name must be at least 3 characters."),
+  studentCoordinatorName: z.string().optional(),
+  studentCoordinatorContact: z.string().optional(),
   juryMembers: z.array(JuryMemberInputSchema).length(3, "A panel must have exactly 3 jury members."),
   isDraft: z.boolean().optional().describe("If true, saves the panel as a draft without creating users."),
 });
