@@ -298,6 +298,7 @@ export default function UniversityNominationsPage() {
                         />
                     </TableHead>
                     <TableHead>Team Name</TableHead>
+                    <TableHead>Leader Email</TableHead>
                     <TableHead>Institute</TableHead>
                     <TableHead>Assign Panel</TableHead>
                     <TableHead className="w-[200px]">University Team ID</TableHead>
@@ -305,7 +306,9 @@ export default function UniversityNominationsPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {nominatedTeams.map((team) => (
+                  {nominatedTeams.map((team) => {
+                    const leader = allUsers.get(team.leader.uid);
+                    return (
                     <TableRow key={team.id} data-state={selectedTeamIds.includes(team.id) && "selected"}>
                         <TableCell>
                             <Checkbox
@@ -315,6 +318,7 @@ export default function UniversityNominationsPage() {
                             />
                         </TableCell>
                       <TableCell className="font-medium">{team.name}</TableCell>
+                      <TableCell>{leader?.email || 'N/A'}</TableCell>
                       <TableCell>{team.institute}</TableCell>
                       <TableCell>
                           <Select
@@ -365,7 +369,8 @@ export default function UniversityNominationsPage() {
                         </div>
                       </TableCell>
                     </TableRow>
-                  ))}
+                    )
+                  })}
                 </TableBody>
               </Table>
             </div>
