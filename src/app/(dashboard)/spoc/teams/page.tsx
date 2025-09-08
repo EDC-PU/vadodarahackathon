@@ -220,6 +220,7 @@ export default function SpocTeamsPage() {
               leader_name: leader?.name || 'N/A',
               problemstatement_id: ps?.problemStatementId || 'N/A',
               problemstatement_title: team.problemStatementTitle || 'N/A',
+              category: team.category || 'N/A',
             };
         });
         
@@ -432,7 +433,7 @@ export default function SpocTeamsPage() {
          toast({ title: "Error", description: "An unexpected error occurred.", variant: "destructive" });
     } finally {
         setIsProcessing(null);
-        fetchInstituteData();
+        if(user?.institute) fetchAllData(user.institute);
     }
   }
 
@@ -449,7 +450,7 @@ export default function SpocTeamsPage() {
          toast({ title: "Error", description: "An unexpected error occurred.", variant: "destructive" });
     } finally {
         setIsProcessing(null);
-        fetchInstituteData();
+         if(user?.institute) fetchAllData(user.institute);
     }
   }
 
@@ -469,7 +470,7 @@ export default function SpocTeamsPage() {
         if (result.success) {
             toast({ title: "Success", description: result.message });
             setSpocPsSelection(prev => ({ ...prev, [teamId]: '' })); // Clear selection
-            await fetchInstituteData(); // Refresh data
+            if(user?.institute) await fetchAllData(user.institute); // Refresh data
         } else {
             throw new Error(result.message);
         }
@@ -939,5 +940,3 @@ export default function SpocTeamsPage() {
     </div>
   );
 }
-
-
