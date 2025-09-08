@@ -1,5 +1,4 @@
 
-
 import {z} from 'genkit';
 import type {Query} from 'firebase-admin/firestore';
 
@@ -234,11 +233,23 @@ export const DeleteJuryPanelOutputSchema = z.object({
 export type DeleteJuryPanelOutput = z.infer<typeof DeleteJuryPanelOutputSchema>;
 
 // update-jury-panel-flow
+export const JuryMemberEditSchema = z.object({
+    uid: z.string(),
+    name: z.string().min(2, "Name is required."),
+    email: z.string().email(),
+    institute: z.string().min(1, "Institute is required."),
+    contactNumber: z.string().regex(/^\d{10}$/, "A valid 10-digit contact number is required."),
+    department: z.string().min(2, "Department is required."),
+    highestQualification: z.string().min(2, "Highest qualification is required."),
+    experience: z.string().min(1, "Experience is required."),
+});
+
 export const UpdateJuryPanelInputSchema = z.object({
   panelId: z.string().describe("The document ID of the jury panel to update."),
   panelName: z.string().min(3, "Panel name must be at least 3 characters."),
   studentCoordinatorName: z.string().optional(),
   studentCoordinatorContact: z.string().optional(),
+  juryMembers: z.array(JuryMemberEditSchema),
 });
 export type UpdateJuryPanelInput = z.infer<typeof UpdateJuryPanelInputSchema>;
 
