@@ -4,14 +4,14 @@
 import { useEffect, useState } from "react";
 import { db } from "@/lib/firebase";
 import { collection, query, where, onSnapshot, doc, updateDoc, getDocs } from "firebase/firestore";
-import { Team, UserProfile, JuryPanel } from "@/lib/types";
+import { Team, UserProfile, JuryPanel, ProblemStatement } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { Loader2, AlertCircle, Save, Medal, Download, KeyRound, Mail, Copy } from "lucide-react";
+import { Loader2, AlertCircle, Save, Medal, Download, KeyRound, Mail, Copy, ChevronDown } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { isAfter } from "date-fns";
 import { exportEvaluation } from "@/ai/flows/export-evaluation-flow";
@@ -27,6 +27,14 @@ import {
   DialogTrigger,
   DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { Textarea } from "@/components/ui/textarea";
 import { exportTeamsByIds } from "@/ai/flows/export-teams-by-ids-flow";
 
@@ -52,6 +60,7 @@ export default function UniversityNominationsPage() {
   const [nominatedTeams, setNominatedTeams] = useState<Team[]>([]);
   const [allUsers, setAllUsers] = useState<Map<string, UserProfile>>(new Map());
   const [juryPanels, setJuryPanels] = useState<JuryPanel[]>([]);
+  const [problemStatements, setProblemStatements] = useState<ProblemStatement[]>([]);
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState<string | null>(null);
   const [isExporting, setIsExporting] = useState(false);
@@ -59,6 +68,8 @@ export default function UniversityNominationsPage() {
   const [isBulkNominating, setIsBulkNominating] = useState(false);
   const [selectedTeamIds, setSelectedTeamIds] = useState<string[]>([]);
   const [universityTeamIds, setUniversityTeamIds] = useState<Record<string, string>>({});
+  const [showAssignPanel, setShowAssignPanel] = useState(true);
+  const [showSihStatus, setShowSihStatus] = useState(true);
   const { toast } = useToast();
 
   const canModify = isAfter(new Date(), new Date(2025, 8, 6)); // September 6th, 2025
@@ -67,9 +78,14 @@ export default function UniversityNominationsPage() {
     setLoading(true);
     const teamsQuery = query(collection(db, "teams"), where("isNominated", "==", true));
     const panelsQuery = query(collection(db, "juryPanels"), where("status", "==", "active"));
+    const psQuery = query(collection(db, "problemStatements"));
     
     const unsubPanels = onSnapshot(panelsQuery, (snapshot) => {
         setJuryPanels(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as JuryPanel)));
+    });
+
+    const unsubPs = onSnapshot(psQuery, (snapshot) => {
+      setProblemStatements(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ProblemStatement)));
     });
 
     const unsubscribe = onSnapshot(teamsQuery, async (snapshot) => {
@@ -104,6 +120,7 @@ export default function UniversityNominationsPage() {
     return () => {
         unsubscribe();
         unsubPanels();
+        unsubPs();
     };
   }, [toast]);
   
@@ -161,8 +178,7 @@ export default function UniversityNominationsPage() {
     }
     setIsExporting(true);
     try {
-      const problemStatementsSnapshot = await getDocs(collection(db, 'problemStatements'));
-      const problemStatementsMap = new Map(problemStatementsSnapshot.docs.map(doc => [doc.id, doc.data() as any]));
+      const problemStatementsMap = new Map(problemStatements.map(ps => [ps.id, ps]));
 
       const teamsToExport = nominatedTeams.map(team => {
         const leader = allUsers.get(team.leader.uid);
@@ -342,6 +358,30 @@ export default function UniversityNominationsPage() {
               {isExporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Download className="mr-2 h-4 w-4"/>}
               Export for Evaluation
             </Button>
+             <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline">
+                  View
+                  <ChevronDown className="ml-2 h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuLabel>Toggle Columns</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuCheckboxItem
+                  checked={showAssignPanel}
+                  onCheckedChange={setShowAssignPanel}
+                >
+                  Assign Panel
+                </DropdownMenuCheckboxItem>
+                <DropdownMenuCheckboxItem
+                  checked={showSihStatus}
+                  onCheckedChange={setShowSihStatus}
+                >
+                  SIH Status
+                </DropdownMenuCheckboxItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
         </div>
       </header>
 
@@ -393,13 +433,15 @@ export default function UniversityNominationsPage() {
                     <TableHead>Team Name</TableHead>
                     <TableHead>Leader Email</TableHead>
                     <TableHead>Institute</TableHead>
-                    <TableHead>Assign Panel</TableHead>
-                    <TableHead className="w-[300px]">SIH 2025 Selection Status</TableHead>
+                    <TableHead>Problem Statement</TableHead>
+                    {showAssignPanel && <TableHead>Assign Panel</TableHead>}
+                    {showSihStatus && <TableHead className="w-[300px]">SIH 2025 Selection Status</TableHead>}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {nominatedTeams.map((team) => {
                     const leader = allUsers.get(team.leader.uid);
+                    const ps = team.problemStatementId ? problemStatements.find(p => p.id === team.problemStatementId) : null;
                     return (
                     <TableRow key={team.id} data-state={selectedTeamIds.includes(team.id) && "selected"}>
                         <TableCell>
@@ -429,40 +471,45 @@ export default function UniversityNominationsPage() {
                       </TableCell>
                       <TableCell>{leader?.email || 'N/A'}</TableCell>
                       <TableCell>{team.institute}</TableCell>
-                      <TableCell>
-                          <Select
-                            value={team.panelId || ""}
-                            onValueChange={(panelId) => handlePanelAssignment(team.id, panelId)}
-                            disabled={isSaving === `panel-${team.id}`}
-                          >
-                              <SelectTrigger className="w-[200px]">
-                                <SelectValue placeholder="Assign a Panel..." />
-                              </SelectTrigger>
-                              <SelectContent>
-                                  {juryPanels.map(panel => (
-                                      <SelectItem key={panel.id} value={panel.id}>{panel.name}</SelectItem>
-                                  ))}
-                              </SelectContent>
-                          </Select>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                           <Select
-                             defaultValue={team.sihSelectionStatus}
-                             onValueChange={(value) => handleStatusChange(team.id, value as 'university' | 'institute')}
-                             disabled={!canModify || isSaving === `status-${team.id}`}
-                           >
-                              <SelectTrigger>
-                                <SelectValue placeholder="Set Status..." />
-                              </SelectTrigger>
-                              <SelectContent>
-                                  <SelectItem value="university">Selected for SIH (University Level)</SelectItem>
-                                  <SelectItem value="institute">Selected for SIH (Institute Level)</SelectItem>
-                              </SelectContent>
-                           </Select>
-                           {isSaving === `status-${team.id}` && <Loader2 className="h-4 w-4 animate-spin" />}
-                        </div>
-                      </TableCell>
+                      <TableCell className="max-w-xs whitespace-normal">{ps?.title || 'N/A'}</TableCell>
+                      {showAssignPanel && (
+                        <TableCell>
+                            <Select
+                              value={team.panelId || ""}
+                              onValueChange={(panelId) => handlePanelAssignment(team.id, panelId)}
+                              disabled={isSaving === `panel-${team.id}`}
+                            >
+                                <SelectTrigger className="w-[200px]">
+                                  <SelectValue placeholder="Assign a Panel..." />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {juryPanels.map(panel => (
+                                        <SelectItem key={panel.id} value={panel.id}>{panel.name}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </TableCell>
+                      )}
+                      {showSihStatus && (
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <Select
+                                defaultValue={team.sihSelectionStatus}
+                                onValueChange={(value) => handleStatusChange(team.id, value as 'university' | 'institute')}
+                                disabled={!canModify || isSaving === `status-${team.id}`}
+                            >
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Set Status..." />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="university">Selected for SIH (University Level)</SelectItem>
+                                    <SelectItem value="institute">Selected for SIH (Institute Level)</SelectItem>
+                                </SelectContent>
+                            </Select>
+                            {isSaving === `status-${team.id}` && <Loader2 className="h-4 w-4 animate-spin" />}
+                          </div>
+                        </TableCell>
+                      )}
                     </TableRow>
                     )
                   })}
@@ -475,4 +522,3 @@ export default function UniversityNominationsPage() {
     </div>
   );
 }
-
