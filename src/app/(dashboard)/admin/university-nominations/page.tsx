@@ -19,6 +19,24 @@ import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { generateBulkNomination } from "@/ai/flows/generate-bulk-nomination-flow";
 
+async function getUserProfilesInChunks(userIds: string[]): Promise<Map<string, UserProfile>> {
+    const userProfiles = new Map<string, UserProfile>();
+    if (userIds.length === 0) return userProfiles;
+
+    const chunkSize = 30;
+    for (let i = 0; i < userIds.length; i += chunkSize) {
+        const chunk = userIds.slice(i, i + chunkSize);
+        if (chunk.length > 0) {
+            const usersQuery = query(collection(db, 'users'), where('uid', 'in', chunk));
+            const usersSnapshot = await getDocs(usersQuery);
+            usersSnapshot.forEach(doc => {
+                userProfiles.set(doc.id, { uid: doc.id, ...doc.data() } as UserProfile);
+            });
+        }
+    }
+    return userProfiles;
+}
+
 export default function UniversityNominationsPage() {
   const [nominatedTeams, setNominatedTeams] = useState<Team[]>([]);
   const [allUsers, setAllUsers] = useState<Map<string, UserProfile>>(new Map());
@@ -60,12 +78,7 @@ export default function UniversityNominationsPage() {
       });
       
       if (allUserIds.size > 0) {
-        const usersQuery = query(collection(db, 'users'), where('uid', 'in', Array.from(allUserIds)));
-        const usersSnapshot = await getDocs(usersQuery);
-        const usersData = new Map<string, UserProfile>();
-        usersSnapshot.forEach(doc => {
-            usersData.set(doc.id, { uid: doc.id, ...doc.data() } as UserProfile);
-        });
+        const usersData = await getUserProfilesInChunks(Array.from(allUserIds));
         setAllUsers(usersData);
       }
 
@@ -380,3 +393,4 @@ export default function UniversityNominationsPage() {
     </div>
   );
 }
+
