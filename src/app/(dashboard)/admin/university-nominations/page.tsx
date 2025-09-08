@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { db } from "@/lib/firebase";
 import { collection, query, where, onSnapshot, doc, updateDoc, getDocs } from "firebase/firestore";
 import { Team, UserProfile, JuryPanel, ProblemStatement } from "@/lib/types";
@@ -11,7 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { Loader2, AlertCircle, Save, Medal, Download, KeyRound, Mail, Copy, ChevronDown } from "lucide-react";
+import { Loader2, AlertCircle, Save, Medal, Download, KeyRound, Mail, Copy, ChevronDown, ArrowUpDown } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { isAfter } from "date-fns";
 import { exportEvaluation } from "@/ai/flows/export-evaluation-flow";
@@ -70,6 +70,8 @@ export default function UniversityNominationsPage() {
   const [universityTeamIds, setUniversityTeamIds] = useState<Record<string, string>>({});
   const [showAssignPanel, setShowAssignPanel] = useState(false);
   const [showSihStatus, setShowSihStatus] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null);
   const { toast } = useToast();
 
   const canModify = isAfter(new Date(), new Date(2025, 8, 6)); // September 6th, 2025
@@ -307,6 +309,65 @@ export default function UniversityNominationsPage() {
         setSelectedTeamIds(prev => prev.filter(id => id !== teamId));
     }
   };
+  
+  const requestSort = (key: string) => {
+    let direction: 'asc' | 'desc' = 'asc';
+    if (sortConfig && sortConfig.key === key && sortConfig.direction === 'asc') {
+      direction = 'desc';
+    }
+    setSortConfig({ key, direction });
+  };
+
+  const getSortIndicator = (key: string) => {
+    if (!sortConfig || sortConfig.key !== key) {
+      return <ArrowUpDown className="h-4 w-4" />;
+    }
+    return sortConfig.direction === 'asc' ? '▲' : '▼';
+  };
+
+  const filteredAndSortedTeams = useMemo(() => {
+    let sortableTeams = [...nominatedTeams];
+
+    if (searchTerm) {
+      const lowercasedTerm = searchTerm.toLowerCase();
+      sortableTeams = sortableTeams.filter(team => {
+        const leader = allUsers.get(team.leader.uid);
+        const ps = team.problemStatementId ? problemStatements.find(p => p.id === team.problemStatementId) : null;
+        return (
+          team.name.toLowerCase().includes(lowercasedTerm) ||
+          (leader && leader.email.toLowerCase().includes(lowercasedTerm)) ||
+          team.institute.toLowerCase().includes(lowercasedTerm) ||
+          (ps && ps.title.toLowerCase().includes(lowercasedTerm))
+        );
+      });
+    }
+
+    if (sortConfig !== null) {
+      sortableTeams.sort((a, b) => {
+        let aVal: string | undefined;
+        let bVal: string | undefined;
+
+        if (sortConfig.key === 'problemStatementId') {
+          const psA = a.problemStatementId ? problemStatements.find(p => p.id === a.problemStatementId) : null;
+          const psB = b.problemStatementId ? problemStatements.find(p => p.id === b.problemStatementId) : null;
+          aVal = psA?.problemStatementId;
+          bVal = psB?.problemStatementId;
+        } else {
+          aVal = (a as any)[sortConfig.key];
+          bVal = (b as any)[sortConfig.key];
+        }
+
+        if (aVal! < bVal!) {
+          return sortConfig.direction === 'asc' ? -1 : 1;
+        }
+        if (aVal! > bVal!) {
+          return sortConfig.direction === 'asc' ? 1 : -1;
+        }
+        return 0;
+      });
+    }
+    return sortableTeams;
+  }, [nominatedTeams, searchTerm, sortConfig, allUsers, problemStatements]);
 
 
   return (
@@ -397,20 +458,30 @@ export default function UniversityNominationsPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            Nominated Teams
-            <Badge variant="secondary">{nominatedTeams.length} nominations received</Badge>
-          </CardTitle>
-          <CardDescription>
-            The following teams have been nominated by their respective institutes.
-          </CardDescription>
+          <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+              <div>
+                 <CardTitle className="flex items-center gap-2">
+                    Nominated Teams
+                    <Badge variant="secondary">{nominatedTeams.length} nominations received</Badge>
+                </CardTitle>
+                <CardDescription>
+                    The following teams have been nominated by their respective institutes.
+                </CardDescription>
+              </div>
+              <Input
+                placeholder="Search teams..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="max-w-sm"
+              />
+          </div>
         </CardHeader>
         <CardContent>
           {loading ? (
             <div className="flex justify-center items-center h-48">
               <Loader2 className="h-8 w-8 animate-spin" />
             </div>
-          ) : nominatedTeams.length === 0 ? (
+          ) : filteredAndSortedTeams.length === 0 ? (
             <Alert>
               <AlertCircle className="h-4 w-4" />
               <AlertTitle>No Nominated Teams</AlertTitle>
@@ -430,17 +501,29 @@ export default function UniversityNominationsPage() {
                            aria-label="Select all"
                         />
                     </TableHead>
-                    <TableHead>Team Name</TableHead>
+                    <TableHead>
+                        <Button variant="ghost" onClick={() => requestSort('name')}>
+                            Team Name {getSortIndicator('name')}
+                        </Button>
+                    </TableHead>
                     <TableHead>Leader Email</TableHead>
-                    <TableHead>Institute</TableHead>
-                    <TableHead>Problem Statement</TableHead>
+                    <TableHead>
+                         <Button variant="ghost" onClick={() => requestSort('institute')}>
+                            Institute {getSortIndicator('institute')}
+                        </Button>
+                    </TableHead>
+                    <TableHead>
+                        <Button variant="ghost" onClick={() => requestSort('problemStatementId')}>
+                            Problem Statement {getSortIndicator('problemStatementId')}
+                        </Button>
+                    </TableHead>
                     <TableHead>Category</TableHead>
                     {showAssignPanel && <TableHead>Assign Panel</TableHead>}
                     {showSihStatus && <TableHead className="w-[300px]">SIH 2025 Selection Status</TableHead>}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {nominatedTeams.map((team) => {
+                  {filteredAndSortedTeams.map((team) => {
                     const leader = allUsers.get(team.leader.uid);
                     const ps = team.problemStatementId ? problemStatements.find(p => p.id === team.problemStatementId) : null;
                     return (
@@ -528,5 +611,3 @@ export default function UniversityNominationsPage() {
     </div>
   );
 }
-
-    
