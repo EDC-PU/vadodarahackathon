@@ -47,7 +47,6 @@ import { useToast } from "@/hooks/use-toast"
 import { leaveTeam } from "@/ai/flows/leave-team-flow"
 import { Input } from "./ui/input"
 import { useRouter } from "next/navigation"
-import { RegistrationReminderDialog } from "./registration-reminder-dialog"
 import { format } from "date-fns"
 import { ProblemStatementReminderDialog } from "./problem-statement-reminder-dialog"
 
@@ -86,7 +85,6 @@ export default function MemberDashboard() {
   const { toast } = useToast()
   const [inviteLink, setInviteLink] = useState("")
   const router = useRouter()
-  const [showReminder, setShowReminder] = useState(false);
   const [showPsReminder, setShowPsReminder] = useState(false);
   const [instituteData, setInstituteData] = useState<Institute | null>(null);
   const [deadline, setDeadline] = useState<Date | null>(null);
@@ -126,12 +124,6 @@ export default function MemberDashboard() {
 
   useEffect(() => {
     if (loading || authLoading) return;
-
-    const registrationReminderShown = sessionStorage.getItem('registrationReminderShown');
-    if (team && !teamValidation.isRegistered && !registrationReminderShown) {
-        setShowReminder(true);
-        sessionStorage.setItem('registrationReminderShown', 'true');
-    }
     
     const psReminderShown = sessionStorage.getItem('psReminderShown');
     if (team && teamValidation.isEligible && !teamValidation.psSelected && !psReminderShown) {
@@ -313,7 +305,6 @@ export default function MemberDashboard() {
 
   return (
     <div className="p-4 sm:p-6 lg:p-8">
-       <RegistrationReminderDialog isOpen={showReminder} onClose={() => setShowReminder(false)} />
        <ProblemStatementReminderDialog isOpen={showPsReminder} onClose={() => setShowPsReminder(false)} isLeader={false} />
        {user && <IncompleteProfileAlert profile={user} />}
        {team && isDeadlinePassed && team.isLocked !== false && (

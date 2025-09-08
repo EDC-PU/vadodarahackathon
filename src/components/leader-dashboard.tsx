@@ -31,7 +31,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from ".
 import { getTeamInviteLink } from "@/ai/flows/get-team-invite-link-flow";
 import { Badge } from "./ui/badge";
 import { ScrollArea } from "./ui/scroll-area";
-import { RegistrationReminderDialog } from "./registration-reminder-dialog";
 import { format } from "date-fns";
 import { ProblemStatementReminderDialog } from "./problem-statement-reminder-dialog";
 
@@ -166,7 +165,6 @@ export default function LeaderDashboard() {
   const [inviteLink, setInviteLink] = useState<string | null>(null);
   const [isLoadingLink, setIsLoadingLink] = useState(true);
   const [deadline, setDeadline] = useState<Date | null>(null);
-  const [showReminder, setShowReminder] = useState(false);
   const [showPsReminder, setShowPsReminder] = useState(false);
   const [instituteData, setInstituteData] = useState<Institute | null>(null);
   const appBaseUrl = "https://vadodarahackathon.pierc.org";
@@ -223,12 +221,6 @@ export default function LeaderDashboard() {
 
   useEffect(() => {
     if (loading || authLoading) return;
-
-    const registrationReminderShown = sessionStorage.getItem('registrationReminderShown');
-    if (team && !teamValidation.isRegistered && !registrationReminderShown) {
-        setShowReminder(true);
-        sessionStorage.setItem('registrationReminderShown', 'true');
-    }
 
     const psReminderShown = sessionStorage.getItem('psReminderShown');
     if (team && teamValidation.isEligible && !teamValidation.psSelected.isMet && !psReminderShown) {
@@ -439,7 +431,6 @@ export default function LeaderDashboard() {
   
   return (
     <div className="p-4 sm:p-6 lg:p-8">
-        <RegistrationReminderDialog isOpen={showReminder} onClose={() => setShowReminder(false)} />
         <ProblemStatementReminderDialog isOpen={showPsReminder} onClose={() => setShowPsReminder(false)} isLeader={true} />
         {user && <IncompleteProfileAlert profile={user} />}
         {isDeadlinePassed && team.isLocked !== false && (
