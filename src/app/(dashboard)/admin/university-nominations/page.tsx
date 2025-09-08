@@ -28,7 +28,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { exportTeams } from "@/ai/flows/export-teams-flow";
+import { exportTeamsByIds } from "@/ai/flows/export-teams-by-ids-flow";
 
 async function getUserProfilesInChunks(userIds: string[]): Promise<Map<string, UserProfile>> {
     const userProfiles = new Map<string, UserProfile>();
@@ -209,17 +209,13 @@ export default function UniversityNominationsPage() {
             return;
         }
 
-        const result = await exportTeams({
-            institute: 'All Institutes', 
-            category: 'All Categories', 
-            status: 'All Statuses',
-        });
+        const result = await exportTeamsByIds({ teamIds });
         if (result.success && result.fileContent) {
             const blob = new Blob([Buffer.from(result.fileContent, 'base64')], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = 'nominated-teams.xlsx';
+            a.download = result.fileName || 'nominated-teams.xlsx';
             document.body.appendChild(a);
             a.click();
             window.URL.revokeObjectURL(url);
@@ -479,3 +475,4 @@ export default function UniversityNominationsPage() {
     </div>
   );
 }
+

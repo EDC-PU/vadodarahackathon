@@ -35,3 +35,4 @@ import '@/ai/flows/create-jury-panel-flow.ts';
 import '@/ai/flows/delete-jury-panel-flow.ts';
 import '@/ai/flows/update-jury-panel-flow.ts';
 import '@/ai/flows/finalize-jury-panel-flow.ts';
+import '@/ai/flows/export-teams-by-ids-flow.ts';
