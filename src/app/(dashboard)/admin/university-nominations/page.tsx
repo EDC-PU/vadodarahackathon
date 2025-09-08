@@ -68,8 +68,8 @@ export default function UniversityNominationsPage() {
   const [isBulkNominating, setIsBulkNominating] = useState(false);
   const [selectedTeamIds, setSelectedTeamIds] = useState<string[]>([]);
   const [universityTeamIds, setUniversityTeamIds] = useState<Record<string, string>>({});
-  const [showAssignPanel, setShowAssignPanel] = useState(true);
-  const [showSihStatus, setShowSihStatus] = useState(true);
+  const [showAssignPanel, setShowAssignPanel] = useState(false);
+  const [showSihStatus, setShowSihStatus] = useState(false);
   const { toast } = useToast();
 
   const canModify = isAfter(new Date(), new Date(2025, 8, 6)); // September 6th, 2025
@@ -528,3 +528,5 @@ export default function UniversityNominationsPage() {
     </div>
   );
 }
+
+    
