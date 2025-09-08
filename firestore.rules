@@ -1,118 +1,127 @@
-
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Helper Functions
-    function isSignedIn() {
-      return request.auth != null;
+    // Helper functions to safely check roles and relationships
+    function isRole(role) {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == role;
+    }
+    
+    function userExists(userId) {
+      return exists(/databases/$(database)/documents/users/$(userId));
     }
     
     function getUserData(userId) {
       return get(/databases/$(database)/documents/users/$(userId)).data;
     }
 
-    function isRole(role) {
-      return isSignedIn() && getUserData(request.auth.uid).role == role;
+    function isSignedIn() {
+      return request.auth != null;
     }
     
-    function isTeamMember(teamId) {
-        return isSignedIn() && getUserData(request.auth.uid).teamId == teamId;
-    }
-    
-    function isTeamLeader(teamId) {
-        let teamData = get(/databases/$(database)/documents/teams/$(teamId)).data;
-        return isSignedIn() && teamData.leader.uid == request.auth.uid;
+    function isTeamMemberOrLeader(teamId) {
+      let teamData = get(/databases/$(database)/documents/teams/$(teamId)).data;
+      return request.auth.uid == teamData.leader.uid || request.auth.uid in teamData.members.map(mem => mem.uid);
     }
 
-    function isSpocForTeam(teamId) {
-        let teamData = get(/databases/$(database)/documents/teams/$(teamId)).data;
-        let userData = getUserData(request.auth.uid);
-        return isRole('spoc') && userData.institute == teamData.institute;
+    function isSpocForInstitute(instituteName) {
+        return isSignedIn() && getUserData(request.auth.uid).role == 'spoc' && getUserData(request.auth.uid).institute == instituteName;
     }
     
     function isJuryForTeam(teamId) {
         let teamData = get(/databases/$(database)/documents/teams/$(teamId)).data;
-        let userData = getUserData(request.auth.uid);
-        return isRole('jury') && userData.panelId == teamData.panelId;
+        if (!teamData.panelId) {
+          return false;
+        }
+        let panelData = get(/databases/$(database)/documents/juryPanels/$(teamData.panelId)).data;
+        return isSignedIn() && getUserData(request.auth.uid).role == 'jury' && request.auth.uid in panelData.members.map(mem => mem.uid);
     }
     
-    function isTeamLocked(teamId) {
-        let deadline = get(/databases/$(database)/documents/config/event).data.registrationDeadline;
-        let teamData = get(/databases/$(database)/documents/teams/$(teamId)).data;
-        // A team is locked if the deadline has passed AND isLocked is not explicitly false.
-        return request.time > deadline && teamData.isLocked != false;
-    }
-    
-    // Global Read Rules
-    match /{path=**}/documents {
-      allow read: if true;
-    }
-
-    // Collections
+    // User Profiles
     match /users/{userId} {
       allow read: if isSignedIn();
-      allow create: if !isSignedIn();
-      allow update: if request.auth.uid == userId 
-                    || isRole('admin')
-                    || (isRole('spoc') && getUserData(userId).institute == getUserData(request.auth.uid).institute);
+      allow create: if request.auth.uid == userId;
+      allow update: if request.auth.uid == userId || isRole('admin');
       allow delete: if isRole('admin');
     }
 
+    // Teams collection
     match /teams/{teamId} {
-      allow read: if isTeamMember(teamId) || isSpocForTeam(teamId) || isJuryForTeam(teamId) || isRole('admin');
-      // Allow create if user is a leader AND doesn't already have a teamId.
-      allow create: if isRole('leader') && !('teamId' in getUserData(request.auth.uid));
-      // Only allow updates by leader/spoc/admin and respect the lock status
-      allow update: if (isTeamLeader(teamId) || isSpocForTeam(teamId) || isRole('admin')) && !isTeamLocked(teamId);
-      allow delete: if (isSpocForTeam(teamId) || isRole('admin')) && !isTeamLocked(teamId);
+      allow read: if isRole('admin') || isSpocForInstitute(resource.data.institute) || isTeamMemberOrLeader(teamId) || isJuryForTeam(teamId);
+      allow create: if isRole('leader') && request.auth.uid == request.resource.data.leader.uid && getUserData(request.auth.uid).teamId == null;
+      allow update: if isRole('admin') || isSpocForInstitute(resource.data.institute) || (isTeamMemberOrLeader(teamId) && !isDeadlinePassed(request));
+      allow delete: if isRole('admin') || isSpocForInstitute(resource.data.institute);
+    }
+    
+    function isDeadlinePassed(req) {
+        let deadline = get(/databases/$(database)/documents/config/event).data.registrationDeadline;
+        return req.time > deadline;
     }
 
+    // Problem Statements
     match /problemStatements/{psId} {
-      allow read: if true;
+      allow read: if isSignedIn();
+      allow create, update, delete: if isRole('admin');
+    }
+
+    // Announcements
+    match /announcements/{announcementId} {
+        allow read: if isSignedIn();
+        allow create: if isRole('admin') || isRole('spoc');
+        allow delete: if isRole('admin') || isRole('spoc');
+    }
+    
+    // SPOC can manage their institute's departments
+    match /departments/{instituteName} {
+        allow read: if isSignedIn();
+        allow write: if isRole('admin') || isSpocForInstitute(instituteName);
+    }
+
+    // Admins can manage institutes
+    match /institutes/{instituteId} {
+      allow read: if isSignedIn();
       allow write: if isRole('admin');
     }
     
-    match /institutes/{instId} {
-        allow read: if true;
-        allow write: if isRole('admin') || (isRole('spoc') && getUserData(request.auth.uid).institute == request.resource.data.name);
-    }
-
-    match /departments/{deptId} {
-        allow read: if true;
-        allow write: if isRole('admin') || isRole('spoc');
-    }
-
+    // Team Invites
     match /teamInvites/{inviteId} {
-      allow read: if true;
-      allow create: if isRole('leader') || isRole('spoc');
-      allow write: if false; 
+      allow read: if isSignedIn();
+      allow create: if isRole('leader');
+      allow update, delete: if isRole('admin') || isRole('spoc'); // Or leader of the team
     }
 
-    match /announcements/{announcementId} {
-      allow read: if true;
+    // Notifications
+    match /notifications/{notificationId} {
+      allow read, update: if isSignedIn() && request.auth.uid == resource.data.recipientUid;
       allow create, delete: if isRole('admin') || isRole('spoc');
     }
-
-    match /notifications/{notificationId} {
-        allow read, update: if isSignedIn() && request.auth.uid == resource.data.recipientUid;
-        allow create: if isSignedIn();
-    }
     
-    match /juryPanels/{panelId} {
-        allow read, write: if isRole('admin');
-    }
-
-    match /config/{docId} {
-      allow read: if true;
-      allow write: if isRole('admin');
-    }
-    
+    // Logs (write-only for backend, read for admins)
     match /logs/{logId} {
-        allow read: if isRole('admin');
-        allow create: if isSignedIn();
+      allow read: if isRole('admin');
+      allow write: if isSignedIn(); // Backend services are signed in
     }
     
+    // Config (read for all, write for admins)
+    match /config/{configId} {
+        allow read: if isSignedIn();
+        allow write: if isRole('admin');
+    }
+    
+    // Jury Panels
+    match /juryPanels/{panelId} {
+        allow read: if isRole('admin') || isRole('jury');
+        allow write: if isRole('admin');
+    }
+    
+    // Allow admins to list users and teams for their dashboards
+    match /users/{userId} {
+      allow list: if isRole('admin');
+    }
+    
+    match /teams/{teamId} {
+        allow list: if isRole('admin') || isRole('spoc');
+    }
   }
 }
