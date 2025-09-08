@@ -46,13 +46,16 @@ const deleteJuryPanelFlow = ai.defineFlow(
 
         // 2. Delete the jury member user documents and Auth accounts
         for (const member of panelData.members) {
-            const userRef = adminDb.collection('users').doc(member.uid);
-            batch.delete(userRef);
-            try {
-                await adminAuth.deleteUser(member.uid);
-            } catch (error: any) {
-                // It's possible the auth user was already deleted. Log a warning but continue.
-                console.warn(`Could not delete auth user ${member.uid} (may already be deleted): ${error.message}`);
+            // It's possible a member has a draft entry without a UID
+            if (member.uid) {
+                const userRef = adminDb.collection('users').doc(member.uid);
+                batch.delete(userRef);
+                try {
+                    await adminAuth.deleteUser(member.uid);
+                } catch (error: any) {
+                    // It's possible the auth user was already deleted. Log a warning but continue.
+                    console.warn(`Could not delete auth user ${member.uid} (may already be deleted): ${error.message}`);
+                }
             }
         }
         
