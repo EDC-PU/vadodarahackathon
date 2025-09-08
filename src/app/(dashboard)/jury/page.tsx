@@ -150,80 +150,76 @@ export default function JuryDashboardPage() {
                 <p className="text-muted-foreground">Welcome, {user?.name}. Here are your assigned teams for evaluation.</p>
             </header>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                <div className="lg:col-span-2">
-                    <Card>
-                        <CardHeader className="flex flex-row justify-between items-center">
-                          <div>
-                            <CardTitle className="flex items-center gap-2"><ClipboardList /> Assigned Teams for Evaluation</CardTitle>
-                            <CardDescription>Review the details of the teams you are assigned to evaluate.</CardDescription>
-                          </div>
-                           <Button onClick={handleExportEvaluation} disabled={isExporting}>
-                                {isExporting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Download className="h-4 w-4 mr-2" />}
-                                Download Sheet
-                            </Button>
-                        </CardHeader>
-                        <CardContent>
-                            <ScrollArea className="h-[60vh] border rounded-md">
-                                <Table>
-                                    <TableHeader>
-                                        <TableRow>
-                                            <TableHead>Team Name</TableHead>
-                                            <TableHead>Institute</TableHead>
-                                            <TableHead>Problem Statement</TableHead>
-                                            <TableHead>Category</TableHead>
-                                        </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                        {assignedTeams.length > 0 ? (
-                                            assignedTeams.map(team => (
-                                                <TableRow key={team.id}>
-                                                    <TableCell className="font-medium">{team.name}</TableCell>
-                                                    <TableCell>{team.institute}</TableCell>
-                                                    <TableCell>{team.problemStatementTitle}</TableCell>
-                                                    <TableCell><Badge variant={team.category === 'Software' ? 'default' : 'secondary'}>{team.category}</Badge></TableCell>
-                                                </TableRow>
-                                            ))
-                                        ) : (
-                                            <TableRow>
-                                                <TableCell colSpan={4} className="text-center h-24">
-                                                    You have not been assigned any teams for evaluation yet.
-                                                </TableCell>
+            <div className="space-y-8">
+                <Card>
+                    <CardHeader className="flex flex-row justify-between items-center">
+                        <div>
+                        <CardTitle className="flex items-center gap-2"><ClipboardList /> Assigned Teams for Evaluation</CardTitle>
+                        <CardDescription>Review the details of the teams you are assigned to evaluate.</CardDescription>
+                        </div>
+                        <Button onClick={handleExportEvaluation} disabled={isExporting}>
+                            {isExporting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Download className="h-4 w-4 mr-2" />}
+                            Download Sheet
+                        </Button>
+                    </CardHeader>
+                    <CardContent>
+                        <ScrollArea className="h-[60vh] border rounded-md">
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>Team Name</TableHead>
+                                        <TableHead>Institute</TableHead>
+                                        <TableHead>Problem Statement</TableHead>
+                                        <TableHead>Category</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {assignedTeams.length > 0 ? (
+                                        assignedTeams.map(team => (
+                                            <TableRow key={team.id}>
+                                                <TableCell className="font-medium">{team.name}</TableCell>
+                                                <TableCell>{team.institute}</TableCell>
+                                                <TableCell>{team.problemStatementTitle}</TableCell>
+                                                <TableCell><Badge variant={team.category === 'Software' ? 'default' : 'secondary'}>{team.category}</Badge></TableCell>
                                             </TableRow>
-                                        )}
-                                    </TableBody>
-                                </Table>
-                            </ScrollArea>
+                                        ))
+                                    ) : (
+                                        <TableRow>
+                                            <TableCell colSpan={4} className="text-center h-24">
+                                                You have not been assigned any teams for evaluation yet.
+                                            </TableCell>
+                                        </TableRow>
+                                    )}
+                                </TableBody>
+                            </Table>
+                        </ScrollArea>
+                    </CardContent>
+                </Card>
+
+                {panel && (
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="flex items-center gap-2"><Users /> Your Jury Panel: {panel.name}</CardTitle>
+                            <CardDescription>These are the members of your evaluation panel.</CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                            {panelMembers.map(member => (
+                                <div key={member.uid} className="p-3 border rounded-md bg-secondary/30">
+                                    <p className="font-semibold flex items-center gap-2">
+                                        <UserCircle className="h-4 w-4"/> {member.name} {member.uid === user?.uid && <span className="text-xs text-primary font-normal">(You)</span>}
+                                    </p>
+                                    <p className="text-sm text-muted-foreground">{member.email}</p>
+                                        <div className="mt-2 text-xs space-y-1 text-muted-foreground">
+                                        <p className="flex items-center gap-1.5"><Building className="h-3 w-3" /> {member.institute}</p>
+                                        <p className="flex items-center gap-1.5"><Phone className="h-3 w-3" /> {member.contactNumber || 'N/A'}</p>
+                                        <p className="flex items-center gap-1.5"><Briefcase className="h-3 w-3" /> {member.department || 'N/A'}</p>
+                                        <p className="flex items-center gap-1.5"><GraduationCap className="h-3 w-3" /> {member.highestQualification || 'N/A'} | {member.experience || 'N/A'} yrs exp</p>
+                                    </div>
+                                </div>
+                            ))}
                         </CardContent>
                     </Card>
-                </div>
-
-                <div className="space-y-8">
-                    {panel && (
-                        <Card>
-                            <CardHeader>
-                                <CardTitle className="flex items-center gap-2"><Users /> Your Jury Panel: {panel.name}</CardTitle>
-                                <CardDescription>These are the members of your evaluation panel.</CardDescription>
-                            </CardHeader>
-                            <CardContent className="space-y-4">
-                                {panelMembers.map(member => (
-                                    <div key={member.uid} className="p-3 border rounded-md bg-secondary/30">
-                                        <p className="font-semibold flex items-center gap-2">
-                                            <UserCircle className="h-4 w-4"/> {member.name} {member.uid === user?.uid && <span className="text-xs text-primary font-normal">(You)</span>}
-                                        </p>
-                                        <p className="text-sm text-muted-foreground">{member.email}</p>
-                                         <div className="mt-2 text-xs space-y-1 text-muted-foreground">
-                                            <p className="flex items-center gap-1.5"><Building className="h-3 w-3" /> {member.institute}</p>
-                                            <p className="flex items-center gap-1.5"><Phone className="h-3 w-3" /> {member.contactNumber || 'N/A'}</p>
-                                            <p className="flex items-center gap-1.5"><Briefcase className="h-3 w-3" /> {member.department || 'N/A'}</p>
-                                            <p className="flex items-center gap-1.5"><GraduationCap className="h-3 w-3" /> {member.highestQualification || 'N/A'} | {member.experience || 'N/A'} yrs exp</p>
-                                        </div>
-                                    </div>
-                                ))}
-                            </CardContent>
-                        </Card>
-                    )}
-                </div>
+                )}
             </div>
         </div>
     );
