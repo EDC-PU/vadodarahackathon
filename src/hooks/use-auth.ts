@@ -120,7 +120,7 @@ export function useAuth() {
     
     if (!user) {
         // If there's no user and we're not on a public page, redirect to login
-        const publicPaths = ['/login', '/register', '/forgot-password', '/', '/privacy', '/terms'];
+        const publicPaths = ['/login', '/register', '/register-spoc', '/forgot-password', '/', '/privacy', '/terms'];
         if (!publicPaths.includes(pathname) && !pathname.startsWith('/_next/') && !pathname.startsWith('/join/') && !pathname.startsWith('/profile/')) {
             console.log(`Redirect Check: No user found, redirecting from protected path ${pathname} to /login.`);
             performRedirect('/login');
