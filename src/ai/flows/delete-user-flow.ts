@@ -41,12 +41,23 @@ const deleteUserFlow = ai.defineFlow(
         // If user document doesn't exist, they might still have an auth account.
         // Proceed to delete from Auth.
         console.warn(`User document for UID ${uid} not found in Firestore. Attempting to delete from Auth.`);
-        await adminAuth.deleteUser(uid);
-        console.log(`Successfully deleted orphaned user from Firebase Authentication for UID: ${uid}`);
-        return { success: true, message: 'User has been successfully deleted.' };
+        try {
+            await adminAuth.deleteUser(uid);
+            console.log(`Successfully deleted orphaned user from Firebase Authentication for UID: ${uid}`);
+            return { success: true, message: 'User has been successfully deleted.' };
+        } catch(authError: any) {
+            if (authError.code === 'auth/user-not-found') {
+                 return { success: false, message: "User not found." };
+            }
+            throw authError;
+        }
       }
       
       const userProfile = userDoc.data() as UserProfile;
+
+      if (userProfile.role === 'admin') {
+        return { success: false, message: 'Admin accounts cannot be deleted.' };
+      }
       
       const batch = adminDb.batch();
 

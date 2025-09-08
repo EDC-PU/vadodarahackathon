@@ -46,14 +46,42 @@ const bulkDeleteUsersAndTeamsFlow = ai.defineFlow(
 
     let deletedUsersCount = 0;
     let deletedTeamsCount = 0;
+    const finalUserIdsToDelete = [...userIds];
 
     try {
+      // First pass: Check for admin accounts and remove them from the deletion list
+      const userDocs = await Promise.all(userIds.map(id => adminDb.collection('users').doc(id).get()));
+      const adminUsers = [];
+      
+      for (const userDoc of userDocs) {
+        if (userDoc.exists) {
+          const userData = userDoc.data() as UserProfile;
+          if (userData.role === 'admin') {
+            adminUsers.push(userData.email);
+            // Remove admin from the list of users to be deleted
+            const index = finalUserIdsToDelete.indexOf(userData.uid);
+            if (index > -1) {
+              finalUserIdsToDelete.splice(index, 1);
+            }
+          }
+        }
+      }
+
+      if (adminUsers.length > 0) {
+          toast({ title: "Admins Skipped", description: `The following admin accounts were skipped and not deleted: ${adminUsers.join(', ')}`, variant: "default" });
+      }
+
+      if(finalUserIdsToDelete.length === 0) {
+        return { success: true, message: "No users were deleted. Admins were skipped." };
+      }
+      
+
       const batch = adminDb.batch();
       const teamsToDelete = new Set<string>();
       const usersInDeletedTeams = new Set<string>();
 
-      // First pass: identify users and teams to delete
-      for (const userId of userIds) {
+      // Second pass: identify users and teams to delete from the filtered list
+      for (const userId of finalUserIdsToDelete) {
         const userRef = adminDb.collection('users').doc(userId);
         const userDoc = await userRef.get();
         if (userDoc.exists) {
@@ -65,7 +93,7 @@ const bulkDeleteUsersAndTeamsFlow = ai.defineFlow(
         }
       }
 
-      // Second pass: process teams marked for deletion
+      // Third pass: process teams marked for deletion
       for (const teamId of teamsToDelete) {
         const teamRef = adminDb.collection('teams').doc(teamId);
         const teamDoc = await teamRef.get();
@@ -80,12 +108,12 @@ const bulkDeleteUsersAndTeamsFlow = ai.defineFlow(
         }
       }
       
-      // Third pass: Update or delete all affected user profiles
-      const allAffectedUsers = new Set([...userIds, ...usersInDeletedTeams]);
+      // Fourth pass: Update or delete all affected user profiles
+      const allAffectedUsers = new Set([...finalUserIdsToDelete, ...usersInDeletedTeams]);
 
       for (const userId of allAffectedUsers) {
          const userRef = adminDb.collection('users').doc(userId);
-         if (userIds.includes(userId)) {
+         if (finalUserIdsToDelete.includes(userId)) {
              // This user was explicitly selected for deletion
              batch.delete(userRef);
          } else if (usersInDeletedTeams.has(userId)) {
@@ -97,7 +125,7 @@ const bulkDeleteUsersAndTeamsFlow = ai.defineFlow(
       await batch.commit();
 
       // Finally, delete the selected users from Firebase Auth
-      for (const userId of userIds) {
+      for (const userId of finalUserIdsToDelete) {
         try {
           await adminAuth.deleteUser(userId);
           deletedUsersCount++;
@@ -106,9 +134,14 @@ const bulkDeleteUsersAndTeamsFlow = ai.defineFlow(
         }
       }
 
+      let message = `Successfully deleted ${deletedUsersCount} user(s) and ${deletedTeamsCount} team(s).`;
+      if (adminUsers.length > 0) {
+        message += ` Skipped ${adminUsers.length} admin(s).`;
+      }
+      
       return {
         success: true,
-        message: `Successfully deleted ${deletedUsersCount} user(s) and ${deletedTeamsCount} team(s).`,
+        message,
         deletedUsers: deletedUsersCount,
         deletedTeams: deletedTeamsCount,
       };
