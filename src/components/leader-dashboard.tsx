@@ -4,8 +4,8 @@
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Team, UserProfile, TeamMember, TeamInvite, Notification, Institute } from "@/lib/types";
-import { AlertCircle, CheckCircle, PlusCircle, Trash2, User, Loader2, FileText, Pencil, Users2, Badge as BadgeIcon, ArrowUpDown, Link as LinkIcon, Copy, RefreshCw, Bell, X as CloseIcon, Download, Calendar, Lock, Phone, Mail } from "lucide-react";
+import { Team, UserProfile, TeamMember, TeamInvite, Notification, Institute, Mentor } from "@/lib/types";
+import { AlertCircle, CheckCircle, PlusCircle, Trash2, User, Loader2, FileText, Pencil, Users2, Badge as BadgeIcon, ArrowUpDown, Link as LinkIcon, Copy, RefreshCw, Bell, X as CloseIcon, Download, Calendar, Lock, Phone, Mail, GraduationCap } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "./ui/alert";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
@@ -32,7 +32,8 @@ import { getTeamInviteLink } from "@/ai/flows/get-team-invite-link-flow";
 import { Badge } from "./ui/badge";
 import { ScrollArea } from "./ui/scroll-area";
 import { format } from "date-fns";
-import { ProblemStatementReminderDialog } from "./problem-statement-reminder-dialog";
+import { MentorDetailsForm } from "./mentor-details-form";
+
 
 type SortKey = 'name' | 'role' | 'email' | 'contactNumber' | 'enrollmentNumber' | 'yearOfStudy' | 'semester';
 type SortDirection = 'asc' | 'desc';
@@ -165,7 +166,6 @@ export default function LeaderDashboard() {
   const [inviteLink, setInviteLink] = useState<string | null>(null);
   const [isLoadingLink, setIsLoadingLink] = useState(true);
   const [deadline, setDeadline] = useState<Date | null>(null);
-  const [showPsReminder, setShowPsReminder] = useState(false);
   const [instituteData, setInstituteData] = useState<Institute | null>(null);
   const appBaseUrl = "https://vadodarahackathon.pierc.org";
 
@@ -217,17 +217,6 @@ export default function LeaderDashboard() {
         isRegistered: isEligible && psSelected,
     };
   }, [team, teamMembers]);
-
-
-  useEffect(() => {
-    if (loading || authLoading) return;
-
-    const psReminderShown = sessionStorage.getItem('psReminderShown');
-    if (team && teamValidation.isEligible && !teamValidation.psSelected.isMet && !psReminderShown) {
-        setShowPsReminder(true);
-        sessionStorage.setItem('psReminderShown', 'true');
-    }
-  }, [loading, authLoading, team, teamValidation]);
 
 
   useEffect(() => {
@@ -431,7 +420,6 @@ export default function LeaderDashboard() {
   
   return (
     <div className="p-4 sm:p-6 lg:p-8">
-        <ProblemStatementReminderDialog isOpen={showPsReminder} onClose={() => setShowPsReminder(false)} isLeader={true} />
         {user && <IncompleteProfileAlert profile={user} />}
         {isDeadlinePassed && team.isLocked !== false && (
             <Alert variant="destructive" className="mb-8">
@@ -804,6 +792,21 @@ export default function LeaderDashboard() {
                         )}
                     </CardContent>
                 </Card>
+
+                 {team.sihSelectionStatus && (
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="flex items-center gap-2"><GraduationCap /> Mentor Details</CardTitle>
+                            <CardDescription>
+                                Your team has been nominated for SIH. Please provide your mentor's details. The mentor must be from Parul University.
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                           <MentorDetailsForm team={team} canEdit={canEdit} />
+                        </CardContent>
+                    </Card>
+                )}
+
 
                 <Card>
                     <CardHeader>

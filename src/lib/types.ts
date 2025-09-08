@@ -98,6 +98,14 @@ export interface ProblemStatement {
   contactInfo?: string;
 }
 
+export interface Mentor {
+    name: string;
+    department: string;
+    phoneNumber: string;
+    email: string;
+    gender: "M" | "F" | "O";
+}
+
 export interface Team {
   id: string;
   name: string;
@@ -119,6 +127,7 @@ export interface Team {
   ssihEnrolled?: boolean;
   isLocked?: boolean;
   panelId?: string;
+  mentor?: Mentor;
 }
 
 export interface Institute {
@@ -177,6 +186,27 @@ export interface Announcement {
 
 
 // Schemas for Genkit Flows
+
+// set-mentor-details-flow
+export const SetMentorDetailsInputSchema = z.object({
+  teamId: z.string().describe("The document ID of the team."),
+  leaderUid: z.string().describe("The UID of the user performing the action, to verify they are the leader."),
+  mentor: z.object({
+    name: z.string().min(2, "Mentor name is required."),
+    department: z.string().min(1, "Department is required."),
+    phoneNumber: z.string().regex(/^\d{10}$/, "A valid 10-digit phone number is required."),
+    email: z.string().email("A valid email is required."),
+    gender: z.enum(["M", "F", "O"], { required_error: "Gender is required." }),
+  }),
+});
+export type SetMentorDetailsInput = z.infer<typeof SetMentorDetailsInputSchema>;
+
+export const SetMentorDetailsOutputSchema = z.object({
+  success: z.boolean(),
+  message: z.string(),
+});
+export type SetMentorDetailsOutput = z.infer<typeof SetMentorDetailsOutputSchema>;
+
 
 // finalize-jury-panel-flow
 export const FinalizeJuryPanelInputSchema = z.object({
