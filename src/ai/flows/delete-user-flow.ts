@@ -55,8 +55,8 @@ const deleteUserFlow = ai.defineFlow(
       
       const userProfile = userDoc.data() as UserProfile;
 
-      if (userProfile.role === 'admin') {
-        return { success: false, message: 'Admin accounts cannot be deleted.' };
+      if (userProfile.role === 'admin' || userProfile.role === 'spoc') {
+        return { success: false, message: 'Admin and SPOC accounts cannot be deleted.' };
       }
       
       const batch = adminDb.batch();

@@ -47,18 +47,18 @@ const bulkDeleteUsersAndTeamsFlow = ai.defineFlow(
     let deletedUsersCount = 0;
     let deletedTeamsCount = 0;
     const finalUserIdsToDelete = [...userIds];
-    const adminUsersSkipped: string[] = [];
+    const skippedUsers: { email: string, role: string }[] = [];
 
     try {
-      // First pass: Check for admin accounts and remove them from the deletion list
+      // First pass: Check for admin/spoc accounts and remove them from the deletion list
       const userDocs = await Promise.all(userIds.map(id => adminDb.collection('users').doc(id).get()));
       
       for (const userDoc of userDocs) {
         if (userDoc.exists) {
           const userData = userDoc.data() as UserProfile;
-          if (userData.role === 'admin') {
-            adminUsersSkipped.push(userData.email);
-            // Remove admin from the list of users to be deleted
+          if (userData.role === 'admin' || userData.role === 'spoc') {
+            skippedUsers.push({ email: userData.email, role: userData.role! });
+            // Remove protected user from the list of users to be deleted
             const index = finalUserIdsToDelete.indexOf(userData.uid);
             if (index > -1) {
               finalUserIdsToDelete.splice(index, 1);
@@ -68,7 +68,8 @@ const bulkDeleteUsersAndTeamsFlow = ai.defineFlow(
       }
 
       if(finalUserIdsToDelete.length === 0) {
-        return { success: true, message: `No users were deleted. Skipped ${adminUsersSkipped.length} admin(s).` };
+        const skippedMessage = skippedUsers.map(u => `${u.email} (${u.role})`).join(', ');
+        return { success: true, message: `No users were deleted. Skipped ${skippedUsers.length} protected account(s): ${skippedMessage}.` };
       }
       
       const batch = adminDb.batch();
@@ -130,8 +131,9 @@ const bulkDeleteUsersAndTeamsFlow = ai.defineFlow(
       }
 
       let message = `Successfully deleted ${deletedUsersCount} user(s) and ${deletedTeamsCount} team(s).`;
-      if (adminUsersSkipped.length > 0) {
-        message += ` Skipped ${adminUsersSkipped.length} admin(s): ${adminUsersSkipped.join(', ')}.`;
+      if (skippedUsers.length > 0) {
+        const skippedMessage = skippedUsers.map(u => `${u.email} (${u.role})`).join(', ');
+        message += ` Skipped ${skippedUsers.length} protected account(s): ${skippedMessage}.`;
       }
       
       return {
