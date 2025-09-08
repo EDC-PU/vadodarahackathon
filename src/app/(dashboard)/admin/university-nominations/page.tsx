@@ -11,13 +11,23 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { Loader2, AlertCircle, Save, Medal, Download, KeyRound } from "lucide-react";
+import { Loader2, AlertCircle, Save, Medal, Download, KeyRound, Mail, Copy } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { isAfter } from "date-fns";
 import { exportEvaluation } from "@/ai/flows/export-evaluation-flow";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { generateBulkNomination } from "@/ai/flows/generate-bulk-nomination-flow";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
 
 async function getUserProfilesInChunks(userIds: string[]): Promise<Map<string, UserProfile>> {
     const userProfiles = new Map<string, UserProfile>();
@@ -223,6 +233,8 @@ export default function UniversityNominationsPage() {
         setIsBulkNominating(false);
     }
   };
+  
+  const allLeaderEmails = nominatedTeams.map(team => allUsers.get(team.leader.uid)?.email).filter(Boolean).join(', ');
 
   const getStatusVariant = (status?: string) => {
     if (status === 'university') return 'default';
@@ -261,6 +273,33 @@ export default function UniversityNominationsPage() {
                     Download Forms ({selectedTeamIds.length})
                 </Button>
             )}
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button variant="outline"><Mail className="mr-2 h-4 w-4" /> Copy Leader Emails</Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Leader Email Addresses</DialogTitle>
+                  <DialogDescription>
+                    Here is a list of all leader emails for the nominated teams.
+                  </DialogDescription>
+                </DialogHeader>
+                <Textarea
+                  readOnly
+                  value={allLeaderEmails}
+                  rows={10}
+                  className="font-mono text-xs"
+                />
+                <DialogFooter>
+                  <Button onClick={() => {
+                    navigator.clipboard.writeText(allLeaderEmails);
+                    toast({ title: "Copied!", description: "All leader emails have been copied to your clipboard." });
+                  }}>
+                    <Copy className="mr-2 h-4 w-4" /> Copy to Clipboard
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
             <Button onClick={handleExport} disabled={isExporting}>
               {isExporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Download className="mr-2 h-4 w-4"/>}
               Export for Evaluation
@@ -393,4 +432,3 @@ export default function UniversityNominationsPage() {
     </div>
   );
 }
-
