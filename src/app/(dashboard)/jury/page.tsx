@@ -110,7 +110,7 @@ export default function JuryDashboardPage() {
             const teamsToExport = assignedTeams.map(team => {
                 const ps = team.problemStatementId ? problemStatementsMap.get(team.problemStatementId) : null;
                 return {
-                  team_number: team.teamNumber || 'N/A',
+                  universityTeamId: team.universityTeamId || 'N/A',
                   team_name: team.name,
                   leader_name: team.leader.name,
                   problemstatement_id: ps?.problemStatementId || 'N/A',
@@ -212,47 +212,45 @@ export default function JuryDashboardPage() {
                 </Card>
 
                 {panel && (
-                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                        <Card>
-                            <CardHeader>
-                                <CardTitle className="flex items-center gap-2"><Users /> Your Jury Panel: {panel.name}</CardTitle>
-                                <CardDescription>These are the members of your evaluation panel.</CardDescription>
-                            </CardHeader>
-                            <CardContent className="space-y-4">
-                                {panelMembers.map(member => (
-                                    <div key={member.uid} className="p-3 border rounded-md bg-secondary/30">
-                                        <p className="font-semibold flex items-center gap-2">
-                                            <UserCircle className="h-4 w-4"/> {member.name} {member.uid === user?.uid && <span className="text-xs text-primary font-normal">(You)</span>}
-                                        </p>
-                                        <p className="text-sm text-muted-foreground">{member.email}</p>
-                                            <div className="mt-2 text-xs space-y-1 text-muted-foreground">
-                                            <p className="flex items-center gap-1.5"><Building className="h-3 w-3" /> {member.institute}</p>
-                                            <p className="flex items-center gap-1.5"><Phone className="h-3 w-3" /> {member.contactNumber || 'N/A'}</p>
-                                            <p className="flex items-center gap-1.5"><Briefcase className="h-3 w-3" /> {member.department || 'N/A'}</p>
-                                            <p className="flex items-center gap-1.5"><GraduationCap className="h-3 w-3" /> {member.highestQualification || 'N/A'} | {member.experience || 'N/A'} yrs exp</p>
-                                        </div>
+                     <Card>
+                        <CardHeader>
+                            <CardTitle className="flex items-center gap-2"><Users /> Your Jury Panel: {panel.name}</CardTitle>
+                            <CardDescription>These are the members of your evaluation panel.</CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                            {panelMembers.map(member => (
+                                <div key={member.uid} className="p-3 border rounded-md bg-secondary/30">
+                                    <p className="font-semibold flex items-center gap-2">
+                                        <UserCircle className="h-4 w-4"/> {member.name} {member.uid === user?.uid && <span className="text-xs text-primary font-normal">(You)</span>}
+                                    </p>
+                                    <p className="text-sm text-muted-foreground">{member.email}</p>
+                                        <div className="mt-2 text-xs space-y-1 text-muted-foreground">
+                                        <p className="flex items-center gap-1.5"><Building className="h-3 w-3" /> {member.institute}</p>
+                                        <p className="flex items-center gap-1.5"><Phone className="h-3 w-3" /> {member.contactNumber || 'N/A'}</p>
+                                        <p className="flex items-center gap-1.5"><Briefcase className="h-3 w-3" /> {member.department || 'N/A'}</p>
+                                        <p className="flex items-center gap-1.5"><GraduationCap className="h-3 w-3" /> {member.highestQualification || 'N/A'} | {member.experience || 'N/A'} yrs exp</p>
                                     </div>
-                                ))}
-                            </CardContent>
-                        </Card>
-                         {panel.studentCoordinatorName && (
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle className="flex items-center gap-2"><UserCircle /> Student Coordinator</CardTitle>
-                                    <CardDescription>Your point of contact for assistance.</CardDescription>
-                                </CardHeader>
-                                <CardContent className="space-y-2">
-                                    <p className="font-semibold text-lg">{panel.studentCoordinatorName}</p>
-                                    {panel.studentCoordinatorContact && (
-                                        <a href={`https://wa.me/91${panel.studentCoordinatorContact.replace(/\s/g, '')}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-muted-foreground hover:text-primary">
-                                            <Phone className="h-4 w-4" />
-                                            {panel.studentCoordinatorContact}
-                                        </a>
-                                    )}
-                                </CardContent>
-                            </Card>
-                        )}
-                    </div>
+                                </div>
+                            ))}
+                        </CardContent>
+                    </Card>
+                )}
+                 {panel?.studentCoordinatorName && (
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="flex items-center gap-2"><UserCircle /> Student Coordinator</CardTitle>
+                            <CardDescription>Your point of contact for assistance.</CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-2">
+                            <p className="font-semibold text-lg">{panel.studentCoordinatorName}</p>
+                            {panel.studentCoordinatorContact && (
+                                <a href={`https://wa.me/91${panel.studentCoordinatorContact.replace(/\s/g, '')}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-muted-foreground hover:text-primary">
+                                    <Phone className="h-4 w-4" />
+                                    {panel.studentCoordinatorContact}
+                                </a>
+                            )}
+                        </CardContent>
+                    </Card>
                 )}
             </div>
         </div>
