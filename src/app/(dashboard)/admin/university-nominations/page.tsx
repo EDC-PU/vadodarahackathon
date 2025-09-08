@@ -28,6 +28,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
+import { exportTeams } from "@/ai/flows/export-teams-flow";
 
 async function getUserProfilesInChunks(userIds: string[]): Promise<Map<string, UserProfile>> {
     const userProfiles = new Map<string, UserProfile>();
@@ -54,6 +55,7 @@ export default function UniversityNominationsPage() {
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState<string | null>(null);
   const [isExporting, setIsExporting] = useState(false);
+  const [isExportingTeams, setIsExportingTeams] = useState(false);
   const [isBulkNominating, setIsBulkNominating] = useState(false);
   const [selectedTeamIds, setSelectedTeamIds] = useState<string[]>([]);
   const [universityTeamIds, setUniversityTeamIds] = useState<Record<string, string>>({});
@@ -152,7 +154,7 @@ export default function UniversityNominationsPage() {
     }
   }
   
-  const handleExport = async () => {
+  const handleExportEvaluation = async () => {
     if (nominatedTeams.length === 0) {
       toast({ title: "No Teams", description: "There are no nominated teams to export.", variant: "destructive" });
       return;
@@ -195,6 +197,42 @@ export default function UniversityNominationsPage() {
       toast({ title: "Export Failed", description: error.message, variant: "destructive" });
     } finally {
       setIsExporting(false);
+    }
+  };
+
+  const handleExportTeams = async () => {
+    setIsExportingTeams(true);
+    try {
+        const teamIds = nominatedTeams.map(t => t.id);
+        if (teamIds.length === 0) {
+            toast({ title: "No Teams", description: "There are no nominated teams to export.", variant: "destructive" });
+            return;
+        }
+
+        const result = await exportTeams({
+            institute: 'All Institutes', 
+            category: 'All Categories', 
+            status: 'All Statuses',
+        });
+        if (result.success && result.fileContent) {
+            const blob = new Blob([Buffer.from(result.fileContent, 'base64')], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'nominated-teams.xlsx';
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            a.remove();
+            toast({ title: "Success", description: "Nominated teams data has been exported." });
+        } else {
+            toast({ title: "Export Failed", description: result.message || "Could not generate the export file.", variant: "destructive" });
+        }
+    } catch (error) {
+        console.error("Error exporting data:", error);
+        toast({ title: "Error", description: "An unexpected error occurred during export.", variant: "destructive" });
+    } finally {
+        setIsExportingTeams(false);
     }
   };
 
@@ -266,7 +304,7 @@ export default function UniversityNominationsPage() {
           <h1 className="text-3xl font-bold font-headline flex items-center gap-2"><Medal/> University Level Nominations</h1>
           <p className="text-muted-foreground">Manage teams nominated by institute SPOCs for the university-level round.</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
             {selectedTeamIds.length > 0 && (
                 <Button variant="outline" onClick={handleBulkGenerateNomination} disabled={isBulkNominating}>
                     {isBulkNominating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
@@ -300,7 +338,11 @@ export default function UniversityNominationsPage() {
                 </DialogFooter>
               </DialogContent>
             </Dialog>
-            <Button onClick={handleExport} disabled={isExporting}>
+            <Button onClick={handleExportTeams} disabled={isExportingTeams}>
+                {isExportingTeams ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
+                Export Team Data
+            </Button>
+            <Button onClick={handleExportEvaluation} disabled={isExporting}>
               {isExporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Download className="mr-2 h-4 w-4"/>}
               Export for Evaluation
             </Button>
