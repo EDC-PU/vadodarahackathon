@@ -104,7 +104,7 @@ export function MentorDetailsForm({ team, canEdit }: MentorDetailsFormProps) {
     }
   }
 
-  if (!isEditing) {
+  if (!isEditing && team.mentor) {
     return (
       <div className="space-y-4">
         <div className="flex justify-between items-start">
@@ -114,11 +114,6 @@ export function MentorDetailsForm({ team, canEdit }: MentorDetailsFormProps) {
                 <p><strong>Email:</strong> {team.mentor?.email}</p>
                 <p><strong>Phone:</strong> {team.mentor?.phoneNumber}</p>
             </div>
-            {canEdit && (
-                <Button variant="outline" size="sm" onClick={() => setIsEditing(true)}>
-                    <Pencil className="mr-2 h-4 w-4" /> Edit
-                </Button>
-            )}
         </div>
       </div>
     );

@@ -244,7 +244,7 @@ export default function JuryDashboardPage() {
                                 <CardContent className="space-y-2">
                                     <p className="font-semibold text-lg">{panel.studentCoordinatorName}</p>
                                     {panel.studentCoordinatorContact && (
-                                        <a href={`tel:${panel.studentCoordinatorContact}`} className="flex items-center gap-2 text-muted-foreground hover:text-primary">
+                                        <a href={`https://wa.me/91${panel.studentCoordinatorContact.replace(/\s/g, '')}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-muted-foreground hover:text-primary">
                                             <Phone className="h-4 w-4" />
                                             {panel.studentCoordinatorContact}
                                         </a>
