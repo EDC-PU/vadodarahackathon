@@ -16,15 +16,16 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "./ui/form";
 import { useState, useEffect } from "react";
-import { Loader2 } from "lucide-react";
+import { Loader2, RefreshCw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { JuryPanel, UserProfile } from "@/lib/types";
 import { updateJuryPanel } from "@/ai/flows/update-jury-panel-flow";
 import { db } from "@/lib/firebase";
-import { collection, doc, getDoc, onSnapshot, query, where } from "firebase/firestore";
+import { collection, doc, getDoc, onSnapshot, query, where, orderBy } from "firebase/firestore";
 import { ScrollArea } from "./ui/scroll-area";
 import { Separator } from "./ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
+import { Card } from "./ui/card";
 
 interface EditJuryPanelDialogProps {
   isOpen: boolean;
@@ -34,9 +35,9 @@ interface EditJuryPanelDialogProps {
 }
 
 const juryMemberEditSchema = z.object({
-    uid: z.string(),
+    uid: z.string().optional(), // Optional for new members
     name: z.string().min(2, "Name is required."),
-    email: z.string().email(), // Readonly in the form
+    email: z.string().email(), 
     institute: z.string().min(1, "Institute is required."),
     contactNumber: z.string().regex(/^\d{10}$/, "A valid 10-digit contact number is required."),
     department: z.string().min(2, "Department is required."),
@@ -66,22 +67,13 @@ export function EditJuryPanelDialog({ isOpen, onOpenChange, panel, onPanelUpdate
     },
   });
   
-  const { fields } = useFieldArray({
+  const { fields, update, replace } = useFieldArray({
     control: form.control,
     name: "juryMembers",
   });
-
-  useEffect(() => {
-    const q = query(collection(db, "institutes"));
-    const unsubscribe = onSnapshot(q, (querySnapshot) => {
-      setInstitutes(querySnapshot.docs.map(doc => ({ id: doc.id, name: doc.data().name })));
-    });
-    return () => unsubscribe();
-  }, []);
-
-  useEffect(() => {
+  
+  const fetchAndSetPanelDetails = async () => {
     if (panel && isOpen) {
-      const fetchMemberDetails = async () => {
         const memberDetailsPromises = panel.members.map(async (member) => {
             if (!member.uid) return null;
             const userDocRef = doc(db, 'users', member.uid);
@@ -106,10 +98,37 @@ export function EditJuryPanelDialog({ isOpen, onOpenChange, panel, onPanelUpdate
                 experience: m.experience || "",
             }))
         });
-      };
-      fetchMemberDetails();
-    }
-  }, [panel, form, isOpen]);
+      }
+  };
+
+  useEffect(() => {
+    const q = query(collection(db, "institutes"), orderBy("name"));
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+      setInstitutes(querySnapshot.docs.map(doc => ({ id: doc.id, name: doc.data().name })));
+    });
+
+    fetchAndSetPanelDetails();
+
+    return () => unsubscribe();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [panel, isOpen]);
+
+
+  const handleReplaceMember = (index: number) => {
+    const currentValues = form.getValues();
+    const newMembers = [...currentValues.juryMembers];
+    newMembers[index] = {
+        name: "",
+        email: "",
+        institute: "",
+        contactNumber: "",
+        department: "",
+        highestQualification: "",
+        experience: "",
+        // uid is omitted, signifying a new member
+    };
+    replace(newMembers);
+  }
 
   const onSubmit = async (values: z.infer<typeof panelSchema>) => {
     setIsLoading(true);
@@ -120,6 +139,7 @@ export function EditJuryPanelDialog({ isOpen, onOpenChange, panel, onPanelUpdate
         studentCoordinatorName: values.studentCoordinatorName,
         studentCoordinatorContact: values.studentCoordinatorContact,
         juryMembers: values.juryMembers,
+        originalMemberUids: panel.members.map(m => m.uid),
       });
 
       if (result.success) {
@@ -149,7 +169,7 @@ export function EditJuryPanelDialog({ isOpen, onOpenChange, panel, onPanelUpdate
         <DialogHeader>
           <DialogTitle>Edit Panel Details</DialogTitle>
           <DialogDescription>
-            Update the panel's name, coordinator, and jury member details. Email addresses cannot be changed.
+            Update the panel's name, coordinator, or replace jury members. Replacing a member will delete their old account and create a new one.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -199,72 +219,79 @@ export function EditJuryPanelDialog({ isOpen, onOpenChange, panel, onPanelUpdate
                     </div>
                      <Separator />
                      {fields.map((field, index) => (
-                        <div key={field.id} className="space-y-4 border p-4 rounded-md">
-                            <h3 className="font-semibold text-lg">Jury Member {index + 1}</h3>
-                             <FormField
-                                control={form.control}
-                                name={`juryMembers.${index}.email`}
-                                render={({ field }) => (
-                                    <FormItem>
-                                    <FormLabel>Email</FormLabel>
-                                    <FormControl>
-                                        <Input type="email" {...field} readOnly disabled className="text-muted-foreground"/>
-                                    </FormControl>
-                                    <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <FormField
-                                    control={form.control}
-                                    name={`juryMembers.${index}.name`}
-                                    render={({ field }) => (
-                                        <FormItem>
-                                        <FormLabel>Full Name</FormLabel>
-                                        <FormControl>
-                                            <Input placeholder="John Doe" {...field} />
-                                        </FormControl>
-                                        <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                                <FormField
-                                    control={form.control}
-                                    name={`juryMembers.${index}.contactNumber`}
-                                    render={({ field }) => (
-                                        <FormItem>
-                                        <FormLabel>Contact Number</FormLabel>
-                                        <FormControl>
-                                            <Input placeholder="9876543210" {...field} />
-                                        </FormControl>
-                                        <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                            </div>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <FormField
-                                    control={form.control}
-                                    name={`juryMembers.${index}.institute`}
-                                    render={({ field }) => (
-                                        <FormItem>
-                                        <FormLabel>Institute</FormLabel>
-                                        <Select onValueChange={field.onChange} value={field.value}>
+                        <Card key={field.id} className="p-4 relative">
+                            <div className="space-y-4">
+                                <div className="flex justify-between items-center">
+                                    <h3 className="font-semibold text-lg">Jury Member {index + 1}</h3>
+                                     <Button type="button" variant="outline" size="sm" onClick={() => handleReplaceMember(index)}>
+                                        <RefreshCw className="mr-2 h-3 w-3" /> Replace Member
+                                    </Button>
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <FormField
+                                        control={form.control}
+                                        name={`juryMembers.${index}.name`}
+                                        render={({ field }) => (
+                                            <FormItem>
+                                            <FormLabel>Full Name</FormLabel>
                                             <FormControl>
-                                                <SelectTrigger>
-                                                    <SelectValue placeholder="Select an institute" />
-                                                </SelectTrigger>
+                                                <Input placeholder="John Doe" {...field} />
                                             </FormControl>
-                                            <SelectContent>
-                                            {institutes.map((inst) => (
-                                                <SelectItem key={inst.id} value={inst.name}>{inst.name}</SelectItem>
-                                            ))}
-                                            </SelectContent>
-                                        </Select>
-                                        <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
+                                            <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                    <FormField
+                                        control={form.control}
+                                        name={`juryMembers.${index}.email`}
+                                        render={({ field }) => (
+                                            <FormItem>
+                                            <FormLabel>Email</FormLabel>
+                                            <FormControl>
+                                                <Input type="email" placeholder="member@example.com" {...field} disabled={!!form.getValues(`juryMembers.${index}.uid`)} />
+                                            </FormControl>
+                                            <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <FormField
+                                        control={form.control}
+                                        name={`juryMembers.${index}.institute`}
+                                        render={({ field }) => (
+                                            <FormItem>
+                                            <FormLabel>Institute</FormLabel>
+                                            <Select onValueChange={field.onChange} value={field.value}>
+                                                <FormControl>
+                                                    <SelectTrigger>
+                                                        <SelectValue placeholder="Select an institute" />
+                                                    </SelectTrigger>
+                                                </FormControl>
+                                                <SelectContent>
+                                                {institutes.map((inst) => (
+                                                    <SelectItem key={inst.id} value={inst.name}>{inst.name}</SelectItem>
+                                                ))}
+                                                </SelectContent>
+                                            </Select>
+                                            <FormMessage />
+                                            </FormItem>
+                                        )}
+                                        />
+                                    <FormField
+                                        control={form.control}
+                                        name={`juryMembers.${index}.contactNumber`}
+                                        render={({ field }) => (
+                                            <FormItem>
+                                            <FormLabel>Contact Number</FormLabel>
+                                            <FormControl>
+                                                <Input placeholder="9876543210" {...field} />
+                                            </FormControl>
+                                            <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                </div>
                                 <FormField
                                     control={form.control}
                                     name={`juryMembers.${index}.department`}
@@ -277,37 +304,37 @@ export function EditJuryPanelDialog({ isOpen, onOpenChange, panel, onPanelUpdate
                                         <FormMessage />
                                         </FormItem>
                                     )}
-                                />
+                                    />
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <FormField
+                                        control={form.control}
+                                        name={`juryMembers.${index}.highestQualification`}
+                                        render={({ field }) => (
+                                            <FormItem>
+                                            <FormLabel>Highest Qualification</FormLabel>
+                                            <FormControl>
+                                                <Input placeholder="e.g., Ph.D. in CSE" {...field} />
+                                            </FormControl>
+                                            <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                    <FormField
+                                        control={form.control}
+                                        name={`juryMembers.${index}.experience`}
+                                        render={({ field }) => (
+                                            <FormItem>
+                                            <FormLabel>Years of Experience</FormLabel>
+                                            <FormControl>
+                                                <Input type="number" placeholder="e.g., 10" {...field} />
+                                            </FormControl>
+                                            <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                </div>
                             </div>
-                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <FormField
-                                    control={form.control}
-                                    name={`juryMembers.${index}.highestQualification`}
-                                    render={({ field }) => (
-                                        <FormItem>
-                                        <FormLabel>Highest Qualification</FormLabel>
-                                        <FormControl>
-                                            <Input placeholder="e.g., Ph.D. in CSE" {...field} />
-                                        </FormControl>
-                                        <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                                <FormField
-                                    control={form.control}
-                                    name={`juryMembers.${index}.experience`}
-                                    render={({ field }) => (
-                                        <FormItem>
-                                        <FormLabel>Years of Experience</FormLabel>
-                                        <FormControl>
-                                            <Input type="number" placeholder="e.g., 10" {...field} />
-                                        </FormControl>
-                                        <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                            </div>
-                        </div>
+                        </Card>
                     ))}
                 </div>
              </ScrollArea>

@@ -234,7 +234,7 @@ export type DeleteJuryPanelOutput = z.infer<typeof DeleteJuryPanelOutputSchema>;
 
 // update-jury-panel-flow
 export const JuryMemberEditSchema = z.object({
-    uid: z.string(),
+    uid: z.string().optional(),
     name: z.string().min(2, "Name is required."),
     email: z.string().email(),
     institute: z.string().min(1, "Institute is required."),
@@ -250,6 +250,7 @@ export const UpdateJuryPanelInputSchema = z.object({
   studentCoordinatorName: z.string().optional(),
   studentCoordinatorContact: z.string().optional(),
   juryMembers: z.array(JuryMemberEditSchema),
+  originalMemberUids: z.array(z.string()).describe("The UIDs of the members originally in the panel before editing."),
 });
 export type UpdateJuryPanelInput = z.infer<typeof UpdateJuryPanelInputSchema>;
 
