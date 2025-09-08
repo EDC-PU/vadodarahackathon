@@ -356,7 +356,6 @@ export default function UniversityNominationsPage() {
                     <TableHead>Leader Email</TableHead>
                     <TableHead>Institute</TableHead>
                     <TableHead>Assign Panel</TableHead>
-                    <TableHead className="w-[200px]">University Team ID</TableHead>
                     <TableHead className="w-[300px]">SIH 2025 Selection Status</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -372,7 +371,24 @@ export default function UniversityNominationsPage() {
                                 aria-label={`Select team ${team.name}`}
                             />
                         </TableCell>
-                      <TableCell className="font-medium">{team.name}</TableCell>
+                      <TableCell className="font-medium">
+                        <div className="flex flex-col gap-2 items-start">
+                          <span>{team.name}</span>
+                          <div className="flex items-center gap-2">
+                           <KeyRound className="h-4 w-4 text-muted-foreground" />
+                            <Input
+                              value={universityTeamIds[team.id] || ''}
+                              onChange={(e) => setUniversityTeamIds(prev => ({...prev, [team.id]: e.target.value}))}
+                              placeholder="e.g., PU-123"
+                              className="h-8 w-32"
+                              onClick={(e) => e.stopPropagation()}
+                            />
+                            <Button size="icon" className="h-8 w-8" onClick={(e) => {e.stopPropagation(); handleSaveUniversityId(team.id)}} disabled={isSaving === `id-${team.id}`}>
+                                {isSaving === `id-${team.id}` ? <Loader2 className="h-4 w-4 animate-spin"/> : <Save className="h-4 w-4" />}
+                            </Button>
+                         </div>
+                        </div>
+                      </TableCell>
                       <TableCell>{leader?.email || 'N/A'}</TableCell>
                       <TableCell>{team.institute}</TableCell>
                       <TableCell>
@@ -390,20 +406,6 @@ export default function UniversityNominationsPage() {
                                   ))}
                               </SelectContent>
                           </Select>
-                      </TableCell>
-                       <TableCell>
-                         <div className="flex items-center gap-2">
-                           <KeyRound className="h-4 w-4 text-muted-foreground" />
-                            <Input
-                              value={universityTeamIds[team.id] || ''}
-                              onChange={(e) => setUniversityTeamIds(prev => ({...prev, [team.id]: e.target.value}))}
-                              placeholder="e.g., PU-123"
-                              className="h-9 w-32"
-                            />
-                            <Button size="sm" onClick={() => handleSaveUniversityId(team.id)} disabled={isSaving === `id-${team.id}`}>
-                                {isSaving === `id-${team.id}` ? <Loader2 className="h-4 w-4 animate-spin"/> : <Save className="h-4 w-4" />}
-                            </Button>
-                         </div>
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
@@ -435,4 +437,3 @@ export default function UniversityNominationsPage() {
     </div>
   );
 }
-
