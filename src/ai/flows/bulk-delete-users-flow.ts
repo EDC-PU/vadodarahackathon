@@ -47,17 +47,17 @@ const bulkDeleteUsersAndTeamsFlow = ai.defineFlow(
     let deletedUsersCount = 0;
     let deletedTeamsCount = 0;
     const finalUserIdsToDelete = [...userIds];
+    const adminUsersSkipped: string[] = [];
 
     try {
       // First pass: Check for admin accounts and remove them from the deletion list
       const userDocs = await Promise.all(userIds.map(id => adminDb.collection('users').doc(id).get()));
-      const adminUsers = [];
       
       for (const userDoc of userDocs) {
         if (userDoc.exists) {
           const userData = userDoc.data() as UserProfile;
           if (userData.role === 'admin') {
-            adminUsers.push(userData.email);
+            adminUsersSkipped.push(userData.email);
             // Remove admin from the list of users to be deleted
             const index = finalUserIdsToDelete.indexOf(userData.uid);
             if (index > -1) {
@@ -67,15 +67,10 @@ const bulkDeleteUsersAndTeamsFlow = ai.defineFlow(
         }
       }
 
-      if (adminUsers.length > 0) {
-          toast({ title: "Admins Skipped", description: `The following admin accounts were skipped and not deleted: ${adminUsers.join(', ')}`, variant: "default" });
-      }
-
       if(finalUserIdsToDelete.length === 0) {
-        return { success: true, message: "No users were deleted. Admins were skipped." };
+        return { success: true, message: `No users were deleted. Skipped ${adminUsersSkipped.length} admin(s).` };
       }
       
-
       const batch = adminDb.batch();
       const teamsToDelete = new Set<string>();
       const usersInDeletedTeams = new Set<string>();
@@ -135,8 +130,8 @@ const bulkDeleteUsersAndTeamsFlow = ai.defineFlow(
       }
 
       let message = `Successfully deleted ${deletedUsersCount} user(s) and ${deletedTeamsCount} team(s).`;
-      if (adminUsers.length > 0) {
-        message += ` Skipped ${adminUsers.length} admin(s).`;
+      if (adminUsersSkipped.length > 0) {
+        message += ` Skipped ${adminUsersSkipped.length} admin(s): ${adminUsersSkipped.join(', ')}.`;
       }
       
       return {
