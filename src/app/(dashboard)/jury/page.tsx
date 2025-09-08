@@ -9,7 +9,7 @@ import { Team, UserProfile, JuryPanel, ProblemStatement } from "@/lib/types";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Users, ClipboardList, UserCircle, Download } from "lucide-react";
+import { Loader2, Users, ClipboardList, UserCircle, Download, Briefcase, GraduationCap, Phone, Building } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -212,7 +212,12 @@ export default function JuryDashboardPage() {
                                             <UserCircle className="h-4 w-4"/> {member.name} {member.uid === user?.uid && <span className="text-xs text-primary font-normal">(You)</span>}
                                         </p>
                                         <p className="text-sm text-muted-foreground">{member.email}</p>
-                                        <p className="text-sm text-muted-foreground">{member.institute}</p>
+                                         <div className="mt-2 text-xs space-y-1 text-muted-foreground">
+                                            <p className="flex items-center gap-1.5"><Building className="h-3 w-3" /> {member.institute}</p>
+                                            <p className="flex items-center gap-1.5"><Phone className="h-3 w-3" /> {member.contactNumber || 'N/A'}</p>
+                                            <p className="flex items-center gap-1.5"><Briefcase className="h-3 w-3" /> {member.department || 'N/A'}</p>
+                                            <p className="flex items-center gap-1.5"><GraduationCap className="h-3 w-3" /> {member.highestQualification || 'N/A'} | {member.experience || 'N/A'} yrs exp</p>
+                                        </div>
                                     </div>
                                 ))}
                             </CardContent>
