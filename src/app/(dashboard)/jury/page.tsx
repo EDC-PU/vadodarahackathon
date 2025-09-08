@@ -5,38 +5,46 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { db } from "@/lib/firebase";
 import { collection, query, where, onSnapshot, doc, getDoc, getDocs } from "firebase/firestore";
-import { Team, UserProfile, JuryPanel } from "@/lib/types";
+import { Team, UserProfile, JuryPanel, ProblemStatement } from "@/lib/types";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Users, ClipboardList, UserCircle } from "lucide-react";
-import Link from "next/link";
+import { Loader2, Users, ClipboardList, UserCircle, Download } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { useToast } from "@/hooks/use-toast";
+import { Button } from "@/components/ui/button";
+import { exportEvaluation } from "@/ai/flows/export-evaluation-flow";
 
 export default function JuryDashboardPage() {
     const { user, loading: authLoading } = useAuth();
     const [assignedTeams, setAssignedTeams] = useState<Team[]>([]);
     const [panel, setPanel] = useState<JuryPanel | null>(null);
     const [panelMembers, setPanelMembers] = useState<UserProfile[]>([]);
+    const [problemStatements, setProblemStatements] = useState<ProblemStatement[]>([]);
     const [loading, setLoading] = useState(true);
+    const [isExporting, setIsExporting] = useState(false);
+    const { toast } = useToast();
 
     useEffect(() => {
-        if (!user || !user.panelId) {
-            if (!authLoading) setLoading(false);
+        if (!user || authLoading) return;
+        if (!user.panelId) {
+            setLoading(false);
             return;
         }
 
         setLoading(true);
 
+        const unsubscribes: (() => void)[] = [];
+
         // 1. Fetch Panel Details
         const panelDocRef = doc(db, 'juryPanels', user.panelId);
-        const unsubscribePanel = onSnapshot(panelDocRef, async (panelDoc) => {
+        const unsubPanel = onSnapshot(panelDocRef, async (panelDoc) => {
             if (panelDoc.exists()) {
                 const panelData = { id: panelDoc.id, ...panelDoc.data() } as JuryPanel;
                 setPanel(panelData);
 
                 // Fetch full profiles for panel members
-                const memberUids = panelData.members.map(m => m.uid);
+                const memberUids = panelData.members.map(m => m.uid).filter(Boolean);
                 if (memberUids.length > 0) {
                     const membersQuery = query(collection(db, 'users'), where('uid', 'in', memberUids));
                     const memberDocs = await getDocs(membersQuery);
@@ -44,12 +52,15 @@ export default function JuryDashboardPage() {
                 }
                  // 2. Fetch Assigned Teams after panel is loaded
                 const teamsQuery = query(collection(db, 'teams'), where('panelId', '==', user.panelId));
-                const unsubscribeTeams = onSnapshot(teamsQuery, (snapshot) => {
+                const unsubTeams = onSnapshot(teamsQuery, (snapshot) => {
                     const teamsData = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Team));
                     setAssignedTeams(teamsData);
                     setLoading(false); // Set loading false only after teams are also loaded
+                }, (err) => {
+                    console.error("Error fetching teams for jury:", err);
+                    setLoading(false);
                 });
-                return () => unsubscribeTeams(); // Nested unsubscribe
+                unsubscribes.push(unsubTeams);
 
             } else {
                 setPanel(null);
@@ -57,13 +68,72 @@ export default function JuryDashboardPage() {
                 setAssignedTeams([]);
                 setLoading(false);
             }
+        }, (err) => {
+            console.error("Error fetching jury panel:", err);
+            setLoading(false);
         });
+        unsubscribes.push(unsubPanel);
+        
+        // Fetch All Problem Statements
+        const psQuery = query(collection(db, "problemStatements"));
+        const unsubPs = onSnapshot(psQuery, (snapshot) => {
+          setProblemStatements(snapshot.docs.map(d => ({ id: d.id, ...d.data() } as ProblemStatement)));
+        });
+        unsubscribes.push(unsubPs);
+
 
         return () => {
-            unsubscribePanel();
+            unsubscribes.forEach(unsub => unsub());
         };
 
     }, [user, authLoading]);
+    
+     const handleExportEvaluation = async () => {
+        if (!panel || assignedTeams.length === 0) {
+            toast({ title: "No Teams", description: "This panel has no teams assigned to it.", variant: "destructive" });
+            return;
+        }
+        setIsExporting(true);
+        try {
+            const problemStatementsMap = new Map(problemStatements.map(ps => [ps.id, ps]));
+            
+            const teamsToExport = assignedTeams.map(team => {
+                const ps = team.problemStatementId ? problemStatementsMap.get(team.problemStatementId) : null;
+                return {
+                  team_number: team.teamNumber || 'N/A',
+                  team_name: team.name,
+                  leader_name: team.leader.name,
+                  problemstatement_id: ps?.problemStatementId || 'N/A',
+                  problemstatement_title: team.problemStatementTitle || 'N/A',
+                  category: team.category || 'N/A',
+                };
+            });
+
+            const result = await exportEvaluation({
+                instituteName: `Jury_Panel_${panel.name.replace(/\s+/g, '_')}`,
+                teams: teamsToExport
+            });
+
+            if (result.success && result.fileContent) {
+                const blob = new Blob([Buffer.from(result.fileContent, 'base64')], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = result.fileName || `${panel.name}_Evaluation.xlsx`;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                a.remove();
+            } else {
+                throw new Error(result.message || "Failed to export evaluation sheet.");
+            }
+        } catch (error: any) {
+            toast({ title: "Export Failed", description: error.message, variant: "destructive" });
+        } finally {
+            setIsExporting(false);
+        }
+  };
+
 
     if (loading || authLoading) {
         return (
@@ -83,9 +153,15 @@ export default function JuryDashboardPage() {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 <div className="lg:col-span-2">
                     <Card>
-                        <CardHeader>
+                        <CardHeader className="flex flex-row justify-between items-center">
+                          <div>
                             <CardTitle className="flex items-center gap-2"><ClipboardList /> Assigned Teams for Evaluation</CardTitle>
                             <CardDescription>Review the details of the teams you are assigned to evaluate.</CardDescription>
+                          </div>
+                           <Button onClick={handleExportEvaluation} disabled={isExporting}>
+                                {isExporting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Download className="h-4 w-4 mr-2" />}
+                                Download Sheet
+                            </Button>
                         </CardHeader>
                         <CardContent>
                             <ScrollArea className="h-[60vh] border rounded-md">
