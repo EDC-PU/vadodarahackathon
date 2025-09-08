@@ -113,7 +113,7 @@ export default function AnalyticsPage() {
     return Object.entries(instituteCounts).map(([institute, count]) => ({
       institute,
       teams: count,
-    })).sort((a, b) => b.teams - a.teams);
+    })).sort((a, b) => b.teams - a.teams).slice(0, 7);
   };
   
   const getCategoryData = (): CategoryChartData[] => {
@@ -345,7 +345,7 @@ export default function AnalyticsPage() {
         
         <Card className="md:col-span-2 xl:col-span-3">
           <CardHeader>
-            <CardTitle>Teams per Institute</CardTitle>
+            <CardTitle>Top 7 Teams per Institute</CardTitle>
             <CardDescription>Distribution of teams across different institutes.</CardDescription>
           </CardHeader>
           <CardContent>
