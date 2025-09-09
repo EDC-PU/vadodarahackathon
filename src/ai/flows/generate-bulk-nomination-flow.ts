@@ -93,6 +93,11 @@ async function createDocx(db: FirebaseFirestore.Firestore, teamId: string, templ
       leader_contact: leaderProfile.contactNumber || '',
       leader_department: leaderProfile.department || '',
       leader_year: leaderProfile.yearOfStudy || '',
+      mentor_name: team.mentor?.name || 'N/A',
+      mentor_gender: team.mentor?.gender || 'N/A',
+      mentor_email: team.mentor?.email || 'N/A',
+      mentor_contact: team.mentor?.phoneNumber || 'N/A',
+      mentor_department: team.mentor?.department || 'N/A',
     };
 
     for (let i = 0; i < 6; i++) {
@@ -105,12 +110,6 @@ async function createDocx(db: FirebaseFirestore.Firestore, teamId: string, templ
       dataToFill[`member${i + 1}_department`] = memberProfile?.department || 'N/A';
       dataToFill[`member${i + 1}_year`] = memberProfile?.yearOfStudy || 'N/A';
     }
-
-    Object.assign(dataToFill, {
-      mentor1_gender: 'N/A',
-      mentor_email: 'N/A',
-      mentor_department: 'N/A'
-    });
 
     doc.render(dataToFill);
 

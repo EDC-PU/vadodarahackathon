@@ -117,6 +117,11 @@ const generateNominationFormFlow = ai.defineFlow(
         leader_contact: leaderProfile.contactNumber || '',
         leader_department: leaderProfile.department || '',
         leader_year: leaderProfile.yearOfStudy || '',
+        mentor_name: team.mentor?.name || 'N/A',
+        mentor_gender: team.mentor?.gender || 'N/A',
+        mentor_email: team.mentor?.email || 'N/A',
+        mentor_contact: team.mentor?.phoneNumber || 'N/A',
+        mentor_department: team.mentor?.department || 'N/A',
       };
 
       // Add members, ensuring we have placeholders for up to 6 members
@@ -130,14 +135,6 @@ const generateNominationFormFlow = ai.defineFlow(
         dataToFill[`member${i + 1}_department`] = memberProfile?.department || 'N/A';
         dataToFill[`member${i + 1}_year`] = memberProfile?.yearOfStudy || 'N/A';
       }
-      
-      // Special cases from template
-      Object.assign(dataToFill, {
-        mentor1_gender: 'N/A',
-        mentor_email: 'N/A',
-        mentor_department: 'N/A'
-      });
-
 
       doc.render(dataToFill);
 
