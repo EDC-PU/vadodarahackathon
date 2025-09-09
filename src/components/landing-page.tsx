@@ -237,22 +237,6 @@ export default function LandingPage({ spocDetails, announcements, problemStateme
     return () => unsubscribe();
   }, []);
 
-  const navLinks = [
-    { name: 'Home', href: '#home' },
-    { name: 'Eligibility', href: '#eligibility' },
-    { name: 'Problem Statements', href: '#problem-statements' },
-    { name: 'Timeline', href: '#timeline' },
-    { name: 'Rewards', href: '#rewards' },
-    { name: 'Contact', href: '#contact' },
-  ];
-  
-  const aboutImages = [
-    '/VadodaraHackathon/1.jpg',
-    '/VadodaraHackathon/2.jpg',
-    '/VadodaraHackathon/3.jpg',
-    '/VadodaraHackathon/4.jpg',
-  ];
-
   const galleryImages = [
     '/VadodaraHackathon/5.jpg',
     '/VadodaraHackathon/6.jpg',
@@ -267,16 +251,6 @@ export default function LandingPage({ spocDetails, announcements, problemStateme
     '/VadodaraHackathon/15.jpg',
   ];
 
-  const handleNavClick = (e: MouseEvent<HTMLAnchorElement>, href: string) => {
-    e.preventDefault();
-    const targetId = href.replace(/.*#/, "");
-    const elem = document.getElementById(targetId);
-    elem?.scrollIntoView({
-        behavior: "smooth",
-    });
-  };
-  
-
   return (
     <div className="flex min-h-screen flex-col bg-background text-foreground selection:bg-primary/40">
       <header className="sticky top-0 z-50 w-full border-b border-border/20 bg-background/50 backdrop-blur-lg">
@@ -284,20 +258,6 @@ export default function LandingPage({ spocDetails, announcements, problemStateme
           <Link href="/" className="flex items-center gap-2 font-bold text-xl" prefetch={false}>
              <Image src="https://www.pierc.org/_next/static/media/PIERC%20WHITE.a9ef7cc8.svg" alt="PIERC Logo" width={150} height={150}/>
           </Link>
-          <nav className="hidden md:flex items-center gap-1">
-            {navLinks.map((link) => (
-              <Button key={link.name} variant="ghost" asChild>
-                <Link 
-                    href={link.href} 
-                    className="text-foreground/80 transition-colors hover:text-foreground" 
-                    onClick={(e) => handleNavClick(e, link.href)}
-                    prefetch={false}
-                >
-                  {link.name}
-                </Link>
-              </Button>
-            ))}
-          </nav>
            <div className="flex items-center gap-2">
               {authLoading ? (
                   <Skeleton className="h-10 w-40 rounded-full" />
@@ -584,6 +544,7 @@ export default function LandingPage({ spocDetails, announcements, problemStateme
     </div>
   );
 }
+
 
 
 
