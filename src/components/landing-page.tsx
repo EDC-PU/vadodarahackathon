@@ -212,13 +212,7 @@ const HeroSection = () => {
                         className="bg-transparent border-2 border-brand-yellow text-brand-yellow rounded-full animate-neon-pulse transition-transform hover:scale-105"
                         asChild
                     >
-                        <Link href="/register">Register Now</Link>
-                    </Button>
-                     <Button variant="link" size="lg" className="text-white group text-lg rounded-full" asChild>
-                        <Link href="#eligibility">
-                            Learn More
-                            <span className="block max-w-0 group-hover:max-w-full transition-all duration-300 h-0.5 bg-brand-red"></span>
-                        </Link>
+                        <a href="http://drive.google.com/file/d/1F9aZeeiWHies_PGeLw4xGwe1K-cYZ_bu/view?usp=sharing" target="_blank" rel="noopener noreferrer">View Institute Round Results</a>
                     </Button>
                 </motion.div>
                 <LiveStatsCounter />
@@ -590,5 +584,6 @@ export default function LandingPage({ spocDetails, announcements, problemStateme
     </div>
   );
 }
+
 
 
