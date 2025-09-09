@@ -495,7 +495,7 @@ export default function LeaderDashboard() {
                     <Users2 />
                     Team Members ({teamValidation.memberCount.current} / 6)
                     <div className="ml-auto flex items-center gap-4">
-                        {team.universityTeamId && <Badge variant="secondary" className="text-base">{`Univ. ID: ${team.universityTeamId}`}</Badge>}
+                        {team.isNominated && team.universityTeamId && <Badge variant="secondary" className="text-base">{`Univ. ID: ${team.universityTeamId}`}</Badge>}
                         {team.teamNumber && <Badge variant="secondary" className="text-base">{`Team No: ${team.teamNumber}`}</Badge>}
                     </div>
                 </CardTitle>
@@ -633,8 +633,10 @@ export default function LeaderDashboard() {
                                       </AlertDialogTrigger>
                                       <AlertDialogContent>
                                           <AlertDialogHeader>
-                                              <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                                              <AlertDialogDescription>This action will remove {member.name} from the team.</AlertDialogDescription>
+                                              <AlertDialogTitle>Remove {member.name}?</AlertDialogTitle>
+                                              <AlertDialogDescription>
+                                                  Are you sure you want to remove {member.name} from this team?
+                                              </AlertDialogDescription>
                                           </AlertDialogHeader>
                                           <AlertDialogFooter>
                                               <AlertDialogCancel>Cancel</AlertDialogCancel>

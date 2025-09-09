@@ -385,7 +385,7 @@ export default function MemberDashboard() {
               <CardTitle className="flex items-center gap-2">
                 <Users /> Team Details: {team.name}
                  <div className="ml-auto flex items-center gap-4">
-                    {team.universityTeamId && <Badge variant="secondary" className="text-base">{`Univ. ID: ${team.universityTeamId}`}</Badge>}
+                    {team.isNominated && team.universityTeamId && <Badge variant="secondary" className="text-base">{`Univ. ID: ${team.universityTeamId}`}</Badge>}
                     {team.teamNumber && (
                       <Badge variant="secondary" className="text-base">{`Team No: ${team.teamNumber}`}</Badge>
                     )}
