@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
@@ -186,7 +187,7 @@ export default function UniversityNominationsPage() {
         const leader = allUsers.get(team.leader.uid);
         const ps = team.problemStatementId ? problemStatementsMap.get(team.problemStatementId) : null;
         return {
-          team_number: team.teamNumber || 'N/A',
+          universityTeamId: team.universityTeamId || 'N/A',
           team_name: team.name,
           leader_name: leader?.name || 'N/A',
           problemstatement_id: ps?.problemStatementId || 'N/A',
@@ -611,3 +612,4 @@ export default function UniversityNominationsPage() {
     </div>
   );
 }
+
