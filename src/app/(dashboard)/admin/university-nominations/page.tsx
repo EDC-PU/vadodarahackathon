@@ -336,6 +336,7 @@ export default function UniversityNominationsPage() {
         const ps = team.problemStatementId ? problemStatements.find(p => p.id === team.problemStatementId) : null;
         return (
           team.name.toLowerCase().includes(lowercasedTerm) ||
+          team.universityTeamId?.toLowerCase().includes(lowercasedTerm) ||
           (leader && leader.email.toLowerCase().includes(lowercasedTerm)) ||
           team.institute.toLowerCase().includes(lowercasedTerm) ||
           (ps && ps.title.toLowerCase().includes(lowercasedTerm))
@@ -507,6 +508,11 @@ export default function UniversityNominationsPage() {
                             Team Name {getSortIndicator('name')}
                         </Button>
                     </TableHead>
+                     <TableHead>
+                        <Button variant="ghost" onClick={() => requestSort('universityTeamId')}>
+                            University Team ID {getSortIndicator('universityTeamId')}
+                        </Button>
+                    </TableHead>
                     <TableHead>Leader Email</TableHead>
                     <TableHead>
                          <Button variant="ghost" onClick={() => requestSort('institute')}>
@@ -537,8 +543,9 @@ export default function UniversityNominationsPage() {
                             />
                         </TableCell>
                       <TableCell className="font-medium">
-                        <div className="flex flex-col gap-2 items-start">
-                          <span>{team.name}</span>
+                        {team.name}
+                      </TableCell>
+                      <TableCell>
                           <div className="flex items-center gap-2">
                            <KeyRound className="h-4 w-4 text-muted-foreground" />
                             <Input
@@ -552,7 +559,6 @@ export default function UniversityNominationsPage() {
                                 {isSaving === `id-${team.id}` ? <Loader2 className="h-4 w-4 animate-spin"/> : <Save className="h-4 w-4" />}
                             </Button>
                          </div>
-                        </div>
                       </TableCell>
                       <TableCell>{leader?.email || 'N/A'}</TableCell>
                       <TableCell>{team.institute}</TableCell>
@@ -612,4 +618,5 @@ export default function UniversityNominationsPage() {
     </div>
   );
 }
+
 
