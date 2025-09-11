@@ -46,7 +46,7 @@ const panelSchema = z.object({
   panelName: z.string().min(3, "Panel name must be at least 3 characters."),
   studentCoordinatorName: z.string().min(2, "Coordinator name is required.").optional().or(z.literal('')),
   studentCoordinatorContact: z.string().regex(/^\d{10}$/, "A valid 10-digit contact number is required.").optional().or(z.literal('')),
-  juryMembers: z.array(juryMemberSchema).length(3, "A panel must have exactly 3 jury members."),
+  juryMembers: z.array(juryMemberSchema).length(4, "A panel must have exactly 4 jury members."),
   isDraft: z.boolean().optional(),
 });
 
@@ -62,6 +62,7 @@ export function AddJuryPanelDialog({ isOpen, onOpenChange, onPanelAdded }: AddJu
       studentCoordinatorName: "",
       studentCoordinatorContact: "",
       juryMembers: [
+        { name: "", email: "", institute: "", contactNumber: "", department: "", highestQualification: "", experience: "" },
         { name: "", email: "", institute: "", contactNumber: "", department: "", highestQualification: "", experience: "" },
         { name: "", email: "", institute: "", contactNumber: "", department: "", highestQualification: "", experience: "" },
         { name: "", email: "", institute: "", contactNumber: "", department: "", highestQualification: "", experience: "" },
@@ -117,7 +118,7 @@ export function AddJuryPanelDialog({ isOpen, onOpenChange, onPanelAdded }: AddJu
         <DialogHeader>
           <DialogTitle>Create New Jury Panel</DialogTitle>
           <DialogDescription>
-            Enter a name for the panel and provide the details for all three jury members.
+            Enter a name for the panel and provide the details for all four jury members.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>

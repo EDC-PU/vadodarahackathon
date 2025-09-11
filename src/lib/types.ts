@@ -249,7 +249,7 @@ export const UpdateJuryPanelInputSchema = z.object({
   panelName: z.string().min(3, "Panel name must be at least 3 characters."),
   studentCoordinatorName: z.string().optional(),
   studentCoordinatorContact: z.string().optional(),
-  juryMembers: z.array(JuryMemberEditSchema),
+  juryMembers: z.array(JuryMemberEditSchema).length(4, "A panel must have exactly 4 jury members."),
   originalMemberUids: z.array(z.string()).describe("The UIDs of the members originally in the panel before editing."),
 });
 export type UpdateJuryPanelInput = z.infer<typeof UpdateJuryPanelInputSchema>;
@@ -276,7 +276,7 @@ export const CreateJuryPanelInputSchema = z.object({
   panelName: z.string().min(3, "Panel name must be at least 3 characters."),
   studentCoordinatorName: z.string().optional(),
   studentCoordinatorContact: z.string().optional(),
-  juryMembers: z.array(JuryMemberInputSchema).length(3, "A panel must have exactly 3 jury members."),
+  juryMembers: z.array(JuryMemberInputSchema).length(4, "A panel must have exactly 4 jury members."),
   isDraft: z.boolean().optional().describe("If true, saves the panel as a draft without creating users."),
 });
 export type CreateJuryPanelInput = z.infer<typeof CreateJuryPanelInputSchema>;

@@ -49,7 +49,7 @@ const panelSchema = z.object({
   panelName: z.string().min(3, "Panel name must be at least 3 characters."),
   studentCoordinatorName: z.string().min(2, "Coordinator name is required.").optional().or(z.literal('')),
   studentCoordinatorContact: z.string().regex(/^\d{10}$/, "A valid 10-digit contact number is required.").optional().or(z.literal('')),
-  juryMembers: z.array(juryMemberEditSchema).length(3, "A panel must have exactly 3 jury members."),
+  juryMembers: z.array(juryMemberEditSchema).length(4, "A panel must have exactly 4 jury members."),
 });
 
 export function EditJuryPanelDialog({ isOpen, onOpenChange, panel, onPanelUpdated }: EditJuryPanelDialogProps) {
