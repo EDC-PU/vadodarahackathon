@@ -119,8 +119,6 @@ const finalizeJuryPanelFlow = ai.defineFlow(
                 institute: member.institute,
                 contactNumber: member.contactNumber,
                 department: member.department,
-                highestQualification: member.highestQualification,
-                experience: member.experience,
                 role: 'jury',
                 panelId: panelDocRef.id,
                 passwordChanged: false,

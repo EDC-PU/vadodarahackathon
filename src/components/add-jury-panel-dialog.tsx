@@ -18,7 +18,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "./ui/form";
 import { useState, useEffect } from "react";
-import { Loader2 } from "lucide-react";
+import { Loader2, PlusCircle, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { createJuryPanel } from "@/ai/flows/create-jury-panel-flow";
 import { db } from "@/lib/firebase";
@@ -38,15 +38,13 @@ const juryMemberSchema = z.object({
   institute: z.string().min(1, "Institute is required."),
   contactNumber: z.string().regex(/^\d{10}$/, "A valid 10-digit contact number is required."),
   department: z.string().min(2, "Department is required."),
-  highestQualification: z.string().min(2, "Highest qualification is required."),
-  experience: z.string().min(1, "Experience is required."),
 });
 
 const panelSchema = z.object({
   panelName: z.string().min(3, "Panel name must be at least 3 characters."),
   studentCoordinatorName: z.string().min(2, "Coordinator name is required.").optional().or(z.literal('')),
   studentCoordinatorContact: z.string().regex(/^\d{10}$/, "A valid 10-digit contact number is required.").optional().or(z.literal('')),
-  juryMembers: z.array(juryMemberSchema).length(4, "A panel must have exactly 4 jury members."),
+  juryMembers: z.array(juryMemberSchema).min(2, "A panel must have at least 2 members.").max(4, "A panel can have at most 4 members."),
   isDraft: z.boolean().optional(),
 });
 
@@ -62,16 +60,14 @@ export function AddJuryPanelDialog({ isOpen, onOpenChange, onPanelAdded }: AddJu
       studentCoordinatorName: "",
       studentCoordinatorContact: "",
       juryMembers: [
-        { name: "", email: "", institute: "", contactNumber: "", department: "", highestQualification: "", experience: "" },
-        { name: "", email: "", institute: "", contactNumber: "", department: "", highestQualification: "", experience: "" },
-        { name: "", email: "", institute: "", contactNumber: "", department: "", highestQualification: "", experience: "" },
-        { name: "", email: "", institute: "", contactNumber: "", department: "", highestQualification: "", experience: "" },
+        { name: "", email: "", institute: "", contactNumber: "", department: "" },
+        { name: "", email: "", institute: "", contactNumber: "", department: "" },
       ],
       isDraft: false,
     },
   });
 
-  const { fields } = useFieldArray({
+  const { fields, append, remove } = useFieldArray({
     control: form.control,
     name: "juryMembers",
   });
@@ -87,7 +83,10 @@ export function AddJuryPanelDialog({ isOpen, onOpenChange, onPanelAdded }: AddJu
   const handleFormSubmit = async (values: z.infer<typeof panelSchema>) => {
     setIsLoading(true);
     try {
-      const result = await createJuryPanel(values);
+      const result = await createJuryPanel({
+        ...values,
+        juryMembers: values.juryMembers.map(m => ({...m, highestQualification: '', experience: ''}))
+      });
       if (result.success) {
         toast({
           title: "Success!",
@@ -118,7 +117,7 @@ export function AddJuryPanelDialog({ isOpen, onOpenChange, onPanelAdded }: AddJu
         <DialogHeader>
           <DialogTitle>Create New Jury Panel</DialogTitle>
           <DialogDescription>
-            Enter a name for the panel and provide the details for all four jury members.
+            Enter a name for the panel and provide the details for 2 to 4 jury members.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -173,8 +172,15 @@ export function AddJuryPanelDialog({ isOpen, onOpenChange, onPanelAdded }: AddJu
 
 
                 {fields.map((field, index) => (
-                  <div key={field.id} className="space-y-4 border p-4 rounded-md">
-                     <h3 className="font-semibold text-lg">Jury Member {index + 1}</h3>
+                  <div key={field.id} className="space-y-4 border p-4 rounded-md relative">
+                     <div className="flex justify-between items-center">
+                        <h3 className="font-semibold text-lg">Jury Member {index + 1}</h3>
+                        {fields.length > 2 && (
+                             <Button type="button" variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => remove(index)}>
+                                <Trash2 className="h-4 w-4"/>
+                            </Button>
+                        )}
+                     </div>
                      <Separator />
                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <FormField
@@ -254,36 +260,13 @@ export function AddJuryPanelDialog({ isOpen, onOpenChange, onPanelAdded }: AddJu
                             </FormItem>
                         )}
                         />
-                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <FormField
-                            control={form.control}
-                            name={`juryMembers.${index}.highestQualification`}
-                            render={({ field }) => (
-                                <FormItem>
-                                <FormLabel>Highest Qualification</FormLabel>
-                                <FormControl>
-                                    <Input placeholder="e.g., Ph.D. in CSE" {...field} />
-                                </FormControl>
-                                <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-                         <FormField
-                            control={form.control}
-                            name={`juryMembers.${index}.experience`}
-                            render={({ field }) => (
-                                <FormItem>
-                                <FormLabel>Years of Experience</FormLabel>
-                                <FormControl>
-                                    <Input type="number" placeholder="e.g., 10" {...field} />
-                                </FormControl>
-                                <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-                     </div>
                   </div>
                 ))}
+                {fields.length < 4 && (
+                    <Button type="button" variant="outline" className="w-full" onClick={() => append({ name: "", email: "", institute: "", contactNumber: "", department: "" })}>
+                        <PlusCircle className="mr-2 h-4 w-4"/> Add Another Member
+                    </Button>
+                )}
               </div>
             </ScrollArea>
             <DialogFooter className="pt-8">

@@ -107,8 +107,6 @@ const updateJuryPanelFlow = ai.defineFlow(
                     institute: member.institute,
                     contactNumber: member.contactNumber,
                     department: member.department,
-                    highestQualification: member.highestQualification,
-                    experience: member.experience,
                 });
                 finalMembersArray.push({ uid: member.uid, name: member.name, email: member.email });
             } else {
@@ -133,8 +131,6 @@ const updateJuryPanelFlow = ai.defineFlow(
                     institute: member.institute,
                     contactNumber: member.contactNumber,
                     department: member.department,
-                    highestQualification: member.highestQualification,
-                    experience: member.experience,
                     role: 'jury',
                     panelId: panelId,
                     passwordChanged: false,

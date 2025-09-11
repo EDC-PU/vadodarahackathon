@@ -16,7 +16,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "./ui/form";
 import { useState, useEffect } from "react";
-import { Loader2, RefreshCw } from "lucide-react";
+import { Loader2, PlusCircle, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { JuryPanel, UserProfile } from "@/lib/types";
 import { updateJuryPanel } from "@/ai/flows/update-jury-panel-flow";
@@ -41,15 +41,13 @@ const juryMemberEditSchema = z.object({
     institute: z.string().min(1, "Institute is required."),
     contactNumber: z.string().regex(/^\d{10}$/, "A valid 10-digit contact number is required."),
     department: z.string().min(2, "Department is required."),
-    highestQualification: z.string().min(2, "Highest qualification is required."),
-    experience: z.string().min(1, "Experience is required."),
 });
 
 const panelSchema = z.object({
   panelName: z.string().min(3, "Panel name must be at least 3 characters."),
   studentCoordinatorName: z.string().min(2, "Coordinator name is required.").optional().or(z.literal('')),
   studentCoordinatorContact: z.string().regex(/^\d{10}$/, "A valid 10-digit contact number is required.").optional().or(z.literal('')),
-  juryMembers: z.array(juryMemberEditSchema).length(4, "A panel must have exactly 4 jury members."),
+  juryMembers: z.array(juryMemberEditSchema).min(2, "A panel must have at least 2 members.").max(4, "A panel can have at most 4 members."),
 });
 
 export function EditJuryPanelDialog({ isOpen, onOpenChange, panel, onPanelUpdated }: EditJuryPanelDialogProps) {
@@ -67,7 +65,7 @@ export function EditJuryPanelDialog({ isOpen, onOpenChange, panel, onPanelUpdate
     },
   });
   
-  const { fields, update, replace } = useFieldArray({
+  const { fields, update, replace, append, remove } = useFieldArray({
     control: form.control,
     name: "juryMembers",
   });
@@ -94,8 +92,6 @@ export function EditJuryPanelDialog({ isOpen, onOpenChange, panel, onPanelUpdate
                 institute: m.institute || "",
                 contactNumber: m.contactNumber || "",
                 department: m.department || "",
-                highestQualification: m.highestQualification || "",
-                experience: m.experience || "",
             }))
         });
       }
@@ -114,22 +110,6 @@ export function EditJuryPanelDialog({ isOpen, onOpenChange, panel, onPanelUpdate
   }, [panel, isOpen]);
 
 
-  const handleReplaceMember = (index: number) => {
-    const currentValues = form.getValues();
-    const newMembers = [...currentValues.juryMembers];
-    newMembers[index] = {
-        name: "",
-        email: "",
-        institute: "",
-        contactNumber: "",
-        department: "",
-        highestQualification: "",
-        experience: "",
-        // uid is omitted, signifying a new member
-    };
-    replace(newMembers);
-  }
-
   const onSubmit = async (values: z.infer<typeof panelSchema>) => {
     setIsLoading(true);
     try {
@@ -138,7 +118,7 @@ export function EditJuryPanelDialog({ isOpen, onOpenChange, panel, onPanelUpdate
         panelName: values.panelName,
         studentCoordinatorName: values.studentCoordinatorName,
         studentCoordinatorContact: values.studentCoordinatorContact,
-        juryMembers: values.juryMembers,
+        juryMembers: values.juryMembers.map(m => ({...m, experience: '', highestQualification: ''})),
         originalMemberUids: panel.members.map(m => m.uid),
       });
 
@@ -169,7 +149,7 @@ export function EditJuryPanelDialog({ isOpen, onOpenChange, panel, onPanelUpdate
         <DialogHeader>
           <DialogTitle>Edit Panel Details</DialogTitle>
           <DialogDescription>
-            Update the panel's name, coordinator, or replace jury members. Replacing a member will delete their old account and create a new one.
+            Update the panel's name, coordinator, or jury members. Adding a new member will create a new account for them.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -223,9 +203,11 @@ export function EditJuryPanelDialog({ isOpen, onOpenChange, panel, onPanelUpdate
                             <div className="space-y-4">
                                 <div className="flex justify-between items-center">
                                     <h3 className="font-semibold text-lg">Jury Member {index + 1}</h3>
-                                     <Button type="button" variant="outline" size="sm" onClick={() => handleReplaceMember(index)}>
-                                        <RefreshCw className="mr-2 h-3 w-3" /> Replace Member
-                                    </Button>
+                                     {fields.length > 2 && (
+                                        <Button type="button" variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => remove(index)}>
+                                            <Trash2 className="h-4 w-4"/>
+                                        </Button>
+                                    )}
                                 </div>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <FormField
@@ -305,37 +287,14 @@ export function EditJuryPanelDialog({ isOpen, onOpenChange, panel, onPanelUpdate
                                         </FormItem>
                                     )}
                                     />
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <FormField
-                                        control={form.control}
-                                        name={`juryMembers.${index}.highestQualification`}
-                                        render={({ field }) => (
-                                            <FormItem>
-                                            <FormLabel>Highest Qualification</FormLabel>
-                                            <FormControl>
-                                                <Input placeholder="e.g., Ph.D. in CSE" {...field} />
-                                            </FormControl>
-                                            <FormMessage />
-                                            </FormItem>
-                                        )}
-                                    />
-                                    <FormField
-                                        control={form.control}
-                                        name={`juryMembers.${index}.experience`}
-                                        render={({ field }) => (
-                                            <FormItem>
-                                            <FormLabel>Years of Experience</FormLabel>
-                                            <FormControl>
-                                                <Input type="number" placeholder="e.g., 10" {...field} />
-                                            </FormControl>
-                                            <FormMessage />
-                                            </FormItem>
-                                        )}
-                                    />
-                                </div>
                             </div>
                         </Card>
                     ))}
+                     {fields.length < 4 && (
+                        <Button type="button" variant="outline" className="w-full" onClick={() => append({ name: "", email: "", institute: "", contactNumber: "", department: "" })}>
+                            <PlusCircle className="mr-2 h-4 w-4"/> Add Another Member
+                        </Button>
+                    )}
                 </div>
              </ScrollArea>
             <DialogFooter className="pt-4">
