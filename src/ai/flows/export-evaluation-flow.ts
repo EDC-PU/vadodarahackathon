@@ -75,7 +75,7 @@ const exportEvaluationFlow = ai.defineFlow(
             // Explicitly set cell values to avoid column shift issues.
             const newRow = sheet.insertRow(startRow + index, []);
             newRow.getCell('A').value = index + 1; // Sr.
-            newRow.getCell('B').value = team.universityTeamId || 'N/A'; // Team Number (using university id)
+            newRow.getCell('B').value = team.universityTeamId || team.team_number || 'N/A'; // Team Number (using university id)
             newRow.getCell('C').value = team.team_name; // Team Name
             newRow.getCell('D').value = team.leader_name; // Lead
             newRow.getCell('E').value = problemStatementCombined; // Problem Statement (Combined)

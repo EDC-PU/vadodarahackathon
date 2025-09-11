@@ -72,7 +72,7 @@ export default function UniversityNominationsPage() {
   const [showAssignPanel, setShowAssignPanel] = useState(false);
   const [showSihStatus, setShowSihStatus] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-  const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null);
+  const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>({ key: 'universityTeamId', direction: 'asc' });
   const { toast } = useToast();
 
   const canModify = isAfter(new Date(), new Date(2025, 8, 6)); // September 6th, 2025
@@ -279,7 +279,7 @@ export default function UniversityNominationsPage() {
         } else {
             toast({ title: "Generation Failed", description: result.message || "Could not generate the zip file.", variant: "destructive" });
         }
-    } catch (error) {
+    } catch (error: any) {
         console.error("Error generating bulk nomination forms:", error);
         toast({ title: "Error", description: "An unexpected error occurred during bulk generation.", variant: "destructive" });
     } finally {
@@ -618,5 +618,6 @@ export default function UniversityNominationsPage() {
     </div>
   );
 }
+
 
 

@@ -428,6 +428,7 @@ export type ExportTeamsOutput = z.infer<typeof ExportTeamsOutputSchema>;
 // export-evaluation-flow
 const TeamForEvaluationSchema = z.object({
     universityTeamId: z.string().optional(),
+    team_number: z.string().optional(),
     team_name: z.string(),
     leader_name: z.string(),
     problemstatement_id: z.string().optional(),
