@@ -79,14 +79,13 @@ const exportEvaluationFlow = ai.defineFlow(
             newRow.getCell('C').value = team.team_name; // Team Name
             newRow.getCell('D').value = team.leader_name; // Lead
             newRow.getCell('E').value = problemStatementCombined; // Problem Statement (Combined)
-            newRow.getCell('F').value = team.category || 'N/A'; // Category
             
             // Set empty values for the scores
-            newRow.getCell('G').value = null; // Relevance
-            newRow.getCell('H').value = null; // Innovation
-            newRow.getCell('I').value = null; // Technical
-            newRow.getCell('J').value = null; // Feasibility
-            newRow.getCell('K').value = null; // Total
+            newRow.getCell('F').value = null; // Relevance
+            newRow.getCell('G').value = null; // Innovation
+            newRow.getCell('H').value = null; // Technical
+            newRow.getCell('I').value = null; // Feasibility
+            newRow.getCell('J').value = null; // Total
 
             // Apply styles and set row height
             newRow.eachCell({ includeEmpty: true }, (cell, colNumber) => {

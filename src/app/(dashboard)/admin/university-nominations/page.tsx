@@ -192,7 +192,6 @@ export default function UniversityNominationsPage() {
           leader_name: leader?.name || 'N/A',
           problemstatement_id: ps?.problemStatementId || 'N/A',
           problemstatement_title: team.problemStatementTitle || 'N/A',
-          category: team.category || 'N/A',
         };
       });
 
@@ -524,7 +523,6 @@ export default function UniversityNominationsPage() {
                             Problem Statement {getSortIndicator('problemStatementId')}
                         </Button>
                     </TableHead>
-                    <TableHead>Category</TableHead>
                     {showAssignPanel && <TableHead>Assign Panel</TableHead>}
                     {showSihStatus && <TableHead className="w-[300px]">SIH 2025 Selection Status</TableHead>}
                   </TableRow>
@@ -564,9 +562,6 @@ export default function UniversityNominationsPage() {
                       <TableCell>{team.institute}</TableCell>
                       <TableCell className="max-w-xs whitespace-normal">
                           {ps ? `${ps.problemStatementId}: ${ps.title}` : 'N/A'}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={team.category === 'Software' ? 'default' : 'secondary'}>{team.category || 'N/A'}</Badge>
                       </TableCell>
                       {showAssignPanel && (
                         <TableCell>
@@ -618,4 +613,5 @@ export default function UniversityNominationsPage() {
     </div>
   );
 }
+
 
