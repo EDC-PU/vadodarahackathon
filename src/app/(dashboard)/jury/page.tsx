@@ -9,11 +9,12 @@ import { Team, UserProfile, JuryPanel, ProblemStatement } from "@/lib/types";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Users, ClipboardList, UserCircle, Download, Briefcase, GraduationCap, Phone, Building } from "lucide-react";
+import { Loader2, Users, ClipboardList, UserCircle, Download, Briefcase, GraduationCap, Phone, Building, AlertCircle } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { exportEvaluation } from "@/ai/flows/export-evaluation-flow";
+import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
 
 export default function JuryDashboardPage() {
     const { user, loading: authLoading } = useAuth();
@@ -23,8 +24,16 @@ export default function JuryDashboardPage() {
     const [panelMembers, setPanelMembers] = useState<UserProfile[]>([]);
     const [problemStatements, setProblemStatements] = useState<ProblemStatement[]>([]);
     const [loading, setLoading] = useState(true);
-    const [isExporting, setIsExporting] = useState(false);
     const { toast } = useToast();
+
+    // Set the reveal time in UTC: September 13, 2025, 9:00 AM IST is 3:30 AM UTC
+    const revealDate = new Date(Date.UTC(2025, 8, 13, 3, 30, 0)); 
+    const [isTimeToShow, setIsTimeToShow] = useState(false);
+
+    useEffect(() => {
+      // This will run on the client, so it uses the client's clock
+      setIsTimeToShow(new Date() >= revealDate);
+    }, [revealDate]);
 
     useEffect(() => {
         if (!user || authLoading) return;
@@ -98,52 +107,6 @@ export default function JuryDashboardPage() {
 
     }, [user, authLoading]);
     
-     const handleExportEvaluation = async () => {
-        if (!panel || assignedTeams.length === 0) {
-            toast({ title: "No Teams", description: "This panel has no teams assigned to it.", variant: "destructive" });
-            return;
-        }
-        setIsExporting(true);
-        try {
-            const problemStatementsMap = new Map(problemStatements.map(ps => [ps.id, ps]));
-            
-            const teamsToExport = assignedTeams.map(team => {
-                const ps = team.problemStatementId ? problemStatementsMap.get(team.problemStatementId) : null;
-                return {
-                  universityTeamId: team.universityTeamId || 'N/A',
-                  team_name: team.name,
-                  leader_name: team.leader.name,
-                  problemstatement_id: ps?.problemStatementId || 'N/A',
-                  problemstatement_title: team.problemStatementTitle || 'N/A',
-                };
-            });
-
-            const result = await exportEvaluation({
-                instituteName: `Jury_Panel_${panel.name.replace(/\s+/g, '_')}`,
-                teams: teamsToExport
-            });
-
-            if (result.success && result.fileContent) {
-                const blob = new Blob([Buffer.from(result.fileContent, 'base64')], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-                const url = window.URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = result.fileName || `${panel.name}_Evaluation.xlsx`;
-                document.body.appendChild(a);
-                a.click();
-                window.URL.revokeObjectURL(url);
-                a.remove();
-            } else {
-                throw new Error(result.message || "Failed to export evaluation sheet.");
-            }
-        } catch (error: any) {
-            toast({ title: "Export Failed", description: error.message, variant: "destructive" });
-        } finally {
-            setIsExporting(false);
-        }
-  };
-
-
     if (loading || authLoading) {
         return (
             <div className="flex justify-center items-center h-screen">
@@ -168,7 +131,8 @@ export default function JuryDashboardPage() {
                         </div>
                     </CardHeader>
                     <CardContent>
-                        <ScrollArea className="h-auto border rounded-md">
+                       {isTimeToShow ? (
+                         <ScrollArea className="h-auto border rounded-md">
                             <Table>
                                 <TableHeader>
                                     <TableRow>
@@ -203,6 +167,15 @@ export default function JuryDashboardPage() {
                                 </TableBody>
                             </Table>
                         </ScrollArea>
+                       ) : (
+                         <Alert>
+                            <AlertCircle className="h-4 w-4" />
+                            <AlertTitle>Teams are not yet visible</AlertTitle>
+                            <AlertDescription>
+                                Assigned teams will be visible for evaluation on September 13th, 2025, from 9:00 AM IST onwards.
+                            </AlertDescription>
+                        </Alert>
+                       )}
                     </CardContent>
                 </Card>
 
@@ -223,7 +196,6 @@ export default function JuryDashboardPage() {
                                         <p className="flex items-center gap-1.5"><Building className="h-3 w-3" /> {member.institute}</p>
                                         <p className="flex items-center gap-1.5"><Phone className="h-3 w-3" /> {member.contactNumber || 'N/A'}</p>
                                         <p className="flex items-center gap-1.5"><Briefcase className="h-3 w-3" /> {member.department || 'N/A'}</p>
-                                        <p className="flex items-center gap-1.5"><GraduationCap className="h-3 w-3" /> {member.highestQualification || 'N/A'} | {member.experience || 'N/A'} yrs exp</p>
                                     </div>
                                 </div>
                             ))}
