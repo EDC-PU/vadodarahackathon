@@ -115,7 +115,6 @@ export default function JuryDashboardPage() {
                   leader_name: team.leader.name,
                   problemstatement_id: ps?.problemStatementId || 'N/A',
                   problemstatement_title: team.problemStatementTitle || 'N/A',
-                  category: team.category || 'N/A',
                 };
             });
 
@@ -167,10 +166,6 @@ export default function JuryDashboardPage() {
                         <CardTitle className="flex items-center gap-2"><ClipboardList /> Assigned Teams for Evaluation</CardTitle>
                         <CardDescription>Review the details of the teams you are assigned to evaluate.</CardDescription>
                         </div>
-                        <Button onClick={handleExportEvaluation} disabled={isExporting}>
-                            {isExporting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Download className="h-4 w-4 mr-2" />}
-                            Download Sheet
-                        </Button>
                     </CardHeader>
                     <CardContent>
                         <ScrollArea className="h-auto border rounded-md">
