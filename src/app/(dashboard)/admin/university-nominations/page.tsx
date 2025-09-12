@@ -222,9 +222,9 @@ export default function UniversityNominationsPage() {
   const handleExportTeams = async () => {
     setIsExportingTeams(true);
     try {
-        const teamIds = nominatedTeams.map(t => t.id);
+        const teamIds = filteredAndSortedTeams.map(t => t.id);
         if (teamIds.length === 0) {
-            toast({ title: "No Teams", description: "There are no nominated teams to export.", variant: "destructive" });
+            toast({ title: "No Teams", description: "There are no nominated teams to export with the current filters.", variant: "destructive" });
             return;
         }
 
@@ -618,6 +618,4 @@ export default function UniversityNominationsPage() {
     </div>
   );
 }
-
-
 

@@ -13,7 +13,7 @@ import ExcelJS from 'exceljs';
 import path from 'path';
 
 const ExportTeamsByIdsInputSchema = z.object({
-    teamIds: z.array(z.string()).describe("An array of team IDs to export."),
+    teamIds: z.array(z.string()).describe("An array of team IDs to export, in the desired order."),
 });
 type ExportTeamsByIdsInput = z.infer<typeof ExportTeamsByIdsInputSchema>;
 
@@ -72,9 +72,14 @@ const exportTeamsByIdsFlow = ai.defineFlow(
 
         try {
             console.log("Step 1: Fetching data from Firestore...");
+            // Fetch teams one by one to preserve the provided order
             const teamPromises = teamIds.map(id => db.collection('teams').doc(id).get());
             const teamDocs = await Promise.all(teamPromises);
-            const teamsData = teamDocs.map(doc => ({ id: doc.id, ...doc.data() } as Team));
+            
+            // Filter out any teams that might not have been found and preserve order
+            const teamsData = teamDocs
+                .map(doc => doc.exists ? ({ id: doc.id, ...doc.data() } as Team) : null)
+                .filter(Boolean) as Team[];
 
             if (teamsData.length === 0) {
                 return { success: false, message: "No teams found for the selected IDs." };
