@@ -148,7 +148,7 @@ export default function ManageJuryPage() {
         const teamsToExport = teamsForPanel.map(team => {
             const ps = team.problemStatementId ? problemStatementsMap.get(team.problemStatementId) : null;
             return {
-              team_number: team.teamNumber || 'N/A',
+              universityTeamId: team.universityTeamId || 'N/A',
               team_name: team.name,
               leader_name: team.leader.name,
               problemstatement_id: ps?.problemStatementId || 'N/A',
