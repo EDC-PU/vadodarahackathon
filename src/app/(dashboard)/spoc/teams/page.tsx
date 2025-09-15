@@ -713,7 +713,7 @@ export default function SpocTeamsPage() {
                                                     ) : (
                                                         <div className="flex items-center gap-2 group">
                                                             <span className="font-bold text-base">{team.name}</span>
-                                                            <Button size="icon" variant="ghost" className="h-7 w-7 opacity-0 group-hover:opacity-100" onClick={() => handleEditTeamName(team)}>
+                                                            <Button size="icon" variant="ghost" className="h-7 w-7 opacity-0 group-hover:opacity-100" onClick={() => setEditingTeamName(team)}>
                                                                 <Pencil className="h-4 w-4 text-muted-foreground"/>
                                                             </Button>
                                                         </div>
@@ -740,6 +740,15 @@ export default function SpocTeamsPage() {
                                                             {team.problemStatement.problemStatementId}: {team.problemStatement.title}
                                                         </div>
                                                     )}
+                                                     <div className="flex items-center gap-2 mt-2">
+                                                        <Label htmlFor={`nominate-${team.id}`} className="text-xs font-normal">Nominate (Inst.)</Label>
+                                                        <Switch
+                                                        id={`nominate-${team.id}`}
+                                                        checked={team.sihSelectionStatus === 'institute' || team.isNominated}
+                                                        onCheckedChange={(checked) => handleNominationToggle(team.id, checked)}
+                                                        disabled={isSaving === `nominate-${team.id}` || team.sihSelectionStatus === 'university' || team.isLocked}
+                                                        />
+                                                    </div>
                                                 </div>
                                             </TableCell>
                                         )}
@@ -765,13 +774,6 @@ export default function SpocTeamsPage() {
                                             <div className="flex items-center justify-end gap-2">
                                               {memberIndex === 0 && (
                                                 <div className="flex items-center gap-2">
-                                                  <Label htmlFor={`nominate-${team.id}`} className="text-xs font-normal">Nominate (Inst.)</Label>
-                                                  <Switch
-                                                    id={`nominate-${team.id}`}
-                                                    checked={team.sihSelectionStatus === 'institute' || team.isNominated}
-                                                    onCheckedChange={(checked) => handleNominationToggle(team.id, checked)}
-                                                    disabled={isSaving === `nominate-${team.id}` || team.sihSelectionStatus === 'university' || team.isLocked}
-                                                  />
                                                   <TooltipProvider>
                                                       <Tooltip>
                                                           <TooltipTrigger asChild>
