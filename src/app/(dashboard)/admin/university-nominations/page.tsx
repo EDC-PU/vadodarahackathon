@@ -287,8 +287,6 @@ export default function UniversityNominationsPage() {
     }
   };
   
-  const allLeaderEmails = nominatedTeams.map(team => allUsers.get(team.leader.uid)?.email).filter(Boolean).join(', ');
-
   const getStatusVariant = (status?: string) => {
     if (status === 'university') return 'default';
     if (status === 'institute') return 'secondary';
@@ -377,6 +375,8 @@ export default function UniversityNominationsPage() {
     }
     return sortableTeams;
   }, [nominatedTeams, searchTerm, sortConfig, allUsers, problemStatements, sihStatusFilter]);
+  
+  const allLeaderEmails = filteredAndSortedTeams.map(team => allUsers.get(team.leader.uid)?.email).filter(Boolean).join(', ');
 
 
   return (
@@ -401,7 +401,7 @@ export default function UniversityNominationsPage() {
                 <DialogHeader>
                   <DialogTitle>Leader Email Addresses</DialogTitle>
                   <DialogDescription>
-                    Here is a list of all leader emails for the nominated teams.
+                    Here is a list of all leader emails for the nominated teams based on your current filter.
                   </DialogDescription>
                 </DialogHeader>
                 <Textarea
@@ -642,6 +642,7 @@ export default function UniversityNominationsPage() {
     </div>
   );
 }
+
 
 
 
