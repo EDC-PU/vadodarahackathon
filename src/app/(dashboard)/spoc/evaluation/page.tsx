@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -114,7 +115,7 @@ export default function SpocEvaluationPage() {
 
         if (!querySnapshot.empty) {
           const instituteDoc = querySnapshot.docs[0];
-          const data = { id: instituteDoc.id, ...instituteDoc.data() } as Institute;
+          const data = { id: instituteDoc.id, ...doc.data() } as Institute;
           setInstituteData(data);
           if (data.evaluationDates) {
             form.setValue(
@@ -192,22 +193,26 @@ export default function SpocEvaluationPage() {
     }
   };
 
-  const registeredTeams = useMemo(() => {
-    return allTeams.filter(team => {
+  const teamsForNomination = useMemo(() => {
+    return allTeams
+      .map(team => {
         const teamMemberProfiles = [team.leader, ...team.members].map(m => allUsers.get(m.uid)).filter(Boolean) as UserProfile[];
         const hasFemale = teamMemberProfiles.some(m => m.gender === 'F');
         const instituteCount = teamMemberProfiles.filter(m => m.institute === team.institute).length;
-
         const isRegistered = teamMemberProfiles.length === 6 && hasFemale && instituteCount >= 3 && !!team.problemStatementId;
         
-        if (!isRegistered) return false;
-        
+        return {
+          ...team,
+          isRegistered,
+        }
+      })
+      .filter(team => {
         if (searchTerm) {
           const lowerSearch = searchTerm.toLowerCase();
           return team.name.toLowerCase().includes(lowerSearch) || team.leader.name.toLowerCase().includes(lowerSearch) || team.teamNumber?.toLowerCase().includes(lowerSearch);
         }
         return true;
-    });
+      });
   }, [allTeams, allUsers, searchTerm]);
   
 
@@ -435,48 +440,56 @@ export default function SpocEvaluationPage() {
                             <TableHead>Team Number</TableHead>
                             <TableHead>Leader</TableHead>
                             <TableHead>Category</TableHead>
+                            <TableHead>Status</TableHead>
                             <TableHead className="text-right">Form</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {registeredTeams.length > 0 ? registeredTeams.map(team => (
-                        <TableRow key={team.id}>
-                            <TableCell>
-                                <Checkbox 
-                                    id={`team-${team.id}`} 
-                                    onCheckedChange={(checked) => handleNominationChange(team.id, team.category, !!checked)}
-                                    checked={nominatedTeamIds.includes(team.id)}
-                                    disabled={
-                                        (!nominatedTeamIds.includes(team.id) && team.category === 'Software' && nominationCounts.software >= (instituteData?.nominationLimitSoftware ?? 0)) ||
-                                        (!nominatedTeamIds.includes(team.id) && team.category === 'Hardware' && nominationCounts.hardware >= (instituteData?.nominationLimitHardware ?? 0)) ||
-                                        !team.category
-                                    }
-                                />
-                            </TableCell>
-                            <TableCell className="font-medium">{team.name}</TableCell>
-                            <TableCell>{team.teamNumber || "N/A"}</TableCell>
-                            <TableCell>{team.leader.name}</TableCell>
-                            <TableCell>
-                                {team.category && <Badge variant={team.category === 'Software' ? 'default' : 'secondary'}>{team.category}</Badge>}
-                            </TableCell>
-                            <TableCell className="text-right">
-                                {nominatedTeamIds.includes(team.id) && (
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => handleGenerateForm(team.id)}
-                                    disabled={isGenerating === team.id}
-                                >
-                                    {isGenerating === team.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
-                                    Generate
-                                </Button>
-                                )}
-                            </TableCell>
-                        </TableRow>
-                        )) : (
+                        {teamsForNomination.length > 0 ? teamsForNomination.map(team => {
+                            const isNominationDisabled = !team.isRegistered || team.sihSelectionStatus === 'university';
+                            return (
+                                <TableRow key={team.id}>
+                                    <TableCell>
+                                        <Checkbox 
+                                            id={`team-${team.id}`} 
+                                            onCheckedChange={(checked) => handleNominationChange(team.id, team.category, !!checked)}
+                                            checked={nominatedTeamIds.includes(team.id)}
+                                            disabled={
+                                                isNominationDisabled ||
+                                                (!nominatedTeamIds.includes(team.id) && team.category === 'Software' && nominationCounts.software >= (instituteData?.nominationLimitSoftware ?? 0)) ||
+                                                (!nominatedTeamIds.includes(team.id) && team.category === 'Hardware' && nominationCounts.hardware >= (instituteData?.nominationLimitHardware ?? 0)) ||
+                                                !team.category
+                                            }
+                                        />
+                                    </TableCell>
+                                    <TableCell className="font-medium">{team.name}</TableCell>
+                                    <TableCell>{team.teamNumber || "N/A"}</TableCell>
+                                    <TableCell>{team.leader.name}</TableCell>
+                                    <TableCell>
+                                        {team.category && <Badge variant={team.category === 'Software' ? 'default' : 'secondary'}>{team.category}</Badge>}
+                                    </TableCell>
+                                    <TableCell>
+                                        {team.isRegistered ? <Badge className="bg-green-600">Registered</Badge> : <Badge variant="destructive">Pending</Badge>}
+                                    </TableCell>
+                                    <TableCell className="text-right">
+                                        {nominatedTeamIds.includes(team.id) && (
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => handleGenerateForm(team.id)}
+                                            disabled={isGenerating === team.id}
+                                        >
+                                            {isGenerating === team.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
+                                            Generate
+                                        </Button>
+                                        )}
+                                    </TableCell>
+                                </TableRow>
+                            )
+                        }) : (
                            <TableRow>
-                               <TableCell colSpan={6} className="h-24 text-center">
-                                   No registered teams found matching your search.
+                               <TableCell colSpan={7} className="h-24 text-center">
+                                   No teams found matching your search.
                                </TableCell>
                            </TableRow>
                         )}
@@ -490,3 +503,4 @@ export default function SpocEvaluationPage() {
     </div>
   );
 }
+
