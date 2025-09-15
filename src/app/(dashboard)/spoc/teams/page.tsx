@@ -717,10 +717,11 @@ export default function SpocTeamsPage() {
                                                             </Button>
                                                         </div>
                                                     )}
-                                                     {team.teamNumber && <Badge variant="secondary">Team No: {team.teamNumber}</Badge>}
-                                                     {team.isNominated && <Badge className="bg-green-600 hover:bg-green-700">Nominated for SIH</Badge>}
-                                                    {team.problemStatement && 
-                                                        <div className="whitespace-normal text-xs text-muted-foreground">
+                                                     {team.isRegistered ? <Badge className="bg-green-600">Registered</Badge> : <Badge variant="destructive">Pending</Badge>}
+                                                     {team.isNominated && <Badge className="bg-blue-500 mt-1">Nominated for SIH (Univ. Level)</Badge>}
+                                                     {team.sihSelectionStatus === 'institute' && <Badge className="bg-purple-600 mt-1">Nominated for SIH (Inst. Level)</Badge>}
+                                                     {team.problemStatement && 
+                                                        <div className="whitespace-normal text-xs text-muted-foreground mt-2">
                                                             <FileText className="inline h-3 w-3 mr-1"/>
                                                             {team.problemStatement.problemStatementId}: {team.problemStatement.title}
                                                         </div>
