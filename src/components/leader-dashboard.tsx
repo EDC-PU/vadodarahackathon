@@ -426,6 +426,19 @@ export default function LeaderDashboard() {
 
         <div className="grid gap-8 lg:grid-cols-2">
             <div className="space-y-8">
+                 {showMentorForm && (
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="flex items-center gap-2"><GraduationCap /> Mentor Details</CardTitle>
+                            <CardDescription>
+                                Your team has been nominated for SIH. Please provide your mentor's details. The mentor must be from Parul University.
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                           <MentorDetailsForm team={team} canEdit={canEdit} />
+                        </CardContent>
+                    </Card>
+                )}
                 <Card>
                     <CardHeader>
                         <CardTitle className="flex items-center gap-2">
@@ -603,19 +616,6 @@ export default function LeaderDashboard() {
             </div>
 
             <div className="space-y-8">
-                 {showMentorForm && (
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="flex items-center gap-2"><GraduationCap /> Mentor Details</CardTitle>
-                            <CardDescription>
-                                Your team has been nominated for SIH. Please provide your mentor's details. The mentor must be from Parul University.
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                           <MentorDetailsForm team={team} canEdit={canEdit} />
-                        </CardContent>
-                    </Card>
-                )}
                  <Card>
                     <CardHeader>
                         <CardTitle className="flex items-center gap-2">
@@ -849,6 +849,7 @@ export default function LeaderDashboard() {
     </div>
   );
 }
+
 
 
 
