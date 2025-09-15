@@ -544,6 +544,7 @@ export default function UniversityNominationsPage() {
                             Problem Statement {getSortIndicator('problemStatementId')}
                         </Button>
                     </TableHead>
+                    <TableHead>Mentor Status</TableHead>
                     {showAssignPanel && <TableHead>Assign Panel</TableHead>}
                     {showSihStatus && <TableHead className="w-[300px]">SIH 2025 Selection Status</TableHead>}
                   </TableRow>
@@ -583,6 +584,13 @@ export default function UniversityNominationsPage() {
                       <TableCell>{team.institute}</TableCell>
                       <TableCell className="max-w-xs whitespace-normal">
                           {ps ? `${ps.problemStatementId}: ${ps.title}` : 'N/A'}
+                      </TableCell>
+                      <TableCell>
+                        {team.mentor ? (
+                          <Badge className="bg-green-600">Yes</Badge>
+                        ) : (
+                          <Badge variant="destructive">No</Badge>
+                        )}
                       </TableCell>
                       {showAssignPanel && (
                         <TableCell>
@@ -634,6 +642,7 @@ export default function UniversityNominationsPage() {
     </div>
   );
 }
+
 
 
 
