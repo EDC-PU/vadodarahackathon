@@ -37,3 +37,4 @@ import '@/ai/flows/update-jury-panel-flow.ts';
 import '@/ai/flows/finalize-jury-panel-flow.ts';
 import '@/ai/flows/export-teams-by-ids-flow.ts';
 import '@/ai/flows/set-mentor-details-flow.ts';
+import '@/ai/flows/notify-leader-of-nomination-flow.ts';

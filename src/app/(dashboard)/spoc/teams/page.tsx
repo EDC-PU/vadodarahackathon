@@ -49,6 +49,7 @@ import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
 import { generateNominationForm } from "@/ai/flows/generate-nomination-form-flow";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { notifyLeaderOfNomination } from "@/ai/flows/notify-leader-of-nomination-flow";
 
 
 type SortKey = 'teamName' | 'teamNumber' | 'name' | 'email' | 'enrollmentNumber' | 'contactNumber';
@@ -110,7 +111,7 @@ export default function SpocTeamsPage() {
   const statuses: StatusFilter[] = ["All Statuses", "Registered", "Pending"];
   const categories: CategoryFilter[] = ["All Categories", "Software", "Hardware"];
 
-  const fetchAllData = useCallback((institute: string) => {
+  const fetchAllData = useCallback(async (institute: string) => {
     setLoading(true);
     
     // Fetch Teams
@@ -531,6 +532,12 @@ export default function SpocTeamsPage() {
         const teamRef = doc(db, 'teams', teamId);
         await updateDoc(teamRef, { isNominated: shouldBeNominated });
         toast({ title: "Success", description: `Team nomination status updated.` });
+        
+        // Notify leader only when nominating, not when de-nominating.
+        if (shouldBeNominated) {
+            await notifyLeaderOfNomination({ teamId });
+        }
+
     } catch (error: any) {
         toast({ title: "Error", description: `Could not update nomination status: ${error.message}`, variant: "destructive" });
     } finally {
@@ -746,14 +753,14 @@ export default function SpocTeamsPage() {
                                                     )}
                                                      <div className="flex flex-wrap items-center gap-2">
                                                         {team.isRegistered ? <Badge className="bg-green-600 hover:bg-green-700">Registered</Badge> : <Badge variant="destructive">Pending</Badge>}
-                                                        {team.sihSelectionStatus === 'university' ? <Badge className="bg-blue-500 hover:bg-blue-600">Nominated for SIH (Univ. Level)</Badge> 
+                                                        {team.sihSelectionStatus === 'university' ? <Badge className="bg-blue-500 hover:bg-blue-600">SIH (Univ. Level)</Badge> 
                                                         : team.sihSelectionStatus === 'institute' ? 
                                                             <Tooltip>
                                                                 <TooltipTrigger asChild>
-                                                                    <Badge className="bg-purple-500 hover:bg-purple-600 cursor-help">Nominated for SIH (Inst. Level)</Badge>
+                                                                    <Badge className="bg-purple-500 hover:bg-purple-600 cursor-help">SIH (Inst. Level)</Badge>
                                                                 </TooltipTrigger>
                                                                 <TooltipContent>
-                                                                    <p>{team.isNominated ? 'By You' : 'By Admin'}</p>
+                                                                    <p>This status was set by an Admin.</p>
                                                                 </TooltipContent>
                                                             </Tooltip>
                                                         : null
@@ -788,22 +795,22 @@ export default function SpocTeamsPage() {
                                                             <Badge variant="destructive">Not Selected</Badge>
                                                         )}
                                                     </div>
-                                                    <div className="flex items-center gap-2 mt-2">
+                                                     <div className="flex items-center gap-2 mt-2">
                                                         <Tooltip>
                                                             <TooltipTrigger asChild>
                                                                 <div className="flex items-center gap-2">
                                                                     <Label htmlFor={`nominate-${team.id}`} className="text-xs font-normal">Nominate (Inst.)</Label>
                                                                     <Switch
                                                                         id={`nominate-${team.id}`}
-                                                                        checked={team.sihSelectionStatus === 'institute' || team.isNominated}
+                                                                        checked={team.isNominated}
                                                                         onCheckedChange={(checked) => handleNominationToggle(team.id, checked)}
-                                                                        disabled={isSaving === `nominate-${team.id}` || team.sihSelectionStatus === 'university' || team.sihSelectionStatus === 'institute'}
+                                                                        disabled={isSaving === `nominate-${team.id}` || !!team.sihSelectionStatus}
                                                                     />
                                                                 </div>
                                                             </TooltipTrigger>
                                                             { (team.sihSelectionStatus === 'institute' || team.sihSelectionStatus === 'university') && (
                                                                 <TooltipContent>
-                                                                    <p>This team's nomination status has been finalized by an admin.</p>
+                                                                    <p>This team's nomination status has been finalized by an admin and cannot be changed.</p>
                                                                 </TooltipContent>
                                                             )}
                                                         </Tooltip>
