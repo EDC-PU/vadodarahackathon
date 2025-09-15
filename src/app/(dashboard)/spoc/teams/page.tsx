@@ -722,9 +722,22 @@ export default function SpocTeamsPage() {
                                                               </Button>
                                                           </div>
                                                       )}
-                                                      {team.isRegistered ? <Badge className="bg-green-600 hover:bg-green-700">Registered</Badge> : <Badge variant="destructive">Pending</Badge>}
-                                                      {team.sihSelectionStatus === 'university' && <Badge className="bg-blue-500 hover:bg-blue-600">Nominated for SIH (Univ. Level)</Badge>}
-                                                      {team.sihSelectionStatus === 'institute' && <Badge className="bg-purple-500 hover:bg-purple-600">Nominated for SIH (Inst. Level)</Badge>}
+                                                      <div className="flex flex-wrap gap-2">
+                                                        {team.isRegistered ? <Badge className="bg-green-600 hover:bg-green-700">Registered</Badge> : <Badge variant="destructive">Pending</Badge>}
+                                                        {team.sihSelectionStatus === 'university' && <Badge className="bg-blue-500 hover:bg-blue-600">Nominated for SIH (Univ. Level)</Badge>}
+                                                        {team.sihSelectionStatus === 'institute' && (
+                                                            <Tooltip>
+                                                                <TooltipTrigger asChild>
+                                                                    <Badge className="bg-purple-500 hover:bg-purple-600 cursor-help">Nominated for SIH (Inst. Level)</Badge>
+                                                                </TooltipTrigger>
+                                                                <TooltipContent>
+                                                                    <p>{team.isNominated ? 'By Admin' : 'By You'}</p>
+                                                                </TooltipContent>
+                                                            </Tooltip>
+                                                        )}
+                                                        {team.teamNumber && <Badge variant="secondary">#{team.teamNumber}</Badge>}
+                                                        {team.universityTeamId && <Badge variant="secondary">Univ. ID: {team.universityTeamId}</Badge>}
+                                                      </div>
                                                   </div>
                                               </TableCell>
                                           )}
@@ -917,3 +930,4 @@ export default function SpocTeamsPage() {
     </TooltipProvider>
   );
 }
+
