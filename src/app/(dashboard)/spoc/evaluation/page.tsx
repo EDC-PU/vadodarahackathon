@@ -116,7 +116,7 @@ export default function SpocEvaluationPage() {
 
         if (!querySnapshot.empty) {
           const instituteDoc = querySnapshot.docs[0];
-          const data = { id: instituteDoc.id, ...doc.data() } as Institute;
+          const data = { id: instituteDoc.id, ...instituteDoc.data() } as Institute;
           setInstituteData(data);
           if (data.evaluationDates) {
             form.setValue(
@@ -208,8 +208,8 @@ export default function SpocEvaluationPage() {
         }
       })
       .filter(team => {
-        // Only show registered teams
-        if (!team.isRegistered) return false;
+        // Only show registered teams not selected for university level
+        if (!team.isRegistered || team.sihSelectionStatus === 'university') return false;
 
         if (searchTerm) {
           const lowerSearch = searchTerm.toLowerCase();
@@ -497,7 +497,7 @@ export default function SpocEvaluationPage() {
                     </TableHeader>
                     <TableBody>
                         {teamsForNomination.length > 0 ? teamsForNomination.map(team => {
-                            const isNominationDisabled = !team.isRegistered || team.sihSelectionStatus === 'university';
+                            const isNominationDisabled = !team.isRegistered;
                             return (
                                 <TableRow key={team.id}>
                                     <TableCell>
@@ -554,5 +554,6 @@ export default function SpocEvaluationPage() {
     </div>
   );
 }
+
 
 
