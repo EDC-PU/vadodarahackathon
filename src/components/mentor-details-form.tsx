@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -170,16 +169,9 @@ export function MentorDetailsForm({ team, canEdit }: MentorDetailsFormProps) {
             render={({ field }) => (
                 <FormItem>
                 <FormLabel>Department (Parul University)</FormLabel>
-                <Select onValueChange={field.onChange} value={field.value}>
-                    <FormControl>
-                    <SelectTrigger>
-                        <SelectValue placeholder="Select mentor's department" />
-                    </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                        {departments.map((dept) => (<SelectItem key={dept} value={dept}>{dept}</SelectItem>))}
-                    </SelectContent>
-                </Select>
+                 <FormControl>
+                  <Input placeholder="e.g. Computer Engineering" {...field} />
+                </FormControl>
                 <FormMessage />
                 </FormItem>
             )}
