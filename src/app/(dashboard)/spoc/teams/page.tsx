@@ -98,6 +98,7 @@ export default function SpocTeamsPage() {
   const [selectedProblemStatements, setSelectedProblemStatements] = useState<string[]>([]);
   const [sortConfig, setSortConfig] = useState<{ key: SortKey, direction: SortDirection } | null>(null);
   const { toast } = useToast();
+  const [inviteLinks, setInviteLinks] = useState<Map<string, string>>(new Map());
   const [loadingLink, setLoadingLink] = useState<string | null>(null);
   const [evaluationExportDate, setEvaluationExportDate] = useState<Date | null>(null);
   const [spocPsSelection, setSpocPsSelection] = useState<Record<string, string>>({});
@@ -746,8 +747,8 @@ export default function SpocTeamsPage() {
                                                     )}
                                                      <div className="flex flex-wrap items-center gap-2">
                                                         {team.isRegistered ? <Badge className="bg-green-600 hover:bg-green-700">Registered</Badge> : <Badge variant="destructive">Pending</Badge>}
-                                                         {team.sihSelectionStatus === 'university' ? <Badge className="bg-blue-500 hover:bg-blue-600">Nominated for SIH (Univ. Level)</Badge> 
-                                                         : team.sihSelectionStatus === 'institute' ? 
+                                                        {team.sihSelectionStatus === 'university' ? <Badge className="bg-blue-500 hover:bg-blue-600">Nominated for SIH (Univ. Level)</Badge> 
+                                                        : team.sihSelectionStatus === 'institute' ? 
                                                             <Tooltip>
                                                                 <TooltipTrigger asChild>
                                                                     <Badge className="bg-purple-500 hover:bg-purple-600 cursor-help">Nominated for SIH (Inst. Level)</Badge>
@@ -756,7 +757,7 @@ export default function SpocTeamsPage() {
                                                                     <p>{team.isNominated ? 'By You' : 'By Admin'}</p>
                                                                 </TooltipContent>
                                                             </Tooltip>
-                                                         : null
+                                                        : null
                                                         }
                                                         {team.universityTeamId && <Badge variant="secondary">{`Univ. ID: ${team.universityTeamId}`}</Badge>}
                                                         {team.teamNumber && <Badge variant="secondary">{`Team No: ${team.teamNumber}`}</Badge>}

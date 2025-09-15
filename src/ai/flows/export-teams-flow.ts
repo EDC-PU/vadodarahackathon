@@ -157,15 +157,27 @@ const exportTeamsFlow = ai.defineFlow(
                 const leaderProfile = usersData.get(team.leader.uid);
                 const problemStatement = team.problemStatementId ? problemStatementsData.get(team.problemStatementId) : null;
                 
-                let allMembers = [
-                    { ...(leaderProfile || team.leader), isLeader: true },
-                     ...team.members.map(m => ({ ...(usersData.get(m.uid) || m), isLeader: false }))
+                 let allMembers = [
+                    { ...(leaderProfile || team.leader), isLeader: true, role: 'Leader' },
+                    ...team.members.map(m => ({ ...(usersData.get(m.uid) || m), isLeader: false, role: 'Member' }))
                 ];
+
+                if (team.mentor) {
+                    allMembers.push({
+                        ...team.mentor,
+                        name: team.mentor.name,
+                        email: team.mentor.email,
+                        contactNumber: team.mentor.phoneNumber,
+                        uid: 'mentor',
+                        isLeader: false,
+                        role: 'Mentor',
+                    } as any);
+                }
 
                 if (role === 'leader') {
                     allMembers = allMembers.filter(m => m.isLeader);
                 } else if (role === 'member') {
-                    allMembers = allMembers.filter(m => !m.isLeader);
+                    allMembers = allMembers.filter(m => !m.isLeader && m.role !== 'Mentor');
                 }
                 
                 const teamSize = allMembers.length;
@@ -179,17 +191,18 @@ const exportTeamsFlow = ai.defineFlow(
                     sheet.addRow([
                         team.name || 'N/A', // A
                         team.teamNumber || 'N/A', // B
-                        memberProfile?.name || (member as any)?.name || 'N/A', // C
-                        memberProfile?.email || (member as any)?.email || 'N/A', // D
-                        memberProfile?.contactNumber || (member as any)?.contactNumber || 'N/A', // E
+                        memberProfile?.name || 'N/A', // C
+                        memberProfile?.email || 'N/A', // D
+                        memberProfile?.contactNumber || 'N/A', // E
                         memberProfile?.department || 'N/A', // F
                         team.institute || 'N/A', // G
-                        memberProfile?.enrollmentNumber || (member as any)?.enrollmentNumber || 'N/A', // H
-                        memberProfile?.gender || (member as any)?.gender || 'N/A', // I
-                        memberProfile?.yearOfStudy || (member as any)?.yearOfStudy || 'N/A', // J
-                        memberProfile?.semester || (member as any)?.semester || 'N/A', // K
+                        memberProfile?.enrollmentNumber || 'N/A', // H
+                        memberProfile?.gender || 'N/A', // I
+                        memberProfile?.yearOfStudy || 'N/A', // J
+                        memberProfile?.semester || 'N/A', // K
                         problemStatement?.problemStatementId || 'N/A', // L
                         problemStatement?.title || 'N/A', // M
+                        member.role || 'N/A', // N - Role
                     ]);
                 });
 

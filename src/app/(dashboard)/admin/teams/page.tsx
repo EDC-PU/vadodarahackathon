@@ -403,7 +403,8 @@ function AllTeamsContent() {
                     isRegistered: team.isRegistered,
                     isFirstRow: memberIndex === 0,
                     rowSpan: membersToDisplay.length,
-                    institute: team.institute
+                    institute: team.institute,
+                    universityTeamId: team.universityTeamId
                 });
             });
         }
@@ -661,12 +662,12 @@ function AllTeamsContent() {
                                             {row.teamNumber && <Badge variant="secondary">{`Team No: ${row.teamNumber}`}</Badge>}
                                         </div>
                                         <div className="text-xs text-muted-foreground">{row.institute}</div>
-                                        {row.problemStatement && 
+                                        {row.problemStatement && (
                                             <div className="whitespace-normal text-xs text-muted-foreground">
                                                 <FileText className="inline h-3 w-3 mr-1"/>
                                                 {row.problemStatement.problemStatementId}: {row.problemStatement.title}
                                             </div>
-                                        }
+                                        )}
                                       </div>
                                   </TableCell>
                               )}
