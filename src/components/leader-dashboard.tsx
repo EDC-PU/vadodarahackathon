@@ -157,6 +157,8 @@ export default function LeaderDashboard() {
 
   const isDeadlinePassed = deadline ? new Date() > deadline : false;
   const canEdit = !isDeadlinePassed || team?.isLocked === false;
+  const canEditMentorDetails = team?.isNominated || team?.sihSelectionStatus;
+
 
   const teamValidation = useMemo(() => {
     if (!team || teamMembers.length === 0) {
@@ -435,7 +437,7 @@ export default function LeaderDashboard() {
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
-                       <MentorDetailsForm team={team} canEdit={canEdit} />
+                       <MentorDetailsForm team={team} canEdit={canEditMentorDetails} />
                     </CardContent>
                 </Card>
             )}
