@@ -212,7 +212,7 @@ const HeroSection = () => {
                         className="bg-transparent border-2 border-brand-yellow text-brand-yellow rounded-full animate-neon-pulse transition-transform hover:scale-105"
                         asChild
                     >
-                        <a href="http://drive.google.com/file/d/1F9aZeeiWHies_PGeLw4xGwe1K-cYZ_bu/view?usp=sharing" target="_blank" rel="noopener noreferrer">View Institute Round Results</a>
+                        <a href="https://drive.google.com/file/d/1SWl6PCB67QVK__MOEGZEJh2svX_C2dWD/view?usp=sharing" target="_blank" rel="noopener noreferrer">University Round Results</a>
                     </Button>
                 </motion.div>
                 <LiveStatsCounter />
@@ -544,6 +544,7 @@ export default function LandingPage({ spocDetails, announcements, problemStateme
     </div>
   );
 }
+
 
 
 
