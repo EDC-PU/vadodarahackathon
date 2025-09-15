@@ -699,7 +699,6 @@ export default function SpocTeamsPage() {
                             <TableHeader>
                             <TableRow>
                                 <TableHead><Button variant="ghost" onClick={() => requestSort('teamName')}>Team Info {getSortIndicator('teamName')}</Button></TableHead>
-                                <TableHead>Invite Link</TableHead>
                                 <TableHead><Button variant="ghost" onClick={() => requestSort('name')}>Member Name {getSortIndicator('name')}</Button></TableHead>
                                 <TableHead><Button variant="ghost" onClick={() => requestSort('email')}>Email {getSortIndicator('email')}</Button></TableHead>
                                 <TableHead><Button variant="ghost" onClick={() => requestSort('enrollmentNumber')}>Enrollment No. {getSortIndicator('enrollmentNumber')}</Button></TableHead>
@@ -764,10 +763,10 @@ export default function SpocTeamsPage() {
                                                     </div>
                                                     <div className="whitespace-normal text-xs text-muted-foreground">
                                                         {team.problemStatement ? (
-                                                          <>
-                                                              <FileText className="inline h-3 w-3 mr-1"/>
-                                                              {team.problemStatement.problemStatementId}: {team.problemStatement.title}
-                                                          </>
+                                                            <>
+                                                                <FileText className="inline h-3 w-3 mr-1"/>
+                                                                {team.problemStatement.problemStatementId}: {team.problemStatement.title}
+                                                            </>
                                                         ) : canSpocSelectPs ? (
                                                             <div className="flex flex-col gap-2 items-start w-[250px] pt-2">
                                                                 <Select onValueChange={(psId) => setSpocPsSelection(prev => ({...prev, [team.id]: psId}))}>
@@ -788,7 +787,7 @@ export default function SpocTeamsPage() {
                                                         ) : (
                                                             <Badge variant="destructive">Not Selected</Badge>
                                                         )}
-                                                     </div>
+                                                    </div>
                                                     <div className="flex items-center gap-2 mt-2">
                                                         <Tooltip>
                                                             <TooltipTrigger asChild>
@@ -810,35 +809,6 @@ export default function SpocTeamsPage() {
                                                         </Tooltip>
                                                     </div>
                                                 </div>
-                                            </TableCell>
-                                        )}
-                                        {memberIndex === 0 && (
-                                            <TableCell rowSpan={membersToDisplay.length} className="align-top pt-6">
-                                                {inviteLinks.has(team.id) ? (
-                                                    <div className="flex items-center gap-1">
-                                                        <Input value={inviteLinks.get(team.id)} readOnly className="h-8 text-xs"/>
-                                                        <Button size="icon" variant="ghost" className="h-8 w-8 shrink-0" onClick={() => {
-                                                            navigator.clipboard.writeText(inviteLinks.get(team.id)!);
-                                                            toast({ title: "Copied!" });
-                                                        }}>
-                                                            <Copy className="h-4 w-4" />
-                                                        </Button>
-                                                    </div>
-                                                ) : (
-                                                    <Button
-                                                        variant="outline"
-                                                        size="sm"
-                                                        onClick={() => handleGetInviteLink(team.id, team.name)}
-                                                        disabled={loadingLink === team.id}
-                                                    >
-                                                        {loadingLink === team.id ? (
-                                                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                                        ) : (
-                                                            <LinkIcon className="mr-2 h-4 w-4" />
-                                                        )}
-                                                        Get Link
-                                                    </Button>
-                                                )}
                                             </TableCell>
                                         )}
                                         <TableCell>
