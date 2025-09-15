@@ -698,6 +698,7 @@ export default function SpocTeamsPage() {
                             <TableHeader>
                             <TableRow>
                                 <TableHead><Button variant="ghost" onClick={() => requestSort('teamName')}>Team Info {getSortIndicator('teamName')}</Button></TableHead>
+                                <TableHead>Invite Link</TableHead>
                                 <TableHead><Button variant="ghost" onClick={() => requestSort('name')}>Member Name {getSortIndicator('name')}</Button></TableHead>
                                 <TableHead><Button variant="ghost" onClick={() => requestSort('email')}>Email {getSortIndicator('email')}</Button></TableHead>
                                 <TableHead><Button variant="ghost" onClick={() => requestSort('enrollmentNumber')}>Enrollment No. {getSortIndicator('enrollmentNumber')}</Button></TableHead>
@@ -745,8 +746,7 @@ export default function SpocTeamsPage() {
                                                     )}
                                                      <div className="flex flex-wrap items-center gap-2">
                                                         {team.isRegistered ? <Badge className="bg-green-600 hover:bg-green-700">Registered</Badge> : <Badge variant="destructive">Pending</Badge>}
-                                                        
-                                                        {team.sihSelectionStatus === 'university' ? <Badge className="bg-blue-500 hover:bg-blue-600">Nominated for SIH (Univ. Level)</Badge> 
+                                                         {team.sihSelectionStatus === 'university' ? <Badge className="bg-blue-500 hover:bg-blue-600">Nominated for SIH (Univ. Level)</Badge> 
                                                          : team.sihSelectionStatus === 'institute' ? 
                                                             <Tooltip>
                                                                 <TooltipTrigger asChild>
@@ -758,6 +758,8 @@ export default function SpocTeamsPage() {
                                                             </Tooltip>
                                                          : null
                                                         }
+                                                        {team.universityTeamId && <Badge variant="secondary">{`Univ. ID: ${team.universityTeamId}`}</Badge>}
+                                                        {team.teamNumber && <Badge variant="secondary">{`Team No: ${team.teamNumber}`}</Badge>}
                                                     </div>
                                                     <div className="whitespace-normal text-xs text-muted-foreground">
                                                         {team.problemStatement ? (
@@ -786,27 +788,56 @@ export default function SpocTeamsPage() {
                                                             <Badge variant="destructive">Not Selected</Badge>
                                                         )}
                                                      </div>
-                                                      <div className="flex items-center gap-2 mt-2">
-                                                          <Tooltip>
-                                                              <TooltipTrigger asChild>
-                                                                  <div className="flex items-center gap-2">
-                                                                      <Label htmlFor={`nominate-${team.id}`} className="text-xs font-normal">Nominate (Inst.)</Label>
-                                                                      <Switch
-                                                                          id={`nominate-${team.id}`}
-                                                                          checked={team.sihSelectionStatus === 'institute' || team.isNominated}
-                                                                          onCheckedChange={(checked) => handleNominationToggle(team.id, checked)}
-                                                                          disabled={isSaving === `nominate-${team.id}` || team.sihSelectionStatus === 'university' || !!team.isLocked || team.sihSelectionStatus === 'institute'}
-                                                                      />
-                                                                  </div>
-                                                              </TooltipTrigger>
-                                                              { (team.sihSelectionStatus === 'institute' || team.sihSelectionStatus === 'university') && (
-                                                                  <TooltipContent>
-                                                                      <p>This team's nomination status has been finalized by an admin.</p>
-                                                                  </TooltipContent>
-                                                              )}
-                                                          </Tooltip>
-                                                      </div>
+                                                    <div className="flex items-center gap-2 mt-2">
+                                                        <Tooltip>
+                                                            <TooltipTrigger asChild>
+                                                                <div className="flex items-center gap-2">
+                                                                    <Label htmlFor={`nominate-${team.id}`} className="text-xs font-normal">Nominate (Inst.)</Label>
+                                                                    <Switch
+                                                                        id={`nominate-${team.id}`}
+                                                                        checked={team.sihSelectionStatus === 'institute' || team.isNominated}
+                                                                        onCheckedChange={(checked) => handleNominationToggle(team.id, checked)}
+                                                                        disabled={isSaving === `nominate-${team.id}` || team.sihSelectionStatus === 'university' || team.sihSelectionStatus === 'institute'}
+                                                                    />
+                                                                </div>
+                                                            </TooltipTrigger>
+                                                            { (team.sihSelectionStatus === 'institute' || team.sihSelectionStatus === 'university') && (
+                                                                <TooltipContent>
+                                                                    <p>This team's nomination status has been finalized by an admin.</p>
+                                                                </TooltipContent>
+                                                            )}
+                                                        </Tooltip>
+                                                    </div>
                                                 </div>
+                                            </TableCell>
+                                        )}
+                                        {memberIndex === 0 && (
+                                            <TableCell rowSpan={membersToDisplay.length} className="align-top pt-6">
+                                                {inviteLinks.has(team.id) ? (
+                                                    <div className="flex items-center gap-1">
+                                                        <Input value={inviteLinks.get(team.id)} readOnly className="h-8 text-xs"/>
+                                                        <Button size="icon" variant="ghost" className="h-8 w-8 shrink-0" onClick={() => {
+                                                            navigator.clipboard.writeText(inviteLinks.get(team.id)!);
+                                                            toast({ title: "Copied!" });
+                                                        }}>
+                                                            <Copy className="h-4 w-4" />
+                                                        </Button>
+                                                    </div>
+                                                ) : (
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        onClick={() => handleGetInviteLink(team.id, team.name)}
+                                                        disabled={loadingLink === team.id}
+                                                    >
+                                                        {loadingLink === team.id ? (
+                                                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                                        ) : (
+                                                            <LinkIcon className="mr-2 h-4 w-4" />
+                                                        )}
+                                                        Get Link
+                                                    </Button>
+                                                )}
                                             </TableCell>
                                         )}
                                         <TableCell>

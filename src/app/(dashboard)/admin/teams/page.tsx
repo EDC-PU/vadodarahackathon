@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -402,6 +403,7 @@ function AllTeamsContent() {
                     isRegistered: team.isRegistered,
                     isFirstRow: memberIndex === 0,
                     rowSpan: membersToDisplay.length,
+                    institute: team.institute
                 });
             });
         }
@@ -652,10 +654,13 @@ function AllTeamsContent() {
                                             </Button>
                                         </div>
                                         <div className="flex flex-wrap items-center gap-2">
-                                            {row.teamNumber && <Badge variant="secondary">Team No: {row.teamNumber}</Badge>}
-                                            {row.sihSelectionStatus === 'university' && <Badge className="bg-blue-500 hover:bg-blue-600">Nominated for SIH (Univ. Level)</Badge>}
-                                            {row.sihSelectionStatus === 'institute' && <Badge className="bg-purple-500 hover:bg-purple-600">Nominated for SIH (Inst. Level)</Badge>}
+                                            {row.isRegistered ? <Badge className="bg-green-600 hover:bg-green-700">Registered</Badge> : <Badge variant="destructive">Pending</Badge>}
+                                            {row.sihSelectionStatus === 'university' ? <Badge className="bg-blue-500 hover:bg-blue-600">Nominated for SIH (Univ. Level)</Badge> 
+                                            : row.sihSelectionStatus === 'institute' ? <Badge className="bg-purple-500 hover:bg-purple-600">Nominated for SIH (Inst. Level)</Badge> : null}
+                                            {row.universityTeamId && <Badge variant="secondary">{`Univ. ID: ${row.universityTeamId}`}</Badge>}
+                                            {row.teamNumber && <Badge variant="secondary">{`Team No: ${row.teamNumber}`}</Badge>}
                                         </div>
+                                        <div className="text-xs text-muted-foreground">{row.institute}</div>
                                         {row.problemStatement && 
                                             <div className="whitespace-normal text-xs text-muted-foreground">
                                                 <FileText className="inline h-3 w-3 mr-1"/>
