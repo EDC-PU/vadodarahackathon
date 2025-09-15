@@ -143,7 +143,7 @@ export default function AnnouncementsPage() {
                                     <SelectItem value="all">All Users</SelectItem>
                                     <SelectItem value="teams">Teams (Leaders & Members)</SelectItem>
                                     <SelectItem value="spocs">SPOCs</SelectItem>
-                                    <SelectItem value="nominated_teams">University Nominated Teams</SelectItem>
+                                    <SelectItem value="university_nominated">SIH University Nominated Teams</SelectItem>
                                 </SelectContent>
                             </Select>
                         </div>
@@ -175,7 +175,7 @@ export default function AnnouncementsPage() {
                                 </Link>
                             )}
                             <p className="text-xs text-muted-foreground mt-2">
-                                Posted for <span className="font-medium capitalize">{announcement.audience.replace('_', ' ')}</span> by {announcement.authorName} on {announcement.createdAt ? new Date(announcement.createdAt.seconds * 1000).toLocaleDateString() : '...'}
+                                Posted for <span className="font-medium capitalize">{announcement.audience.replace(/_/g, ' ')}</span> by {announcement.authorName} on {announcement.createdAt ? new Date(announcement.createdAt.seconds * 1000).toLocaleDateString() : '...'}
                             </p>
                             <AlertDialog>
                               <AlertDialogTrigger asChild>

@@ -165,7 +165,7 @@ export interface JuryPanel {
 }
 
 
-export type AnnouncementAudience = "all" | "teams" | "spocs" | "institute" | "nominated_teams";
+export type AnnouncementAudience = "all" | "teams" | "spocs" | "institute" | "university_nominated" | "institute_nominated";
 
 export interface Announcement {
   id: string;
@@ -290,8 +290,9 @@ export const CreateAnnouncementInputSchema = z.object({
   title: z.string(),
   content: z.string(),
   url: z.string().optional(),
-  audience: z.enum(["all", "teams", "spocs", "nominated_teams"]),
+  audience: z.enum(["all", "teams", "spocs", "university_nominated", "institute_nominated", "institute"]),
   authorName: z.string(),
+  institute: z.string().optional(),
 });
 export type CreateAnnouncementInput = z.infer<typeof CreateAnnouncementInputSchema>;
 

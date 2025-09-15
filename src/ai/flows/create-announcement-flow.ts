@@ -7,7 +7,7 @@
 import { ai } from '@/ai/genkit';
 import { CreateAnnouncementInput, CreateAnnouncementInputSchema, CreateAnnouncementOutput, CreateAnnouncementOutputSchema, Team, UserProfile } from '@/lib/types';
 import { getAdminDb } from '@/lib/firebase-admin';
-import { FieldValue } from 'firebase-admin/firestore';
+import { FieldValue, Query } from 'firebase-admin/firestore';
 import { getEmailTemplate } from '@/lib/email-templates';
 import nodemailer from 'nodemailer';
 
@@ -60,42 +60,54 @@ const createAnnouncementFlow = ai.defineFlow(
     inputSchema: CreateAnnouncementInputSchema,
     outputSchema: CreateAnnouncementOutputSchema,
   },
-  async ({ title, content, url, audience, authorName }) => {
+  async ({ title, content, url, audience, authorName, institute }) => {
     const db = getAdminDb();
     if (!db) {
         return { success: false, message: "Database connection failed." };
     }
 
     try {
-        const batch = db.batch();
-        const announcementRef = db.collection("announcements").doc();
-        batch.set(announcementRef, {
+        const announcementData: any = {
             title,
             content,
             url,
             audience,
             authorName,
             createdAt: FieldValue.serverTimestamp(),
-        });
+        };
 
-        await batch.commit();
+        if (audience === 'institute' && institute) {
+            announcementData.institute = institute;
+        }
+
+        const announcementRef = db.collection("announcements").doc();
+        await announcementRef.set(announcementData);
 
         let message = "Announcement posted successfully.";
 
-        // If audience is nominated teams, send emails
-        if (audience === 'nominated_teams') {
-            console.log("Audience is nominated teams. Fetching leaders to email...");
-            const nominatedTeamsQuery = db.collection('teams').where('isNominated', '==', true);
+        // If audience is a nominated group, send emails
+        if (audience === 'university_nominated' || audience === 'institute_nominated') {
+            const status = audience === 'university_nominated' ? 'university' : 'institute';
+            console.log(`Audience is ${audience}. Fetching leaders to email...`);
+            
+            let nominatedTeamsQuery: Query = db.collection('teams').where('sihSelectionStatus', '==', status);
+            
+            // For institute-nominated, SPOC must also filter by their institute
+            if (audience === 'institute_nominated' && institute) {
+                nominatedTeamsQuery = nominatedTeamsQuery.where('institute', '==', institute);
+            }
+            
             const snapshot = await nominatedTeamsQuery.get();
+
             if (snapshot.empty) {
                 console.log("No nominated teams found to notify.");
-                message += " No nominated teams found to notify.";
+                message += " No teams found for this nomination status.";
             } else {
                 const leaderEmails = snapshot.docs.map(doc => (doc.data() as Team).leader.email);
                 const uniqueEmails = [...new Set(leaderEmails)];
                 
                 await sendAnnouncementEmail(uniqueEmails, title, content, url);
-                message += ` Emailed ${uniqueEmails.length} nominated team leader(s).`;
+                message += ` Emailed ${uniqueEmails.length} team leader(s).`;
             }
         }
         

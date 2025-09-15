@@ -7,7 +7,7 @@ import { PlusCircle, Loader2, Trash2, Link as LinkIcon } from "lucide-react";
 import { useEffect, useState, useRef } from "react";
 import { db } from "@/lib/firebase";
 import { collection, onSnapshot, query, orderBy, addDoc, serverTimestamp, deleteDoc, doc, where } from "firebase/firestore";
-import { Announcement, AnnouncementAudience } from "@/lib/types";
+import { Announcement, AnnouncementAudience, CreateAnnouncementInput } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
@@ -25,6 +25,8 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import Link from "next/link";
+import { createAnnouncement } from "@/ai/flows/create-announcement-flow";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export default function SpocAnnouncementsPage() {
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
@@ -42,7 +44,6 @@ export default function SpocAnnouncementsPage() {
     const announcementsCollection = collection(db, 'announcements');
     const q = query(
         announcementsCollection, 
-        where("audience", "==", "institute"),
         where("institute", "==", user.institute),
         orderBy("createdAt", "desc")
     );
@@ -72,20 +73,31 @@ export default function SpocAnnouncementsPage() {
     const title = formData.get('title') as string;
     const content = formData.get('content') as string;
     const url = formData.get('url') as string;
+    const audience = formData.get('audience') as CreateAnnouncementInput['audience'];
+
+    if (!audience) {
+        toast({ title: "Error", description: "Please select an audience.", variant: "destructive" });
+        setIsCreating(false);
+        return;
+    }
     
     try {
-        await addDoc(collection(db, "announcements"), {
+        const result = await createAnnouncement({
             title,
             content,
             url,
-            audience: 'institute',
-            institute: user.institute,
+            audience,
             authorName: `${user.name} (SPOC)`,
-            createdAt: serverTimestamp(),
+            institute: user.institute,
         });
-        toast({ title: "Success", description: "Announcement has been posted to your institute's teams."});
-        (event.target as HTMLFormElement).reset();
-    } catch (error) {
+
+        if (result.success) {
+            toast({ title: "Success", description: result.message});
+            (event.target as HTMLFormElement).reset();
+        } else {
+            throw new Error(result.message);
+        }
+    } catch (error: any) {
         console.error("Error creating announcement:", error);
         toast({ title: "Error", description: "Could not post the announcement.", variant: "destructive" });
     } finally {
@@ -129,6 +141,18 @@ export default function SpocAnnouncementsPage() {
                         <div>
                             <Label htmlFor="url">URL (Optional)</Label>
                             <Input id="url" name="url" type="url" placeholder="https://example.com/more-info" disabled={isCreating} />
+                        </div>
+                        <div>
+                            <Label htmlFor="audience">Audience</Label>
+                            <Select name="audience" required disabled={isCreating}>
+                                <SelectTrigger id="audience">
+                                    <SelectValue placeholder="Select who will see this" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="institute">All Institute Teams</SelectItem>
+                                    <SelectItem value="institute_nominated">SIH Institute Nominated Teams</SelectItem>
+                                </SelectContent>
+                            </Select>
                         </div>
                         <Button type="submit" disabled={isCreating}>
                             {isCreating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <PlusCircle className="mr-2 h-4 w-4" />}
