@@ -4,7 +4,7 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Loader2, Download, Save, Pencil, X, Trash2, MinusCircle, ChevronDown, ArrowUpDown, RefreshCw, Lock, Unlock } from "lucide-react";
+import { Loader2, Download, Save, Pencil, X, Trash2, MinusCircle, ChevronDown, ArrowUpDown, RefreshCw, Lock, Unlock, FileText, FileBadge } from "lucide-react";
 import { useEffect, useState, useMemo, useCallback, Suspense } from "react";
 import { db } from "@/lib/firebase";
 import { collection, onSnapshot, doc, updateDoc, query, orderBy, getDocs, where } from "firebase/firestore";
@@ -371,7 +371,7 @@ function AllTeamsContent() {
         return {
             ...team,
             allMembers,
-            problemStatementId: problemStatement?.problemStatementId,
+            problemStatement: problemStatement,
             isRegistered,
         };
     });
@@ -398,7 +398,7 @@ function AllTeamsContent() {
                     isLocked: team.isLocked,
                     teamNumber: team.teamNumber,
                     isNominated: team.isNominated,
-                    problemStatementId: team.problemStatementId || 'Not Selected',
+                    problemStatement: team.problemStatement,
                     isRegistered: team.isRegistered,
                     isFirstRow: memberIndex === 0,
                     rowSpan: membersToDisplay.length,
@@ -606,15 +606,9 @@ function AllTeamsContent() {
                              />
                           </TableHead>
                           <TableHead>
-                              <Button variant="ghost" onClick={() => requestSort('teamName')}>Team Name {getSortIndicator('teamName')}</Button>
+                              <Button variant="ghost" onClick={() => requestSort('teamName')}>Team Info {getSortIndicator('teamName')}</Button>
                           </TableHead>
-                           <TableHead>
-                              <Button variant="ghost" onClick={() => requestSort('teamNumber')}>Team Number {getSortIndicator('teamNumber')}</Button>
-                          </TableHead>
-                          <TableHead>
-                              <Button variant="ghost" onClick={() => requestSort('problemStatementId')}>Problem Statement {getSortIndicator('problemStatementId')}</Button>
-                          </TableHead>
-                           <TableHead>Lock Status</TableHead>
+                          <TableHead>Lock Status</TableHead>
                           <TableHead>
                               <Button variant="ghost" onClick={() => requestSort('name')}>Member Name {getSortIndicator('name')}</Button>
                           </TableHead>
@@ -640,7 +634,7 @@ function AllTeamsContent() {
                       {teamsWithDetails.map((row, index) => (
                           <TableRow key={`${row.teamId}-${row.uid || index}-${roleFilter}`} data-state={selectedTeamIds.includes(row.teamId) && "selected"} className="select-none">
                               {row.isFirstRow && (
-                                  <TableCell rowSpan={row.rowSpan} className="align-top">
+                                  <TableCell rowSpan={row.rowSpan} className="align-top pt-6">
                                       <Checkbox 
                                           checked={selectedTeamIds.includes(row.teamId)}
                                           onCheckedChange={(checked) => handleRowSelect(row.teamId, !!checked)}
@@ -649,55 +643,27 @@ function AllTeamsContent() {
                                   </TableCell>
                               )}
                               {row.isFirstRow && (
-                                  <TableCell rowSpan={row.rowSpan} className="font-medium align-top">
-                                      <div className="flex flex-col gap-1 items-start">
+                                  <TableCell rowSpan={row.rowSpan} className="font-medium align-top pt-6">
+                                      <div className="flex flex-col gap-2 items-start w-64">
                                         <div className="flex items-center gap-2 group">
-                                            <span>{row.teamName}</span>
+                                            <span className="font-bold text-base">{row.teamName}</span>
                                             <Button size="icon" variant="ghost" className="h-7 w-7 opacity-0 group-hover:opacity-100" onClick={() => handleEditTeamName(row)}>
                                                 <Pencil className="h-4 w-4 text-muted-foreground"/>
                                             </Button>
                                         </div>
-                                        {row.isNominated && <Badge className="bg-green-600 hover:bg-green-700">Nominated</Badge>}
+                                        {row.teamNumber && <Badge variant="secondary">Team No: {row.teamNumber}</Badge>}
+                                        {row.isNominated && <Badge className="bg-green-600 hover:bg-green-700">Nominated for SIH</Badge>}
+                                        {row.problemStatement && 
+                                            <div className="whitespace-normal text-xs text-muted-foreground">
+                                                <FileText className="inline h-3 w-3 mr-1"/>
+                                                {row.problemStatement.problemStatementId}: {row.problemStatement.title}
+                                            </div>
+                                        }
                                       </div>
                                   </TableCell>
                               )}
-                             {row.isFirstRow && (
-                                <TableCell rowSpan={row.rowSpan} className="align-top">
-                                     {row.isRegistered ? (
-                                        (editingTeamNumber?.id === row.teamId || !row.teamNumber) ? (
-                                            <div className="flex items-center gap-2 w-32">
-                                                <Input
-                                                    value={editingTeamNumber?.id === row.teamId ? editingTeamNumber.number : ''}
-                                                    onChange={(e) => setEditingTeamNumber({ id: row.teamId, number: e.target.value })}
-                                                    className="h-8"
-                                                    placeholder="Team No."
-                                                    disabled={isSaving === `number-${row.teamId}`}
-                                                />
-                                                <Button size="icon" className="h-8 w-8" onClick={() => handleSaveTeamNumber(row.teamId)} disabled={isSaving === `number-${row.teamId}`}>
-                                                    {isSaving === `number-${row.teamId}` ? <Loader2 className="h-4 w-4 animate-spin"/> : <Save className="h-4 w-4"/>}
-                                                </Button>
-                                                {editingTeamNumber?.id === row.teamId && (
-                                                    <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setEditingTeamNumber(null)}>
-                                                        <X className="h-4 w-4"/>
-                                                    </Button>
-                                                )}
-                                            </div>
-                                        ) : (
-                                            <div className="flex items-center gap-2 group">
-                                                <span>{row.teamNumber}</span>
-                                                <Button size="icon" variant="ghost" className="h-7 w-7 opacity-0 group-hover:opacity-100" onClick={() => handleEditTeamNumber(row)}>
-                                                    <Pencil className="h-4 w-4 text-muted-foreground"/>
-                                                </Button>
-                                            </div>
-                                        )
-                                    ) : (
-                                        <Badge variant="outline">Pending</Badge>
-                                    )}
-                                </TableCell>
-                              )}
-                              {row.isFirstRow && <TableCell rowSpan={row.rowSpan} className="align-top">{row.problemStatementId}</TableCell>}
                               {row.isFirstRow && (
-                                <TableCell rowSpan={row.rowSpan} className="align-top">
+                                <TableCell rowSpan={row.rowSpan} className="align-top pt-6">
                                     <div className="flex items-center space-x-2">
                                         <Switch
                                             id={`lock-switch-${row.teamId}`}
@@ -803,3 +769,4 @@ export default function AllTeamsPage() {
     
 
     
+

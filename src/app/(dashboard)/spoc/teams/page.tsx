@@ -5,7 +5,7 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Loader2, AlertCircle, Save, Pencil, X, Trash2, Users, User, MinusCircle, ArrowUpDown, Link as LinkIcon, Copy, RefreshCw, ChevronDown, FileQuestion, Lock, Unlock, Download, FileSpreadsheet } from "lucide-react";
+import { Loader2, AlertCircle, Save, Pencil, X, Trash2, Users, User, MinusCircle, ArrowUpDown, Link as LinkIcon, Copy, RefreshCw, ChevronDown, FileQuestion, Lock, Unlock, Download, FileSpreadsheet, FileText } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useEffect, useState, useMemo, useCallback } from "react";
 import { db } from "@/lib/firebase";
@@ -94,7 +94,6 @@ export default function SpocTeamsPage() {
   const [selectedProblemStatements, setSelectedProblemStatements] = useState<string[]>([]);
   const [sortConfig, setSortConfig] = useState<{ key: SortKey, direction: SortDirection } | null>(null);
   const { toast } = useToast();
-  const [inviteLinks, setInviteLinks] = useState<Map<string, string>>(new Map());
   const [loadingLink, setLoadingLink] = useState<string | null>(null);
   const [evaluationExportDate, setEvaluationExportDate] = useState<Date | null>(null);
   const [spocPsSelection, setSpocPsSelection] = useState<Record<string, string>>({});
@@ -318,11 +317,13 @@ export default function SpocTeamsPage() {
         const femaleCount = allMemberProfiles.filter(m => m.gender === 'F').length;
         const instituteCount = allMemberProfiles.filter(m => m.institute === team.institute).length;
         const isRegistered = allMemberProfiles.length === 6 && femaleCount >= 1 && instituteCount >= 3 && !!team.problemStatementId;
-
+        const problemStatement = problemStatements.find(ps => ps.id === team.problemStatementId);
+        
         return {
             ...team,
             allMembers,
             isRegistered,
+            problemStatement,
         };
     });
   };
@@ -361,7 +362,7 @@ export default function SpocTeamsPage() {
       });
     }
     return detailedTeams;
-  }, [filteredTeams, users, sortConfig]);
+  }, [filteredTeams, users, sortConfig, problemStatements]);
 
   const requestSort = (key: SortKey) => {
     let direction: SortDirection = 'asc';
@@ -478,26 +479,6 @@ export default function SpocTeamsPage() {
         toast({ title: "Error", description: `Could not assign problem statement: ${error.message}`, variant: "destructive" });
     } finally {
         setIsSaving(null);
-    }
-  };
-
-  const handleGetInviteLink = async (teamId: string, teamName: string) => {
-    setLoadingLink(teamId);
-    try {
-        const result = await getTeamInviteLink({
-            teamId: teamId,
-            teamName: teamName,
-            baseUrl: appBaseUrl,
-        });
-        if (result.success && result.inviteLink) {
-            setInviteLinks(prev => new Map(prev).set(teamId, result.inviteLink!));
-        } else {
-            throw new Error(result.message || "Failed to get invite link.");
-        }
-    } catch (error: any) {
-        toast({ title: "Error", description: error.message, variant: "destructive" });
-    } finally {
-        setLoadingLink(null);
     }
   };
 
@@ -690,11 +671,7 @@ export default function SpocTeamsPage() {
                         <Table>
                             <TableHeader>
                             <TableRow>
-                                <TableHead><Button variant="ghost" onClick={() => requestSort('teamName')}>Team Name {getSortIndicator('teamName')}</Button></TableHead>
-                                <TableHead><Button variant="ghost" onClick={() => requestSort('teamNumber')}>Team Number {getSortIndicator('teamNumber')}</Button></TableHead>
-                                <TableHead>Problem Statement</TableHead>
-                                <TableHead>SIH Nomination</TableHead>
-                                <TableHead>Invite Link</TableHead>
+                                <TableHead><Button variant="ghost" onClick={() => requestSort('teamName')}>Team Info {getSortIndicator('teamName')}</Button></TableHead>
                                 <TableHead><Button variant="ghost" onClick={() => requestSort('name')}>Member Name {getSortIndicator('name')}</Button></TableHead>
                                 <TableHead><Button variant="ghost" onClick={() => requestSort('email')}>Email {getSortIndicator('email')}</Button></TableHead>
                                 <TableHead><Button variant="ghost" onClick={() => requestSort('enrollmentNumber')}>Enrollment No. {getSortIndicator('enrollmentNumber')}</Button></TableHead>
@@ -716,167 +693,39 @@ export default function SpocTeamsPage() {
                                     <TableRow key={`${team.id}-${member.uid || memberIndex}-${roleFilter}`}>
                                         {memberIndex === 0 && (
                                             <TableCell rowSpan={membersToDisplay.length} className="font-medium align-top">
-                                                <div className="flex flex-col gap-2">
-                                                    {(editingTeamName?.id === team.id) ? (
+                                                <div className="flex flex-col gap-2 items-start w-64">
+                                                    {(editingTeam?.id === team.id) ? (
                                                         <div className="flex items-center gap-2">
                                                             <Input 
-                                                                value={editingTeamName.name}
-                                                                onChange={(e) => setEditingTeamName({ ...editingTeamName, name: e.target.value })}
+                                                                value={editingTeam.name}
+                                                                onChange={(e) => setEditingTeam({ ...editingTeam, name: e.target.value })}
                                                                 className="w-40 h-8"
                                                                 disabled={isSaving === team.id}
                                                             />
                                                             <Button size="icon" className="h-8 w-8" onClick={() => handleSaveTeamName(team.id)} disabled={isSaving === team.id}>
                                                                 {isSaving === team.id ? <Loader2 className="h-4 w-4 animate-spin"/> : <Save className="h-4 w-4"/>}
                                                             </Button>
-                                                            <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setEditingTeamName(null)} disabled={isSaving === team.id}>
+                                                            <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setEditingTeam(null)} disabled={isSaving === team.id}>
                                                                 <X className="h-4 w-4"/>
                                                             </Button>
                                                         </div>
                                                     ) : (
                                                         <div className="flex items-center gap-2 group">
-                                                            <span>{team.name}</span>
+                                                            <span className="font-bold text-base">{team.name}</span>
                                                             <Button size="icon" variant="ghost" className="h-7 w-7 opacity-0 group-hover:opacity-100" onClick={() => handleEditTeamName(team)}>
                                                                 <Pencil className="h-4 w-4 text-muted-foreground"/>
                                                             </Button>
                                                         </div>
                                                     )}
-                                                    <AlertDialog>
-                                                        <AlertDialogTrigger asChild>
-                                                            <Button variant="destructive" size="sm" className="w-fit" disabled={isProcessing === team.id}>
-                                                                <Trash2 className="mr-2 h-4 w-4"/> Delete Team
-                                                            </Button>
-                                                        </AlertDialogTrigger>
-                                                        <AlertDialogContent>
-                                                            <AlertDialogHeader>
-                                                            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                                                            <AlertDialogDescription>
-                                                                This will permanently delete the team "{team.name}" and remove all its members. This action cannot be undone.
-                                                            </AlertDialogDescription>
-                                                            </AlertDialogHeader>
-                                                            <AlertDialogFooter>
-                                                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                                            <AlertDialogAction onClick={() => handleDeleteTeam(team.id)} className="bg-destructive hover:bg-destructive/90">Delete Team</AlertDialogAction>
-                                                            </AlertDialogFooter>
-                                                        </AlertDialogContent>
-                                                    </AlertDialog>
-                                                </div>
-                                            </TableCell>
-                                        )}
-                                        {memberIndex === 0 && (
-                                            <TableCell rowSpan={membersToDisplay.length} className="align-top">
-                                                {team.isRegistered ? (
-                                                    (editingTeamNumber?.id === team.id || !team.teamNumber) ? (
-                                                        <div className="flex items-center gap-2 w-32">
-                                                            <Input
-                                                                value={editingTeamNumber?.id === team.id ? editingTeamNumber.number : ''}
-                                                                onChange={(e) => setEditingTeamNumber({ id: team.id, number: e.target.value })}
-                                                                className="h-8"
-                                                                placeholder="Team No."
-                                                                disabled={isSaving === `number-${team.id}`}
-                                                            />
-                                                            <Button size="icon" className="h-8 w-8" onClick={() => handleSaveTeamNumber(team.id)} disabled={isSaving === `number-${team.id}`}>
-                                                                {isSaving === `number-${team.id}` ? <Loader2 className="h-4 w-4 animate-spin"/> : <Save className="h-4 w-4"/>}
-                                                            </Button>
-                                                             {editingTeamNumber?.id === team.id && (
-                                                                <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setEditingTeamNumber(null)}>
-                                                                    <X className="h-4 w-4"/>
-                                                                </Button>
-                                                             )}
+                                                     {team.teamNumber && <Badge variant="secondary">Team No: {team.teamNumber}</Badge>}
+                                                     {team.isNominated && <Badge className="bg-green-600 hover:bg-green-700">Nominated for SIH</Badge>}
+                                                    {team.problemStatement && 
+                                                        <div className="whitespace-normal text-xs text-muted-foreground">
+                                                            <FileText className="inline h-3 w-3 mr-1"/>
+                                                            {team.problemStatement.problemStatementId}: {team.problemStatement.title}
                                                         </div>
-                                                    ) : (
-                                                        <div className="flex items-center gap-2 group">
-                                                            <span>{team.teamNumber}</span>
-                                                            <Button size="icon" variant="ghost" className="h-7 w-7 opacity-0 group-hover:opacity-100" onClick={() => handleEditTeamNumber(team)}>
-                                                                <Pencil className="h-4 w-4 text-muted-foreground"/>
-                                                            </Button>
-                                                        </div>
-                                                    )
-                                                ) : (
-                                                    <Badge variant="outline">Pending Reg.</Badge>
-                                                )}
-                                            </TableCell>
-                                        )}
-                                        {memberIndex === 0 && (
-                                            <TableCell rowSpan={membersToDisplay.length} className="align-top whitespace-normal max-w-xs">
-                                                {team.problemStatementTitle ? (
-                                                    <Badge variant="secondary" className="whitespace-normal">{team.problemStatementTitle}</Badge>
-                                                ) : canSpocSelectPs ? (
-                                                     <div className="flex flex-col gap-2 items-start w-[250px]">
-                                                        <Select onValueChange={(psId) => setSpocPsSelection(prev => ({...prev, [team.id]: psId}))}>
-                                                            <SelectTrigger>
-                                                                <SelectValue placeholder="Select a PS..." />
-                                                            </SelectTrigger>
-                                                            <SelectContent>
-                                                                {problemStatements.map(ps => (
-                                                                    <SelectItem key={ps.id} value={ps.id}>{ps.problemStatementId} - {ps.title}</SelectItem>
-                                                                ))}
-                                                            </SelectContent>
-                                                        </Select>
-                                                        <Button size="sm" onClick={() => handleAssignProblemStatement(team.id)} disabled={!spocPsSelection[team.id] || isSaving === `ps-${team.id}`}>
-                                                            {isSaving === `ps-${team.id}` ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Save className="mr-2 h-4 w-4" />}
-                                                            Assign
-                                                        </Button>
-                                                     </div>
-                                                ) : (
-                                                    <Badge variant="destructive">Not Selected</Badge>
-                                                )}
-                                            </TableCell>
-                                        )}
-                                         {memberIndex === 0 && (
-                                            <TableCell rowSpan={membersToDisplay.length} className="align-top">
-                                                <div className="flex flex-col items-start gap-2">
-                                                    <div className="flex items-center gap-2">
-                                                        <Checkbox
-                                                            id={`nominate-${team.id}`}
-                                                            checked={team.isNominated}
-                                                            onCheckedChange={(checked) => handleNominationToggle(team.id, !!checked)}
-                                                            disabled={isSaving === `nominate-${team.id}`}
-                                                        />
-                                                        <Label htmlFor={`nominate-${team.id}`} className="cursor-pointer">
-                                                            {team.isNominated ? "Nominated" : "Nominate"}
-                                                        </Label>
-                                                    </div>
-                                                    {team.isNominated && (
-                                                        <Button
-                                                            variant="outline"
-                                                            size="sm"
-                                                            onClick={() => handleGenerateForm(team.id)}
-                                                            disabled={isProcessing === `gen-form-${team.id}`}
-                                                        >
-                                                            {isProcessing === `gen-form-${team.id}` ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
-                                                            <span className="ml-2">Download Form</span>
-                                                        </Button>
-                                                    )}
+                                                    }
                                                 </div>
-                                            </TableCell>
-                                        )}
-                                        {memberIndex === 0 && (
-                                            <TableCell rowSpan={membersToDisplay.length} className="align-top">
-                                                {inviteLinks.has(team.id) ? (
-                                                    <div className="flex items-center gap-1">
-                                                        <Input value={inviteLinks.get(team.id)} readOnly className="h-8 text-xs"/>
-                                                        <Button size="icon" variant="ghost" className="h-8 w-8 shrink-0" onClick={() => {
-                                                            navigator.clipboard.writeText(inviteLinks.get(team.id)!);
-                                                            toast({ title: "Copied!" });
-                                                        }}>
-                                                            <Copy className="h-4 w-4" />
-                                                        </Button>
-                                                    </div>
-                                                ) : (
-                                                    <Button
-                                                        variant="outline"
-                                                        size="sm"
-                                                        onClick={() => handleGetInviteLink(team.id, team.name)}
-                                                        disabled={loadingLink === team.id}
-                                                    >
-                                                        {loadingLink === team.id ? (
-                                                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                                        ) : (
-                                                            <LinkIcon className="mr-2 h-4 w-4" />
-                                                        )}
-                                                        Get Link
-                                                    </Button>
-                                                )}
                                             </TableCell>
                                         )}
                                         <TableCell>
