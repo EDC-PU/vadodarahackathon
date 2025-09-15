@@ -116,7 +116,7 @@ export default function SpocEvaluationPage() {
 
         if (!querySnapshot.empty) {
           const instituteDoc = querySnapshot.docs[0];
-          const data = { id: instituteDoc.id, ...instituteDoc.data() } as Institute;
+          const data = { id: instituteDoc.id, ...doc.data() } as Institute;
           setInstituteData(data);
           if (data.evaluationDates) {
             form.setValue(
@@ -208,6 +208,9 @@ export default function SpocEvaluationPage() {
         }
       })
       .filter(team => {
+        // Only show registered teams
+        if (!team.isRegistered) return false;
+
         if (searchTerm) {
           const lowerSearch = searchTerm.toLowerCase();
           return team.name.toLowerCase().includes(lowerSearch) || team.leader.name.toLowerCase().includes(lowerSearch) || team.teamNumber?.toLowerCase().includes(lowerSearch);
@@ -432,7 +435,7 @@ export default function SpocEvaluationPage() {
                   </Card>
                   <Card>
                       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                          <CardTitle className="text-sm font-medium">Nominated By You</CardTitle>
+                          <CardTitle className="text-sm font-medium">Nominated by You</CardTitle>
                           <Users className="h-4 w-4 text-muted-foreground" />
                       </CardHeader>
                       <CardContent>
@@ -537,7 +540,7 @@ export default function SpocEvaluationPage() {
                         }) : (
                            <TableRow>
                                <TableCell colSpan={7} className="h-24 text-center">
-                                   No teams found matching your search.
+                                   No registered teams found matching your search.
                                </TableCell>
                            </TableRow>
                         )}
@@ -551,4 +554,5 @@ export default function SpocEvaluationPage() {
     </div>
   );
 }
+
 
