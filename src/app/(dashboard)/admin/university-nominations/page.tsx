@@ -70,9 +70,10 @@ export default function UniversityNominationsPage() {
   const [selectedTeamIds, setSelectedTeamIds] = useState<string[]>([]);
   const [universityTeamIds, setUniversityTeamIds] = useState<Record<string, string>>({});
   const [showAssignPanel, setShowAssignPanel] = useState(false);
-  const [showSihStatus, setShowSihStatus] = useState(false);
+  const [showSihStatus, setShowSihStatus] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>({ key: 'universityTeamId', direction: 'asc' });
+  const [sihStatusFilter, setSihStatusFilter] = useState<'all' | 'university' | 'institute' | 'none'>('university');
   const { toast } = useToast();
 
   const canModify = isAfter(new Date(), new Date(2025, 8, 6)); // September 6th, 2025
@@ -328,6 +329,13 @@ export default function UniversityNominationsPage() {
   const filteredAndSortedTeams = useMemo(() => {
     let sortableTeams = [...nominatedTeams];
 
+    if (sihStatusFilter !== 'all') {
+      sortableTeams = sortableTeams.filter(team => {
+        if (sihStatusFilter === 'none') return !team.sihSelectionStatus;
+        return team.sihSelectionStatus === sihStatusFilter;
+      });
+    }
+
     if (searchTerm) {
       const lowercasedTerm = searchTerm.toLowerCase();
       sortableTeams = sortableTeams.filter(team => {
@@ -368,7 +376,7 @@ export default function UniversityNominationsPage() {
       });
     }
     return sortableTeams;
-  }, [nominatedTeams, searchTerm, sortConfig, allUsers, problemStatements]);
+  }, [nominatedTeams, searchTerm, sortConfig, allUsers, problemStatements, sihStatusFilter]);
 
 
   return (
@@ -469,12 +477,25 @@ export default function UniversityNominationsPage() {
                     The following teams have been nominated by their respective institutes.
                 </CardDescription>
               </div>
-              <Input
-                placeholder="Search teams..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="max-w-sm"
-              />
+              <div className="flex items-center gap-2">
+                <Select value={sihStatusFilter} onValueChange={(value) => setSihStatusFilter(value as any)}>
+                    <SelectTrigger className="w-[200px]">
+                        <SelectValue placeholder="Filter by SIH Status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="all">All Statuses</SelectItem>
+                        <SelectItem value="university">University Level</SelectItem>
+                        <SelectItem value="institute">Institute Level</SelectItem>
+                        <SelectItem value="none">Not Set</SelectItem>
+                    </SelectContent>
+                </Select>
+                <Input
+                    placeholder="Search teams..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="max-w-sm"
+                />
+              </div>
           </div>
         </CardHeader>
         <CardContent>
@@ -487,7 +508,7 @@ export default function UniversityNominationsPage() {
               <AlertCircle className="h-4 w-4" />
               <AlertTitle>No Nominated Teams</AlertTitle>
               <AlertDescription>
-                There are currently no teams nominated by any institute SPOCs.
+                There are currently no teams matching your filter criteria.
               </AlertDescription>
             </Alert>
           ) : (
@@ -613,5 +634,6 @@ export default function UniversityNominationsPage() {
     </div>
   );
 }
+
 
 
