@@ -10,7 +10,7 @@ import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { db } from "@/lib/firebase";
-import { doc, onSnapshot, updateDoc, arrayRemove, collection, query, where, getDocs, writeBatch, addDoc, serverTimestamp, limit, deleteDoc, setDoc, orderBy } from "firebase/firestore";
+import { doc, onSnapshot, updateDoc, arrayRemove, collection, query, where, getDocs, writeBatch, addDoc, serverTimestamp, limit, deleteDoc, setDoc, orderBy, getDoc } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { AnnouncementsSection } from "./announcements-section";
@@ -424,8 +424,8 @@ export default function LeaderDashboard() {
         </header>
 
         <div className="space-y-8">
-            {showMentorForm && (
-                <Card>
+           {showMentorForm && (
+                <Card className="w-full">
                     <CardHeader>
                         <CardTitle className="flex items-center gap-2"><GraduationCap /> Mentor Details</CardTitle>
                         <CardDescription>
@@ -438,7 +438,7 @@ export default function LeaderDashboard() {
                 </Card>
             )}
             
-            <Card>
+            <Card className="w-full">
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                         <Users2 />
