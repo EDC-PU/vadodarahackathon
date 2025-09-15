@@ -11,9 +11,9 @@ import { useEffect, useState, useMemo, useCallback } from "react";
 import { db } from "@/lib/firebase";
 import { doc, onSnapshot, updateDoc, collection, query, where, getDocs, writeBatch, orderBy, getDoc } from "firebase/firestore";
 import { Team, UserProfile, TeamMember, ProblemStatement, ProblemStatementCategory } from "@/lib/types";
-import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
+import { Alert, AlertTitle, AlertDescription } from "./ui/alert";
 import { useToast } from "@/hooks/use-toast";
-import { Input } from "@/components/ui/input";
+import { Input } from "./ui/input";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -39,14 +39,14 @@ import { exportTeams } from "@/ai/flows/export-teams-flow";
 import { Buffer } from 'buffer';
 import { getTeamInviteLink } from "@/ai/flows/get-team-invite-link-flow";
 import Link from "next/link";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ScrollArea } from "./ui/scroll-area";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { exportEvaluation } from "@/ai/flows/export-evaluation-flow";
 import { isAfter } from "date-fns";
 import { toggleTeamLock } from "@/ai/flows/toggle-team-lock-flow";
-import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
-import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "./ui/label";
+import { Switch } from "./ui/switch";
+import { Checkbox } from "./ui/checkbox";
 import { generateNominationForm } from "@/ai/flows/generate-nomination-form-flow";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
@@ -475,6 +475,27 @@ export default function SpocTeamsPage() {
     }
   };
 
+  const handleGetInviteLink = async (teamId: string, teamName: string) => {
+    setLoadingLink(teamId);
+    try {
+        const result = await getTeamInviteLink({
+            teamId: teamId,
+            teamName: teamName,
+            baseUrl: appBaseUrl,
+        });
+        if (result.success && result.inviteLink) {
+            const newInviteLinks = new Map(inviteLinks);
+            newInviteLinks.set(teamId, result.inviteLink);
+        } else {
+            throw new Error(result.message || "Failed to get invite link.");
+        }
+    } catch (error: any) {
+        toast({ title: "Error", description: error.message, variant: "destructive" });
+    } finally {
+        setLoadingLink(null);
+    }
+  };
+
   const handleProblemStatementFilterChange = (psId: string) => {
     setSelectedProblemStatements(prev => {
         const newSelection = new Set(prev);
@@ -731,27 +752,60 @@ export default function SpocTeamsPage() {
                                                                     <Badge className="bg-purple-500 hover:bg-purple-600 cursor-help">Nominated for SIH (Inst. Level)</Badge>
                                                                 </TooltipTrigger>
                                                                 <TooltipContent>
-                                                                    <p>{team.isNominated ? 'By Admin' : 'By You'}</p>
+                                                                    <p>{team.isNominated ? 'By You' : 'By Admin'}</p>
                                                                 </TooltipContent>
                                                             </Tooltip>
                                                         )}
                                                         {team.teamNumber && <Badge variant="secondary">#{team.teamNumber}</Badge>}
                                                         {team.universityTeamId && <Badge variant="secondary">Univ. ID: {team.universityTeamId}</Badge>}
                                                     </div>
-                                                     {team.problemStatement && 
+                                                     {team.problemStatement ? 
                                                         <div className="whitespace-normal text-xs text-muted-foreground">
                                                             <FileText className="inline h-3 w-3 mr-1"/>
                                                             {team.problemStatement.problemStatementId}: {team.problemStatement.title}
                                                         </div>
+                                                        : canSpocSelectPs ? (
+                                                            <div className="flex flex-col gap-2 items-start w-[250px] pt-2">
+                                                                <Select onValueChange={(psId) => setSpocPsSelection(prev => ({...prev, [team.id]: psId}))}>
+                                                                    <SelectTrigger>
+                                                                        <SelectValue placeholder="Select a PS..." />
+                                                                    </SelectTrigger>
+                                                                    <SelectContent>
+                                                                        {problemStatements.map(ps => (
+                                                                            <SelectItem key={ps.id} value={ps.id}>{ps.problemStatementId} - {ps.title}</SelectItem>
+                                                                        ))}
+                                                                    </SelectContent>
+                                                                </Select>
+                                                                <Button size="sm" onClick={()={() => handleAssignProblemStatement(team.id)} disabled={!spocPsSelection[team.id] || isSaving === `ps-${team.id}`}>
+                                                                    {isSaving === `ps-${team.id}` ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Save className="mr-2 h-4 w-4" />}
+                                                                    Assign
+                                                                </Button>
+                                                            </div>
+                                                        ) : (
+                                                            <Badge variant="destructive">Not Selected</Badge>
+                                                        )
                                                     }
                                                      <div className="flex items-center gap-2 mt-2">
-                                                        <Label htmlFor={`nominate-${team.id}`} className="text-xs font-normal">Nominate (Inst.)</Label>
-                                                        <Switch
-                                                            id={`nominate-${team.id}`}
-                                                            checked={team.sihSelectionStatus === 'institute' || team.isNominated}
-                                                            onCheckedChange={(checked) => handleNominationToggle(team.id, checked)}
-                                                            disabled={isSaving === `nominate-${team.id}` || team.sihSelectionStatus === 'university' || team.isLocked || team.sihSelectionStatus === 'institute'}
-                                                        />
+                                                        <Tooltip>
+                                                            <TooltipTrigger asChild>
+                                                                <div className="flex items-center gap-2">
+                                                                    <Label htmlFor={`nominate-${team.id}`} className="text-xs font-normal">Nominate (Inst.)</Label>
+                                                                    <Switch
+                                                                        id={`nominate-${team.id}`}
+                                                                        checked={team.sihSelectionStatus === 'institute' || team.isNominated}
+                                                                        onCheckedChange={(checked) => handleNominationToggle(team.id, checked)}
+                                                                        disabled={isSaving === `nominate-${team.id}` || team.sihSelectionStatus === 'university' || !!team.isLocked || team.sihSelectionStatus === 'institute'}
+                                                                    />
+                                                                </div>
+                                                            </TooltipTrigger>
+                                                            { (team.sihSelectionStatus === 'institute' || team.sihSelectionStatus === 'university' || team.isLocked) && (
+                                                                <TooltipContent>
+                                                                    <p>
+                                                                        {team.isLocked ? "Team is locked." : "This team's nomination status has been finalized by an admin."}
+                                                                    </p>
+                                                                </TooltipContent>
+                                                            )}
+                                                        </Tooltip>
                                                     </div>
                                                 </div>
                                             </TableCell>
@@ -834,7 +888,7 @@ export default function SpocTeamsPage() {
                                                           </AlertDialogHeader>
                                                           <AlertDialogFooter>
                                                           <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                                          <AlertDialogAction onClick={() => handleRemoveMember(team.id, member)} className="bg-destructive hover:bg-destructive/90">Remove Member</AlertDialogAction>
+                                                          <AlertDialogAction onClick={()={() => handleRemoveMember(team.id, member)} className="bg-destructive hover:bg-destructive/90">Remove Member</AlertDialogAction>
                                                           </AlertDialogFooter>
                                                       </AlertDialogContent>
                                                   </AlertDialog>
@@ -912,3 +966,5 @@ export default function SpocTeamsPage() {
     </TooltipProvider>
   );
 }
+
+    
