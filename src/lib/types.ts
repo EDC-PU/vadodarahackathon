@@ -240,8 +240,6 @@ export const JuryMemberEditSchema = z.object({
     institute: z.string().min(1, "Institute is required."),
     contactNumber: z.string().regex(/^\d{10}$/, "A valid 10-digit contact number is required."),
     department: z.string().min(2, "Department is required."),
-    highestQualification: z.string().optional(),
-    experience: z.string().optional(),
 });
 
 export const UpdateJuryPanelInputSchema = z.object({
@@ -267,8 +265,6 @@ export const JuryMemberInputSchema = z.object({
   institute: z.string().min(1, "Institute is required."),
   contactNumber: z.string().regex(/^\d{10}$/, "A valid 10-digit contact number is required."),
   department: z.string().min(2, "Department is required."),
-  highestQualification: z.string().optional(),
-  experience: z.string().optional(),
 });
 export type JuryMemberInput = z.infer<typeof JuryMemberInputSchema>;
 
@@ -433,6 +429,10 @@ const TeamForEvaluationSchema = z.object({
     leader_name: z.string(),
     problemstatement_id: z.string().optional(),
     problemstatement_title: z.string().optional(),
+});
+export const ExportEvaluationInputSchema = z.object({
+    instituteName: z.string().describe("The name of the institute or context for the export."),
+    teams: z.array(TeamForEvaluationSchema).describe("An array of team data to populate in the Excel file."),
 });
 export type ExportEvaluationInput = z.infer<typeof ExportEvaluationInputSchema>;
 
