@@ -56,6 +56,7 @@ type SortDirection = 'asc' | 'desc';
 type StatusFilter = "All Statuses" | "Registered" | "Pending";
 type RoleFilter = "all" | "leader" | "member";
 type CategoryFilter = ProblemStatementCategory | "All Categories";
+type SihStatusFilter = "all" | "university" | "institute" | "none";
 
 // Helper to fetch user profiles in chunks to avoid Firestore 30-item 'in' query limit
 async function getUserProfilesInChunks(userIds: string[]): Promise<Map<string, UserProfile>> {
@@ -91,6 +92,7 @@ export default function SpocTeamsPage() {
   const [isExportingEval, setIsExportingEval] = useState(false);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("Registered");
   const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>("All Categories");
+  const [sihStatusFilter, setSihStatusFilter] = useState<SihStatusFilter>("institute");
   const [memberCountFilter, setMemberCountFilter] = useState<number | "All">("All");
   const [roleFilter, setRoleFilter] = useState<RoleFilter>("all");
   const [selectedProblemStatements, setSelectedProblemStatements] = useState<string[]>([]);
@@ -287,9 +289,18 @@ export default function SpocTeamsPage() {
       const memberCountMatch = memberCountFilter === "All" || memberCount === memberCount;
       const categoryMatch = categoryFilter === 'All Categories' || team.category === categoryFilter;
 
-      return statusMatch && psMatch && memberCountMatch && categoryMatch;
+      let sihStatusMatch = true;
+      if (sihStatusFilter !== 'all') {
+          if (sihStatusFilter === 'none') {
+              sihStatusMatch = !team.sihSelectionStatus;
+          } else {
+              sihStatusMatch = team.sihSelectionStatus === sihStatusFilter;
+          }
+      }
+
+      return statusMatch && psMatch && memberCountMatch && categoryMatch && sihStatusMatch;
     });
-  }, [teams, statusFilter, users, selectedProblemStatements, memberCountFilter, categoryFilter]);
+  }, [teams, statusFilter, users, selectedProblemStatements, memberCountFilter, categoryFilter, sihStatusFilter]);
   
   const getTeamWithFullDetails = (teamsToProcess: Team[]) => {
     return teamsToProcess.map(team => {
@@ -517,7 +528,7 @@ export default function SpocTeamsPage() {
     setIsSaving(`nominate-${teamId}`);
     try {
         const teamRef = doc(db, 'teams', teamId);
-        await updateDoc(teamRef, { sihSelectionStatus: shouldBeNominated ? 'institute' : null });
+        await updateDoc(teamRef, { isNominated: shouldBeNominated, sihSelectionStatus: shouldBeNominated ? 'institute' : null });
         toast({ title: "Success", description: `Team nomination status updated.` });
     } catch (error: any) {
         toast({ title: "Error", description: `Could not update nomination status: ${error.message}`, variant: "destructive" });
@@ -596,6 +607,17 @@ export default function SpocTeamsPage() {
                       </SelectTrigger>
                       <SelectContent>
                           {categories.map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}
+                      </SelectContent>
+                  </Select>
+                  <Select value={sihStatusFilter} onValueChange={(value) => setSihStatusFilter(value as SihStatusFilter)}>
+                      <SelectTrigger className="w-full sm:w-48">
+                          <SelectValue placeholder="Filter by SIH Status" />
+                      </SelectTrigger>
+                       <SelectContent>
+                          <SelectItem value="all">All SIH Statuses</SelectItem>
+                          <SelectItem value="university">University Level</SelectItem>
+                          <SelectItem value="institute">Institute Level</SelectItem>
+                          <SelectItem value="none">Not Nominated</SelectItem>
                       </SelectContent>
                   </Select>
                   <Select value={String(memberCountFilter)} onValueChange={(val) => setMemberCountFilter(val === "All" ? "All" : Number(val))}>
@@ -722,22 +744,22 @@ export default function SpocTeamsPage() {
                                                               </Button>
                                                           </div>
                                                       )}
-                                                      <div className="flex flex-wrap gap-2">
-                                                        {team.isRegistered ? <Badge className="bg-green-600 hover:bg-green-700">Registered</Badge> : <Badge variant="destructive">Pending</Badge>}
-                                                        {team.sihSelectionStatus === 'university' && <Badge className="bg-blue-500 hover:bg-blue-600">Nominated for SIH (Univ. Level)</Badge>}
-                                                        {team.sihSelectionStatus === 'institute' && (
-                                                            <Tooltip>
-                                                                <TooltipTrigger asChild>
-                                                                    <Badge className="bg-purple-500 hover:bg-purple-600 cursor-help">Nominated for SIH (Inst. Level)</Badge>
-                                                                </TooltipTrigger>
-                                                                <TooltipContent>
-                                                                    <p>{team.isNominated ? 'By Admin' : 'By You'}</p>
-                                                                </TooltipContent>
-                                                            </Tooltip>
-                                                        )}
-                                                        {team.teamNumber && <Badge variant="secondary">#{team.teamNumber}</Badge>}
-                                                        {team.universityTeamId && <Badge variant="secondary">Univ. ID: {team.universityTeamId}</Badge>}
-                                                      </div>
+                                                        <div className="flex flex-wrap gap-2">
+                                                            {team.isRegistered ? <Badge className="bg-green-600 hover:bg-green-700">Registered</Badge> : <Badge variant="destructive">Pending</Badge>}
+                                                            {team.sihSelectionStatus === 'university' && <Badge className="bg-blue-500 hover:bg-blue-600">Nominated for SIH (Univ. Level)</Badge>}
+                                                            {team.sihSelectionStatus === 'institute' && (
+                                                                <Tooltip>
+                                                                    <TooltipTrigger asChild>
+                                                                        <Badge className="bg-purple-500 hover:bg-purple-600 cursor-help">Nominated for SIH (Inst. Level)</Badge>
+                                                                    </TooltipTrigger>
+                                                                    <TooltipContent>
+                                                                        <p>{team.isNominated ? 'By Admin' : 'By You'}</p>
+                                                                    </TooltipContent>
+                                                                </Tooltip>
+                                                            )}
+                                                            {team.teamNumber && <Badge variant="secondary">#{team.teamNumber}</Badge>}
+                                                            {team.universityTeamId && <Badge variant="secondary">Univ. ID: {team.universityTeamId}</Badge>}
+                                                        </div>
                                                   </div>
                                               </TableCell>
                                           )}
@@ -792,7 +814,7 @@ export default function SpocTeamsPage() {
                                                   <Label htmlFor={`nominate-${team.id}`} className="text-xs font-normal">Nominate (Inst.)</Label>
                                                   <Switch
                                                     id={`nominate-${team.id}`}
-                                                    checked={team.sihSelectionStatus === 'institute'}
+                                                    checked={team.sihSelectionStatus === 'institute' || team.isNominated}
                                                     onCheckedChange={(checked) => handleNominationToggle(team.id, checked)}
                                                     disabled={isSaving === `nominate-${team.id}` || team.sihSelectionStatus === 'university' || team.isLocked}
                                                   />
