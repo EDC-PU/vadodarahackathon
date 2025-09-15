@@ -215,6 +215,13 @@ const HeroSection = () => {
                         <a href="https://drive.google.com/file/d/1SWl6PCB67QVK__MOEGZEJh2svX_C2dWD/view?usp=sharing" target="_blank" rel="noopener noreferrer">University Round Results</a>
                     </Button>
                 </motion.div>
+
+                 <motion.p 
+                    className="mt-6 text-sm text-white/70"
+                    variants={itemVariants}
+                >
+                   Teams not selected for SIH (University Level) are nominated for SIH from Institute Level.
+                </motion.p>
                 <LiveStatsCounter />
             </motion.div>
         </section>
@@ -544,6 +551,7 @@ export default function LandingPage({ spocDetails, announcements, problemStateme
     </div>
   );
 }
+
 
 
 
