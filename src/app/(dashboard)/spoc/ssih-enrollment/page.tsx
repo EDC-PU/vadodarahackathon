@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Loader2, AlertCircle, FileSignature, CheckCircle } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { enrollTeamInSsih } from "@/ai/flows/enroll-team-in-ssih-flow";
 
 export default function SsihEnrollmentPage() {
   const { user, loading: authLoading } = useAuth();
@@ -49,12 +50,15 @@ export default function SsihEnrollmentPage() {
   const handleEnroll = async (teamId: string) => {
     setIsSaving(teamId);
     try {
-        const teamRef = doc(db, "teams", teamId);
-        await updateDoc(teamRef, { ssihEnrolled: true });
-        toast({ title: "Success", description: "Team has been marked as enrolled for SIH." });
-    } catch(e) {
+        const result = await enrollTeamInSsih({ teamId });
+        if (result.success) {
+            toast({ title: "Success", description: result.message });
+        } else {
+            throw new Error(result.message);
+        }
+    } catch(e: any) {
         console.error("Error enrolling team in SIH:", e);
-        toast({ title: "Error", description: "Could not update team enrollment status.", variant: "destructive" });
+        toast({ title: "Error", description: `Could not enroll team: ${e.message}`, variant: "destructive" });
     } finally {
         setIsSaving(null);
     }
@@ -124,7 +128,7 @@ export default function SsihEnrollmentPage() {
                                 disabled={isSaving === team.id}
                              >
                                 {isSaving === team.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
-                                Mark as Enrolled for SIH 2025 from Instiute Level
+                                Mark as Enrolled in SIH
                              </Button>
                           )}
                       </TableCell>
@@ -139,4 +143,3 @@ export default function SsihEnrollmentPage() {
     </div>
   );
 }
-

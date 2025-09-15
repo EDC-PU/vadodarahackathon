@@ -44,6 +44,7 @@ import {
   Cpu,
   Code,
   Search,
+  UserCheck,
 } from "lucide-react";
 import { format, isAfter } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -115,7 +116,7 @@ export default function SpocEvaluationPage() {
 
         if (!querySnapshot.empty) {
           const instituteDoc = querySnapshot.docs[0];
-          const data = { id: instituteDoc.id, ...doc.data() } as Institute;
+          const data = { id: instituteDoc.id, ...instituteDoc.data() } as Institute;
           setInstituteData(data);
           if (data.evaluationDates) {
             form.setValue(
@@ -226,6 +227,10 @@ export default function SpocEvaluationPage() {
     });
     return { software, hardware };
   }, [nominatedTeamIds, allTeams]);
+
+  const adminFinalizedCount = useMemo(() => {
+    return allTeams.filter(team => team.sihSelectionStatus === 'university' || team.sihSelectionStatus === 'institute').length;
+  }, [allTeams]);
   
  const handleNominationChange = (teamId: string, teamCategory: ProblemStatementCategory | undefined, checked: boolean) => {
     const softwareLimit = instituteData?.nominationLimitSoftware ?? 0;
@@ -404,7 +409,50 @@ export default function SpocEvaluationPage() {
             </Alert>
           ) : (
             <div className="space-y-4">
-              <div className="flex justify-between items-center flex-wrap gap-4">
+               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                  <Card>
+                      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                          <CardTitle className="text-sm font-medium">Software Limit</CardTitle>
+                          <Code className="h-4 w-4 text-muted-foreground" />
+                      </CardHeader>
+                      <CardContent>
+                          <div className="text-2xl font-bold">{instituteData?.nominationLimitSoftware ?? 0}</div>
+                          <p className="text-xs text-muted-foreground">teams can be nominated</p>
+                      </CardContent>
+                  </Card>
+                   <Card>
+                      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                          <CardTitle className="text-sm font-medium">Hardware Limit</CardTitle>
+                          <Cpu className="h-4 w-4 text-muted-foreground" />
+                      </CardHeader>
+                      <CardContent>
+                          <div className="text-2xl font-bold">{instituteData?.nominationLimitHardware ?? 0}</div>
+                          <p className="text-xs text-muted-foreground">teams can be nominated</p>
+                      </CardContent>
+                  </Card>
+                  <Card>
+                      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                          <CardTitle className="text-sm font-medium">Nominated By You</CardTitle>
+                          <Users className="h-4 w-4 text-muted-foreground" />
+                      </CardHeader>
+                      <CardContent>
+                          <div className="text-2xl font-bold">{nominatedTeamIds.length}</div>
+                          <p className="text-xs text-muted-foreground">teams selected</p>
+                      </CardContent>
+                  </Card>
+                  <Card>
+                      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                          <CardTitle className="text-sm font-medium">Finalized by Admin</CardTitle>
+                          <UserCheck className="h-4 w-4 text-muted-foreground" />
+                      </CardHeader>
+                      <CardContent>
+                          <div className="text-2xl font-bold">{adminFinalizedCount}</div>
+                          <p className="text-xs text-muted-foreground">teams assigned a status</p>
+                      </CardContent>
+                  </Card>
+              </div>
+
+               <div className="flex justify-between items-center flex-wrap gap-4 pt-4 border-t">
                  <div className="flex flex-wrap items-center gap-4 text-sm font-medium">
                     <p className="flex items-center gap-2">
                         <Code className="h-4 w-4 text-primary" />
