@@ -5,7 +5,7 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Loader2, AlertCircle, Save, Pencil, X, Trash2, Users, User, MinusCircle, ArrowUpDown, Link as LinkIcon, Copy, RefreshCw, ChevronDown, FileQuestion, Lock, Unlock } from "lucide-react";
+import { Loader2, AlertCircle, Save, Pencil, X, Trash2, Users, User, MinusCircle, ArrowUpDown, Link as LinkIcon, Copy, RefreshCw, ChevronDown, FileQuestion, Lock, Unlock, Download, FileSpreadsheet } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useEffect, useState, useMemo, useCallback } from "react";
 import { db } from "@/lib/firebase";
@@ -36,7 +36,6 @@ import {
 import { manageTeamBySpoc } from "@/ai/flows/manage-team-by-spoc-flow";
 import { useAuth } from "@/hooks/use-auth";
 import { exportTeams } from "@/ai/flows/export-teams-flow";
-import { Download, FileSpreadsheet } from "lucide-react";
 import { Buffer } from 'buffer';
 import { getTeamInviteLink } from "@/ai/flows/get-team-invite-link-flow";
 import Link from "next/link";
@@ -47,6 +46,8 @@ import { isAfter } from "date-fns";
 import { toggleTeamLock } from "@/ai/flows/toggle-team-lock-flow";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
+import { generateNominationForm } from "@/ai/flows/generate-nomination-form-flow";
 
 type SortKey = 'teamName' | 'teamNumber' | 'name' | 'email' | 'enrollmentNumber' | 'contactNumber';
 type SortDirection = 'asc' | 'desc';
@@ -220,7 +221,6 @@ export default function SpocTeamsPage() {
               leader_name: leader?.name || 'N/A',
               problemstatement_id: ps?.problemStatementId || 'N/A',
               problemstatement_title: team.problemStatementTitle || 'N/A',
-              category: team.category || 'N/A',
             };
         });
         
@@ -529,6 +529,44 @@ export default function SpocTeamsPage() {
     }
   }
 
+  const handleNominationToggle = async (teamId: string, shouldBeNominated: boolean) => {
+    setIsSaving(`nominate-${teamId}`);
+    try {
+        const teamRef = doc(db, 'teams', teamId);
+        await updateDoc(teamRef, { isNominated: shouldBeNominated });
+        toast({ title: "Success", description: `Team ${shouldBeNominated ? 'nominated' : 'nomination removed'}.` });
+    } catch (error: any) {
+        toast({ title: "Error", description: `Could not update nomination status: ${error.message}`, variant: "destructive" });
+    } finally {
+        setIsSaving(null);
+    }
+  };
+
+  const handleGenerateForm = async (teamId: string) => {
+    setIsProcessing(`gen-form-${teamId}`);
+    try {
+      const result = await generateNominationForm({ teamId, generatorRole: 'spoc' });
+      if (result.success && result.fileContent) {
+        const blob = new Blob([Buffer.from(result.fileContent, 'base64')], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = result.fileName || 'nomination-form.docx';
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        a.remove();
+      } else {
+        throw new Error(result.message || "Could not generate form.");
+      }
+    } catch(e: any) {
+      toast({title: "Error", description: e.message, variant: "destructive"});
+    } finally {
+      setIsProcessing(null);
+    }
+  };
+
+
   if (authLoading || loading) {
     return (
       <div className="flex justify-center items-center h-screen">
@@ -655,7 +693,7 @@ export default function SpocTeamsPage() {
                                 <TableHead><Button variant="ghost" onClick={() => requestSort('teamName')}>Team Name {getSortIndicator('teamName')}</Button></TableHead>
                                 <TableHead><Button variant="ghost" onClick={() => requestSort('teamNumber')}>Team Number {getSortIndicator('teamNumber')}</Button></TableHead>
                                 <TableHead>Problem Statement</TableHead>
-                                <TableHead>Lock Status</TableHead>
+                                <TableHead>SIH Nomination</TableHead>
                                 <TableHead>Invite Link</TableHead>
                                 <TableHead><Button variant="ghost" onClick={() => requestSort('name')}>Member Name {getSortIndicator('name')}</Button></TableHead>
                                 <TableHead><Button variant="ghost" onClick={() => requestSort('email')}>Email {getSortIndicator('email')}</Button></TableHead>
@@ -784,19 +822,31 @@ export default function SpocTeamsPage() {
                                                 )}
                                             </TableCell>
                                         )}
-                                        {memberIndex === 0 && (
+                                         {memberIndex === 0 && (
                                             <TableCell rowSpan={membersToDisplay.length} className="align-top">
-                                                <div className="flex items-center space-x-2">
-                                                    <Switch
-                                                        id={`lock-switch-${team.id}`}
-                                                        checked={!team.isLocked}
-                                                        onCheckedChange={(checked) => handleLockToggle(team.id, !checked)}
-                                                        disabled={isSaving === `lock-${team.id}`}
-                                                    />
-                                                    <Label htmlFor={`lock-switch-${team.id}`} className="flex items-center gap-1.5">
-                                                        {team.isLocked ? <Lock className="h-4 w-4 text-destructive"/> : <Unlock className="h-4 w-4 text-green-500" />}
-                                                        {team.isLocked ? 'Locked' : 'Unlocked'}
-                                                    </Label>
+                                                <div className="flex flex-col items-start gap-2">
+                                                    <div className="flex items-center gap-2">
+                                                        <Checkbox
+                                                            id={`nominate-${team.id}`}
+                                                            checked={team.isNominated}
+                                                            onCheckedChange={(checked) => handleNominationToggle(team.id, !!checked)}
+                                                            disabled={isSaving === `nominate-${team.id}`}
+                                                        />
+                                                        <Label htmlFor={`nominate-${team.id}`} className="cursor-pointer">
+                                                            {team.isNominated ? "Nominated" : "Nominate"}
+                                                        </Label>
+                                                    </div>
+                                                    {team.isNominated && (
+                                                        <Button
+                                                            variant="outline"
+                                                            size="sm"
+                                                            onClick={() => handleGenerateForm(team.id)}
+                                                            disabled={isProcessing === `gen-form-${team.id}`}
+                                                        >
+                                                            {isProcessing === `gen-form-${team.id}` ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+                                                            <span className="ml-2">Download Form</span>
+                                                        </Button>
+                                                    )}
                                                 </div>
                                             </TableCell>
                                         )}

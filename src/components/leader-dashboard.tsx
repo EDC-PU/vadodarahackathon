@@ -417,6 +417,7 @@ export default function LeaderDashboard() {
   }
 
   const canAddMoreMembers = teamValidation.memberCount.current < 6;
+  const showMentorForm = team.isNominated || team.sihSelectionStatus;
   
   return (
     <div className="p-4 sm:p-6 lg:p-8">
@@ -436,6 +437,9 @@ export default function LeaderDashboard() {
               <p className="text-muted-foreground">Manage your team and review your registration status.</p>
             </div>
             <div className="flex items-center gap-2 flex-wrap justify-end">
+                {team.isNominated && !team.sihSelectionStatus && (
+                    <Badge className='bg-blue-500'>Nominated for University Round</Badge>
+                )}
                 {team.sihSelectionStatus && (
                     <Badge className={team.sihSelectionStatus === 'university' ? 'bg-amber-500' : 'bg-blue-500'}>
                         {team.sihSelectionStatus === 'university' ? "Selected for SIH (University Level)" : "Selected for SIH (Institute Level)"}
@@ -799,7 +803,7 @@ export default function LeaderDashboard() {
                     </CardContent>
                 </Card>
 
-                 {team.sihSelectionStatus && (
+                 {showMentorForm && (
                     <Card>
                         <CardHeader>
                             <CardTitle className="flex items-center gap-2"><GraduationCap /> Mentor Details</CardTitle>
@@ -878,5 +882,6 @@ export default function LeaderDashboard() {
     </div>
   );
 }
+
 
 

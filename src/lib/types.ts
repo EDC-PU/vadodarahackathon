@@ -434,10 +434,6 @@ const TeamForEvaluationSchema = z.object({
     problemstatement_id: z.string().optional(),
     problemstatement_title: z.string().optional(),
 });
-export const ExportEvaluationInputSchema = z.object({
-    instituteName: z.string(),
-    teams: z.array(TeamForEvaluationSchema),
-});
 export type ExportEvaluationInput = z.infer<typeof ExportEvaluationInputSchema>;
 
 export const ExportEvaluationOutputSchema = z.object({
