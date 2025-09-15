@@ -125,35 +125,6 @@ function NotificationsSection() {
     );
 }
 
-function StudentCoordinatorCard({ institute }: { institute: Institute | null }) {
-  if (!institute || !institute.studentCoordinatorName) {
-    return null;
-  }
-
-  return (
-    <Card className="border-primary/40">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <User className="h-5 w-5 text-primary" /> Student Coordinator Details
-        </CardTitle>
-        <CardDescription>Your point of contact for any institute-specific queries.</CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-2">
-        <p className="font-semibold">{institute.studentCoordinatorName}</p>
-        {institute.studentCoordinatorContact && (
-            <div className="flex items-center gap-3">
-            <Phone className="h-4 w-4 text-muted-foreground" />
-            <a href={`https://wa.me/91${institute.studentCoordinatorContact?.replace(/\s/g, '')}`} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary">
-                {institute.studentCoordinatorContact}
-            </a>
-            </div>
-        )}
-      </CardContent>
-    </Card>
-  );
-}
-
-
 export default function LeaderDashboard() {
   const { user, loading: authLoading } = useAuth();
   const [team, setTeam] = useState<Team | null>(null);
@@ -453,50 +424,6 @@ export default function LeaderDashboard() {
             </div>
         </header>
 
-        <div className="grid gap-8 lg:grid-cols-2 mb-8">
-            <StudentCoordinatorCard institute={instituteData} />
-            <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <FileText /> Institute SPOC Details
-                  </CardTitle>
-                  <CardDescription>Your point of contact for any queries.</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  {spoc ? (
-                    <>
-                      <div className="flex items-center gap-3">
-                        <User className="h-5 w-5 text-primary" />
-                        <span className="font-medium">{spoc.name}</span>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <Mail className="h-5 w-5 text-primary" />
-                        <a href={`mailto:${spoc.email}`} className="text-muted-foreground hover:text-primary">
-                          {spoc.email}
-                        </a>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <Phone className="h-5 w-5 text-primary" />
-                        <a
-                          href={`https://wa.me/+91${spoc.contactNumber}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-muted-foreground hover:text-primary"
-                        >
-                          {spoc.contactNumber}
-                        </a>
-                      </div>
-                    </>
-                  ) : (
-                    <p className="text-muted-foreground">
-                      SPOC details are not available yet. An SPOC for your institute will be assigned soon.
-                    </p>
-                  )}
-                </CardContent>
-            </Card>
-        </div>
-
-
         <Card className="mb-8 w-full">
             <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -673,6 +600,45 @@ export default function LeaderDashboard() {
             </div>
             
             <div className="space-y-8">
+                 <Card>
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                            <FileText /> Institute SPOC Details
+                        </CardTitle>
+                        <CardDescription>Your point of contact for any queries.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                        {spoc ? (
+                        <>
+                            <div className="flex items-center gap-3">
+                            <User className="h-5 w-5 text-primary" />
+                            <span className="font-medium">{spoc.name}</span>
+                            </div>
+                            <div className="flex items-center gap-3">
+                            <Mail className="h-5 w-5 text-primary" />
+                            <a href={`mailto:${spoc.email}`} className="text-muted-foreground hover:text-primary">
+                                {spoc.email}
+                            </a>
+                            </div>
+                            <div className="flex items-center gap-3">
+                            <Phone className="h-5 w-5 text-primary" />
+                            <a
+                                href={`https://wa.me/+91${spoc.contactNumber}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-muted-foreground hover:text-primary"
+                            >
+                                {spoc.contactNumber}
+                            </a>
+                            </div>
+                        </>
+                        ) : (
+                        <p className="text-muted-foreground">
+                            SPOC details are not available yet. An SPOC for your institute will be assigned soon.
+                        </p>
+                        )}
+                    </CardContent>
+                </Card>
                  <Card>
                     <CardHeader>
                         <CardTitle>Team Status</CardTitle>
@@ -882,6 +848,7 @@ export default function LeaderDashboard() {
     </div>
   );
 }
+
 
 
 
