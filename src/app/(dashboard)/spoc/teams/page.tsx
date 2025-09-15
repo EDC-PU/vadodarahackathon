@@ -694,18 +694,18 @@ export default function SpocTeamsPage() {
                                         {memberIndex === 0 && (
                                             <TableCell rowSpan={membersToDisplay.length} className="font-medium align-top">
                                                 <div className="flex flex-col gap-2 items-start w-64">
-                                                    {(editingTeam?.id === team.id) ? (
+                                                    {(editingTeamName?.id === team.id) ? (
                                                         <div className="flex items-center gap-2">
                                                             <Input 
-                                                                value={editingTeam.name}
-                                                                onChange={(e) => setEditingTeam({ ...editingTeam, name: e.target.value })}
+                                                                value={editingTeamName.name}
+                                                                onChange={(e) => setEditingTeamName({ ...editingTeamName, name: e.target.value })}
                                                                 className="w-40 h-8"
                                                                 disabled={isSaving === team.id}
                                                             />
                                                             <Button size="icon" className="h-8 w-8" onClick={() => handleSaveTeamName(team.id)} disabled={isSaving === team.id}>
                                                                 {isSaving === team.id ? <Loader2 className="h-4 w-4 animate-spin"/> : <Save className="h-4 w-4"/>}
                                                             </Button>
-                                                            <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setEditingTeam(null)} disabled={isSaving === team.id}>
+                                                            <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setEditingTeamName(null)} disabled={isSaving === team.id}>
                                                                 <X className="h-4 w-4"/>
                                                             </Button>
                                                         </div>
