@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { Button } from "@/components/ui/button";
@@ -410,10 +411,11 @@ export default function LeaderDashboard() {
                 {team.isNominated && !team.sihSelectionStatus && (
                     <Badge className='bg-blue-500'>Nominated for University Round</Badge>
                 )}
-                {team.sihSelectionStatus && (
-                    <Badge className={team.sihSelectionStatus === 'university' ? 'bg-amber-500' : 'bg-blue-500'}>
-                        {team.sihSelectionStatus === 'university' ? "Selected for SIH (University Level)" : "Selected for SIH (Institute Level)"}
-                    </Badge>
+                 {team.sihSelectionStatus === 'institute' && (
+                    <Badge className="bg-purple-600">Nominated for SIH (Institute Level)</Badge>
+                )}
+                {team.sihSelectionStatus === 'university' && (
+                    <Badge className="bg-amber-500">Selected for SIH (University Level)</Badge>
                 )}
                 {teamValidation.isRegistered ? (
                     <Badge variant="default" className="bg-green-600 hover:bg-green-600">Registered</Badge>
@@ -429,7 +431,7 @@ export default function LeaderDashboard() {
                     <CardHeader>
                         <CardTitle className="flex items-center gap-2"><GraduationCap /> Mentor Details</CardTitle>
                         <CardDescription>
-                            Your team has been nominated for SIH. Please provide your mentor's details. The mentor must be from Parul University.
+                            Your team has been nominated for SIH. Please provide your mentor's details. The mentor must be from Parul University. This is a required step before your SPOC can generate the nomination form.
                         </CardDescription>
                     </CardHeader>
                     <CardContent>

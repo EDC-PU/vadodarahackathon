@@ -48,6 +48,8 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
 import { generateNominationForm } from "@/ai/flows/generate-nomination-form-flow";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+
 
 type SortKey = 'teamName' | 'teamNumber' | 'name' | 'email' | 'enrollmentNumber' | 'contactNumber';
 type SortDirection = 'asc' | 'desc';
@@ -215,11 +217,12 @@ export default function SpocTeamsPage() {
             const leader = users.get(team.leader.uid);
             const ps = team.problemStatementId ? problemStatementsMap.get(team.problemStatementId) : null;
             return {
-              team_number: team.teamNumber || 'N/A',
+              universityTeamId: team.universityTeamId || 'N/A',
               team_name: team.name,
               leader_name: leader?.name || 'N/A',
               problemstatement_id: ps?.problemStatementId || 'N/A',
               problemstatement_title: team.problemStatementTitle || 'N/A',
+              category: team.category || 'N/A',
             };
         });
         
@@ -390,7 +393,7 @@ export default function SpocTeamsPage() {
   const handleSaveTeamName = async (teamId: string) => {
       if (!editingTeamName || editingTeamName.id !== teamId) return;
 
-      setIsSaving(teamId);
+      setIsSaving(`name-${teamId}`);
       try {
           const teamDocRef = doc(db, "teams", teamId);
           await updateDoc(teamDocRef, { name: editingTeamName.name });
@@ -571,272 +574,305 @@ export default function SpocTeamsPage() {
   const canExportForEvaluation = evaluationExportDate ? isAfter(new Date(), evaluationExportDate) : false;
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8">
-        <header className="mb-8 flex flex-col sm:flex-row justify-between sm:items-center gap-4">
-            <div>
-                <h1 className="text-3xl font-bold font-headline">Institute Teams</h1>
-                <p className="text-muted-foreground">View and manage all teams from <strong>{user?.institute}</strong></p>
-            </div>
-             <div className="flex flex-wrap gap-2">
-                 <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as StatusFilter)}>
-                    <SelectTrigger className="w-full sm:w-48">
-                        <SelectValue placeholder="Filter by Status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        {statuses.map(st => <SelectItem key={st} value={st}>{st}</SelectItem>)}
-                    </SelectContent>
-                </Select>
-                 <Select value={categoryFilter} onValueChange={(value) => setCategoryFilter(value as CategoryFilter)}>
-                    <SelectTrigger className="w-full sm:w-48">
-                        <SelectValue placeholder="Filter by Category" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        {categories.map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}
-                    </SelectContent>
-                </Select>
-                 <Select value={String(memberCountFilter)} onValueChange={(val) => setMemberCountFilter(val === "All" ? "All" : Number(val))}>
-                    <SelectTrigger className="w-full sm:w-48">
-                        <SelectValue placeholder="Filter by Members" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="All">All Member Counts</SelectItem>
-                        {[1, 2, 3, 4, 5, 6].map(num => <SelectItem key={num} value={String(num)}>{num} Member(s)</SelectItem>)}
-                    </SelectContent>
-                </Select>
-                 <Select value={roleFilter} onValueChange={(value) => setRoleFilter(value as RoleFilter)}>
-                    <SelectTrigger className="w-full sm:w-48">
-                        <SelectValue placeholder="Filter by Role" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="all">All Roles</SelectItem>
-                        <SelectItem value="leader">Leaders Only</SelectItem>
-                        <SelectItem value="member">Members Only</SelectItem>
-                    </SelectContent>
-                </Select>
-                 <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                        <Button variant="outline" className="w-full sm:w-48 justify-between">
-                            {selectedProblemStatements.length > 0 ? `${selectedProblemStatements.length} PS selected` : 'Filter by PS'}
-                            <ChevronDown className="h-4 w-4 ml-2"/>
-                        </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent className="w-56">
-                        <DropdownMenuLabel>Problem Statements</DropdownMenuLabel>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuCheckboxItem
-                            key="not-selected"
-                            checked={selectedProblemStatements.includes('not-selected')}
-                            onCheckedChange={() => handleProblemStatementFilterChange('not-selected')}
-                        >
-                            Not Selected
-                        </DropdownMenuCheckboxItem>
-                        <DropdownMenuSeparator />
-                        {problemStatements.length > 0 ? problemStatements.map((ps) => (
-                            <DropdownMenuCheckboxItem
-                                key={ps.id}
-                                checked={selectedProblemStatements.includes(ps.id)}
-                                onCheckedChange={() => handleProblemStatementFilterChange(ps.id)}
-                            >
-                                {ps.problemStatementId}
-                            </DropdownMenuCheckboxItem>
-                        )) : <DropdownMenuLabel className="text-xs text-muted-foreground font-normal">No statements available</DropdownMenuLabel>}
-                    </DropdownMenuContent>
-                </DropdownMenu>
-                <Button onClick={handleExport} disabled={isExporting}>
-                  {isExporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
-                  Export Teams
-                </Button>
-                 {canExportForEvaluation && (
-                  <Button onClick={handleExportEvaluation} disabled={isExportingEval}>
-                    {isExportingEval ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileSpreadsheet className="mr-2 h-4 w-4" />}
-                    Export for Evaluation
+    <TooltipProvider>
+      <div className="p-4 sm:p-6 lg:p-8">
+          <header className="mb-8 flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+              <div>
+                  <h1 className="text-3xl font-bold font-headline">Institute Teams</h1>
+                  <p className="text-muted-foreground">View and manage all teams from <strong>{user?.institute}</strong></p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                  <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as StatusFilter)}>
+                      <SelectTrigger className="w-full sm:w-48">
+                          <SelectValue placeholder="Filter by Status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                          {statuses.map(st => <SelectItem key={st} value={st}>{st}</SelectItem>)}
+                      </SelectContent>
+                  </Select>
+                  <Select value={categoryFilter} onValueChange={(value) => setCategoryFilter(value as CategoryFilter)}>
+                      <SelectTrigger className="w-full sm:w-48">
+                          <SelectValue placeholder="Filter by Category" />
+                      </SelectTrigger>
+                      <SelectContent>
+                          {categories.map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}
+                      </SelectContent>
+                  </Select>
+                  <Select value={String(memberCountFilter)} onValueChange={(val) => setMemberCountFilter(val === "All" ? "All" : Number(val))}>
+                      <SelectTrigger className="w-full sm:w-48">
+                          <SelectValue placeholder="Filter by Members" />
+                      </SelectTrigger>
+                      <SelectContent>
+                          <SelectItem value="All">All Member Counts</SelectItem>
+                          {[1, 2, 3, 4, 5, 6].map(num => <SelectItem key={num} value={String(num)}>{num} Member(s)</SelectItem>)}
+                      </SelectContent>
+                  </Select>
+                  <Select value={roleFilter} onValueChange={(value) => setRoleFilter(value as RoleFilter)}>
+                      <SelectTrigger className="w-full sm:w-48">
+                          <SelectValue placeholder="Filter by Role" />
+                      </SelectTrigger>
+                      <SelectContent>
+                          <SelectItem value="all">All Roles</SelectItem>
+                          <SelectItem value="leader">Leaders Only</SelectItem>
+                          <SelectItem value="member">Members Only</SelectItem>
+                      </SelectContent>
+                  </Select>
+                  <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                          <Button variant="outline" className="w-full sm:w-48 justify-between">
+                              {selectedProblemStatements.length > 0 ? `${selectedProblemStatements.length} PS selected` : 'Filter by PS'}
+                              <ChevronDown className="h-4 w-4 ml-2"/>
+                          </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent className="w-56">
+                          <DropdownMenuLabel>Problem Statements</DropdownMenuLabel>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuCheckboxItem
+                              key="not-selected"
+                              checked={selectedProblemStatements.includes('not-selected')}
+                              onCheckedChange={() => handleProblemStatementFilterChange('not-selected')}
+                          >
+                              Not Selected
+                          </DropdownMenuCheckboxItem>
+                          <DropdownMenuSeparator />
+                          {problemStatements.length > 0 ? problemStatements.map((ps) => (
+                              <DropdownMenuCheckboxItem
+                                  key={ps.id}
+                                  checked={selectedProblemStatements.includes(ps.id)}
+                                  onCheckedChange={() => handleProblemStatementFilterChange(ps.id)}
+                              >
+                                  {ps.problemStatementId}
+                              </DropdownMenuCheckboxItem>
+                          )) : <DropdownMenuLabel className="text-xs text-muted-foreground font-normal">No statements available</DropdownMenuLabel>}
+                      </DropdownMenuContent>
+                  </DropdownMenu>
+                  <Button onClick={handleExport} disabled={isExporting}>
+                    {isExporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
+                    Export Teams
                   </Button>
-                )}
-            </div>
-        </header>
+                  {canExportForEvaluation && (
+                    <Button onClick={handleExportEvaluation} disabled={isExportingEval}>
+                      {isExportingEval ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileSpreadsheet className="mr-2 h-4 w-4" />}
+                      Export for Evaluation
+                    </Button>
+                  )}
+              </div>
+          </header>
 
-        <Card>
-            <CardHeader>
-            <CardTitle>Teams List</CardTitle>
-            <CardDescription>{filteredTeams.length} team(s) found with the current filters.</CardDescription>
-            </CardHeader>
-            <CardContent>
-                {teams.length === 0 ? (
-                    <p className="text-muted-foreground text-center py-8">No teams have registered from your institute yet.</p>
-                ) : (
-                  <>
-                    {/* Desktop Table View */}
-                    <div className="hidden md:block">
-                      <ScrollArea className="w-full whitespace-nowrap">
-                        <Table>
-                            <TableHeader>
-                            <TableRow>
-                                <TableHead><Button variant="ghost" onClick={() => requestSort('teamName')}>Team Info {getSortIndicator('teamName')}</Button></TableHead>
-                                <TableHead><Button variant="ghost" onClick={() => requestSort('name')}>Member Name {getSortIndicator('name')}</Button></TableHead>
-                                <TableHead><Button variant="ghost" onClick={() => requestSort('email')}>Email {getSortIndicator('email')}</Button></TableHead>
-                                <TableHead><Button variant="ghost" onClick={() => requestSort('enrollmentNumber')}>Enrollment No. {getSortIndicator('enrollmentNumber')}</Button></TableHead>
-                                <TableHead><Button variant="ghost" onClick={() => requestSort('contactNumber')}>Contact No. {getSortIndicator('contactNumber')}</Button></TableHead>
-                                <TableHead className="text-right">Actions</TableHead>
-                            </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                            {teamsWithDetails.map((team) => {
-                                let membersToDisplay = team.allMembers;
-                                if (roleFilter === 'leader') {
-                                    membersToDisplay = team.allMembers.filter(m => m.isLeader);
-                                } else if (roleFilter === 'member') {
-                                    membersToDisplay = team.allMembers.filter(m => !m.isLeader);
-                                }
-                                if (membersToDisplay.length === 0) return null;
+          <Card>
+              <CardHeader>
+              <CardTitle>Teams List</CardTitle>
+              <CardDescription>{filteredTeams.length} team(s) found with the current filters.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                  {teams.length === 0 ? (
+                      <p className="text-muted-foreground text-center py-8">No teams have registered from your institute yet.</p>
+                  ) : (
+                    <>
+                      {/* Desktop Table View */}
+                      <div className="hidden md:block">
+                        <ScrollArea className="w-full whitespace-nowrap">
+                          <Table>
+                              <TableHeader>
+                              <TableRow>
+                                  <TableHead><Button variant="ghost" onClick={() => requestSort('teamName')}>Team Info {getSortIndicator('teamName')}</Button></TableHead>
+                                  <TableHead><Button variant="ghost" onClick={() => requestSort('name')}>Member Name {getSortIndicator('name')}</Button></TableHead>
+                                  <TableHead><Button variant="ghost" onClick={() => requestSort('email')}>Email {getSortIndicator('email')}</Button></TableHead>
+                                  <TableHead><Button variant="ghost" onClick={() => requestSort('enrollmentNumber')}>Enrollment No. {getSortIndicator('enrollmentNumber')}</Button></TableHead>
+                                  <TableHead><Button variant="ghost" onClick={() => requestSort('contactNumber')}>Contact No. {getSortIndicator('contactNumber')}</Button></TableHead>
+                                  <TableHead className="text-right">Actions</TableHead>
+                              </TableRow>
+                              </TableHeader>
+                              <TableBody>
+                              {teamsWithDetails.map((team) => {
+                                  let membersToDisplay = team.allMembers;
+                                  if (roleFilter === 'leader') {
+                                      membersToDisplay = team.allMembers.filter(m => m.isLeader);
+                                  } else if (roleFilter === 'member') {
+                                      membersToDisplay = team.allMembers.filter(m => !m.isLeader);
+                                  }
+                                  if (membersToDisplay.length === 0) return null;
 
-                                return membersToDisplay.map((member, memberIndex) => (
-                                    <TableRow key={`${team.id}-${member.uid || memberIndex}-${roleFilter}`}>
-                                        {memberIndex === 0 && (
-                                            <TableCell rowSpan={membersToDisplay.length} className="font-medium align-top">
-                                                <div className="flex flex-col gap-2 items-start w-64">
-                                                    {(editingTeamName?.id === team.id) ? (
-                                                        <div className="flex items-center gap-2">
-                                                            <Input 
-                                                                value={editingTeamName.name}
-                                                                onChange={(e) => setEditingTeamName({ ...editingTeamName, name: e.target.value })}
-                                                                className="w-40 h-8"
-                                                                disabled={isSaving === team.id}
-                                                            />
-                                                            <Button size="icon" className="h-8 w-8" onClick={() => handleSaveTeamName(team.id)} disabled={isSaving === team.id}>
-                                                                {isSaving === team.id ? <Loader2 className="h-4 w-4 animate-spin"/> : <Save className="h-4 w-4"/>}
-                                                            </Button>
-                                                            <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setEditingTeamName(null)} disabled={isSaving === team.id}>
-                                                                <X className="h-4 w-4"/>
-                                                            </Button>
-                                                        </div>
-                                                    ) : (
-                                                        <div className="flex items-center gap-2 group">
-                                                            <span className="font-bold text-base">{team.name}</span>
-                                                            <Button size="icon" variant="ghost" className="h-7 w-7 opacity-0 group-hover:opacity-100" onClick={() => handleEditTeamName(team)}>
-                                                                <Pencil className="h-4 w-4 text-muted-foreground"/>
-                                                            </Button>
-                                                        </div>
-                                                    )}
-                                                     {team.isRegistered ? <Badge className="bg-green-600">Registered</Badge> : <Badge variant="destructive">Pending</Badge>}
-                                                     {team.isNominated && <Badge className="bg-blue-500 mt-1">Nominated for SIH (Univ. Level)</Badge>}
-                                                     {team.sihSelectionStatus === 'institute' && <Badge className="bg-purple-600 mt-1">Nominated for SIH (Inst. Level)</Badge>}
-                                                     {team.problemStatement && 
-                                                        <div className="whitespace-normal text-xs text-muted-foreground mt-2">
-                                                            <FileText className="inline h-3 w-3 mr-1"/>
-                                                            {team.problemStatement.problemStatementId}: {team.problemStatement.title}
-                                                        </div>
-                                                    }
+                                  return membersToDisplay.map((member, memberIndex) => (
+                                      <TableRow key={`${team.id}-${member.uid || memberIndex}-${roleFilter}`}>
+                                          {memberIndex === 0 && (
+                                              <TableCell rowSpan={membersToDisplay.length} className="font-medium align-top pt-6">
+                                                  <div className="flex flex-col gap-2 items-start w-64">
+                                                      {(editingTeamName?.id === team.id) ? (
+                                                          <div className="flex items-center gap-2">
+                                                              <Input 
+                                                                  value={editingTeamName.name}
+                                                                  onChange={(e) => setEditingTeamName({ ...editingTeamName, name: e.target.value })}
+                                                                  className="w-40 h-8"
+                                                                  disabled={isSaving === `name-${team.id}`}
+                                                              />
+                                                              <Button size="icon" className="h-8 w-8" onClick={() => handleSaveTeamName(team.id)} disabled={isSaving === `name-${team.id}`}>
+                                                                  {isSaving === `name-${team.id}` ? <Loader2 className="h-4 w-4 animate-spin"/> : <Save className="h-4 w-4"/>}
+                                                              </Button>
+                                                              <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setEditingTeamName(null)} disabled={isSaving === `name-${team.id}`}>
+                                                                  <X className="h-4 w-4"/>
+                                                              </Button>
+                                                          </div>
+                                                      ) : (
+                                                          <div className="flex items-center gap-2 group">
+                                                              <span className="font-bold text-base">{team.name}</span>
+                                                              <Button size="icon" variant="ghost" className="h-7 w-7 opacity-0 group-hover:opacity-100" onClick={() => handleEditTeamName(team)}>
+                                                                  <Pencil className="h-4 w-4 text-muted-foreground"/>
+                                                              </Button>
+                                                          </div>
+                                                      )}
+                                                      {team.isRegistered ? <Badge className="bg-green-600">Registered</Badge> : <Badge variant="destructive">Pending</Badge>}
+                                                      {team.sihSelectionStatus === 'institute' && <Badge className="bg-purple-600 mt-1">Nominated for SIH (Inst. Level)</Badge>}
+                                                      {team.problemStatement && 
+                                                          <div className="whitespace-normal text-xs text-muted-foreground mt-2">
+                                                              <FileText className="inline h-3 w-3 mr-1"/>
+                                                              {team.problemStatement.problemStatementId}: {team.problemStatement.title}
+                                                          </div>
+                                                      }
+                                                  </div>
+                                              </TableCell>
+                                          )}
+                                          <TableCell>
+                                              {member.enrollmentNumber ? (
+                                                  <Link href={`/profile/${member.enrollmentNumber}`} className="hover:underline">
+                                                      {member.name} {member.isLeader && <Badge variant="secondary" className="ml-1">Leader</Badge>}
+                                                  </Link>
+                                              ) : (
+                                                  `${member.name} ${member.isLeader ? '(Leader)' : ''}`
+                                              )}
+                                          </TableCell>
+                                          <TableCell>{member.email}</TableCell>
+                                          <TableCell>{member.enrollmentNumber || 'N/A'}</TableCell>
+                                          <TableCell>
+                                              {member.contactNumber ? (
+                                                  <a href={`https://wa.me/+91${member.contactNumber}`} target="_blank" rel="noopener noreferrer" className="hover:underline">
+                                                      {member.contactNumber}
+                                                  </a>
+                                              ) : 'N/A'}
+                                          </TableCell>
+                                          <TableCell className="text-right">
+                                            <div className="flex items-center justify-end gap-2">
+                                              {memberIndex === 0 && (
+                                                <div className="flex items-center gap-2">
+                                                  <Label htmlFor={`nominate-${team.id}`} className="text-xs font-normal">Nominate for Institute SIH</Label>
+                                                  <Switch
+                                                    id={`nominate-${team.id}`}
+                                                    checked={team.sihSelectionStatus === 'institute'}
+                                                    onCheckedChange={(checked) => handleNominationToggle(team.id, checked)}
+                                                    disabled={isSaving === `nominate-${team.id}`}
+                                                  />
+                                                  <TooltipProvider>
+                                                      <Tooltip>
+                                                          <TooltipTrigger asChild>
+                                                              <Button
+                                                                  variant="outline"
+                                                                  size="icon"
+                                                                  className="h-8 w-8"
+                                                                  onClick={() => handleGenerateForm(team.id)}
+                                                                  disabled={isProcessing === `gen-form-${team.id}` || !team.mentor}
+                                                              >
+                                                                  {isProcessing === `gen-form-${team.id}` ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+                                                              </Button>
+                                                          </TooltipTrigger>
+                                                          <TooltipContent>
+                                                              <p>{!team.mentor ? "Leader must add mentor details first." : "Generate Nomination Form"}</p>
+                                                          </TooltipContent>
+                                                      </Tooltip>
+                                                  </TooltipProvider>
                                                 </div>
-                                            </TableCell>
-                                        )}
-                                        <TableCell>
-                                            {member.enrollmentNumber ? (
-                                                <Link href={`/profile/${member.enrollmentNumber}`} className="hover:underline">
-                                                    {member.name} {member.isLeader && <Badge variant="secondary" className="ml-1">Leader</Badge>}
-                                                </Link>
-                                            ) : (
-                                                `${member.name} ${member.isLeader ? '(Leader)' : ''}`
-                                            )}
-                                        </TableCell>
-                                        <TableCell>{member.email}</TableCell>
-                                        <TableCell>{member.enrollmentNumber || 'N/A'}</TableCell>
-                                        <TableCell>
-                                            {member.contactNumber ? (
-                                                <a href={`https://wa.me/+91${member.contactNumber}`} target="_blank" rel="noopener noreferrer" className="hover:underline">
-                                                    {member.contactNumber}
-                                                </a>
-                                            ) : 'N/A'}
-                                        </TableCell>
-                                        <TableCell className="text-right">
-                                            {!member.isLeader && (
-                                                <AlertDialog>
-                                                    <AlertDialogTrigger asChild>
-                                                        <Button variant="ghost" size="icon" className="h-8 w-8" disabled={isProcessing === `${team.id}-${member.uid}`}>
-                                                            {isProcessing === `${team.id}-${member.uid}` ? <Loader2 className="h-4 w-4 animate-spin"/> : <MinusCircle className="h-4 w-4 text-destructive"/>}
-                                                        </Button>
-                                                    </AlertDialogTrigger>
-                                                    <AlertDialogContent>
-                                                        <AlertDialogHeader>
-                                                        <AlertDialogTitle>Remove {member.name}?</AlertDialogTitle>
-                                                        <AlertDialogDescription>
-                                                            Are you sure you want to remove {member.name} from this team? Their account will not be deleted, but they will be removed from the team.
-                                                        </AlertDialogDescription>
-                                                        </AlertDialogHeader>
-                                                        <AlertDialogFooter>
-                                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                                        <AlertDialogAction onClick={() => handleRemoveMember(team.id, member)} className="bg-destructive hover:bg-destructive/90">Remove Member</AlertDialogAction>
-                                                        </AlertDialogFooter>
-                                                    </AlertDialogContent>
-                                                </AlertDialog>
-                                            )}
-                                        </TableCell>
-                                    </TableRow>
-                                ));
-                            })}
-                            </TableBody>
-                        </Table>
-                      </ScrollArea>
-                    </div>
+                                              )}
 
-                    {/* Mobile Card View */}
-                    <div className="md:hidden space-y-4">
-                      {teamsWithDetails.map((team) => {
-                        let membersToDisplay = team.allMembers;
-                        if (roleFilter === 'leader') {
-                            membersToDisplay = team.allMembers.filter(m => m.isLeader);
-                        } else if (roleFilter === 'member') {
-                            membersToDisplay = team.allMembers.filter(m => !m.isLeader);
-                        }
-                        if (membersToDisplay.length === 0) return null;
+                                              {!member.isLeader && (
+                                                  <AlertDialog>
+                                                      <AlertDialogTrigger asChild>
+                                                          <Button variant="ghost" size="icon" className="h-8 w-8" disabled={isProcessing === `${team.id}-${member.uid}`}>
+                                                              {isProcessing === `${team.id}-${member.uid}` ? <Loader2 className="h-4 w-4 animate-spin"/> : <MinusCircle className="h-4 w-4 text-destructive"/>}
+                                                          </Button>
+                                                      </AlertDialogTrigger>
+                                                      <AlertDialogContent>
+                                                          <AlertDialogHeader>
+                                                          <AlertDialogTitle>Remove {member.name}?</AlertDialogTitle>
+                                                          <AlertDialogDescription>
+                                                              Are you sure you want to remove {member.name} from this team? Their account will not be deleted, but they will be removed from the team.
+                                                          </AlertDialogDescription>
+                                                          </AlertDialogHeader>
+                                                          <AlertDialogFooter>
+                                                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                          <AlertDialogAction onClick={() => handleRemoveMember(team.id, member)} className="bg-destructive hover:bg-destructive/90">Remove Member</AlertDialogAction>
+                                                          </AlertDialogFooter>
+                                                      </AlertDialogContent>
+                                                  </AlertDialog>
+                                              )}
+                                              </div>
+                                          </TableCell>
+                                      </TableRow>
+                                  ));
+                              })}
+                              </TableBody>
+                          </Table>
+                        </ScrollArea>
+                      </div>
 
-                        return (
-                            <Card key={team.id} className="p-4">
-                                <CardHeader className="p-0 mb-4">
-                                <CardTitle className="flex justify-between items-start">
-                                    <span>{team.name}</span>
-                                    {team.teamNumber && <Badge variant="outline">#{team.teamNumber}</Badge>}
-                                </CardTitle>
-                                </CardHeader>
-                                <CardContent className="p-0 space-y-3">
-                                {membersToDisplay.map(member => (
-                                    <div key={member.uid || member.email} className="text-sm border-t pt-3">
-                                    <div className="flex justify-between items-center">
-                                        <p className="font-semibold">{member.name} {member.isLeader && <span className="text-xs font-normal text-primary">(Leader)</span>}</p>
-                                        {!member.isLeader && (
-                                            <AlertDialog>
-                                                <AlertDialogTrigger asChild>
-                                                    <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive" disabled={isProcessing === `${team.id}-${member.uid}`}>
-                                                        {isProcessing === `${team.id}-${member.uid}` ? <Loader2 className="h-4 w-4 animate-spin"/> : <MinusCircle className="h-4 w-4"/>}
-                                                    </Button>
-                                                </AlertDialogTrigger>
-                                                <AlertDialogContent>
-                                                    <AlertDialogHeader>
-                                                        <AlertDialogTitle>Remove {member.name}?</AlertDialogTitle>
-                                                        <AlertDialogDescription>
-                                                            Are you sure you want to remove {member.name} from this team?
-                                                        </AlertDialogDescription>
-                                                    </AlertDialogHeader>
-                                                    <AlertDialogFooter>
-                                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                                        <AlertDialogAction onClick={() => handleRemoveMember(team.id, member)} className="bg-destructive hover:bg-destructive/90">Remove</AlertDialogAction>
-                                                    </AlertDialogFooter>
-                                                </AlertDialogContent>
-                                            </AlertDialog>
-                                        )}
-                                    </div>
-                                    <p className="text-muted-foreground select-text">{member.email}</p>
-                                    <p className="text-muted-foreground">{member.enrollmentNumber}</p>
-                                    </div>
-                                ))}
-                                </CardContent>
-                            </Card>
-                        )
-                      })}
-                    </div>
-                  </>
-                )}
-            </CardContent>
-        </Card>
-    </div>
+                      {/* Mobile Card View */}
+                      <div className="md:hidden space-y-4">
+                        {teamsWithDetails.map((team) => {
+                          let membersToDisplay = team.allMembers;
+                          if (roleFilter === 'leader') {
+                              membersToDisplay = team.allMembers.filter(m => m.isLeader);
+                          } else if (roleFilter === 'member') {
+                              membersToDisplay = team.allMembers.filter(m => !m.isLeader);
+                          }
+                          if (membersToDisplay.length === 0) return null;
+
+                          return (
+                              <Card key={team.id} className="p-4">
+                                  <CardHeader className="p-0 mb-4">
+                                  <CardTitle className="flex justify-between items-start">
+                                      <span>{team.name}</span>
+                                      {team.teamNumber && <Badge variant="outline">#{team.teamNumber}</Badge>}
+                                  </CardTitle>
+                                  </CardHeader>
+                                  <CardContent className="p-0 space-y-3">
+                                  {membersToDisplay.map(member => (
+                                      <div key={member.uid || member.email} className="text-sm border-t pt-3">
+                                      <div className="flex justify-between items-center">
+                                          <p className="font-semibold">{member.name} {member.isLeader && <span className="text-xs font-normal text-primary">(Leader)</span>}</p>
+                                          {!member.isLeader && (
+                                              <AlertDialog>
+                                                  <AlertDialogTrigger asChild>
+                                                      <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive" disabled={isProcessing === `${team.id}-${member.uid}`}>
+                                                          {isProcessing === `${team.id}-${member.uid}` ? <Loader2 className="h-4 w-4 animate-spin"/> : <MinusCircle className="h-4 w-4"/>}
+                                                      </Button>
+                                                  </AlertDialogTrigger>
+                                                  <AlertDialogContent>
+                                                      <AlertDialogHeader>
+                                                          <AlertDialogTitle>Remove {member.name}?</AlertDialogTitle>
+                                                          <AlertDialogDescription>
+                                                              Are you sure you want to remove {member.name} from this team?
+                                                          </AlertDialogDescription>
+                                                      </AlertDialogHeader>
+                                                      <AlertDialogFooter>
+                                                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                          <AlertDialogAction onClick={() => handleRemoveMember(team.id, member)} className="bg-destructive hover:bg-destructive/90">Remove</AlertDialogAction>
+                                                      </AlertDialogFooter>
+                                                  </AlertDialogContent>
+                                              </AlertDialog>
+                                          )}
+                                      </div>
+                                      <p className="text-muted-foreground select-text">{member.email}</p>
+                                      <p className="text-muted-foreground">{member.enrollmentNumber}</p>
+                                      </div>
+                                  ))}
+                                  </CardContent>
+                              </Card>
+                          )
+                        })}
+                      </div>
+                    </>
+                  )}
+              </CardContent>
+          </Card>
+      </div>
+    </TooltipProvider>
   );
 }
