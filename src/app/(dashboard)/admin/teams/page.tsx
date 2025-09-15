@@ -651,9 +651,11 @@ function AllTeamsContent() {
                                                 <Pencil className="h-4 w-4 text-muted-foreground"/>
                                             </Button>
                                         </div>
-                                        {row.teamNumber && <Badge variant="secondary">Team No: {row.teamNumber}</Badge>}
-                                        {row.sihSelectionStatus === 'university' && <Badge className="bg-blue-500 hover:bg-blue-600">Nominated for SIH (Univ. Level)</Badge>}
-                                        {row.sihSelectionStatus === 'institute' && <Badge className="bg-purple-500 hover:bg-purple-600">Nominated for SIH (Inst. Level)</Badge>}
+                                        <div className="flex flex-wrap items-center gap-2">
+                                            {row.teamNumber && <Badge variant="secondary">Team No: {row.teamNumber}</Badge>}
+                                            {row.sihSelectionStatus === 'university' && <Badge className="bg-blue-500 hover:bg-blue-600">Nominated for SIH (Univ. Level)</Badge>}
+                                            {row.sihSelectionStatus === 'institute' && <Badge className="bg-purple-500 hover:bg-purple-600">Nominated for SIH (Inst. Level)</Badge>}
+                                        </div>
                                         {row.problemStatement && 
                                             <div className="whitespace-normal text-xs text-muted-foreground">
                                                 <FileText className="inline h-3 w-3 mr-1"/>
