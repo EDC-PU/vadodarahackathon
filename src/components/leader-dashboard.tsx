@@ -424,182 +424,198 @@ export default function LeaderDashboard() {
             </div>
         </header>
 
-        <Card className="mb-8 w-full">
-            <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                    <Users2 />
-                    Team Members ({teamValidation.memberCount.current} / 6)
-                    <div className="ml-auto flex items-center gap-4">
-                        {team.isNominated && team.universityTeamId && <Badge variant="secondary" className="text-base">{`Univ. ID: ${team.universityTeamId}`}</Badge>}
-                        {team.teamNumber && <Badge variant="secondary" className="text-base">{`Team No: ${team.teamNumber}`}</Badge>}
-                    </div>
-                </CardTitle>
-                <CardDescription>Your current team roster. Invite members using the link below.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {/* Desktop Table View */}
-              <div className="hidden md:block">
-                <ScrollArea className="w-full whitespace-nowrap">
-                  <Table>
-                      <TableHeader>
-                          <TableRow>
-                              <TableHead>
-                                  <Button variant="ghost" onClick={() => requestSort('name')}>Name {getSortIndicator('name')}</Button>
-                              </TableHead>
-                              <TableHead>
-                                  <Button variant="ghost" onClick={() => requestSort('role')}>Role {getSortIndicator('role')}</Button>
-                              </TableHead>
-                              <TableHead>
-                                  <Button variant="ghost" onClick={() => requestSort('email')}>Email {getSortIndicator('email')}</Button>
-                              </TableHead>
-                              <TableHead>
-                                  <Button variant="ghost" onClick={() => requestSort('contactNumber')}>Contact No. {getSortIndicator('contactNumber')}</Button>
-                              </TableHead>
-                              <TableHead>
-                                  <Button variant="ghost" onClick={() => requestSort('enrollmentNumber')}>Enrollment No. {getSortIndicator('enrollmentNumber')}</Button>
-                              </TableHead>
-                              <TableHead>
-                                  <Button variant="ghost" onClick={() => requestSort('yearOfStudy')}>Year {getSortIndicator('yearOfStudy')}</Button>
-                              </TableHead>
-                              <TableHead>
-                                  <Button variant="ghost" onClick={() => requestSort('semester')}>Sem {getSortIndicator('semester')}</Button>
-                              </TableHead>
-                              <TableHead className="text-right">Actions</TableHead>
-                          </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                          {sortedTeamMembers.length > 0 ? (
-                              sortedTeamMembers.map((member, index) => {
-                                  const isLeader = member.uid === user.uid;
-                                  const role = isLeader ? 'Leader' : `Member`;
-                                  return (
-                                  <TableRow key={member.uid}>
-                                      <TableCell className="font-medium">
-                                        {member.enrollmentNumber ? (
-                                              <Link href={`/profile/${member.enrollmentNumber}`} className="hover:underline">
-                                                  {member.name}
-                                              </Link>
-                                          ) : (
-                                              member.name
-                                          )}
-                                      </TableCell>
-                                      <TableCell>
-                                          <Badge variant={isLeader ? 'default' : 'secondary'} className="capitalize">
-                                              {role}
-                                          </Badge>
-                                      </TableCell>
-                                      <TableCell>{member.email}</TableCell>
-                                      <TableCell>
-                                          {member.contactNumber ? (
-                                              <a href={`https://wa.me/+91${member.contactNumber}`} target="_blank" rel="noopener noreferrer" className="hover:underline">
-                                                  {member.contactNumber}
-                                              </a>
-                                          ) : 'N/A'}
-                                      </TableCell>
-                                      <TableCell>{member.enrollmentNumber || 'N/A'}</TableCell>
-                                      <TableCell>{member.yearOfStudy || 'N/A'}</TableCell>
-                                      <TableCell>{member.semester || 'N/A'}</TableCell>
-                                      <TableCell className="text-right">
-                                          {!isLeader && (
-                                              <AlertDialog>
-                                                  <AlertDialogTrigger asChild>
-                                                      <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-destructive" disabled={isRemoving === member.email || !canEdit}>
-                                                      {isRemoving === member.email ? <Loader2 className="h-4 w-4 animate-spin"/> : <Trash2 className="h-4 w-4"/>}
-                                                      </Button>
-                                                  </AlertDialogTrigger>
-                                                  <AlertDialogContent>
-                                                      <AlertDialogHeader>
-                                                      <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                                                      <AlertDialogDescription>
-                                                          This action will remove {member.name} from the team. They will need to be invited again to rejoin.
-                                                      </AlertDialogDescription>
-                                                      </AlertDialogHeader>
-                                                      <AlertDialogFooter>
-                                                      <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                                      <AlertDialogAction onClick={() => handleRemoveMember(member)} className="bg-destructive hover:bg-destructive/90">Remove</AlertDialogAction>
-                                                      </AlertDialogFooter>
-                                                  </AlertDialogContent>
-                                              </AlertDialog>
-                                          )}
-                                      </TableCell>
-                                  </TableRow>
-                              )})
-                          ) : (
-                              <TableRow>
-                                  <TableCell colSpan={8} className="text-center text-muted-foreground h-24">
-                                      {loading ? <Loader2 className="h-6 w-6 animate-spin mx-auto"/> : 'Your details are shown. Invite members to add them to the team.'}
-                                  </TableCell>
-                              </TableRow>
-                          )
-                        }
-                      </TableBody>
-                  </Table>
-                  </ScrollArea>
-                </div>
-
-                {/* Mobile Card View */}
-                <div className="md:hidden space-y-4">
-                  {sortedTeamMembers.length > 0 ? (
-                    sortedTeamMembers.map((member) => {
-                      const isLeader = member.uid === user.uid;
-                      return (
-                        <Card key={member.uid} className="p-4">
-                          <div className="flex justify-between items-start">
-                            <div>
-                              <h3 className="font-bold">{member.name}</h3>
-                              <p className="text-sm text-muted-foreground">{member.email}</p>
-                            </div>
-                            <Badge variant={isLeader ? 'default' : 'secondary'} className="capitalize">{isLeader ? 'Leader' : 'Member'}</Badge>
-                          </div>
-                          <div className="text-sm text-muted-foreground mt-4 grid grid-cols-2 gap-x-4 gap-y-2">
-                              <div className="flex flex-col"><span>Enrollment:</span> <span className="font-medium text-foreground">{member.enrollmentNumber || 'N/A'}</span></div>
-                              <div className="flex flex-col"><span>Contact:</span> <span className="font-medium text-foreground">{member.contactNumber || 'N/A'}</span></div>
-                              <div className="flex flex-col"><span>Year:</span> <span className="font-medium text-foreground">{member.yearOfStudy || 'N/A'}</span></div>
-                              <div className="flex flex-col"><span>Semester:</span> <span className="font-medium text-foreground">{member.semester || 'N/A'}</span></div>
-                          </div>
-                           {!isLeader && (
-                              <div className="mt-4 pt-4 border-t flex justify-end">
-                                  <AlertDialog>
-                                      <AlertDialogTrigger asChild>
-                                          <Button variant="destructive" size="sm" disabled={isRemoving === member.email || !canEdit}>
-                                          {isRemoving === member.email ? <Loader2 className="h-4 w-4 animate-spin"/> : <Trash2 className="h-4 w-4"/>}
-                                          <span className="ml-2">Remove</span>
-                                          </Button>
-                                      </AlertDialogTrigger>
-                                      <AlertDialogContent>
-                                          <AlertDialogHeader>
-                                              <AlertDialogTitle>Remove {member.name}?</AlertDialogTitle>
-                                              <AlertDialogDescription>
-                                                  Are you sure you want to remove {member.name} from this team?
-                                              </AlertDialogDescription>
-                                          </AlertDialogHeader>
-                                          <AlertDialogFooter>
-                                              <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                              <AlertDialogAction onClick={() => handleRemoveMember(member)} className="bg-destructive hover:bg-destructive/90">Remove</AlertDialogAction>
-                                          </AlertDialogFooter>
-                                      </AlertDialogContent>
-                                  </AlertDialog>
-                              </div>
-                           )}
-                        </Card>
-                      )
-                    })
-                  ) : (
-                    <div className="text-center text-muted-foreground py-8">
-                       {loading ? <Loader2 className="h-6 w-6 animate-spin mx-auto"/> : 'Your details are shown. Invite members to add them to the team.'}
-                    </div>
-                  )}
-                </div>
-            </CardContent>
-         </Card>
-
         <div className="grid gap-8 lg:grid-cols-2">
-             <div className="space-y-8">
-                <AnnouncementsSection audience="spoc_teams" />
-                <NotificationsSection />
-            </div>
-            
             <div className="space-y-8">
+                <Card>
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                            <Users2 />
+                            Team Members ({teamValidation.memberCount.current} / 6)
+                            <div className="ml-auto flex items-center gap-4">
+                                {team.isNominated && team.universityTeamId && <Badge variant="secondary" className="text-base">{`Univ. ID: ${team.universityTeamId}`}</Badge>}
+                                {team.teamNumber && <Badge variant="secondary" className="text-base">{`Team No: ${team.teamNumber}`}</Badge>}
+                            </div>
+                        </CardTitle>
+                        <CardDescription>Your current team roster. Invite members using the link below.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                    {/* Desktop Table View */}
+                    <div className="hidden md:block">
+                        <ScrollArea className="w-full whitespace-nowrap">
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>
+                                        <Button variant="ghost" onClick={() => requestSort('name')}>Name {getSortIndicator('name')}</Button>
+                                    </TableHead>
+                                    <TableHead>
+                                        <Button variant="ghost" onClick={() => requestSort('role')}>Role {getSortIndicator('role')}</Button>
+                                    </TableHead>
+                                    <TableHead>
+                                        <Button variant="ghost" onClick={() => requestSort('email')}>Email {getSortIndicator('email')}</Button>
+                                    </TableHead>
+                                    <TableHead>
+                                        <Button variant="ghost" onClick={() => requestSort('contactNumber')}>Contact No. {getSortIndicator('contactNumber')}</Button>
+                                    </TableHead>
+                                    <TableHead>
+                                        <Button variant="ghost" onClick={() => requestSort('enrollmentNumber')}>Enrollment No. {getSortIndicator('enrollmentNumber')}</Button>
+                                    </TableHead>
+                                    <TableHead>
+                                        <Button variant="ghost" onClick={() => requestSort('yearOfStudy')}>Year {getSortIndicator('yearOfStudy')}</Button>
+                                    </TableHead>
+                                    <TableHead>
+                                        <Button variant="ghost" onClick={() => requestSort('semester')}>Sem {getSortIndicator('semester')}</Button>
+                                    </TableHead>
+                                    <TableHead className="text-right">Actions</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {sortedTeamMembers.length > 0 ? (
+                                    sortedTeamMembers.map((member, index) => {
+                                        const isLeader = member.uid === user.uid;
+                                        const role = isLeader ? 'Leader' : `Member`;
+                                        return (
+                                        <TableRow key={member.uid}>
+                                            <TableCell className="font-medium">
+                                                {member.enrollmentNumber ? (
+                                                    <Link href={`/profile/${member.enrollmentNumber}`} className="hover:underline">
+                                                        {member.name}
+                                                    </Link>
+                                                ) : (
+                                                    member.name
+                                                )}
+                                            </TableCell>
+                                            <TableCell>
+                                                <Badge variant={isLeader ? 'default' : 'secondary'} className="capitalize">
+                                                    {role}
+                                                </Badge>
+                                            </TableCell>
+                                            <TableCell>{member.email}</TableCell>
+                                            <TableCell>
+                                                {member.contactNumber ? (
+                                                    <a href={`https://wa.me/+91${member.contactNumber}`} target="_blank" rel="noopener noreferrer" className="hover:underline">
+                                                        {member.contactNumber}
+                                                    </a>
+                                                ) : 'N/A'}
+                                            </TableCell>
+                                            <TableCell>{member.enrollmentNumber || 'N/A'}</TableCell>
+                                            <TableCell>{member.yearOfStudy || 'N/A'}</TableCell>
+                                            <TableCell>{member.semester || 'N/A'}</TableCell>
+                                            <TableCell className="text-right">
+                                                {!isLeader && (
+                                                    <AlertDialog>
+                                                        <AlertDialogTrigger asChild>
+                                                            <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-destructive" disabled={isRemoving === member.email || !canEdit}>
+                                                            {isRemoving === member.email ? <Loader2 className="h-4 w-4 animate-spin"/> : <Trash2 className="h-4 w-4"/>}
+                                                            </Button>
+                                                        </AlertDialogTrigger>
+                                                        <AlertDialogContent>
+                                                            <AlertDialogHeader>
+                                                            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                                            <AlertDialogDescription>
+                                                                This action will remove {member.name} from the team. They will need to be invited again to rejoin.
+                                                            </AlertDialogDescription>
+                                                            </AlertDialogHeader>
+                                                            <AlertDialogFooter>
+                                                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                            <AlertDialogAction onClick={() => handleRemoveMember(member)} className="bg-destructive hover:bg-destructive/90">Remove</AlertDialogAction>
+                                                            </AlertDialogFooter>
+                                                        </AlertDialogContent>
+                                                    </AlertDialog>
+                                                )}
+                                            </TableCell>
+                                        </TableRow>
+                                    )})
+                                ) : (
+                                    <TableRow>
+                                        <TableCell colSpan={8} className="text-center text-muted-foreground h-24">
+                                            {loading ? <Loader2 className="h-6 w-6 animate-spin mx-auto"/> : 'Your details are shown. Invite members to add them to the team.'}
+                                        </TableCell>
+                                    </TableRow>
+                                )
+                                }
+                            </TableBody>
+                        </Table>
+                        </ScrollArea>
+                        </div>
+
+                        {/* Mobile Card View */}
+                        <div className="md:hidden space-y-4">
+                        {sortedTeamMembers.length > 0 ? (
+                            sortedTeamMembers.map((member) => {
+                            const isLeader = member.uid === user.uid;
+                            return (
+                                <Card key={member.uid} className="p-4">
+                                <div className="flex justify-between items-start">
+                                    <div>
+                                    <h3 className="font-bold">{member.name}</h3>
+                                    <p className="text-sm text-muted-foreground">{member.email}</p>
+                                    </div>
+                                    <Badge variant={isLeader ? 'default' : 'secondary'} className="capitalize">{isLeader ? 'Leader' : 'Member'}</Badge>
+                                </div>
+                                <div className="text-sm text-muted-foreground mt-4 grid grid-cols-2 gap-x-4 gap-y-2">
+                                    <div className="flex flex-col"><span>Enrollment:</span> <span className="font-medium text-foreground">{member.enrollmentNumber || 'N/A'}</span></div>
+                                    <div className="flex flex-col"><span>Contact:</span> <span className="font-medium text-foreground">{member.contactNumber || 'N/A'}</span></div>
+                                    <div className="flex flex-col"><span>Year:</span> <span className="font-medium text-foreground">{member.yearOfStudy || 'N/A'}</span></div>
+                                    <div className="flex flex-col"><span>Semester:</span> <span className="font-medium text-foreground">{member.semester || 'N/A'}</span></div>
+                                </div>
+                                {!isLeader && (
+                                    <div className="mt-4 pt-4 border-t flex justify-end">
+                                        <AlertDialog>
+                                            <AlertDialogTrigger asChild>
+                                                <Button variant="destructive" size="sm" disabled={isRemoving === member.email || !canEdit}>
+                                                {isRemoving === member.email ? <Loader2 className="h-4 w-4 animate-spin"/> : <Trash2 className="h-4 w-4"/>}
+                                                <span className="ml-2">Remove</span>
+                                                </Button>
+                                            </AlertDialogTrigger>
+                                            <AlertDialogContent>
+                                                <AlertDialogHeader>
+                                                    <AlertDialogTitle>Remove {member.name}?</AlertDialogTitle>
+                                                    <AlertDialogDescription>
+                                                        Are you sure you want to remove {member.name} from this team?
+                                                    </AlertDialogDescription>
+                                                </AlertDialogHeader>
+                                                <AlertDialogFooter>
+                                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                    <AlertDialogAction onClick={() => handleRemoveMember(member)} className="bg-destructive hover:bg-destructive/90">Remove</AlertDialogAction>
+                                                </AlertDialogFooter>
+                                            </AlertDialogContent>
+                                        </AlertDialog>
+                                    </div>
+                                )}
+                                </Card>
+                            )
+                            })
+                        ) : (
+                            <div className="text-center text-muted-foreground py-8">
+                            {loading ? (
+                                <Loader2 className="h-6 w-6 animate-spin mx-auto" />
+                            ) : (
+                                "Your details are shown. Invite members to add them to the team."
+                            )}
+                            </div>
+                        )}
+                        </div>
+                    </CardContent>
+                </Card>
+                 <AnnouncementsSection audience="spoc_teams" />
+                 <NotificationsSection />
+            </div>
+
+            <div className="space-y-8">
+                 {showMentorForm && (
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="flex items-center gap-2"><GraduationCap /> Mentor Details</CardTitle>
+                            <CardDescription>
+                                Your team has been nominated for SIH. Please provide your mentor's details. The mentor must be from Parul University.
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                           <MentorDetailsForm team={team} canEdit={canEdit} />
+                        </CardContent>
+                    </Card>
+                )}
                  <Card>
                     <CardHeader>
                         <CardTitle className="flex items-center gap-2">
@@ -640,6 +656,58 @@ export default function LeaderDashboard() {
                     </CardContent>
                 </Card>
                  <Card>
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-2"><Calendar /> Institute Hackathon Dates</CardTitle>
+                        <CardDescription>Your SPOC has set the following dates for your internal institute hackathon.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        {instituteData?.evaluationDates && instituteData.evaluationDates.length > 0 ? (
+                            <div className="flex items-center gap-2 text-lg font-semibold">
+                                {instituteData.evaluationDates.map((d: any) => d.toDate()).map(date => format(date, 'do MMMM, yyyy')).join(' & ')}
+                            </div>
+                        ) : (
+                            <p className="text-muted-foreground">Your institute SPOC has not set the evaluation dates yet.</p>
+                        )}
+                    </CardContent>
+                </Card>
+
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Problem Statement & Category</CardTitle>
+                        <CardDescription>
+                            {isDeadlinePassed 
+                                ? "The deadline for changing problem statements has passed." 
+                                : "Select a problem statement. Your team's category will be set automatically."}
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        {team.problemStatementId ? (
+                            <div className="space-y-3">
+                                <p className="text-muted-foreground">Your team has selected:</p>
+                                <h3 className="text-lg font-semibold">{team.problemStatementTitle}</h3>
+                                <p className="text-sm">Team Category: <span className="font-semibold">{team.category}</span></p>
+                                 <Button variant="outline" asChild disabled={!canEdit}>
+                                    <Link href="/leader/select-problem-statement">
+                                        <Pencil className="mr-2 h-4 w-4" /> Change Problem Statement
+                                    </Link>
+                                </Button>
+                                {isDeadlinePassed && <p className="text-xs text-destructive mt-2">The deadline was on {deadline?.toLocaleDateString()}</p>}
+                            </div>
+                        ) : (
+                            <div className="flex flex-col items-start gap-4">
+                                <p>Your team has not selected a problem statement yet.</p>
+                                <Button asChild disabled={!canEdit}>
+                                   <Link href="/leader/select-problem-statement">
+                                        <FileText className="mr-2 h-4 w-4" /> Select Problem Statement
+                                   </Link>
+                                </Button>
+                                {isDeadlinePassed && <p className="text-xs text-destructive mt-2">The deadline was on {deadline?.toLocaleDateString()}</p>}
+                            </div>
+                        )}
+                    </CardContent>
+                </Card>
+
+                <Card>
                     <CardHeader>
                         <CardTitle>Team Status</CardTitle>
                         <CardDescription>Check if your team meets the hackathon requirements.</CardDescription>
@@ -719,73 +787,6 @@ export default function LeaderDashboard() {
                 </Card>
                 <Card>
                     <CardHeader>
-                        <CardTitle className="flex items-center gap-2"><Calendar /> Institute Hackathon Dates</CardTitle>
-                        <CardDescription>Your SPOC has set the following dates for your internal institute hackathon.</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        {instituteData?.evaluationDates && instituteData.evaluationDates.length > 0 ? (
-                            <div className="flex items-center gap-2 text-lg font-semibold">
-                                {instituteData.evaluationDates.map((d: any) => d.toDate()).map(date => format(date, 'do MMMM, yyyy')).join(' & ')}
-                            </div>
-                        ) : (
-                            <p className="text-muted-foreground">Your institute SPOC has not set the evaluation dates yet.</p>
-                        )}
-                    </CardContent>
-                </Card>
-
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Problem Statement & Category</CardTitle>
-                        <CardDescription>
-                            {isDeadlinePassed 
-                                ? "The deadline for changing problem statements has passed." 
-                                : "Select a problem statement. Your team's category will be set automatically."}
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        {team.problemStatementId ? (
-                            <div className="space-y-3">
-                                <p className="text-muted-foreground">Your team has selected:</p>
-                                <h3 className="text-lg font-semibold">{team.problemStatementTitle}</h3>
-                                <p className="text-sm">Team Category: <span className="font-semibold">{team.category}</span></p>
-                                 <Button variant="outline" asChild disabled={!canEdit}>
-                                    <Link href="/leader/select-problem-statement">
-                                        <Pencil className="mr-2 h-4 w-4" /> Change Problem Statement
-                                    </Link>
-                                </Button>
-                                {isDeadlinePassed && <p className="text-xs text-destructive mt-2">The deadline was on {deadline?.toLocaleDateString()}</p>}
-                            </div>
-                        ) : (
-                            <div className="flex flex-col items-start gap-4">
-                                <p>Your team has not selected a problem statement yet.</p>
-                                <Button asChild disabled={!canEdit}>
-                                   <Link href="/leader/select-problem-statement">
-                                        <FileText className="mr-2 h-4 w-4" /> Select Problem Statement
-                                   </Link>
-                                </Button>
-                                {isDeadlinePassed && <p className="text-xs text-destructive mt-2">The deadline was on {deadline?.toLocaleDateString()}</p>}
-                            </div>
-                        )}
-                    </CardContent>
-                </Card>
-
-                 {showMentorForm && (
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="flex items-center gap-2"><GraduationCap /> Mentor Details</CardTitle>
-                            <CardDescription>
-                                Your team has been nominated for SIH. Please provide your mentor's details. The mentor must be from Parul University.
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                           <MentorDetailsForm team={team} canEdit={canEdit} />
-                        </CardContent>
-                    </Card>
-                )}
-
-
-                <Card>
-                    <CardHeader>
                         <CardTitle className="flex items-center gap-2">
                            <LinkIcon /> Invite Members
                         </CardTitle>
@@ -848,6 +849,7 @@ export default function LeaderDashboard() {
     </div>
   );
 }
+
 
 
 
