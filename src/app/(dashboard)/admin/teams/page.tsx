@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -398,6 +397,7 @@ function AllTeamsContent() {
                     isLocked: team.isLocked,
                     teamNumber: team.teamNumber,
                     isNominated: team.isNominated,
+                    sihSelectionStatus: team.sihSelectionStatus,
                     problemStatement: team.problemStatement,
                     isRegistered: team.isRegistered,
                     isFirstRow: memberIndex === 0,
@@ -652,7 +652,8 @@ function AllTeamsContent() {
                                             </Button>
                                         </div>
                                         {row.teamNumber && <Badge variant="secondary">Team No: {row.teamNumber}</Badge>}
-                                        {row.isNominated && <Badge className="bg-green-600 hover:bg-green-700">Nominated for SIH</Badge>}
+                                        {row.sihSelectionStatus === 'university' && <Badge className="bg-blue-500 hover:bg-blue-600">Nominated for SIH (Univ. Level)</Badge>}
+                                        {row.sihSelectionStatus === 'institute' && <Badge className="bg-purple-500 hover:bg-purple-600">Nominated for SIH (Inst. Level)</Badge>}
                                         {row.problemStatement && 
                                             <div className="whitespace-normal text-xs text-muted-foreground">
                                                 <FileText className="inline h-3 w-3 mr-1"/>
@@ -765,8 +766,3 @@ export default function AllTeamsPage() {
     )
 }
     
-
-    
-
-    
-

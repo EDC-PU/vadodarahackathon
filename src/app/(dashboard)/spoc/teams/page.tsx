@@ -517,8 +517,8 @@ export default function SpocTeamsPage() {
     setIsSaving(`nominate-${teamId}`);
     try {
         const teamRef = doc(db, 'teams', teamId);
-        await updateDoc(teamRef, { isNominated: shouldBeNominated });
-        toast({ title: "Success", description: `Team ${shouldBeNominated ? 'nominated' : 'nomination removed'}.` });
+        await updateDoc(teamRef, { sihSelectionStatus: shouldBeNominated ? 'institute' : null });
+        toast({ title: "Success", description: `Team nomination status updated.` });
     } catch (error: any) {
         toast({ title: "Error", description: `Could not update nomination status: ${error.message}`, variant: "destructive" });
     } finally {
@@ -676,6 +676,7 @@ export default function SpocTeamsPage() {
                               <TableHeader>
                               <TableRow>
                                   <TableHead><Button variant="ghost" onClick={() => requestSort('teamName')}>Team Info {getSortIndicator('teamName')}</Button></TableHead>
+                                  <TableHead>Problem Statement</TableHead>
                                   <TableHead><Button variant="ghost" onClick={() => requestSort('name')}>Member Name {getSortIndicator('name')}</Button></TableHead>
                                   <TableHead><Button variant="ghost" onClick={() => requestSort('email')}>Email {getSortIndicator('email')}</Button></TableHead>
                                   <TableHead><Button variant="ghost" onClick={() => requestSort('enrollmentNumber')}>Enrollment No. {getSortIndicator('enrollmentNumber')}</Button></TableHead>
@@ -698,7 +699,7 @@ export default function SpocTeamsPage() {
                                           {memberIndex === 0 && (
                                               <TableCell rowSpan={membersToDisplay.length} className="font-medium align-top pt-6">
                                                   <div className="flex flex-col gap-2 items-start w-64">
-                                                      {(editingTeamName?.id === team.id) ? (
+                                                      {editingTeamName?.id === team.id ? (
                                                           <div className="flex items-center gap-2">
                                                               <Input 
                                                                   value={editingTeamName.name}
@@ -721,15 +722,36 @@ export default function SpocTeamsPage() {
                                                               </Button>
                                                           </div>
                                                       )}
-                                                      {team.isRegistered ? <Badge className="bg-green-600">Registered</Badge> : <Badge variant="destructive">Pending</Badge>}
-                                                      {team.sihSelectionStatus === 'institute' && <Badge className="bg-purple-600 mt-1">Nominated for SIH (Inst. Level)</Badge>}
-                                                      {team.problemStatement && 
-                                                          <div className="whitespace-normal text-xs text-muted-foreground mt-2">
-                                                              <FileText className="inline h-3 w-3 mr-1"/>
-                                                              {team.problemStatement.problemStatementId}: {team.problemStatement.title}
-                                                          </div>
-                                                      }
+                                                      {team.isRegistered ? <Badge className="bg-green-600 hover:bg-green-700">Registered</Badge> : <Badge variant="destructive">Pending</Badge>}
+                                                      {team.sihSelectionStatus === 'university' && <Badge className="bg-blue-500 hover:bg-blue-600">Nominated for SIH (Univ. Level)</Badge>}
+                                                      {team.sihSelectionStatus === 'institute' && <Badge className="bg-purple-500 hover:bg-purple-600">Nominated for SIH (Inst. Level)</Badge>}
                                                   </div>
+                                              </TableCell>
+                                          )}
+                                          {memberIndex === 0 && (
+                                              <TableCell rowSpan={membersToDisplay.length} className="align-top whitespace-normal max-w-xs pt-6">
+                                                  {team.problemStatementTitle ? (
+                                                      <Badge variant="secondary" className="whitespace-normal">{team.problemStatementTitle}</Badge>
+                                                  ) : canSpocSelectPs ? (
+                                                       <div className="flex flex-col gap-2 items-start w-[250px]">
+                                                          <Select onValueChange={(psId) => setSpocPsSelection(prev => ({...prev, [team.id]: psId}))}>
+                                                              <SelectTrigger>
+                                                                  <SelectValue placeholder="Select a PS..." />
+                                                              </SelectTrigger>
+                                                              <SelectContent>
+                                                                  {problemStatements.map(ps => (
+                                                                      <SelectItem key={ps.id} value={ps.id}>{ps.problemStatementId} - {ps.title}</SelectItem>
+                                                                  ))}
+                                                              </SelectContent>
+                                                          </Select>
+                                                          <Button size="sm" onClick={() => handleAssignProblemStatement(team.id)} disabled={!spocPsSelection[team.id] || isSaving === `ps-${team.id}`}>
+                                                              {isSaving === `ps-${team.id}` ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Save className="mr-2 h-4 w-4" />}
+                                                              Assign
+                                                          </Button>
+                                                       </div>
+                                                  ) : (
+                                                      <Badge variant="destructive">Not Selected</Badge>
+                                                  )}
                                               </TableCell>
                                           )}
                                           <TableCell>
@@ -754,12 +776,12 @@ export default function SpocTeamsPage() {
                                             <div className="flex items-center justify-end gap-2">
                                               {memberIndex === 0 && (
                                                 <div className="flex items-center gap-2">
-                                                  <Label htmlFor={`nominate-${team.id}`} className="text-xs font-normal">Nominate for Institute SIH</Label>
+                                                  <Label htmlFor={`nominate-${team.id}`} className="text-xs font-normal">Nominate (Inst.)</Label>
                                                   <Switch
                                                     id={`nominate-${team.id}`}
                                                     checked={team.sihSelectionStatus === 'institute'}
                                                     onCheckedChange={(checked) => handleNominationToggle(team.id, checked)}
-                                                    disabled={isSaving === `nominate-${team.id}`}
+                                                    disabled={isSaving === `nominate-${team.id}` || team.sihSelectionStatus === 'university' || team.isLocked}
                                                   />
                                                   <TooltipProvider>
                                                       <Tooltip>
@@ -779,6 +801,25 @@ export default function SpocTeamsPage() {
                                                           </TooltipContent>
                                                       </Tooltip>
                                                   </TooltipProvider>
+                                                   <AlertDialog>
+                                                        <AlertDialogTrigger asChild>
+                                                            <Button variant="destructive" size="icon" className="h-8 w-8" disabled={isProcessing === team.id}>
+                                                                <Trash2 className="h-4 w-4"/>
+                                                            </Button>
+                                                        </AlertDialogTrigger>
+                                                        <AlertDialogContent>
+                                                            <AlertDialogHeader>
+                                                            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                                            <AlertDialogDescription>
+                                                                This will permanently delete the team "{team.name}" and remove all its members. This action cannot be undone.
+                                                            </AlertDialogDescription>
+                                                            </AlertDialogHeader>
+                                                            <AlertDialogFooter>
+                                                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                            <AlertDialogAction onClick={() => handleDeleteTeam(team.id)} className="bg-destructive hover:bg-destructive/90">Delete Team</AlertDialogAction>
+                                                            </AlertDialogFooter>
+                                                        </AlertDialogContent>
+                                                    </AlertDialog>
                                                 </div>
                                               )}
 
