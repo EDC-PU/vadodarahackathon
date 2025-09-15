@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -84,7 +85,7 @@ function AllTeamsContent() {
   const [selectedTeamIds, setSelectedTeamIds] = useState<string[]>([]);
   const [instituteFilter, setInstituteFilter] = useState<string>("All Institutes");
   const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>("All Categories");
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>("All Statuses");
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("Registered");
   const [memberCountFilter, setMemberCountFilter] = useState<number | "All">("All");
   const [roleFilter, setRoleFilter] = useState<RoleFilter>("all");
   const [searchTerm, setSearchTerm] = useState("");

@@ -87,7 +87,7 @@ export default function SpocTeamsPage() {
   const [isProcessing, setIsProcessing] = useState<string | null>(null);
   const [isExporting, setIsExporting] = useState(false);
   const [isExportingEval, setIsExportingEval] = useState(false);
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>("All Statuses");
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("Registered");
   const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>("All Categories");
   const [memberCountFilter, setMemberCountFilter] = useState<number | "All">("All");
   const [roleFilter, setRoleFilter] = useState<RoleFilter>("all");
