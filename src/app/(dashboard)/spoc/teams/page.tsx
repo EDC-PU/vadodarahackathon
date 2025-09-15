@@ -7,13 +7,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Loader2, AlertCircle, Save, Pencil, X, Trash2, Users, User, MinusCircle, ArrowUpDown, Link as LinkIcon, Copy, RefreshCw, ChevronDown, FileQuestion, Lock, Unlock, Download, FileSpreadsheet, FileText } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { useEffect, useState, useMemo, useCallback } from "react";
+import { useEffect, useState, useMemo, useCallback, useRef } from "react";
 import { db } from "@/lib/firebase";
 import { doc, onSnapshot, updateDoc, collection, query, where, getDocs, writeBatch, orderBy, getDoc } from "firebase/firestore";
 import { Team, UserProfile, TeamMember, ProblemStatement, ProblemStatementCategory } from "@/lib/types";
-import { Alert, AlertTitle, AlertDescription } from "./ui/alert";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
-import { Input } from "./ui/input";
+import { Input } from "@/components/ui/input";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -39,14 +39,14 @@ import { exportTeams } from "@/ai/flows/export-teams-flow";
 import { Buffer } from 'buffer';
 import { getTeamInviteLink } from "@/ai/flows/get-team-invite-link-flow";
 import Link from "next/link";
-import { ScrollArea } from "./ui/scroll-area";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { exportEvaluation } from "@/ai/flows/export-evaluation-flow";
 import { isAfter } from "date-fns";
 import { toggleTeamLock } from "@/ai/flows/toggle-team-lock-flow";
-import { Label } from "./ui/label";
-import { Switch } from "./ui/switch";
-import { Checkbox } from "./ui/checkbox";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
 import { generateNominationForm } from "@/ai/flows/generate-nomination-form-flow";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
@@ -484,8 +484,8 @@ export default function SpocTeamsPage() {
             baseUrl: appBaseUrl,
         });
         if (result.success && result.inviteLink) {
-            const newInviteLinks = new Map(inviteLinks);
-            newInviteLinks.set(teamId, result.inviteLink);
+          const newInviteLinks = new Map<string, string>();
+          newInviteLinks.set(teamId, result.inviteLink);
         } else {
             throw new Error(result.message || "Failed to get invite link.");
         }
@@ -745,8 +745,8 @@ export default function SpocTeamsPage() {
                                                     )}
                                                      <div className="flex flex-wrap items-center gap-2">
                                                         {team.isRegistered ? <Badge className="bg-green-600 hover:bg-green-700">Registered</Badge> : <Badge variant="destructive">Pending</Badge>}
-                                                        {team.sihSelectionStatus === 'university' && <Badge className="bg-blue-500 hover:bg-blue-600">Nominated for SIH (Univ. Level)</Badge>}
-                                                        {team.sihSelectionStatus === 'institute' && (
+                                                        {team.sihSelectionStatus === 'university' ? <Badge className="bg-blue-500 hover:bg-blue-600">Nominated for SIH (Univ. Level)</Badge> 
+                                                         : team.sihSelectionStatus === 'institute' ? 
                                                             <Tooltip>
                                                                 <TooltipTrigger asChild>
                                                                     <Badge className="bg-purple-500 hover:bg-purple-600 cursor-help">Nominated for SIH (Inst. Level)</Badge>
@@ -755,36 +755,36 @@ export default function SpocTeamsPage() {
                                                                     <p>{team.isNominated ? 'By You' : 'By Admin'}</p>
                                                                 </TooltipContent>
                                                             </Tooltip>
-                                                        )}
-                                                        {team.teamNumber && <Badge variant="secondary">#{team.teamNumber}</Badge>}
-                                                        {team.universityTeamId && <Badge variant="secondary">Univ. ID: {team.universityTeamId}</Badge>}
+                                                         : null
+                                                        }
                                                     </div>
-                                                     {team.problemStatement ? 
-                                                        <div className="whitespace-normal text-xs text-muted-foreground">
-                                                            <FileText className="inline h-3 w-3 mr-1"/>
-                                                            {team.problemStatement.problemStatementId}: {team.problemStatement.title}
-                                                        </div>
-                                                        : canSpocSelectPs ? (
-                                                            <div className="flex flex-col gap-2 items-start w-[250px] pt-2">
-                                                                <Select onValueChange={(psId) => setSpocPsSelection(prev => ({...prev, [team.id]: psId}))}>
-                                                                    <SelectTrigger>
-                                                                        <SelectValue placeholder="Select a PS..." />
-                                                                    </SelectTrigger>
-                                                                    <SelectContent>
-                                                                        {problemStatements.map(ps => (
-                                                                            <SelectItem key={ps.id} value={ps.id}>{ps.problemStatementId} - {ps.title}</SelectItem>
-                                                                        ))}
-                                                                    </SelectContent>
-                                                                </Select>
-                                                                <Button size="sm" onClick={()={() => handleAssignProblemStatement(team.id)} disabled={!spocPsSelection[team.id] || isSaving === `ps-${team.id}`}>
-                                                                    {isSaving === `ps-${team.id}` ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Save className="mr-2 h-4 w-4" />}
-                                                                    Assign
-                                                                </Button>
-                                                            </div>
-                                                        ) : (
-                                                            <Badge variant="destructive">Not Selected</Badge>
-                                                        )
-                                                    }
+                                                     <div className="whitespace-normal text-xs text-muted-foreground">
+                                                      {team.problemStatement ? (
+                                                          <>
+                                                              <FileText className="inline h-3 w-3 mr-1"/>
+                                                              {team.problemStatement.problemStatementId}: {team.problemStatement.title}
+                                                          </>
+                                                      ) : canSpocSelectPs ? (
+                                                          <div className="flex flex-col gap-2 items-start w-[250px] pt-2">
+                                                              <Select onValueChange={(psId) => setSpocPsSelection(prev => ({...prev, [team.id]: psId}))}>
+                                                                  <SelectTrigger>
+                                                                      <SelectValue placeholder="Select a PS..." />
+                                                                  </SelectTrigger>
+                                                                  <SelectContent>
+                                                                      {problemStatements.map(ps => (
+                                                                          <SelectItem key={ps.id} value={ps.id}>{ps.problemStatementId} - {ps.title}</SelectItem>
+                                                                      ))}
+                                                                  </SelectContent>
+                                                              </Select>
+                                                              <Button size="sm" onClick={() => handleAssignProblemStatement(team.id)} disabled={!spocPsSelection[team.id] || isSaving === `ps-${team.id}`}>
+                                                                  {isSaving === `ps-${team.id}` ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Save className="mr-2 h-4 w-4" />}
+                                                                  Assign
+                                                              </Button>
+                                                          </div>
+                                                      ) : (
+                                                          <Badge variant="destructive">Not Selected</Badge>
+                                                      )}
+                                                     </div>
                                                      <div className="flex items-center gap-2 mt-2">
                                                         <Tooltip>
                                                             <TooltipTrigger asChild>
@@ -888,7 +888,7 @@ export default function SpocTeamsPage() {
                                                           </AlertDialogHeader>
                                                           <AlertDialogFooter>
                                                           <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                                          <AlertDialogAction onClick={()={() => handleRemoveMember(team.id, member)} className="bg-destructive hover:bg-destructive/90">Remove Member</AlertDialogAction>
+                                                          <AlertDialogAction onClick={() => handleRemoveMember(team.id, member)} className="bg-destructive hover:bg-destructive/90">Remove Member</AlertDialogAction>
                                                           </AlertDialogFooter>
                                                       </AlertDialogContent>
                                                   </AlertDialog>
