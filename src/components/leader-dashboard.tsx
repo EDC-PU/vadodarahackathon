@@ -143,7 +143,7 @@ function StudentCoordinatorCard({ institute }: { institute: Institute | null }) 
         {institute.studentCoordinatorContact && (
             <div className="flex items-center gap-3">
             <Phone className="h-4 w-4 text-muted-foreground" />
-            <a href={`https://wa.me/${institute.studentCoordinatorContact?.replace(/\s/g, '')}`} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary">
+            <a href={`https://wa.me/91${institute.studentCoordinatorContact?.replace(/\s/g, '')}`} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary">
                 {institute.studentCoordinatorContact}
             </a>
             </div>
@@ -435,8 +435,12 @@ export default function LeaderDashboard() {
               <h1 className="text-3xl font-bold font-headline">Team Dashboard: {team.name}</h1>
               <p className="text-muted-foreground">Manage your team and review your registration status.</p>
             </div>
-            <div className="flex items-center gap-2">
-                <span className="text-sm text-muted-foreground">Status: </span>
+            <div className="flex items-center gap-2 flex-wrap justify-end">
+                {team.sihSelectionStatus && (
+                    <Badge className={team.sihSelectionStatus === 'university' ? 'bg-amber-500' : 'bg-blue-500'}>
+                        {team.sihSelectionStatus === 'university' ? "Selected for SIH (University Level)" : "Selected for SIH (Institute Level)"}
+                    </Badge>
+                )}
                 {teamValidation.isRegistered ? (
                     <Badge variant="default" className="bg-green-600 hover:bg-green-600">Registered</Badge>
                 ) : (
@@ -874,4 +878,5 @@ export default function LeaderDashboard() {
     </div>
   );
 }
+
 

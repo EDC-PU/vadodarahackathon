@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -114,6 +115,11 @@ export function MentorDetailsForm({ team, canEdit }: MentorDetailsFormProps) {
                 <p><strong>Email:</strong> {team.mentor?.email}</p>
                 <p><strong>Phone:</strong> {team.mentor?.phoneNumber}</p>
             </div>
+             {canEdit && (
+                <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setIsEditing(true)}>
+                    <Pencil className="h-4 w-4" />
+                </Button>
+            )}
         </div>
       </div>
     );
@@ -212,7 +218,7 @@ export function MentorDetailsForm({ team, canEdit }: MentorDetailsFormProps) {
                 <X className="mr-2 h-4 w-4"/> Cancel
             </Button>
            )}
-          <Button type="submit" disabled={isLoading || authLoading}>
+          <Button type="submit" disabled={isLoading || authLoading || !canEdit}>
             {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Save Mentor Details
           </Button>
