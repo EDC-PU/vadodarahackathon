@@ -297,15 +297,15 @@ export default function SpocTeamsPage() {
       const categoryMatch = categoryFilter === 'All Categories' || team.category === categoryFilter;
 
       let sihStatusMatch = true;
-        if (sihStatusFilter !== 'all') {
-            if (sihStatusFilter === 'none') {
-                sihStatusMatch = !team.isNominated;
-            } else if (sihStatusFilter === 'institute') {
-                sihStatusMatch = team.isNominated && (!team.sihSelectionStatus || team.sihSelectionStatus === 'institute');
-            } else { // university
-                sihStatusMatch = team.sihSelectionStatus === 'university';
-            }
-        }
+      if (sihStatusFilter !== 'all') {
+          if (sihStatusFilter === 'none') {
+              sihStatusMatch = !team.isNominated && !team.sihSelectionStatus;
+          } else if (sihStatusFilter === 'institute') {
+              sihStatusMatch = team.isNominated && team.sihSelectionStatus !== 'university';
+          } else { // university
+              sihStatusMatch = team.sihSelectionStatus === 'university';
+          }
+      }
 
       return statusMatch && psMatch && memberCountMatch && categoryMatch && sihStatusMatch;
     });
@@ -692,8 +692,6 @@ export default function SpocTeamsPage() {
                             <TableHeader>
                             <TableRow>
                                 <TableHead><Button variant="ghost" onClick={() => requestSort('teamName')}>Team Info {getSortIndicator('teamName')}</Button></TableHead>
-                                <TableHead>Problem Statement</TableHead>
-                                <TableHead>Mentor Status</TableHead>
                                 <TableHead><Button variant="ghost" onClick={() => requestSort('name')}>Member Name {getSortIndicator('name')}</Button></TableHead>
                                 <TableHead><Button variant="ghost" onClick={() => requestSort('email')}>Email {getSortIndicator('email')}</Button></TableHead>
                                 <TableHead><Button variant="ghost" onClick={() => requestSort('contactNumber')}>Contact No. {getSortIndicator('contactNumber')}</Button></TableHead>
@@ -755,6 +753,37 @@ export default function SpocTeamsPage() {
                                                         {team.teamNumber && <Badge variant="secondary">{`Team No: ${team.teamNumber}`}</Badge>}
                                                         {team.universityTeamId && <Badge variant="secondary">{`Univ. ID: ${team.universityTeamId}`}</Badge>}
                                                     </div>
+                                                    <div className="flex flex-col items-start gap-2 mt-2">
+                                                        {team.problemStatement ? (
+                                                            <Badge variant="secondary" className="whitespace-normal text-left max-w-full">
+                                                                <FileText className="h-3 w-3 mr-1.5 shrink-0"/>{team.problemStatement.problemStatementId}: {team.problemStatement.title}
+                                                            </Badge>
+                                                        ) : canSpocSelectPs ? (
+                                                            <div className="flex flex-col gap-2 items-start w-full">
+                                                                <Select onValueChange={(psId) => setSpocPsSelection(prev => ({...prev, [team.id]: psId}))}>
+                                                                    <SelectTrigger>
+                                                                        <SelectValue placeholder="Assign a PS..." />
+                                                                    </SelectTrigger>
+                                                                    <SelectContent>
+                                                                        {problemStatements.map(ps => (
+                                                                            <SelectItem key={ps.id} value={ps.id}>{ps.problemStatementId} - {ps.title}</SelectItem>
+                                                                        ))}
+                                                                    </SelectContent>
+                                                                </Select>
+                                                                <Button size="sm" onClick={() => handleAssignProblemStatement(team.id)} disabled={!spocPsSelection[team.id] || isSaving === `ps-${team.id}`}>
+                                                                    {isSaving === `ps-${team.id}` ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Save className="mr-2 h-4 w-4" />}
+                                                                    Assign
+                                                                </Button>
+                                                            </div>
+                                                        ) : (
+                                                            <Badge variant="destructive">PS Not Selected</Badge>
+                                                        )}
+                                                        <div className="flex items-center gap-1.5">
+                                                            <GraduationCap className="h-4 w-4 text-muted-foreground"/>
+                                                            <p className="text-xs font-medium">Mentor:</p>
+                                                            {team.mentor ? <Badge className="bg-green-600">Yes</Badge> : <Badge variant="destructive">No</Badge>}
+                                                        </div>
+                                                    </div>
                                                      <div className="flex items-center gap-4 mt-2">
                                                         <Tooltip>
                                                             <TooltipTrigger asChild>
@@ -774,7 +803,7 @@ export default function SpocTeamsPage() {
                                                                 </TooltipContent>
                                                             )}
                                                         </Tooltip>
-                                                        {team.isNominated && !team.sihSelectionStatus && (
+                                                        {team.isNominated && team.sihSelectionStatus !== 'university' && (
                                                             <Tooltip>
                                                                 <TooltipTrigger asChild>
                                                                     <div className="inline-block">
@@ -798,37 +827,7 @@ export default function SpocTeamsPage() {
                                                 </div>
                                             </TableCell>
                                         )}
-                                        {memberIndex === 0 && (
-                                            <TableCell rowSpan={membersToDisplay.length} className="align-top pt-6 whitespace-normal max-w-xs">
-                                                {team.problemStatement ? (
-                                                    <Badge variant="secondary" className="whitespace-normal">{team.problemStatement.problemStatementId}: {team.problemStatement.title}</Badge>
-                                                ) : canSpocSelectPs ? (
-                                                     <div className="flex flex-col gap-2 items-start w-[250px]">
-                                                        <Select onValueChange={(psId) => setSpocPsSelection(prev => ({...prev, [team.id]: psId}))}>
-                                                            <SelectTrigger>
-                                                                <SelectValue placeholder="Select a PS..." />
-                                                            </SelectTrigger>
-                                                            <SelectContent>
-                                                                {problemStatements.map(ps => (
-                                                                    <SelectItem key={ps.id} value={ps.id}>{ps.problemStatementId} - {ps.title}</SelectItem>
-                                                                ))}
-                                                            </SelectContent>
-                                                        </Select>
-                                                        <Button size="sm" onClick={() => handleAssignProblemStatement(team.id)} disabled={!spocPsSelection[team.id] || isSaving === `ps-${team.id}`}>
-                                                            {isSaving === `ps-${team.id}` ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Save className="mr-2 h-4 w-4" />}
-                                                            Assign
-                                                        </Button>
-                                                     </div>
-                                                ) : (
-                                                    <Badge variant="destructive">Not Selected</Badge>
-                                                )}
-                                            </TableCell>
-                                        )}
-                                        {memberIndex === 0 && (
-                                            <TableCell rowSpan={membersToDisplay.length} className="align-top pt-6">
-                                                {team.mentor ? <Badge className="bg-green-600">Yes</Badge> : <Badge variant="destructive">No</Badge>}
-                                            </TableCell>
-                                        )}
+                                        
                                         <TableCell>
                                             {member.enrollmentNumber ? (
                                                 <Link href={`/profile/${member.enrollmentNumber}`} className="hover:underline">
