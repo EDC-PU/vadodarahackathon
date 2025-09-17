@@ -3,8 +3,8 @@
 
 import { useEffect, useState } from "react";
 import { db } from "@/lib/firebase";
-import { collection, query, where, onSnapshot, doc, updateDoc } from "firebase/firestore";
-import { Team } from "@/lib/types";
+import { collection, query, where, onSnapshot, doc, getDocs } from "firebase/firestore";
+import { Team, UserProfile } from "@/lib/types";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -19,6 +19,7 @@ import { generateNominationForm } from "@/ai/flows/generate-nomination-form-flow
 export default function SsihEnrollmentPage() {
   const { user, loading: authLoading } = useAuth();
   const [teams, setTeams] = useState<Team[]>([]);
+  const [leaders, setLeaders] = useState<Map<string, UserProfile>>(new Map());
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState<string | null>(null);
@@ -36,9 +37,21 @@ export default function SsihEnrollmentPage() {
         where("sihSelectionStatus", "==", "institute")
     );
 
-    const unsubscribe = onSnapshot(teamsQuery, (snapshot) => {
+    const unsubscribe = onSnapshot(teamsQuery, async (snapshot) => {
       const teamsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Team));
       setTeams(teamsData);
+
+      if (teamsData.length > 0) {
+        const leaderUids = teamsData.map(team => team.leader.uid);
+        const leadersQuery = query(collection(db, 'users'), where('uid', 'in', leaderUids));
+        const leaderDocs = await getDocs(leadersQuery);
+        const leaderMap = new Map<string, UserProfile>();
+        leaderDocs.forEach(doc => {
+            leaderMap.set(doc.id, doc.data() as UserProfile);
+        });
+        setLeaders(leaderMap);
+      }
+
       setLoading(false);
     }, (error) => {
       console.error("Error fetching teams for SIH enrollment:", error);
@@ -128,6 +141,7 @@ export default function SsihEnrollmentPage() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Team Name</TableHead>
+                    <TableHead>Leader</TableHead>
                     <TableHead>Problem Statement</TableHead>
                     <TableHead>Category</TableHead>
                     <TableHead>Mentor Details</TableHead>
@@ -136,9 +150,15 @@ export default function SsihEnrollmentPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {teams.map((team) => (
+                  {teams.map((team) => {
+                    const leader = leaders.get(team.leader.uid);
+                    return (
                     <TableRow key={team.id}>
                       <TableCell className="font-medium">{team.name}</TableCell>
+                      <TableCell>
+                        <div className="font-medium">{leader?.name || 'N/A'}</div>
+                        <div className="text-xs text-muted-foreground">{leader?.contactNumber || 'N/A'}</div>
+                      </TableCell>
                       <TableCell>{team.problemStatementTitle}</TableCell>
                       <TableCell>
                           <Badge variant={team.category === 'Software' ? 'default' : 'secondary'}>
@@ -177,7 +197,7 @@ export default function SsihEnrollmentPage() {
                           )}
                       </TableCell>
                     </TableRow>
-                  ))}
+                  )})}
                 </TableBody>
               </Table>
             </div>
