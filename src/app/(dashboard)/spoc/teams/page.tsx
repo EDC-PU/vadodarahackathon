@@ -508,7 +508,7 @@ export default function SpocTeamsPage() {
     } finally {
         setIsSaving(null);
     }
-  }
+  };
 
   const handleNominationToggle = async (teamId: string, shouldBeNominated: boolean) => {
     setIsSaving(`nominate-${teamId}`);
@@ -833,13 +833,18 @@ export default function SpocTeamsPage() {
                                                               size="icon"
                                                               className="h-8 w-8"
                                                               onClick={() => handleGenerateForm(team.id)}
-                                                              disabled={isProcessing === `gen-form-${team.id}` || !team.mentor}
+                                                              disabled={isProcessing === `gen-form-${team.id}` || !team.mentor || team.sihSelectionStatus === 'university'}
                                                           >
                                                               {isProcessing === `gen-form-${team.id}` ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
                                                           </Button>
                                                       </TooltipTrigger>
                                                       <TooltipContent>
-                                                          <p>{!team.mentor ? "Leader must add mentor details first." : "Generate Nomination Form"}</p>
+                                                        {team.sihSelectionStatus === 'university' 
+                                                            ? <p>Admin will generate the form.</p>
+                                                            : !team.mentor 
+                                                            ? <p>Leader must add mentor details first.</p>
+                                                            : <p>Generate Nomination Form</p>
+                                                        }
                                                       </TooltipContent>
                                                   </Tooltip>
                                                    <AlertDialog>
