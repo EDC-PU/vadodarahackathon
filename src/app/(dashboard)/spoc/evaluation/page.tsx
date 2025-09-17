@@ -15,13 +15,6 @@ import {
   FormLabel
 } from "@/components/ui/form";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
   Popover,
   PopoverContent,
   PopoverTrigger,
@@ -528,7 +521,7 @@ export default function SpocEvaluationPage() {
                                             variant="outline"
                                             size="sm"
                                             onClick={() => handleGenerateForm(team.id)}
-                                            disabled={isGenerating === team.id}
+                                            disabled={isGenerating === team.id || team.sihSelectionStatus === 'university'}
                                         >
                                             {isGenerating === team.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
                                             Generate
@@ -554,6 +547,7 @@ export default function SpocEvaluationPage() {
     </div>
   );
 }
+
 
 
 
