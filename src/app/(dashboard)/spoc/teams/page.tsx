@@ -5,7 +5,7 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Loader2, AlertCircle, Save, Pencil, X, Trash2, Users, User, MinusCircle, ArrowUpDown, Link as LinkIcon, Copy, RefreshCw, ChevronDown, FileQuestion, Lock, Unlock, Download, FileSpreadsheet, FileText } from "lucide-react";
+import { Loader2, AlertCircle, Save, Pencil, X, Trash2, Users, User, MinusCircle, ArrowUpDown, Link as LinkIcon, Copy, RefreshCw, ChevronDown, FileQuestion, Lock, Unlock, Download, FileSpreadsheet, FileText, GraduationCap } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useEffect, useState, useMemo, useCallback, useRef } from "react";
 import { db } from "@/lib/firebase";
@@ -691,9 +691,9 @@ export default function SpocTeamsPage() {
                             <TableRow>
                                 <TableHead><Button variant="ghost" onClick={() => requestSort('teamName')}>Team Info {getSortIndicator('teamName')}</Button></TableHead>
                                 <TableHead>Problem Statement</TableHead>
+                                <TableHead>Mentor Status</TableHead>
                                 <TableHead><Button variant="ghost" onClick={() => requestSort('name')}>Member Name {getSortIndicator('name')}</Button></TableHead>
                                 <TableHead><Button variant="ghost" onClick={() => requestSort('email')}>Email {getSortIndicator('email')}</Button></TableHead>
-                                <TableHead><Button variant="ghost" onClick={() => requestSort('enrollmentNumber')}>Enrollment No. {getSortIndicator('enrollmentNumber')}</Button></TableHead>
                                 <TableHead><Button variant="ghost" onClick={() => requestSort('contactNumber')}>Contact No. {getSortIndicator('contactNumber')}</Button></TableHead>
                                 <TableHead className="text-right">Actions</TableHead>
                             </TableRow>
@@ -753,8 +753,7 @@ export default function SpocTeamsPage() {
                                                         {team.teamNumber && <Badge variant="secondary">{`Team No: ${team.teamNumber}`}</Badge>}
                                                         {team.universityTeamId && <Badge variant="secondary">{`Univ. ID: ${team.universityTeamId}`}</Badge>}
                                                     </div>
-                                                     <div className="flex items-center gap-2 mt-2">
-                                                        <TooltipProvider>
+                                                     <div className="flex items-center gap-4 mt-2">
                                                         <Tooltip>
                                                             <TooltipTrigger asChild>
                                                                 <div className="flex items-center gap-2">
@@ -773,7 +772,26 @@ export default function SpocTeamsPage() {
                                                                 </TooltipContent>
                                                             )}
                                                         </Tooltip>
-                                                        </TooltipProvider>
+                                                        {team.isNominated && team.sihSelectionStatus !== 'university' && (
+                                                            <Tooltip>
+                                                                <TooltipTrigger asChild>
+                                                                    <div className="inline-block"> {/* Wrapper for disabled button */}
+                                                                        <Button
+                                                                            variant="outline"
+                                                                            size="icon"
+                                                                            className="h-8 w-8"
+                                                                            onClick={() => handleGenerateForm(team.id)}
+                                                                            disabled={isProcessing === `gen-form-${team.id}` || !team.mentor}
+                                                                        >
+                                                                            {isProcessing === `gen-form-${team.id}` ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+                                                                        </Button>
+                                                                    </div>
+                                                                </TooltipTrigger>
+                                                                <TooltipContent>
+                                                                    { !team.mentor ? <p>Leader must add mentor details first.</p> : <p>Generate Nomination Form</p> }
+                                                                </TooltipContent>
+                                                            </Tooltip>
+                                                        )}
                                                     </div>
                                                 </div>
                                             </TableCell>
@@ -804,6 +822,11 @@ export default function SpocTeamsPage() {
                                                 )}
                                             </TableCell>
                                         )}
+                                        {memberIndex === 0 && (
+                                            <TableCell rowSpan={membersToDisplay.length} className="align-top pt-6">
+                                                {team.mentor ? <Badge className="bg-green-600">Yes</Badge> : <Badge variant="destructive">No</Badge>}
+                                            </TableCell>
+                                        )}
                                         <TableCell>
                                             {member.enrollmentNumber ? (
                                                 <Link href={`/profile/${member.enrollmentNumber}`} className="hover:underline">
@@ -814,7 +837,6 @@ export default function SpocTeamsPage() {
                                             )}
                                         </TableCell>
                                         <TableCell>{member.email}</TableCell>
-                                        <TableCell>{member.enrollmentNumber || 'N/A'}</TableCell>
                                         <TableCell>
                                             {member.contactNumber ? (
                                                 <a href={`https://wa.me/+91${member.contactNumber}`} target="_blank" rel="noopener noreferrer" className="hover:underline">
@@ -826,27 +848,6 @@ export default function SpocTeamsPage() {
                                             <div className="flex items-center justify-end gap-2">
                                               {memberIndex === 0 && (
                                                 <div className="flex items-center gap-2">
-                                                  <Tooltip>
-                                                      <TooltipTrigger asChild>
-                                                          <Button
-                                                              variant="outline"
-                                                              size="icon"
-                                                              className="h-8 w-8"
-                                                              onClick={() => handleGenerateForm(team.id)}
-                                                              disabled={isProcessing === `gen-form-${team.id}` || !team.mentor || team.sihSelectionStatus === 'university'}
-                                                          >
-                                                              {isProcessing === `gen-form-${team.id}` ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
-                                                          </Button>
-                                                      </TooltipTrigger>
-                                                      <TooltipContent>
-                                                        {team.sihSelectionStatus === 'university' 
-                                                            ? <p>Admin will generate the form.</p>
-                                                            : !team.mentor 
-                                                            ? <p>Leader must add mentor details first.</p>
-                                                            : <p>Generate Nomination Form</p>
-                                                        }
-                                                      </TooltipContent>
-                                                  </Tooltip>
                                                    <AlertDialog>
                                                         <AlertDialogTrigger asChild>
                                                             <Button variant="destructive" size="icon" className="h-8 w-8" disabled={isProcessing === team.id}>
@@ -947,7 +948,6 @@ export default function SpocTeamsPage() {
                                           )}
                                       </div>
                                       <p className="text-muted-foreground select-text">{member.email}</p>
-                                      <p className="text-muted-foreground">{member.enrollmentNumber}</p>
                                       </div>
                                   ))}
                                   </CardContent>
@@ -963,3 +963,4 @@ export default function SpocTeamsPage() {
     </TooltipProvider>
   );
 }
+
