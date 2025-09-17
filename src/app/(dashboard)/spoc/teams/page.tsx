@@ -256,17 +256,23 @@ export default function SpocTeamsPage() {
 
   useEffect(() => {
     let unsubscribe: (() => void) | undefined;
-    if (user && user.institute) {
-      unsubscribe = fetchAllData(user.institute);
-    } else if (!authLoading) {
-      setLoading(false);
+    
+    async function init() {
+        if (user && user.institute) {
+            unsubscribe = await fetchAllData(user.institute);
+        } else if (!authLoading) {
+            setLoading(false);
+        }
     }
+    
+    init();
+
     return () => {
-      if (unsubscribe) {
-        unsubscribe();
-      }
+        if (unsubscribe) {
+            unsubscribe();
+        }
     };
-  }, [user, authLoading, fetchAllData]);
+}, [user, authLoading, fetchAllData]);
 
   const filteredTeams = useMemo(() => {
     return teams.filter(team => {
@@ -706,6 +712,7 @@ export default function SpocTeamsPage() {
                             <TableHeader>
                             <TableRow>
                                 <TableHead><Button variant="ghost" onClick={() => requestSort('teamName')}>Team Info {getSortIndicator('teamName')}</Button></TableHead>
+                                <TableHead>Problem Statement</TableHead>
                                 <TableHead><Button variant="ghost" onClick={() => requestSort('name')}>Member Name {getSortIndicator('name')}</Button></TableHead>
                                 <TableHead><Button variant="ghost" onClick={() => requestSort('email')}>Email {getSortIndicator('email')}</Button></TableHead>
                                 <TableHead><Button variant="ghost" onClick={() => requestSort('enrollmentNumber')}>Enrollment No. {getSortIndicator('enrollmentNumber')}</Button></TableHead>
@@ -765,35 +772,8 @@ export default function SpocTeamsPage() {
                                                             </Tooltip>
                                                         : null
                                                         }
-                                                        {team.universityTeamId && <Badge variant="secondary">{`Univ. ID: ${team.universityTeamId}`}</Badge>}
-                                                        {team.teamNumber && <Badge variant="secondary">{`Team No: ${team.teamNumber}`}</Badge>}
-                                                    </div>
-                                                    <div className="whitespace-normal text-xs text-muted-foreground">
-                                                        {team.problemStatement ? (
-                                                            <>
-                                                                <FileText className="inline h-3 w-3 mr-1"/>
-                                                                {team.problemStatement.problemStatementId}: {team.problemStatement.title}
-                                                            </>
-                                                        ) : canSpocSelectPs ? (
-                                                            <div className="flex flex-col gap-2 items-start w-[250px] pt-2">
-                                                                <Select onValueChange={(psId) => setSpocPsSelection(prev => ({...prev, [team.id]: psId}))}>
-                                                                    <SelectTrigger>
-                                                                        <SelectValue placeholder="Select a PS..." />
-                                                                    </SelectTrigger>
-                                                                    <SelectContent>
-                                                                        {problemStatements.map(ps => (
-                                                                            <SelectItem key={ps.id} value={ps.id}>{ps.problemStatementId} - {ps.title}</SelectItem>
-                                                                        ))}
-                                                                    </SelectContent>
-                                                                </Select>
-                                                                <Button size="sm" onClick={() => handleAssignProblemStatement(team.id)} disabled={!spocPsSelection[team.id] || isSaving === `ps-${team.id}`}>
-                                                                    {isSaving === `ps-${team.id}` ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Save className="mr-2 h-4 w-4" />}
-                                                                    Assign
-                                                                </Button>
-                                                            </div>
-                                                        ) : (
-                                                            <Badge variant="destructive">Not Selected</Badge>
-                                                        )}
+                                                         {team.teamNumber && <Badge variant="secondary">{`Team No: ${team.teamNumber}`}</Badge>}
+                                                         {team.universityTeamId && <Badge variant="secondary">{`Univ. ID: ${team.universityTeamId}`}</Badge>}
                                                     </div>
                                                      <div className="flex items-center gap-2 mt-2">
                                                         <Tooltip>
@@ -804,11 +784,11 @@ export default function SpocTeamsPage() {
                                                                         id={`nominate-${team.id}`}
                                                                         checked={team.isNominated}
                                                                         onCheckedChange={(checked) => handleNominationToggle(team.id, checked)}
-                                                                        disabled={isSaving === `nominate-${team.id}` || !!team.sihSelectionStatus}
+                                                                        disabled={isSaving === `nominate-${team.id}` || team.sihSelectionStatus === 'institute' || team.sihSelectionStatus === 'university' }
                                                                     />
                                                                 </div>
                                                             </TooltipTrigger>
-                                                            { (team.sihSelectionStatus === 'institute' || team.sihSelectionStatus === 'university') && (
+                                                             {(team.sihSelectionStatus === 'institute' || team.sihSelectionStatus === 'university') && (
                                                                 <TooltipContent>
                                                                     <p>This team's nomination status has been finalized by an admin and cannot be changed.</p>
                                                                 </TooltipContent>
@@ -816,6 +796,32 @@ export default function SpocTeamsPage() {
                                                         </Tooltip>
                                                     </div>
                                                 </div>
+                                            </TableCell>
+                                        )}
+                                        {memberIndex === 0 && (
+                                            <TableCell rowSpan={membersToDisplay.length} className="align-top pt-6 whitespace-normal max-w-xs">
+                                                {team.problemStatement ? (
+                                                    <Badge variant="secondary" className="whitespace-normal">{team.problemStatement.problemStatementId}: {team.problemStatement.title}</Badge>
+                                                ) : canSpocSelectPs ? (
+                                                     <div className="flex flex-col gap-2 items-start w-[250px]">
+                                                        <Select onValueChange={(psId) => setSpocPsSelection(prev => ({...prev, [team.id]: psId}))}>
+                                                            <SelectTrigger>
+                                                                <SelectValue placeholder="Select a PS..." />
+                                                            </SelectTrigger>
+                                                            <SelectContent>
+                                                                {problemStatements.map(ps => (
+                                                                    <SelectItem key={ps.id} value={ps.id}>{ps.problemStatementId} - {ps.title}</SelectItem>
+                                                                ))}
+                                                            </SelectContent>
+                                                        </Select>
+                                                        <Button size="sm" onClick={() => handleAssignProblemStatement(team.id)} disabled={!spocPsSelection[team.id] || isSaving === `ps-${team.id}`}>
+                                                            {isSaving === `ps-${team.id}` ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Save className="mr-2 h-4 w-4" />}
+                                                            Assign
+                                                        </Button>
+                                                     </div>
+                                                ) : (
+                                                    <Badge variant="destructive">Not Selected</Badge>
+                                                )}
                                             </TableCell>
                                         )}
                                         <TableCell>
@@ -974,3 +980,4 @@ export default function SpocTeamsPage() {
     </TooltipProvider>
   );
 }
+
