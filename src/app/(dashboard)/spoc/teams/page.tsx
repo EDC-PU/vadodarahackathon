@@ -93,7 +93,7 @@ export default function SpocTeamsPage() {
   const [isExportingEval, setIsExportingEval] = useState(false);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("Registered");
   const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>("All Categories");
-  const [sihStatusFilter, setSihStatusFilter] = useState<SihStatusFilter>("institute");
+  const [sihStatusFilter, setSihStatusFilter] = useState<SihStatusFilter>("all");
   const [memberCountFilter, setMemberCountFilter] = useState<number | "All">("All");
   const [roleFilter, setRoleFilter] = useState<RoleFilter>("all");
   const [selectedProblemStatements, setSelectedProblemStatements] = useState<string[]>([]);
@@ -776,6 +776,7 @@ export default function SpocTeamsPage() {
                                                          {team.universityTeamId && <Badge variant="secondary">{`Univ. ID: ${team.universityTeamId}`}</Badge>}
                                                     </div>
                                                      <div className="flex items-center gap-2 mt-2">
+                                                        <TooltipProvider>
                                                         <Tooltip>
                                                             <TooltipTrigger asChild>
                                                                 <div className="flex items-center gap-2">
@@ -784,16 +785,17 @@ export default function SpocTeamsPage() {
                                                                         id={`nominate-${team.id}`}
                                                                         checked={team.isNominated}
                                                                         onCheckedChange={(checked) => handleNominationToggle(team.id, checked)}
-                                                                        disabled={isSaving === `nominate-${team.id}` || team.sihSelectionStatus === 'institute' || team.sihSelectionStatus === 'university' }
+                                                                        disabled={isSaving === `nominate-${team.id}` || team.sihSelectionStatus === 'institute' || team.sihSelectionStatus === 'university'}
                                                                     />
                                                                 </div>
                                                             </TooltipTrigger>
-                                                             {(team.sihSelectionStatus === 'institute' || team.sihSelectionStatus === 'university') && (
+                                                            {(team.sihSelectionStatus === 'institute' || team.sihSelectionStatus === 'university') && (
                                                                 <TooltipContent>
                                                                     <p>This team's nomination status has been finalized by an admin and cannot be changed.</p>
                                                                 </TooltipContent>
                                                             )}
                                                         </Tooltip>
+                                                        </TooltipProvider>
                                                     </div>
                                                 </div>
                                             </TableCell>
@@ -980,4 +982,3 @@ export default function SpocTeamsPage() {
     </TooltipProvider>
   );
 }
-
