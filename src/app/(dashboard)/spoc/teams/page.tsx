@@ -297,13 +297,15 @@ export default function SpocTeamsPage() {
       const categoryMatch = categoryFilter === 'All Categories' || team.category === categoryFilter;
 
       let sihStatusMatch = true;
-      if (sihStatusFilter !== 'all') {
-          if (sihStatusFilter === 'none') {
-              sihStatusMatch = !team.sihSelectionStatus;
-          } else {
-              sihStatusMatch = team.sihSelectionStatus === sihStatusFilter;
-          }
-      }
+        if (sihStatusFilter !== 'all') {
+            if (sihStatusFilter === 'none') {
+                sihStatusMatch = !team.isNominated;
+            } else if (sihStatusFilter === 'institute') {
+                sihStatusMatch = team.isNominated && (!team.sihSelectionStatus || team.sihSelectionStatus === 'institute');
+            } else { // university
+                sihStatusMatch = team.sihSelectionStatus === 'university';
+            }
+        }
 
       return statusMatch && psMatch && memberCountMatch && categoryMatch && sihStatusMatch;
     });
@@ -748,7 +750,7 @@ export default function SpocTeamsPage() {
                                                                     <p>This status was set by an Admin.</p>
                                                                 </TooltipContent>
                                                             </Tooltip>
-                                                        : null
+                                                        : team.isNominated ? <Badge className='bg-blue-500'>Nominated (Inst.)</Badge> : null
                                                         }
                                                         {team.teamNumber && <Badge variant="secondary">{`Team No: ${team.teamNumber}`}</Badge>}
                                                         {team.universityTeamId && <Badge variant="secondary">{`Univ. ID: ${team.universityTeamId}`}</Badge>}
@@ -772,7 +774,7 @@ export default function SpocTeamsPage() {
                                                                 </TooltipContent>
                                                             )}
                                                         </Tooltip>
-                                                        {team.isNominated && team.sihSelectionStatus !== 'university' && (
+                                                        {team.isNominated && !team.sihSelectionStatus && (
                                                             <Tooltip>
                                                                 <TooltipTrigger asChild>
                                                                     <div className="inline-block"> {/* Wrapper for disabled button */}
@@ -964,3 +966,4 @@ export default function SpocTeamsPage() {
   );
 }
 
+```
