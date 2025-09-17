@@ -37,7 +37,6 @@ import { manageTeamBySpoc } from "@/ai/flows/manage-team-by-spoc-flow";
 import { useAuth } from "@/hooks/use-auth";
 import { exportTeams } from "@/ai/flows/export-teams-flow";
 import { Buffer } from 'buffer';
-import { getTeamInviteLink } from "@/ai/flows/get-team-invite-link-flow";
 import Link from "next/link";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -483,27 +482,6 @@ export default function SpocTeamsPage() {
     }
   };
 
-  const handleGetInviteLink = async (teamId: string, teamName: string) => {
-    setLoadingLink(teamId);
-    try {
-        const result = await getTeamInviteLink({
-            teamId: teamId,
-            teamName: teamName,
-            baseUrl: appBaseUrl,
-        });
-        if (result.success && result.inviteLink) {
-          const newInviteLinks = new Map<string, string>();
-          newInviteLinks.set(teamId, result.inviteLink);
-        } else {
-            throw new Error(result.message || "Failed to get invite link.");
-        }
-    } catch (error: any) {
-        toast({ title: "Error", description: error.message, variant: "destructive" });
-    } finally {
-        setLoadingLink(null);
-    }
-  };
-
   const handleProblemStatementFilterChange = (psId: string) => {
     setSelectedProblemStatements(prev => {
         const newSelection = new Set(prev);
@@ -772,8 +750,8 @@ export default function SpocTeamsPage() {
                                                             </Tooltip>
                                                         : null
                                                         }
-                                                         {team.teamNumber && <Badge variant="secondary">{`Team No: ${team.teamNumber}`}</Badge>}
-                                                         {team.universityTeamId && <Badge variant="secondary">{`Univ. ID: ${team.universityTeamId}`}</Badge>}
+                                                        {team.teamNumber && <Badge variant="secondary">{`Team No: ${team.teamNumber}`}</Badge>}
+                                                        {team.universityTeamId && <Badge variant="secondary">{`Univ. ID: ${team.universityTeamId}`}</Badge>}
                                                     </div>
                                                      <div className="flex items-center gap-2 mt-2">
                                                         <TooltipProvider>
@@ -785,11 +763,11 @@ export default function SpocTeamsPage() {
                                                                         id={`nominate-${team.id}`}
                                                                         checked={team.isNominated}
                                                                         onCheckedChange={(checked) => handleNominationToggle(team.id, checked)}
-                                                                        disabled={isSaving === `nominate-${team.id}` || team.sihSelectionStatus === 'institute' || team.sihSelectionStatus === 'university'}
+                                                                        disabled={isSaving === `nominate-${team.id}` || !!team.sihSelectionStatus}
                                                                     />
                                                                 </div>
                                                             </TooltipTrigger>
-                                                            {(team.sihSelectionStatus === 'institute' || team.sihSelectionStatus === 'university') && (
+                                                            {!!team.sihSelectionStatus && (
                                                                 <TooltipContent>
                                                                     <p>This team's nomination status has been finalized by an admin and cannot be changed.</p>
                                                                 </TooltipContent>
@@ -848,24 +826,22 @@ export default function SpocTeamsPage() {
                                             <div className="flex items-center justify-end gap-2">
                                               {memberIndex === 0 && (
                                                 <div className="flex items-center gap-2">
-                                                  <TooltipProvider>
-                                                      <Tooltip>
-                                                          <TooltipTrigger asChild>
-                                                              <Button
-                                                                  variant="outline"
-                                                                  size="icon"
-                                                                  className="h-8 w-8"
-                                                                  onClick={() => handleGenerateForm(team.id)}
-                                                                  disabled={isProcessing === `gen-form-${team.id}` || !team.mentor}
-                                                              >
-                                                                  {isProcessing === `gen-form-${team.id}` ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
-                                                              </Button>
-                                                          </TooltipTrigger>
-                                                          <TooltipContent>
-                                                              <p>{!team.mentor ? "Leader must add mentor details first." : "Generate Nomination Form"}</p>
-                                                          </TooltipContent>
-                                                      </Tooltip>
-                                                  </TooltipProvider>
+                                                  <Tooltip>
+                                                      <TooltipTrigger asChild>
+                                                          <Button
+                                                              variant="outline"
+                                                              size="icon"
+                                                              className="h-8 w-8"
+                                                              onClick={() => handleGenerateForm(team.id)}
+                                                              disabled={isProcessing === `gen-form-${team.id}` || !team.mentor}
+                                                          >
+                                                              {isProcessing === `gen-form-${team.id}` ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+                                                          </Button>
+                                                      </TooltipTrigger>
+                                                      <TooltipContent>
+                                                          <p>{!team.mentor ? "Leader must add mentor details first." : "Generate Nomination Form"}</p>
+                                                      </TooltipContent>
+                                                  </Tooltip>
                                                    <AlertDialog>
                                                         <AlertDialogTrigger asChild>
                                                             <Button variant="destructive" size="icon" className="h-8 w-8" disabled={isProcessing === team.id}>
