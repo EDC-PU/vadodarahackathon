@@ -15,6 +15,8 @@ import { Loader2, AlertCircle, FileSignature, CheckCircle, Download } from "luci
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { enrollTeamInSsih } from "@/ai/flows/enroll-team-in-ssih-flow";
 import { generateNominationForm } from "@/ai/flows/generate-nomination-form-flow";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+
 
 export default function SsihEnrollmentPage() {
   const { user, loading: authLoading } = useAuth();
@@ -137,69 +139,82 @@ export default function SsihEnrollmentPage() {
             </Alert>
           ) : (
             <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Team Name</TableHead>
-                    <TableHead>Leader</TableHead>
-                    <TableHead>Problem Statement</TableHead>
-                    <TableHead>Category</TableHead>
-                    <TableHead>Mentor Details</TableHead>
-                    <TableHead>Download Form</TableHead>
-                    <TableHead className="text-right">Action</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {teams.map((team) => {
-                    const leader = leaders.get(team.leader.uid);
-                    return (
-                    <TableRow key={team.id}>
-                      <TableCell className="font-medium">{team.name}</TableCell>
-                      <TableCell>
-                        <div className="font-medium">{leader?.name || 'N/A'}</div>
-                        <div className="text-xs text-muted-foreground">{leader?.contactNumber || 'N/A'}</div>
-                      </TableCell>
-                      <TableCell>{team.problemStatementTitle}</TableCell>
-                      <TableCell>
-                          <Badge variant={team.category === 'Software' ? 'default' : 'secondary'}>
-                              {team.category}
-                          </Badge>
-                      </TableCell>
-                      <TableCell>
-                        {team.mentor ? <Badge className="bg-green-600">Yes</Badge> : <Badge variant="destructive">No</Badge>}
-                      </TableCell>
-                      <TableCell>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleGenerateForm(team.id)}
-                            disabled={isGenerating === team.id || !team.mentor}
-                          >
-                            {isGenerating === team.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
-                            Download
-                          </Button>
-                      </TableCell>
-                      <TableCell className="text-right">
-                          {team.ssihEnrolled ? (
-                            <div className="flex items-center justify-end gap-2 text-green-600">
-                                <CheckCircle className="h-4 w-4" />
-                                <span className="font-medium">Enrolled</span>
-                            </div>
-                          ) : (
-                             <Button
-                                size="sm"
-                                onClick={() => handleEnroll(team.id)}
-                                disabled={isSaving === team.id}
-                             >
-                                {isSaving === team.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
-                                Mark as Enrolled in SIH
-                             </Button>
-                          )}
-                      </TableCell>
-                    </TableRow>
-                  )})}
-                </TableBody>
-              </Table>
+                <TooltipProvider>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Team Name</TableHead>
+                        <TableHead>Leader</TableHead>
+                        <TableHead>Problem Statement</TableHead>
+                        <TableHead>Category</TableHead>
+                        <TableHead>Mentor Details</TableHead>
+                        <TableHead>Download Form</TableHead>
+                        <TableHead className="text-right">Action</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {teams.map((team) => {
+                        const leader = leaders.get(team.leader.uid);
+                        return (
+                        <TableRow key={team.id}>
+                          <TableCell className="font-medium">{team.name}</TableCell>
+                          <TableCell>
+                            <div className="font-medium">{leader?.name || 'N/A'}</div>
+                            <div className="text-xs text-muted-foreground">{leader?.contactNumber || 'N/A'}</div>
+                          </TableCell>
+                          <TableCell>{team.problemStatementTitle}</TableCell>
+                          <TableCell>
+                              <Badge variant={team.category === 'Software' ? 'default' : 'secondary'}>
+                                  {team.category}
+                              </Badge>
+                          </TableCell>
+                          <TableCell>
+                            {team.mentor ? <Badge className="bg-green-600">Yes</Badge> : <Badge variant="destructive">No</Badge>}
+                          </TableCell>
+                          <TableCell>
+                             <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <div className="inline-block"> {/* Tooltip needs a direct child to attach to when disabled */}
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => handleGenerateForm(team.id)}
+                                      disabled={isGenerating === team.id || !team.mentor}
+                                    >
+                                      {isGenerating === team.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
+                                      Download
+                                    </Button>
+                                  </div>
+                                </TooltipTrigger>
+                                {!team.mentor && (
+                                  <TooltipContent>
+                                    <p>Mentor details must be submitted by the leader first.</p>
+                                  </TooltipContent>
+                                )}
+                              </Tooltip>
+                          </TableCell>
+                          <TableCell className="text-right">
+                              {team.ssihEnrolled ? (
+                                <div className="flex items-center justify-end gap-2 text-green-600">
+                                    <CheckCircle className="h-4 w-4" />
+                                    <span className="font-medium">Enrolled</span>
+                                </div>
+                              ) : (
+                                 <Button
+                                    size="sm"
+                                    onClick={() => handleEnroll(team.id)}
+                                    disabled={isSaving === team.id}
+                                 >
+                                    {isSaving === team.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
+                                    Mark as Enrolled in SIH
+                                 </Button>
+                              )}
+                          </TableCell>
+                        </TableRow>
+                      )})}
+                    </TableBody>
+                  </Table>
+                </TooltipProvider>
             </div>
           )}
         </CardContent>
