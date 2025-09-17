@@ -777,7 +777,7 @@ export default function SpocTeamsPage() {
                                                         {team.isNominated && !team.sihSelectionStatus && (
                                                             <Tooltip>
                                                                 <TooltipTrigger asChild>
-                                                                    <div className="inline-block"> {/* Wrapper for disabled button */}
+                                                                    <div className="inline-block">
                                                                         <Button
                                                                             variant="outline"
                                                                             size="icon"
@@ -965,5 +965,3 @@ export default function SpocTeamsPage() {
     </TooltipProvider>
   );
 }
-
-```
