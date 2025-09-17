@@ -11,15 +11,17 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Loader2, AlertCircle, FileSignature, CheckCircle } from "lucide-react";
+import { Loader2, AlertCircle, FileSignature, CheckCircle, Download } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { enrollTeamInSsih } from "@/ai/flows/enroll-team-in-ssih-flow";
+import { generateNominationForm } from "@/ai/flows/generate-nomination-form-flow";
 
 export default function SsihEnrollmentPage() {
   const { user, loading: authLoading } = useAuth();
   const [teams, setTeams] = useState<Team[]>([]);
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState<string | null>(null);
+  const [isGenerating, setIsGenerating] = useState<string | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -64,6 +66,32 @@ export default function SsihEnrollmentPage() {
     }
   }
 
+  const handleGenerateForm = async (teamId: string) => {
+    setIsGenerating(teamId);
+    try {
+        const result = await generateNominationForm({ teamId, generatorRole: 'spoc' });
+        if (result.success && result.fileContent) {
+            const blob = new Blob([Buffer.from(result.fileContent, 'base64')], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = result.fileName || 'nomination-form.docx';
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            a.remove();
+            toast({ title: "Success", description: "Nomination form generated." });
+        } else {
+            toast({ title: "Generation Failed", description: result.message || "Could not generate the nomination form.", variant: "destructive" });
+        }
+    } catch (error: any) {
+        toast({ title: "Error", description: `An unexpected error occurred: ${error.message}`, variant: "destructive" });
+    } finally {
+        setIsGenerating(null);
+    }
+  };
+
+
   return (
     <div className="p-4 sm:p-6 lg:p-8">
       <header className="mb-8">
@@ -102,6 +130,8 @@ export default function SsihEnrollmentPage() {
                     <TableHead>Team Name</TableHead>
                     <TableHead>Problem Statement</TableHead>
                     <TableHead>Category</TableHead>
+                    <TableHead>Mentor Details</TableHead>
+                    <TableHead>Download Form</TableHead>
                     <TableHead className="text-right">Action</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -114,6 +144,20 @@ export default function SsihEnrollmentPage() {
                           <Badge variant={team.category === 'Software' ? 'default' : 'secondary'}>
                               {team.category}
                           </Badge>
+                      </TableCell>
+                      <TableCell>
+                        {team.mentor ? <Badge className="bg-green-600">Yes</Badge> : <Badge variant="destructive">No</Badge>}
+                      </TableCell>
+                      <TableCell>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleGenerateForm(team.id)}
+                            disabled={isGenerating === team.id || !team.mentor}
+                          >
+                            {isGenerating === team.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
+                            Download
+                          </Button>
                       </TableCell>
                       <TableCell className="text-right">
                           {team.ssihEnrolled ? (
