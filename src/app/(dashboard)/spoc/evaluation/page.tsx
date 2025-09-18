@@ -47,6 +47,8 @@ import { generateNominationForm } from "@/ai/flows/generate-nomination-form-flow
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
+import { Card, CardHeader, CardContent, CardTitle, CardDescription } from "@/components/ui/card";
+
 
 const formSchema = z.object({
   evaluationDates: z
@@ -547,6 +549,7 @@ export default function SpocEvaluationPage() {
     </div>
   );
 }
+
 
 
 
