@@ -532,6 +532,8 @@ export default function SpocTeamsPage() {
   };
 
   const handleGenerateForm = async (teamId: string) => {
+    if (user?.role !== 'spoc') return;
+
     setIsProcessing(`gen-form-${teamId}`);
     try {
       const result = await generateNominationForm({ teamId, generatorRole: 'spoc' });
@@ -692,6 +694,7 @@ export default function SpocTeamsPage() {
                             <TableHeader>
                             <TableRow>
                                 <TableHead><Button variant="ghost" onClick={() => requestSort('teamName')}>Team Info {getSortIndicator('teamName')}</Button></TableHead>
+                                <TableHead>Invite Link</TableHead>
                                 <TableHead><Button variant="ghost" onClick={() => requestSort('name')}>Member Name {getSortIndicator('name')}</Button></TableHead>
                                 <TableHead><Button variant="ghost" onClick={() => requestSort('email')}>Email {getSortIndicator('email')}</Button></TableHead>
                                 <TableHead><Button variant="ghost" onClick={() => requestSort('contactNumber')}>Contact No. {getSortIndicator('contactNumber')}</Button></TableHead>
@@ -812,19 +815,48 @@ export default function SpocTeamsPage() {
                                                                             size="icon"
                                                                             className="h-8 w-8"
                                                                             onClick={() => handleGenerateForm(team.id)}
-                                                                            disabled={isProcessing === `gen-form-${team.id}` || !team.mentor}
+                                                                            disabled={isProcessing === `gen-form-${team.id}`}
                                                                         >
                                                                             {isProcessing === `gen-form-${team.id}` ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
                                                                         </Button>
                                                                     </div>
                                                                 </TooltipTrigger>
                                                                 <TooltipContent>
-                                                                    { !team.mentor ? <p>Leader must add mentor details first.</p> : <p>Generate Nomination Form</p> }
+                                                                    <p>Generate Nomination Form</p>
                                                                 </TooltipContent>
                                                             </Tooltip>
                                                         )}
                                                     </div>
                                                 </div>
+                                            </TableCell>
+                                        )}
+                                        {memberIndex === 0 && (
+                                            <TableCell rowSpan={membersToDisplay.length} className="align-top pt-6">
+                                                {inviteLinks.has(team.id) ? (
+                                                    <div className="flex items-center gap-1 w-48">
+                                                        <Input value={inviteLinks.get(team.id)} readOnly className="h-8 text-xs"/>
+                                                        <Button size="icon" variant="ghost" className="h-8 w-8 shrink-0" onClick={() => {
+                                                            navigator.clipboard.writeText(inviteLinks.get(team.id)!);
+                                                            toast({ title: "Copied!" });
+                                                        }}>
+                                                            <Copy className="h-4 w-4" />
+                                                        </Button>
+                                                    </div>
+                                                ) : (
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        onClick={() => handleGetInviteLink(team.id, team.name)}
+                                                        disabled={loadingLink === team.id}
+                                                    >
+                                                        {loadingLink === team.id ? (
+                                                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                                        ) : (
+                                                            <LinkIcon className="mr-2 h-4 w-4" />
+                                                        )}
+                                                        Get Link
+                                                    </Button>
+                                                )}
                                             </TableCell>
                                         )}
                                         
@@ -964,3 +996,4 @@ export default function SpocTeamsPage() {
     </TooltipProvider>
   );
 }
+

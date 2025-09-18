@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useEffect, useState } from "react";
@@ -179,18 +180,16 @@ export default function SsihEnrollmentPage() {
                                       variant="outline"
                                       size="sm"
                                       onClick={() => handleGenerateForm(team.id)}
-                                      disabled={isGenerating === team.id || !team.mentor}
+                                      disabled={isGenerating === team.id}
                                     >
                                       {isGenerating === team.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
                                       Download
                                     </Button>
                                   </div>
                                 </TooltipTrigger>
-                                {!team.mentor && (
-                                  <TooltipContent>
-                                    <p>Mentor details must be submitted by the leader first.</p>
-                                  </TooltipContent>
-                                )}
+                                <TooltipContent>
+                                    <p>Download Nomination Form</p>
+                                </TooltipContent>
                               </Tooltip>
                           </TableCell>
                           <TableCell className="text-right">
