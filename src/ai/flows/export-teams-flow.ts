@@ -48,8 +48,8 @@ const exportTeamsFlow = ai.defineFlow(
         inputSchema: ExportTeamsInputSchema,
         outputSchema: ExportTeamsOutputSchema,
     },
-    async ({ institute, category, status, problemStatementIds, memberCount, role }) => {
-        console.log("exportTeamsFlow (merged version) started with filters:", { institute, category, status, problemStatementIds, memberCount, role });
+    async ({ institute, category, status, problemStatementIds, memberCount, role, sihStatus }) => {
+        console.log("exportTeamsFlow (merged version) started with filters:", { institute, category, status, problemStatementIds, memberCount, role, sihStatus });
         const db = getAdminDb();
         if (!db) {
             return { success: false, message: "Database connection failed." };
@@ -102,7 +102,19 @@ const exportTeamsFlow = ai.defineFlow(
                                 (showNotSelected && !team.problemStatementId) || 
                                 (selectedPsIds.length > 0 && team.problemStatementId && selectedPsIds.includes(team.problemStatementId));
 
-                return statusMatch && memberCountMatch && psMatch;
+                let sihStatusMatch = true;
+                if (sihStatus && sihStatus !== 'all') {
+                    if (sihStatus === 'none') {
+                        sihStatusMatch = !team.isNominated && !team.sihSelectionStatus;
+                    } else if (sihStatus === 'institute') {
+                        // SPOC nominated OR admin set to institute
+                        sihStatusMatch = (team.isNominated && team.sihSelectionStatus !== 'university') || team.sihSelectionStatus === 'institute';
+                    } else { // university
+                        sihStatusMatch = team.sihSelectionStatus === 'university';
+                    }
+                }
+
+                return statusMatch && memberCountMatch && psMatch && sihStatusMatch;
             });
 
 

@@ -173,6 +173,7 @@ export default function SpocTeamsPage() {
             problemStatementIds: selectedProblemStatements,
             memberCount: memberCountFilter,
             role: roleFilter,
+            sihStatus: sihStatusFilter,
         });
 
         if (result.success && result.fileContent) {
@@ -300,7 +301,9 @@ export default function SpocTeamsPage() {
           if (sihStatusFilter === 'none') {
               sihStatusMatch = !team.isNominated && !team.sihSelectionStatus;
           } else if (sihStatusFilter === 'institute') {
-              sihStatusMatch = team.isNominated && team.sihSelectionStatus !== 'university';
+              // This logic ensures that if a SPOC nominates a team, it shows up in the "Institute" filter,
+              // even if an admin hasn't finalized the status yet. It filters out teams already promoted to university.
+              sihStatusMatch = (team.isNominated && team.sihSelectionStatus !== 'university') || team.sihSelectionStatus === 'institute';
           } else { // university
               sihStatusMatch = team.sihSelectionStatus === 'university';
           }
@@ -693,6 +696,7 @@ export default function SpocTeamsPage() {
                             <TableHeader>
                             <TableRow>
                                 <TableHead><Button variant="ghost" onClick={() => requestSort('teamName')}>Team Info {getSortIndicator('teamName')}</Button></TableHead>
+                                <TableHead>Mentor Status</TableHead>
                                 <TableHead>Invite Link</TableHead>
                                 <TableHead><Button variant="ghost" onClick={() => requestSort('name')}>Member Name {getSortIndicator('name')}</Button></TableHead>
                                 <TableHead><Button variant="ghost" onClick={() => requestSort('email')}>Email {getSortIndicator('email')}</Button></TableHead>

@@ -411,6 +411,7 @@ export const ExportTeamsInputSchema = z.object({
     problemStatementIds: z.array(z.string()).optional().describe("Filter teams by selected problem statement IDs."),
     memberCount: z.union([z.number(), z.literal("All")]).optional().describe("Filter teams by the number of members."),
     role: z.enum(["all", "leader", "member"]).optional().describe("Filter members by their role."),
+    sihStatus: z.enum(["all", "university", "institute", "none"]).optional().describe("Filter teams by their SIH nomination status."),
 });
 export type ExportTeamsInput = z.infer<typeof ExportTeamsInputSchema>;
 
