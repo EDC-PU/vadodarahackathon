@@ -115,7 +115,7 @@ export default function SpocTeamsPage() {
     
     // Fetch Teams
     const teamsQuery = query(collection(db, "teams"), where("institute", "==", institute));
-    const unsubscribeTeams = onSnapshot(teamsQuery, async (snapshot) => {
+    const teamsUnsubscribe = onSnapshot(teamsQuery, async (snapshot) => {
         const teamsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Team));
         
         const allUserIds = new Set<string>();
@@ -140,23 +140,22 @@ export default function SpocTeamsPage() {
 
     // Fetch Problem Statements
     const psQuery = query(collection(db, 'problemStatements'), orderBy("problemStatementId"));
-    const unsubscribePs = onSnapshot(psQuery, (snapshot) => {
+    const psUnsubscribe = onSnapshot(psQuery, (snapshot) => {
         const psData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ProblemStatement));
         setProblemStatements(psData);
     });
 
     const configDocRef = doc(db, "config", "event");
-    const unsubscribeConfig = onSnapshot(configDocRef, (docSnap) => {
+    const configUnsubscribe = onSnapshot(configDocRef, (docSnap) => {
         if (docSnap.exists() && docSnap.data()?.evaluationExportDate) {
             setEvaluationExportDate(docSnap.data().evaluationExportDate.toDate());
         }
     });
 
-
     return () => {
-        unsubscribeTeams();
-        unsubscribePs();
-        unsubscribeConfig();
+        teamsUnsubscribe();
+        psUnsubscribe();
+        configUnsubscribe();
     };
   }, [toast]);
 
@@ -169,7 +168,7 @@ export default function SpocTeamsPage() {
         
         const result = await exportTeams({ 
             institute: user.institute, 
-            category: categoryFilter, 
+            category: categoryFilter,
             status: statusFilter, 
             problemStatementIds: selectedProblemStatements,
             memberCount: memberCountFilter,
@@ -807,24 +806,24 @@ export default function SpocTeamsPage() {
                                                             )}
                                                         </Tooltip>
                                                         {team.isNominated && team.sihSelectionStatus !== 'university' && (
-                                                            <Tooltip>
-                                                                <TooltipTrigger asChild>
-                                                                    <div className="inline-block">
-                                                                        <Button
-                                                                            variant="outline"
-                                                                            size="icon"
-                                                                            className="h-8 w-8"
-                                                                            onClick={() => handleGenerateForm(team.id)}
-                                                                            disabled={isProcessing === `gen-form-${team.id}`}
-                                                                        >
-                                                                            {isProcessing === `gen-form-${team.id}` ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
-                                                                        </Button>
-                                                                    </div>
-                                                                </TooltipTrigger>
-                                                                <TooltipContent>
-                                                                    <p>Generate Nomination Form</p>
-                                                                </TooltipContent>
-                                                            </Tooltip>
+                                                          <Tooltip>
+                                                              <TooltipTrigger asChild>
+                                                                  <div className="inline-block">
+                                                                      <Button
+                                                                          variant="outline"
+                                                                          size="icon"
+                                                                          className="h-8 w-8"
+                                                                          onClick={() => handleGenerateForm(team.id)}
+                                                                          disabled={isProcessing === `gen-form-${team.id}`}
+                                                                      >
+                                                                          {isProcessing === `gen-form-${team.id}` ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+                                                                      </Button>
+                                                                  </div>
+                                                              </TooltipTrigger>
+                                                              <TooltipContent>
+                                                                  <p>Generate Nomination Form</p>
+                                                              </TooltipContent>
+                                                          </Tooltip>
                                                         )}
                                                     </div>
                                                 </div>
@@ -996,4 +995,3 @@ export default function SpocTeamsPage() {
     </TooltipProvider>
   );
 }
-
