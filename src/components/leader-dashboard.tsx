@@ -374,19 +374,19 @@ export default function LeaderDashboard() {
     setIsGeneratingCert(true);
     try {
         const result = await generateCertificate({ name: user.name, institute: user.institute || "Parul University" });
-        if (result.success && result.fileContent) {
-            const blob = new Blob([Buffer.from(result.fileContent, 'base64')], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = result.fileName || 'Certificate.docx';
-            document.body.appendChild(a);
-            a.click();
-            window.URL.revokeObjectURL(url);
-            a.remove();
-            toast({ title: "Success", description: "Your certificate has been downloaded." });
+        if (result.success && result.htmlContent) {
+             const printWindow = window.open('', '_blank');
+            if (printWindow) {
+                printWindow.document.write(result.htmlContent);
+                printWindow.document.close();
+                setTimeout(() => {
+                  printWindow.print();
+                }, 500);
+            } else {
+                throw new Error("Could not open a new window. Please disable your pop-up blocker.");
+            }
         } else {
-            throw new Error(result.message || "Failed to generate certificate.");
+            throw new Error(result.message || "Failed to generate certificate HTML.");
         }
     } catch (error: any) {
         toast({ title: "Error", description: `Could not generate certificate: ${error.message}`, variant: "destructive" });

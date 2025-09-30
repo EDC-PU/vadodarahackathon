@@ -1,5 +1,4 @@
 
-
 import {z} from 'genkit';
 import type {Query} from 'firebase-admin/firestore';
 
@@ -194,10 +193,9 @@ export const GenerateCertificateInputSchema = z.object({
 export type GenerateCertificateInput = z.infer<typeof GenerateCertificateInputSchema>;
 
 export const GenerateCertificateOutputSchema = z.object({
-    success: z.boolean(),
-    message: z.string().optional(),
-    fileContent: z.string().optional().describe("Base64 encoded content of the .docx file."),
-    fileName: z.string().optional(),
+  success: z.boolean(),
+  message: z.string().optional(),
+  htmlContent: z.string().optional().describe("HTML content of the certificate."),
 });
 export type GenerateCertificateOutput = z.infer<typeof GenerateCertificateOutputSchema>;
 
