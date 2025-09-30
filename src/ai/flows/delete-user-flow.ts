@@ -79,27 +79,15 @@ const deleteUserFlow = ai.defineFlow(
             const memberToRemove = teamData.members.find(m => m.uid === uid);
             
             if (memberToRemove) {
-                
-                // 1. Remove member from team's array
+                // Remove member from team's array
                 batch.update(teamDocRef, { members: FieldValue.arrayRemove(memberToRemove) });
-
-                // 2. Create in-app notification for the leader
-                const notificationRef = adminDb.collection('notifications').doc();
-                batch.set(notificationRef, {
-                    recipientUid: teamData.leader.uid,
-                    title: "A Member has Left Your Team",
-                    message: `${userProfile.name} has left your team "${teamData.name}" by deleting their account.`,
-                    read: false,
-                    createdAt: FieldValue.serverTimestamp(),
-                    link: '/leader'
-                });
             }
         }
       } else if (userProfile.role === 'leader' && userProfile.teamId) {
           return { success: false, message: 'Team leaders cannot delete their own accounts. The team must be deleted by a SPOC or an Admin.' };
       }
 
-      // 3. Log this activity
+      // Log this activity
       const logDocRef = adminDb.collection("logs").doc();
       batch.set(logDocRef, {
           id: logDocRef.id,
@@ -108,13 +96,13 @@ const deleteUserFlow = ai.defineFlow(
           createdAt: FieldValue.serverTimestamp(),
       });
 
-      // 4. Delete user from Firestore
+      // Delete user from Firestore
       batch.delete(userDocRef);
       console.log(`Successfully scheduled deletion of user document from Firestore for UID: ${uid}`);
 
       await batch.commit();
 
-      // 5. Delete user from Firebase Auth
+      // Delete user from Firebase Auth
       await adminAuth.deleteUser(uid);
       console.log(`Successfully deleted user from Firebase Authentication for UID: ${uid}`);
 
