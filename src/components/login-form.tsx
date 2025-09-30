@@ -81,7 +81,7 @@ export function LoginForm() {
       let errorMessage = "An unexpected error occurred.";
 
       if (errorCode === 'auth/user-not-found' || errorCode === 'auth/wrong-password' || errorCode === 'auth/invalid-credential') {
-        errorMessage = "Invalid email or password. Please check your credentials and try again."
+        errorMessage = "The email or password you entered is incorrect. Please check for typos and try again."
       } else if (errorCode === 'auth/user-disabled') {
         errorTitle = "Account Disabled";
         errorMessage = "This account has been disabled by an administrator. Please contact support for assistance."
