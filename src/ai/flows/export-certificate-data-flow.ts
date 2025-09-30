@@ -58,11 +58,14 @@ const exportCertificateDataFlow = ai.defineFlow(
                 
                 if (isRegistered) {
                     teamMemberProfiles.forEach(member => {
-                        certificateData.push({
-                            name: member.name,
-                            email: member.email,
-                            institute: member.institute || team.institute,
-                        });
+                        // Ensure we use the member's own institute from their profile
+                        if (member.name && member.email && member.institute) {
+                            certificateData.push({
+                                name: member.name,
+                                email: member.email,
+                                institute: member.institute,
+                            });
+                        }
                     });
                 }
             }
@@ -103,4 +106,3 @@ const exportCertificateDataFlow = ai.defineFlow(
         }
     }
 );
-
