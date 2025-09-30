@@ -4,7 +4,7 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Loader2, Download, Save, Pencil, X, Trash2, MinusCircle, ChevronDown, ArrowUpDown, RefreshCw, Lock, Unlock, FileText, FileBadge } from "lucide-react";
+import { Loader2, Download, Save, Pencil, X, Trash2, MinusCircle, ChevronDown, ArrowUpDown, RefreshCw, Lock, Unlock, FileText, FileBadge, Award } from "lucide-react";
 import { useEffect, useState, useMemo, useCallback, Suspense } from "react";
 import { db } from "@/lib/firebase";
 import { collection, onSnapshot, doc, updateDoc, query, orderBy, getDocs, where } from "firebase/firestore";
@@ -42,6 +42,7 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { toggleTeamLock } from "@/ai/flows/toggle-team-lock-flow";
+import { exportCertificateData } from "@/ai/flows/export-certificate-data-flow";
 
 type CategoryFilter = ProblemStatementCategory | "All Categories";
 type StatusFilter = "All Statuses" | "Registered" | "Pending";
@@ -76,6 +77,7 @@ function AllTeamsContent() {
   const [institutes, setInstitutes] = useState<{ id: string; name: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [isExporting, setIsExporting] = useState(false);
+  const [isExportingCerts, setIsExportingCerts] = useState(false);
   
   const [editingTeamName, setEditingTeamName] = useState<{ id: string; name: string } | null>(null);
   const [editingTeamNumber, setEditingTeamNumber] = useState<{ id: string; number: string } | null>(null);
@@ -245,6 +247,32 @@ function AllTeamsContent() {
     }
   };
   
+  const handleExportForCertificates = async () => {
+    setIsExportingCerts(true);
+    try {
+        const result = await exportCertificateData();
+        if (result.success && result.fileContent) {
+            const blob = new Blob([Buffer.from(result.fileContent, 'base64')], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = result.fileName || 'certificate-data.xlsx';
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            a.remove();
+            toast({ title: "Success", description: "Certificate data for registered teams has been exported." });
+        } else {
+            toast({ title: "Export Failed", description: result.message || "Could not generate the export file.", variant: "destructive" });
+        }
+    } catch (error) {
+        console.error("Error exporting certificate data:", error);
+        toast({ title: "Error", description: "An unexpected error occurred during export.", variant: "destructive" });
+    } finally {
+        setIsExportingCerts(false);
+    }
+  };
+
   const handleEditTeamName = (team: Team) => {
     setEditingTeamName({ id: team.id, name: team.name });
   };
@@ -580,6 +608,10 @@ function AllTeamsContent() {
             <Button variant="outline" onClick={handleExport} disabled={isExporting}>
                 {isExporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
                 Export
+            </Button>
+            <Button variant="outline" onClick={handleExportForCertificates} disabled={isExportingCerts}>
+                {isExportingCerts ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Award className="mr-2 h-4 w-4" />}
+                Export for Certificates
             </Button>
         </div>
       </header>
