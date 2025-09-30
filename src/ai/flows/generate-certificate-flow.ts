@@ -53,7 +53,7 @@ const generateCertificateFlow = ai.defineFlow(
       
       console.log("Populating template with data:", { name, institute });
       doc.render({
-        Name: name,
+        name: name,
         institute_name: institute,
       });
 
