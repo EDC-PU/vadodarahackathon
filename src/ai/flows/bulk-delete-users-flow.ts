@@ -27,7 +27,7 @@ export async function bulkDeleteUsersAndTeams(input: BulkDeleteUsersInput): Prom
   return bulkDeleteUsersAndTeamsFlow(input);
 }
 
-// Helper to process arrays in chunks
+// Helper to process arrays in chunks for Firestore queries
 async function processInChunks<T, U>(items: T[], chunkSize: number, asyncOperation: (chunk: T[]) => Promise<U>): Promise<U[]> {
     const results: U[] = [];
     for (let i = 0; i < items.length; i += chunkSize) {
@@ -60,114 +60,100 @@ const bulkDeleteUsersAndTeamsFlow = ai.defineFlow(
     let deletedTeamsCount = 0;
     const finalUserIdsToDelete = [...userIds];
     const skippedUsers: { email: string, role: string }[] = [];
+    const teamsToDelete = new Set<string>();
 
     try {
-      // First pass: Check for admin/spoc accounts and remove them from the deletion list
-      await processInChunks(userIds, 30, async (chunk) => {
-        const userDocs = await adminDb.collection('users').where(FieldPath.documentId(), 'in', chunk).get();
-        userDocs.forEach(userDoc => {
-            if (userDoc.exists) {
-                const userData = userDoc.data() as UserProfile;
-                if (userData.role === 'admin' || userData.role === 'spoc') {
-                    skippedUsers.push({ email: userData.email, role: userData.role! });
-                    const index = finalUserIdsToDelete.indexOf(userData.uid);
-                    if (index > -1) {
-                        finalUserIdsToDelete.splice(index, 1);
+        // First, filter out protected roles (admin, spoc) and identify teams to delete
+        await processInChunks(userIds, 30, async (chunk) => {
+            const userDocs = await adminDb.collection('users').where(FieldPath.documentId(), 'in', chunk).get();
+            userDocs.forEach(userDoc => {
+                if (userDoc.exists) {
+                    const userData = userDoc.data() as UserProfile;
+                    if (userData.role === 'admin' || userData.role === 'spoc') {
+                        skippedUsers.push({ email: userData.email, role: userData.role! });
+                        const index = finalUserIdsToDelete.indexOf(userData.uid);
+                        if (index > -1) {
+                            finalUserIdsToDelete.splice(index, 1);
+                        }
+                    } else if (userData.role === 'leader' && userData.teamId) {
+                        teamsToDelete.add(userData.teamId);
                     }
                 }
-            }
+            });
         });
-      });
+        
+        if (finalUserIdsToDelete.length === 0 && skippedUsers.length > 0) {
+            const skippedMessage = skippedUsers.map(u => `${u.email} (${u.role})`).join(', ');
+            return { success: true, message: `No users were deleted. Skipped ${skippedUsers.length} protected account(s): ${skippedMessage}.`, deletedUsers: 0, deletedTeams: 0 };
+        }
 
-      if(finalUserIdsToDelete.length === 0 && skippedUsers.length > 0) {
-        const skippedMessage = skippedUsers.map(u => `${u.email} (${u.role})`).join(', ');
-        return { success: true, message: `No users were deleted. Skipped ${skippedUsers.length} protected account(s): ${skippedMessage}.`, deletedUsers: 0, deletedTeams: 0 };
-      }
-      
-      const batch = adminDb.batch();
-      const teamsToDelete = new Set<string>();
-      const usersInDeletedTeams = new Set<string>();
+        // Process all teams marked for deletion
+        if(teamsToDelete.size > 0) {
+            await processInChunks(Array.from(teamsToDelete), 30, async (teamChunk) => {
+                const teamDocs = await adminDb.collection('teams').where(FieldPath.documentId(), 'in', teamChunk).get();
+                const batch = adminDb.batch();
+                teamDocs.forEach(teamDoc => {
+                    const teamData = teamDoc.data() as Team;
+                    // Reset teamId for all members of the deleted team
+                    teamData.members.forEach(m => {
+                        const userRef = adminDb.collection('users').doc(m.uid);
+                        batch.update(userRef, { teamId: FieldValue.delete() });
+                    });
+                    // Also reset for the leader
+                    const leaderRef = adminDb.collection('users').doc(teamData.leader.uid);
+                    batch.update(leaderRef, { teamId: FieldValue.delete() });
+                    
+                    batch.delete(teamDoc.ref);
+                    deletedTeamsCount++;
+                });
+                await batch.commit();
+            });
+        }
+        
+        // Delete user documents from Firestore in batches
+        await processInChunks(finalUserIdsToDelete, 400, async (chunk) => {
+            const batch = adminDb.batch();
+            chunk.forEach(userId => {
+                const userRef = adminDb.collection('users').doc(userId);
+                batch.delete(userRef);
+            });
+            await batch.commit();
+        });
 
-      // Second pass: identify users and teams to delete from the filtered list
-      await processInChunks(finalUserIdsToDelete, 30, async (chunk) => {
-          const userDocs = await adminDb.collection('users').where(FieldPath.documentId(), 'in', chunk).get();
-          userDocs.forEach(userDoc => {
-            if (userDoc.exists) {
-                const userData = userDoc.data() as UserProfile;
-                if (userData.role === 'leader' && userData.teamId) {
-                    teamsToDelete.add(userData.teamId);
+        // Finally, delete users from Firebase Auth individually, skipping non-existent ones
+        for (const userId of finalUserIdsToDelete) {
+            try {
+                await adminAuth.deleteUser(userId);
+                deletedUsersCount++;
+            } catch (error: any) {
+                if (error.code === 'auth/user-not-found') {
+                    console.warn(`User ${userId} not found in Auth, likely already deleted. Continuing...`);
+                    deletedUsersCount++; // Count it as deleted since it's gone
+                } else {
+                    // Log other errors but don't stop the whole process
+                    console.error(`Could not delete user ${userId} from Auth. Error: ${error.message}`);
                 }
             }
-          });
-      });
-
-
-      // Third pass: process teams marked for deletion
-      await processInChunks(Array.from(teamsToDelete), 30, async (chunk) => {
-          const teamDocs = await adminDb.collection('teams').where(FieldPath.documentId(), 'in', chunk).get();
-          teamDocs.forEach(teamDoc => {
-            const teamData = teamDoc.data() as Team;
-            usersInDeletedTeams.add(teamData.leader.uid);
-            teamData.members.forEach(m => usersInDeletedTeams.add(m.uid));
-            batch.delete(teamDoc.ref);
-            deletedTeamsCount++;
-          });
-      });
-      
-      // Fourth pass: Update or delete all affected user profiles
-      const allAffectedUsers = new Set([...finalUserIdsToDelete, ...usersInDeletedTeams]);
-
-      for (const userId of allAffectedUsers) {
-         const userRef = adminDb.collection('users').doc(userId);
-         if (finalUserIdsToDelete.includes(userId)) {
-             batch.delete(userRef);
-         } else if (usersInDeletedTeams.has(userId)) {
-             batch.update(userRef, { teamId: FieldValue.delete() });
-         }
-      }
-
-      await batch.commit();
-
-      // Finally, delete the selected users from Firebase Auth
-      for (const userId of finalUserIdsToDelete) {
-        try {
-          await adminAuth.deleteUser(userId);
-          deletedUsersCount++;
-        } catch (error: any) {
-          if (error.code !== 'auth/user-not-found') {
-            console.warn(`Could not delete user ${userId} from Auth. Error: ${error.message}`);
-          } else {
-             // User was already deleted from auth, which is fine.
-             deletedUsersCount++;
-          }
         }
-      }
 
-      let message = `Successfully deleted ${deletedUsersCount} user(s) and ${deletedTeamsCount} team(s).`;
-      if (skippedUsers.length > 0) {
-        const skippedMessage = skippedUsers.map(u => `${u.email} (${u.role})`).join(', ');
-        message += ` Skipped ${skippedUsers.length} protected account(s): ${skippedMessage}.`;
-      }
+        let message = `Successfully deleted ${deletedUsersCount} user(s) and ${deletedTeamsCount} team(s).`;
+        if (skippedUsers.length > 0) {
+            const skippedMessage = skippedUsers.map(u => `${u.email} (${u.role})`).join(', ');
+            message += ` Skipped ${skippedUsers.length} protected account(s): ${skippedMessage}.`;
+        }
       
-      return {
-        success: true,
-        message,
-        deletedUsers: deletedUsersCount,
-        deletedTeams: deletedTeamsCount,
-      };
+        return {
+            success: true,
+            message,
+            deletedUsers: deletedUsersCount,
+            deletedTeams: deletedTeamsCount,
+        };
 
     } catch (error: any) {
       console.error("Error during bulk delete:", error);
-      // Don't expose potentially sensitive internal error codes like "5 NOT_FOUND" to the user.
-      if (error.code === 5 || (error.message && error.message.includes('NOT_FOUND'))) {
-         return {
-            success: false,
-            message: `An error occurred during bulk deletion. One or more users may have already been deleted. Please refresh and try again.`,
-         };
-      }
       return {
         success: false,
-        message: `An error occurred during bulk deletion: ${error.message}`,
+        message: `An unexpected error occurred during bulk deletion: ${error.message}`,
       };
     }
   }
