@@ -91,22 +91,23 @@ const bulkDeleteUsersAndTeamsFlow = ai.defineFlow(
         if(teamsToDelete.size > 0) {
             await processInChunks(Array.from(teamsToDelete), 30, async (teamChunk) => {
                 const teamDocs = await adminDb.collection('teams').where(FieldPath.documentId(), 'in', teamChunk).get();
-                const batch = adminDb.batch();
-                teamDocs.forEach(teamDoc => {
+                
+                for (const teamDoc of teamDocs.docs) {
                     const teamData = teamDoc.data() as Team;
-                    // Reset teamId for all members of the deleted team
-                    teamData.members.forEach(m => {
-                        const userRef = adminDb.collection('users').doc(m.uid);
-                        batch.update(userRef, { teamId: FieldValue.delete() });
+                    const memberUIDs = [...teamData.members.map(m => m.uid), teamData.leader.uid];
+
+                    // Fetch existing user profiles to avoid updating non-existent ones
+                    const usersToUpdateQuery = await adminDb.collection('users').where(FieldPath.documentId(), 'in', memberUIDs).get();
+                    const batch = adminDb.batch();
+
+                    usersToUpdateQuery.forEach(userDoc => {
+                        batch.update(userDoc.ref, { teamId: FieldValue.delete() });
                     });
-                    // Also reset for the leader
-                    const leaderRef = adminDb.collection('users').doc(teamData.leader.uid);
-                    batch.update(leaderRef, { teamId: FieldValue.delete() });
                     
                     batch.delete(teamDoc.ref);
+                    await batch.commit();
                     deletedTeamsCount++;
-                });
-                await batch.commit();
+                }
             });
         }
         
