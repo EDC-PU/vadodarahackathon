@@ -27,6 +27,18 @@ export async function bulkDeleteUsersAndTeams(input: BulkDeleteUsersInput): Prom
   return bulkDeleteUsersAndTeamsFlow(input);
 }
 
+// Helper to process arrays in chunks
+async function processInChunks<T, U>(items: T[], chunkSize: number, asyncOperation: (chunk: T[]) => Promise<U>): Promise<U[]> {
+    const results: U[] = [];
+    for (let i = 0; i < items.length; i += chunkSize) {
+        const chunk = items.slice(i, i + chunkSize);
+        if (chunk.length > 0) {
+            results.push(await asyncOperation(chunk));
+        }
+    }
+    return results;
+}
+
 const bulkDeleteUsersAndTeamsFlow = ai.defineFlow(
   {
     name: 'bulkDeleteUsersAndTeamsFlow',
@@ -51,21 +63,21 @@ const bulkDeleteUsersAndTeamsFlow = ai.defineFlow(
 
     try {
       // First pass: Check for admin/spoc accounts and remove them from the deletion list
-      const userDocPromises = userIds.map(id => adminDb.collection('users').doc(id).get());
-      const userDocSnapshots = await Promise.all(userDocPromises);
-      
-      for (const userDoc of userDocSnapshots) {
-        if (userDoc.exists) {
-          const userData = userDoc.data() as UserProfile;
-          if (userData.role === 'admin' || userData.role === 'spoc') {
-            skippedUsers.push({ email: userData.email, role: userData.role! });
-            const index = finalUserIdsToDelete.indexOf(userData.uid);
-            if (index > -1) {
-              finalUserIdsToDelete.splice(index, 1);
+      await processInChunks(userIds, 30, async (chunk) => {
+        const userDocs = await adminDb.collection('users').where(FieldPath.documentId(), 'in', chunk).get();
+        userDocs.forEach(userDoc => {
+            if (userDoc.exists) {
+                const userData = userDoc.data() as UserProfile;
+                if (userData.role === 'admin' || userData.role === 'spoc') {
+                    skippedUsers.push({ email: userData.email, role: userData.role! });
+                    const index = finalUserIdsToDelete.indexOf(userData.uid);
+                    if (index > -1) {
+                        finalUserIdsToDelete.splice(index, 1);
+                    }
+                }
             }
-          }
-        }
-      }
+        });
+      });
 
       if(finalUserIdsToDelete.length === 0 && skippedUsers.length > 0) {
         const skippedMessage = skippedUsers.map(u => `${u.email} (${u.role})`).join(', ');
@@ -77,31 +89,30 @@ const bulkDeleteUsersAndTeamsFlow = ai.defineFlow(
       const usersInDeletedTeams = new Set<string>();
 
       // Second pass: identify users and teams to delete from the filtered list
-      if (finalUserIdsToDelete.length > 0) {
-          const filteredUserDocPromises = finalUserIdsToDelete.map(id => adminDb.collection('users').doc(id).get());
-          const filteredUserDocSnapshots = await Promise.all(filteredUserDocPromises);
-
-          for (const userDoc of filteredUserDocSnapshots) {
+      await processInChunks(finalUserIdsToDelete, 30, async (chunk) => {
+          const userDocs = await adminDb.collection('users').where(FieldPath.documentId(), 'in', chunk).get();
+          userDocs.forEach(userDoc => {
             if (userDoc.exists) {
-              const userData = userDoc.data() as UserProfile;
-              if (userData.role === 'leader' && userData.teamId) {
-                teamsToDelete.add(userData.teamId);
-              }
+                const userData = userDoc.data() as UserProfile;
+                if (userData.role === 'leader' && userData.teamId) {
+                    teamsToDelete.add(userData.teamId);
+                }
             }
-          }
-      }
+          });
+      });
+
 
       // Third pass: process teams marked for deletion
-      if (teamsToDelete.size > 0) {
-        const teamDocs = await adminDb.collection('teams').where(FieldPath.documentId(), 'in', Array.from(teamsToDelete)).get();
-        for (const teamDoc of teamDocs.docs) {
+      await processInChunks(Array.from(teamsToDelete), 30, async (chunk) => {
+          const teamDocs = await adminDb.collection('teams').where(FieldPath.documentId(), 'in', chunk).get();
+          teamDocs.forEach(teamDoc => {
             const teamData = teamDoc.data() as Team;
             usersInDeletedTeams.add(teamData.leader.uid);
             teamData.members.forEach(m => usersInDeletedTeams.add(m.uid));
             batch.delete(teamDoc.ref);
             deletedTeamsCount++;
-        }
-      }
+          });
+      });
       
       // Fourth pass: Update or delete all affected user profiles
       const allAffectedUsers = new Set([...finalUserIdsToDelete, ...usersInDeletedTeams]);
