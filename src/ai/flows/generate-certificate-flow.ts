@@ -27,22 +27,6 @@ export async function generateCertificate(input: GenerateCertificateInput): Prom
   return generateCertificateFlow(input);
 }
 
-// This is a custom parser that can help with complex placeholder issues.
-const expressionsParser = (tag: string) => {
-    return {
-        get: (scope: any) => {
-            if (tag === '.') {
-                return scope;
-            }
-            if (scope[tag] !== undefined) {
-                return scope[tag];
-            }
-            return scope;
-        },
-    };
-};
-
-
 const generateCertificateFlow = ai.defineFlow(
   {
     name: 'generateCertificateFlow',
@@ -65,7 +49,6 @@ const generateCertificateFlow = ai.defineFlow(
       const doc = new Docxtemplater(zip, {
         paragraphLoop: true,
         linebreaks: true,
-        parser: expressionsParser, // Using the custom parser
       });
       
       console.log("Populating template with data:", { Name: name, institute_name: institute });
@@ -92,7 +75,6 @@ const generateCertificateFlow = ai.defineFlow(
     } catch (error: any) {
         console.error("Error generating certificate:", error);
 
-        // Enhanced error logging for docxtemplater
         if (error.properties && error.properties.errors) {
             const detailedErrors = error.properties.errors.map((e: any) => e.properties.explanation).join(', ');
             const errorMessage = `Template Error: ${detailedErrors}`;
