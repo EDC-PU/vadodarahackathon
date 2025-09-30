@@ -2,7 +2,7 @@
 'use server';
 
 /**
- * @fileOverview Flow to export name and institute of all members of registered teams for certificates.
+ * @fileOverview Flow to export name, email, and institute of all members of registered teams for certificates.
  */
 
 import { ai } from '@/ai/genkit';
@@ -42,7 +42,7 @@ const exportCertificateDataFlow = ai.defineFlow(
             const teamsSnapshot = await db.collection('teams').get();
             const allUsers = await getAllUserProfiles(db);
 
-            const certificateData: { name: string; institute: string }[] = [];
+            const certificateData: { name: string; email: string; institute: string }[] = [];
 
             console.log("Step 2: Filtering for registered teams and collecting member data...");
             for (const teamDoc of teamsSnapshot.docs) {
@@ -60,6 +60,7 @@ const exportCertificateDataFlow = ai.defineFlow(
                     teamMemberProfiles.forEach(member => {
                         certificateData.push({
                             name: member.name,
+                            email: member.email,
                             institute: member.institute || team.institute,
                         });
                     });
@@ -78,6 +79,7 @@ const exportCertificateDataFlow = ai.defineFlow(
 
             sheet.columns = [
                 { header: 'Name', key: 'name', width: 40 },
+                { header: 'Email', key: 'email', width: 40 },
                 { header: 'Institute', key: 'institute', width: 50 },
             ];
 
@@ -101,3 +103,4 @@ const exportCertificateDataFlow = ai.defineFlow(
         }
     }
 );
+
