@@ -7,7 +7,7 @@
 import { ai } from '@/ai/genkit';
 import { z } from 'zod';
 import { getAdminAuth, getAdminDb } from '@/lib/firebase-admin';
-import { FieldValue } from 'firebase-admin/firestore';
+import { FieldValue, FieldPath } from 'firebase-admin/firestore';
 import { Team, UserProfile } from '@/lib/types';
 
 const BulkDeleteUsersInputSchema = z.object({
@@ -77,16 +77,18 @@ const bulkDeleteUsersAndTeamsFlow = ai.defineFlow(
       const usersInDeletedTeams = new Set<string>();
 
       // Second pass: identify users and teams to delete from the filtered list
-      const filteredUserDocPromises = finalUserIdsToDelete.map(id => adminDb.collection('users').doc(id).get());
-      const filteredUserDocSnapshots = await Promise.all(filteredUserDocPromises);
+      if (finalUserIdsToDelete.length > 0) {
+          const filteredUserDocPromises = finalUserIdsToDelete.map(id => adminDb.collection('users').doc(id).get());
+          const filteredUserDocSnapshots = await Promise.all(filteredUserDocPromises);
 
-      for (const userDoc of filteredUserDocSnapshots) {
-        if (userDoc.exists) {
-          const userData = userDoc.data() as UserProfile;
-          if (userData.role === 'leader' && userData.teamId) {
-            teamsToDelete.add(userData.teamId);
+          for (const userDoc of filteredUserDocSnapshots) {
+            if (userDoc.exists) {
+              const userData = userDoc.data() as UserProfile;
+              if (userData.role === 'leader' && userData.teamId) {
+                teamsToDelete.add(userData.teamId);
+              }
+            }
           }
-        }
       }
 
       // Third pass: process teams marked for deletion
