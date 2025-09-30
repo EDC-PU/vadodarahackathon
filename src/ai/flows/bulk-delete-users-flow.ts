@@ -67,9 +67,9 @@ const bulkDeleteUsersAndTeamsFlow = ai.defineFlow(
         }
       }
 
-      if(finalUserIdsToDelete.length === 0) {
+      if(finalUserIdsToDelete.length === 0 && skippedUsers.length > 0) {
         const skippedMessage = skippedUsers.map(u => `${u.email} (${u.role})`).join(', ');
-        return { success: true, message: `No users were deleted. Skipped ${skippedUsers.length} protected account(s): ${skippedMessage}.` };
+        return { success: true, message: `No users were deleted. Skipped ${skippedUsers.length} protected account(s): ${skippedMessage}.`, deletedUsers: 0, deletedTeams: 0 };
       }
       
       const batch = adminDb.batch();
@@ -77,9 +77,9 @@ const bulkDeleteUsersAndTeamsFlow = ai.defineFlow(
       const usersInDeletedTeams = new Set<string>();
 
       // Second pass: identify users and teams to delete from the filtered list
-      for (const userId of finalUserIdsToDelete) {
-        const userRef = adminDb.collection('users').doc(userId);
-        const userDoc = await userRef.get();
+      const filteredUserDocs = await Promise.all(finalUserIdsToDelete.map(id => adminDb.collection('users').doc(id).get()));
+
+      for (const userDoc of filteredUserDocs) {
         if (userDoc.exists) {
           const userData = userDoc.data() as UserProfile;
           // If the user is a leader, mark their team for deletion
