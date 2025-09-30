@@ -51,7 +51,7 @@ const generateCertificateFlow = ai.defineFlow(
         linebreaks: true,
       });
       
-      console.log("Populating template with data:", { name, institute });
+      console.log("Populating template with data:", { Name: name, institute_name: institute });
       doc.render({
         Name: name,
         institute_name: institute,
@@ -73,8 +73,17 @@ const generateCertificateFlow = ai.defineFlow(
       };
 
     } catch (error: any) {
-      console.error("Error generating certificate:", error);
-      return { success: false, message: `Failed to generate certificate: ${error.message}` };
+        console.error("Error generating certificate:", error);
+
+        // Enhanced error logging for docxtemplater
+        if (error.properties && error.properties.errors) {
+            const detailedErrors = error.properties.errors.map((e: any) => e.properties.explanation).join(', ');
+            const errorMessage = `Template Error: ${detailedErrors}`;
+            console.error("Docxtemplater specific errors:", error.properties.errors);
+            return { success: false, message: errorMessage };
+        }
+
+        return { success: false, message: `Failed to generate certificate: ${error.message}` };
     }
   }
 );
