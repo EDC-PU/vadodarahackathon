@@ -1,10 +1,12 @@
 
 'use server';
 /**
- * @fileOverview A flow to generate an HTML certificate of participation.
+ * @fileOverview A flow to generate a .docx certificate of participation.
  */
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
+import PizZip from 'pizzip';
+import Docxtemplater from 'docxtemplater';
 
 const GenerateCertificateInputSchema = z.object({
   name: z.string().describe("The full name of the participant."),
@@ -15,7 +17,8 @@ type GenerateCertificateInput = z.infer<typeof GenerateCertificateInputSchema>;
 const GenerateCertificateOutputSchema = z.object({
   success: z.boolean(),
   message: z.string().optional(),
-  htmlContent: z.string().optional().describe("HTML content of the certificate."),
+  fileContent: z.string().optional().describe("Base64 encoded content of the .docx file."),
+  fileName: z.string().optional(),
 });
 type GenerateCertificateOutput = z.infer<typeof GenerateCertificateOutputSchema>;
 
@@ -32,75 +35,44 @@ const generateCertificateFlow = ai.defineFlow(
   },
   async ({ name, institute }) => {
     try {
-      const backgroundImageUrl = "https://pinxoxpbufq92wb4.public.blob.vercel-storage.com/Certificate%20of%20Participation.jpg";
-      
-      const htmlContent = `
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <title>Certificate of Participation</title>
-          <style>
-            @import url('https://fonts.googleapis.com/css2?family=Tangerine:wght@700&family=Montserrat:wght@400;500&display=swap');
-            @page {
-              size: A4 landscape;
-              margin: 0;
-            }
-            body {
-              margin: 0;
-              padding: 0;
-              width: 297mm;
-              height: 210mm;
-              background-image: url('${backgroundImageUrl}');
-              background-size: cover;
-              background-position: center;
-              background-repeat: no-repeat;
-              display: flex;
-              flex-direction: column;
-              align-items: center;
-              justify-content: center;
-              font-family: 'Montserrat', sans-serif;
-              color: #333;
-            }
-            .name {
-              position: absolute;
-              top: 48%;
-              left: 50%;
-              transform: translate(-50%, -50%);
-              font-family: 'Tangerine', cursive;
-              font-size: 80px;
-              font-weight: 700;
-              color: #002147;
-              width: 100%;
-              text-align: center;
-            }
-            .institute {
-              position: absolute;
-              top: 61%;
-              left: 50%;
-              transform: translate(-50%, -50%);
-              font-family: 'Montserrat', sans-serif;
-              font-size: 18px;
-              font-weight: 500;
-              width: 80%;
-              text-align: center;
-            }
-          </style>
-        </head>
-        <body>
-          <div class="name">${name}</div>
-          <div class="institute">${institute}</div>
-        </body>
-        </html>
-      `;
+      const templateUrl = "https://pinxoxpbufq92wb4.public.blob.vercel-storage.com/Certificate%20of%20Participation.docx";
+      const response = await fetch(templateUrl);
+      if (!response.ok) {
+        throw new Error(`Failed to download template: ${response.statusText}`);
+      }
+      const templateBuffer = await response.arrayBuffer();
+
+      const zip = new PizZip(templateBuffer);
+      const doc = new Docxtemplater(zip, {
+        paragraphLoop: true,
+        linebreaks: true,
+      });
+
+      doc.render({
+        Name: name,
+        institute_name: institute,
+      });
+
+      const buf = doc.getZip().generate({
+        type: 'nodebuffer',
+        compression: 'DEFLATE',
+      });
 
       return {
         success: true,
-        htmlContent,
+        fileContent: buf.toString('base64'),
+        fileName: `Certificate_of_Participation_${name.replace(/ /g, '_')}.docx`,
       };
 
     } catch (error: any) {
-        console.error("Error generating certificate HTML:", error);
-        return { success: false, message: `Failed to generate certificate: ${error.message}` };
+        console.error("Error generating certificate:", error);
+        
+        let detailedMessage = error.message;
+        if (error.properties && error.properties.errors) {
+            detailedMessage = error.properties.errors.map((e: any) => e.properties.explanation).join(', ');
+        }
+        
+        return { success: false, message: `Failed to generate certificate: ${detailedMessage}` };
     }
   }
 );
