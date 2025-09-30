@@ -51,14 +51,14 @@ const bulkDeleteUsersAndTeamsFlow = ai.defineFlow(
 
     try {
       // First pass: Check for admin/spoc accounts and remove them from the deletion list
-      const userDocs = await Promise.all(userIds.map(id => adminDb.collection('users').doc(id).get()));
+      const userDocPromises = userIds.map(id => adminDb.collection('users').doc(id).get());
+      const userDocSnapshots = await Promise.all(userDocPromises);
       
-      for (const userDoc of userDocs) {
+      for (const userDoc of userDocSnapshots) {
         if (userDoc.exists) {
           const userData = userDoc.data() as UserProfile;
           if (userData.role === 'admin' || userData.role === 'spoc') {
             skippedUsers.push({ email: userData.email, role: userData.role! });
-            // Remove protected user from the list of users to be deleted
             const index = finalUserIdsToDelete.indexOf(userData.uid);
             if (index > -1) {
               finalUserIdsToDelete.splice(index, 1);
@@ -77,12 +77,12 @@ const bulkDeleteUsersAndTeamsFlow = ai.defineFlow(
       const usersInDeletedTeams = new Set<string>();
 
       // Second pass: identify users and teams to delete from the filtered list
-      const filteredUserDocs = await Promise.all(finalUserIdsToDelete.map(id => adminDb.collection('users').doc(id).get()));
+      const filteredUserDocPromises = finalUserIdsToDelete.map(id => adminDb.collection('users').doc(id).get());
+      const filteredUserDocSnapshots = await Promise.all(filteredUserDocPromises);
 
-      for (const userDoc of filteredUserDocs) {
+      for (const userDoc of filteredUserDocSnapshots) {
         if (userDoc.exists) {
           const userData = userDoc.data() as UserProfile;
-          // If the user is a leader, mark their team for deletion
           if (userData.role === 'leader' && userData.teamId) {
             teamsToDelete.add(userData.teamId);
           }
@@ -90,17 +90,14 @@ const bulkDeleteUsersAndTeamsFlow = ai.defineFlow(
       }
 
       // Third pass: process teams marked for deletion
-      for (const teamId of teamsToDelete) {
-        const teamRef = adminDb.collection('teams').doc(teamId);
-        const teamDoc = await teamRef.get();
-        if (teamDoc.exists) {
-          const teamData = teamDoc.data() as Team;
-          // Add all members of the team to a set so we can update their profiles
-          usersInDeletedTeams.add(teamData.leader.uid);
-          teamData.members.forEach(m => usersInDeletedTeams.add(m.uid));
-          
-          batch.delete(teamRef);
-          deletedTeamsCount++;
+      if (teamsToDelete.size > 0) {
+        const teamDocs = await adminDb.collection('teams').where(FieldPath.documentId(), 'in', Array.from(teamsToDelete)).get();
+        for (const teamDoc of teamDocs.docs) {
+            const teamData = teamDoc.data() as Team;
+            usersInDeletedTeams.add(teamData.leader.uid);
+            teamData.members.forEach(m => usersInDeletedTeams.add(m.uid));
+            batch.delete(teamDoc.ref);
+            deletedTeamsCount++;
         }
       }
       
@@ -110,10 +107,8 @@ const bulkDeleteUsersAndTeamsFlow = ai.defineFlow(
       for (const userId of allAffectedUsers) {
          const userRef = adminDb.collection('users').doc(userId);
          if (finalUserIdsToDelete.includes(userId)) {
-             // This user was explicitly selected for deletion
              batch.delete(userRef);
          } else if (usersInDeletedTeams.has(userId)) {
-             // This user was just a member of a deleted team, so only clear their teamId
              batch.update(userRef, { teamId: FieldValue.delete() });
          }
       }
@@ -126,7 +121,12 @@ const bulkDeleteUsersAndTeamsFlow = ai.defineFlow(
           await adminAuth.deleteUser(userId);
           deletedUsersCount++;
         } catch (error: any) {
-          console.warn(`Could not delete user ${userId} from Auth, they may have already been deleted. Error: ${error.message}`);
+          if (error.code !== 'auth/user-not-found') {
+            console.warn(`Could not delete user ${userId} from Auth. Error: ${error.message}`);
+          } else {
+             // User was already deleted from auth, which is fine.
+             deletedUsersCount++;
+          }
         }
       }
 
@@ -145,6 +145,13 @@ const bulkDeleteUsersAndTeamsFlow = ai.defineFlow(
 
     } catch (error: any) {
       console.error("Error during bulk delete:", error);
+      // Don't expose potentially sensitive internal error codes like "5 NOT_FOUND" to the user.
+      if (error.code === 5 || (error.message && error.message.includes('NOT_FOUND'))) {
+         return {
+            success: false,
+            message: `An error occurred during bulk deletion. One or more users may have already been deleted. Please refresh and try again.`,
+         };
+      }
       return {
         success: false,
         message: `An error occurred during bulk deletion: ${error.message}`,
