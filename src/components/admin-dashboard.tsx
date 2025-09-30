@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -15,15 +14,19 @@ import { Buffer } from 'buffer';
 import { useScrollAnimation } from "@/hooks/use-scroll-animation";
 import { cn } from "@/lib/utils";
 import { formatDistanceToNow } from "date-fns";
+import { useAuth } from "@/hooks/use-auth";
+import { generateCertificate } from "@/ai/flows/generate-certificate-flow";
 
 
 export default function AdminDashboard() {
   const [stats, setStats] = useState({ teams: 0, participants: 0, spocs: 0, admins: 0, jury: 0 });
   const [loading, setLoading] = useState(true);
   const [isExporting, setIsExporting] = useState(false);
+  const [isGeneratingCert, setIsGeneratingCert] = useState(false);
   const [recentActivity, setRecentActivity] = useState<Notification[]>([]);
   const [loadingActivity, setLoadingActivity] = useState(true);
   const { toast } = useToast();
+  const { user } = useAuth();
 
   const mainRef = useRef<HTMLDivElement>(null);
   const isInView = useScrollAnimation(mainRef);
@@ -65,6 +68,32 @@ export default function AdminDashboard() {
         toast({ title: "Error", description: "An unexpected error occurred during export.", variant: "destructive" });
     } finally {
         setIsExporting(false);
+    }
+  };
+
+  const handleCertificateDownload = async () => {
+    if (!user) return;
+    setIsGeneratingCert(true);
+    try {
+        const result = await generateCertificate({ name: user.name, institute: user.institute || "Parul University" });
+        if (result.success && result.fileContent) {
+            const blob = new Blob([Buffer.from(result.fileContent, 'base64')], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = result.fileName || 'Certificate.docx';
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            a.remove();
+            toast({ title: "Success", description: "Your certificate has been downloaded." });
+        } else {
+            throw new Error(result.message || "Failed to generate certificate.");
+        }
+    } catch (error: any) {
+        toast({ title: "Error", description: `Could not generate certificate: ${error.message}`, variant: "destructive" });
+    } finally {
+        setIsGeneratingCert(false);
     }
   };
 
@@ -187,13 +216,16 @@ export default function AdminDashboard() {
       <div className="mt-8 grid gap-8 md:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>Data Export</CardTitle>
+            <CardTitle>Actions</CardTitle>
           </CardHeader>
-          <CardContent>
-            <p className="text-muted-foreground mb-4">Export all team data to Excel format.</p>
-            <Button onClick={handleExport} className="w-full" disabled={isExporting}>
+          <CardContent className="flex flex-col gap-4">
+             <Button onClick={handleExport} className="w-full" disabled={isExporting}>
               {isExporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
-              {isExporting ? "Exporting..." : "Export Teams to Excel"}
+              {isExporting ? "Exporting..." : "Export All Teams to Excel"}
+            </Button>
+            <Button onClick={handleCertificateDownload} variant="outline" className="w-full" disabled={isGeneratingCert}>
+              {isGeneratingCert ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
+              {isGeneratingCert ? "Generating..." : "Download Certificate"}
             </Button>
           </CardContent>
         </Card>

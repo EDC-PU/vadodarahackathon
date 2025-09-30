@@ -186,6 +186,22 @@ export interface Announcement {
 
 // Schemas for Genkit Flows
 
+// generate-certificate-flow
+export const GenerateCertificateInputSchema = z.object({
+    name: z.string().describe("The full name of the participant."),
+    institute: z.string().describe("The institute of the participant."),
+});
+export type GenerateCertificateInput = z.infer<typeof GenerateCertificateInputSchema>;
+
+export const GenerateCertificateOutputSchema = z.object({
+    success: z.boolean(),
+    message: z.string().optional(),
+    fileContent: z.string().optional().describe("Base64 encoded content of the .docx file."),
+    fileName: z.string().optional(),
+});
+export type GenerateCertificateOutput = z.infer<typeof GenerateCertificateOutputSchema>;
+
+
 // set-mentor-details-flow
 export const SetMentorDetailsInputSchema = z.object({
   teamId: z.string().describe("The document ID of the team."),
